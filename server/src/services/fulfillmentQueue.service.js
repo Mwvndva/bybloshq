@@ -1,6 +1,7 @@
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import OrderFulfillmentTransitionService from './orderFulfillmentTransition.service.js';
 
 class FulfillmentQueueService {
     /**
@@ -121,14 +122,9 @@ class FulfillmentQueueService {
             let order = orders[0];
             let fulfilledItems = [];
 
-            // 4. Delegate to order completion logic based on type
-            // (Circular dependency alert: use dynamic import or move logic to a shared helper)
-            const { default: OrderService } = await import('./order.service.js');
-
             logger.info(`[QUEUE] Processing fulfillment for Order ${order.id} (Type: ${order.order_type})`);
 
-            // This call should be updated to strictly follow the new transitions
-            await OrderService.executeFulfillment(client, order);
+            await OrderFulfillmentTransitionService.executeFulfillment(client, order);
             const { rows: [updatedOrder] } = await client.query(
                 'SELECT * FROM product_orders WHERE id = $1',
                 [order.id]
@@ -159,13 +155,7 @@ class FulfillmentQueueService {
             await client.query('COMMIT');
             logger.info(`[QUEUE] Job ${job.id} (Order ${order.id}) COMPLETED`);
 
-            setImmediate(() => {
-                eventBus.dispatchOutboxEvent(durableEvent.eventId)
-                    .catch(error => logger.error('[QUEUE] Durable fulfillment event dispatch failed', {
-                        eventId: durableEvent.eventId,
-                        error: error.message
-                    }));
-            });
+            eventBus.dispatchAfterCommit(durableEvent.eventId, 'FulfillmentQueueService.processJob');
 
         } catch (err) {
             await client.query('ROLLBACK');

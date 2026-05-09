@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
@@ -30,59 +30,8 @@ import { format } from 'date-fns';
 
 import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
-import SellerBrandCard from '@/components/SellerBrandCard';
-
-const getShopId = (shop) => String(shop.id || shop.sellerId || shop.seller_id || '');
-
-const updateSellerClientCount = (seller, clientCount) => ({
-  ...seller,
-  clientCount,
-  client_count: clientCount
-});
-
-const updateSellerClickCount = (seller, clickCount) => ({
-  ...seller,
-  knockCount: clickCount,
-  knock_count: clickCount
-});
-
-const hasValidShopCoordinate = (shop) => {
-  const lat = Number(shop?.latitude);
-  const lng = Number(shop?.longitude);
-  return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
-};
-
-const isPhysicalShop = (shop) => Boolean(
-  shop?.hasPhysicalShop ||
-  shop?.has_physical_shop ||
-  shop?.physicalAddress ||
-  shop?.physical_address ||
-  hasValidShopCoordinate(shop)
-);
-
-function SellerBrandCardSkeleton() {
-  return (
-    <div style={{ background: '#050505', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 16, padding: 12, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.10)' }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ height: 12, width: '62%', borderRadius: 999, background: 'rgba(255,255,255,0.14)', marginBottom: 8 }} />
-          <div style={{ height: 10, width: '86%', borderRadius: 999, background: 'rgba(255,255,255,0.10)', marginBottom: 6 }} />
-          <div style={{ height: 10, width: '54%', borderRadius: 999, background: 'rgba(255,255,255,0.08)' }} />
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 12 }}>
-        {[0, 1, 2].map(item => (
-          <div key={item} style={{ height: 46, borderRadius: 12, background: 'rgba(255,255,255,0.08)' }} />
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 12 }}>
-        <div style={{ height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.10)' }} />
-        <div style={{ width: 94, height: 40, borderRadius: 12, background: 'rgba(248,113,113,0.08)' }} />
-      </div>
-    </div>
-  );
-}
+import { MyShopsSection } from './dashboard/MyShopsSection';
+import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
 
 
 
@@ -90,7 +39,6 @@ function SellerBrandCardSkeleton() {
 function BuyerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const { user, logout, updateBuyerProfile } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const { toast } = useToast();
@@ -159,84 +107,7 @@ function BuyerDashboard() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
   const [myShopsMobileTab, setMyShopsMobileTab] = useState<'online' | 'physical'>('online');
-  const shopsQuery = useQuery({
-    queryKey: ['buyer-followed-shops'],
-    queryFn: () => buyerApi.getShops({ page: 1, limit: 48 }),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    enabled: activeSection === 'shops'
-  });
-  const shops = shopsQuery.data || [];
-  const isLoadingShops = shopsQuery.isLoading;
-  const [unfollowingShopId, setUnfollowingShopId] = useState<string | null>(null);
-  const unfollowShopMutation = useMutation({
-    mutationFn: (shop) => buyerApi.leaveClient(getShopId(shop)),
-    onMutate: async (shop) => {
-      const shopId = getShopId(shop);
-      setUnfollowingShopId(shopId);
-      await queryClient.cancelQueries({ queryKey: ['buyer-followed-shops'] });
-      await queryClient.cancelQueries({ queryKey: ['public-sellers'] });
-
-      const previousFollowedShops = queryClient.getQueryData<any[]>(['buyer-followed-shops']);
-      const previousPublicSellerQueries = queryClient.getQueriesData({ queryKey: ['public-sellers'] });
-
-      queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
-        current.filter(item => getShopId(item) !== shopId)
-      );
-
-      queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
-        if (!current?.sellers) return current;
-        return {
-          ...current,
-          sellers: current.sellers.map((seller) => (
-            getShopId(seller) === shopId
-              ? updateSellerClientCount(seller, Math.max(0, Number(seller.clientCount ?? seller.client_count ?? 0) - 1))
-              : seller
-          ))
-        };
-      });
-
-      return { previousFollowedShops, previousPublicSellerQueries };
-    },
-    onError: (error, _shop, context) => {
-      if (context?.previousFollowedShops) {
-        queryClient.setQueryData(['buyer-followed-shops'], context.previousFollowedShops);
-      }
-      context?.previousPublicSellerQueries?.forEach(([queryKey, data]) => {
-        queryClient.setQueryData(queryKey, data);
-      });
-      toast({
-        title: 'Could not unfollow shop',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive'
-      });
-    },
-    onSuccess: (result, shop) => {
-      const shopId = getShopId(shop);
-      if (typeof result.clientCount === 'number') {
-        queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
-          if (!current?.sellers) return current;
-          return {
-            ...current,
-            sellers: current.sellers.map((seller) => (
-              getShopId(seller) === shopId
-                ? updateSellerClientCount(seller, result.clientCount)
-                : seller
-            ))
-          };
-        });
-      }
-      toast({
-        title: 'Shop unfollowed',
-        description: result.message || 'The shop was removed from My Shops.'
-      });
-    },
-    onSettled: () => {
-      setUnfollowingShopId(null);
-      queryClient.invalidateQueries({ queryKey: ['buyer-followed-shops'] });
-      queryClient.invalidateQueries({ queryKey: ['public-sellers'] });
-    }
-  });
+  const followedShops = useBuyerFollowedShops(shopsSearchQuery, activeSection === 'shops');
 
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
@@ -420,71 +291,6 @@ function BuyerDashboard() {
     }
   };
 
-  const filteredShops = useMemo(() => {
-    const query = shopsSearchQuery.trim().toLowerCase();
-    if (!query) return shops;
-
-    return shops.filter((shop) => {
-      const name = String(shop.shopName || shop.name || '').toLowerCase();
-      const location = String(shop.location || shop.city || '').toLowerCase();
-      return name.includes(query) || location.includes(query);
-    });
-  }, [shops, shopsSearchQuery]);
-
-  const { onlineShops, physicalShops } = useMemo(() => {
-    const online = [];
-    const physical = [];
-
-    filteredShops.forEach((shop) => {
-      if (isPhysicalShop(shop)) {
-        physical.push(shop);
-      } else {
-        online.push(shop);
-      }
-    });
-
-    return { onlineShops: online, physicalShops: physical };
-  }, [filteredShops]);
-
-  const shopGroups = [
-    {
-      key: 'online',
-      title: 'Online Shops',
-      count: onlineShops.length,
-      shops: onlineShops,
-      empty: shopsSearchQuery ? 'No online shops match your search.' : 'No online shops followed yet.'
-    },
-    {
-      key: 'physical',
-      title: 'Physical Shops',
-      count: physicalShops.length,
-      shops: physicalShops,
-      empty: shopsSearchQuery ? 'No physical shops match your search.' : 'No physical shops followed yet.'
-    }
-  ] as const;
-
-  const handleShopClickCountChange = useCallback((shop, clickCount) => {
-    const shopId = getShopId(shop);
-    if (!shopId) return;
-
-    queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
-      current.map(item => getShopId(item) === shopId ? updateSellerClickCount(item, clickCount) : item)
-    );
-    queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
-      if (!current?.sellers) return current;
-      return {
-        ...current,
-        sellers: current.sellers.map((seller) => (
-          getShopId(seller) === shopId ? updateSellerClickCount(seller, clickCount) : seller
-        ))
-      };
-    });
-  }, [queryClient]);
-
-  const handleUnfollowShop = useCallback((shop) => {
-    unfollowShopMutation.mutate(shop);
-  }, [unfollowShopMutation]);
-
   return (
     <div className="page-enter" style={{
       display: 'flex', flexDirection: 'column',
@@ -561,125 +367,18 @@ function BuyerDashboard() {
         )}
 
         {activeSection === 'shops' && (
-          <>
-            <div style={{
-              padding: '0 0 8px',
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-              flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>My Shops</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>{filteredShops.length} shops</span>
-            </div>
-
-            <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-white/15 bg-white/5 p-1 md:hidden">
-              {shopGroups.map((group) => {
-                const isActive = myShopsMobileTab === group.key;
-                return (
-                  <button
-                    key={group.key}
-                    type="button"
-                    onClick={() => setMyShopsMobileTab(group.key)}
-                    className="flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition"
-                    style={{
-                      background: isActive ? '#FACC15' : 'transparent',
-                      color: isActive ? '#000000' : '#FFFFFF'
-                    }}
-                  >
-                    <span>{group.title}</span>
-                    <span
-                      className="rounded-full px-1.5 py-0.5 text-[10px]"
-                      style={{
-                        background: isActive ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)',
-                        color: isActive ? '#000000' : '#FFFFFF'
-                      }}
-                    >
-                      {group.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="hidden gap-4 md:grid md:grid-cols-2">
-              {shopGroups.map((group) => (
-                <section key={group.key} className="min-w-0 rounded-2xl border border-white/15 bg-white/5 p-2.5 shadow-sm">
-                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                    <span className="text-xs font-black text-white">{group.title}</span>
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {group.count}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3">
-                    {isLoadingShops && shops.length === 0 && Array.from({ length: 3 }).map((_, index) => (
-                      <SellerBrandCardSkeleton key={`${group.key}-skeleton-${index}`} />
-                    ))}
-
-                    {!isLoadingShops && group.shops.map(shop => (
-                      <SellerBrandCard
-                        key={getShopId(shop)}
-                        seller={shop}
-                        isBuyer
-                        showUnfollow
-                        onUnfollow={handleUnfollowShop}
-                        onClickCountChange={handleShopClickCountChange}
-                        isUnfollowing={unfollowingShopId === getShopId(shop)}
-                      />
-                    ))}
-
-                    {!isLoadingShops && filteredShops.length > 0 && group.shops.length === 0 && (
-                      <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-8 text-center text-xs text-white">
-                        {group.empty}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              ))}
-            </div>
-
-            <div className="grid gap-3 md:hidden">
-              {shopGroups.filter(group => group.key === myShopsMobileTab).map((group) => (
-                <section key={group.key} className="min-w-0 rounded-2xl border border-white/15 bg-white/5 p-2.5 shadow-sm">
-                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                    <span className="text-xs font-black text-white">{group.title}</span>
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {group.count}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3">
-                    {isLoadingShops && shops.length === 0 && Array.from({ length: 3 }).map((_, index) => (
-                      <SellerBrandCardSkeleton key={`${group.key}-mobile-skeleton-${index}`} />
-                    ))}
-
-                    {!isLoadingShops && group.shops.map(shop => (
-                      <SellerBrandCard
-                        key={getShopId(shop)}
-                        seller={shop}
-                        isBuyer
-                        showUnfollow
-                        onUnfollow={handleUnfollowShop}
-                        onClickCountChange={handleShopClickCountChange}
-                        isUnfollowing={unfollowingShopId === getShopId(shop)}
-                      />
-                    ))}
-
-                    {!isLoadingShops && filteredShops.length > 0 && group.shops.length === 0 && (
-                      <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-8 text-center text-xs text-white">
-                        {group.empty}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              ))}
-            </div>
-
-            {filteredShops.length === 0 && !isLoadingShops && (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.72)' }}>
-                {shopsSearchQuery ? 'No followed shops match your search.' : 'No shops followed yet.'}
-              </div>
-            )}
-          </>
+          <MyShopsSection
+            filteredCount={followedShops.filteredShops.length}
+            isLoadingShops={followedShops.isLoadingShops}
+            mobileTab={myShopsMobileTab}
+            onClickCountChange={followedShops.handleShopClickCountChange}
+            onMobileTabChange={setMyShopsMobileTab}
+            onUnfollowShop={followedShops.handleUnfollowShop}
+            searchQuery={shopsSearchQuery}
+            shopGroups={followedShops.shopGroups}
+            shopsCount={followedShops.shops.length}
+            unfollowingShopId={followedShops.unfollowingShopId}
+          />
         )}
 
         {activeSection === 'wishlist' && (

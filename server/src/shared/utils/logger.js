@@ -1,8 +1,8 @@
-import winston from 'winston';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { dirname } from 'path';
 import fs from 'fs';
+import { createRequire } from 'module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,10 +13,45 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-import DailyRotateFile from 'winston-daily-rotate-file';
+const require = createRequire(import.meta.url);
+let winston;
+let DailyRotateFile;
+let logger;
+
+try {
+  winston = require('winston');
+  DailyRotateFile = require('winston-daily-rotate-file');
+} catch (error) {
+  const formatMessage = (message, meta) => {
+    if (meta.length === 0) return message;
+    return `${message} ${meta.map(item => {
+      if (item instanceof Error) return item.stack || item.message;
+      if (typeof item === 'string') return item;
+      try {
+        return JSON.stringify(item);
+      } catch {
+        return String(item);
+      }
+    }).join(' ')}`;
+  };
+
+  const fallbackLogger = {
+    debug: (message, ...meta) => console.debug(formatMessage(message, meta)),
+    info: (message, ...meta) => console.info(formatMessage(message, meta)),
+    warn: (message, ...meta) => console.warn(formatMessage(message, meta)),
+    error: (message, ...meta) => console.error(formatMessage(message, meta)),
+    stream: {
+      write: (message) => console.info(String(message).trim()),
+    },
+  };
+
+  console.warn('[LOGGER] winston transports unavailable; using console logger fallback', error.message);
+  logger = fallbackLogger;
+}
 
 // Create a simple console logger
-const logger = winston.createLogger({
+if (!logger) {
+  logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -55,7 +90,8 @@ const logger = winston.createLogger({
     }),
   ],
   exitOnError: false, // Don't exit on handled exceptions
-});
+  });
+}
 
 // No longer silencing console in production to ensure Docker logs work correctly.
 

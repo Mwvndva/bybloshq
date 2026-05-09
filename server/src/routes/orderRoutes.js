@@ -14,7 +14,7 @@ import {
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createOrderSchema, updateOrderStatusSchema } from '../validations/order.validation.js';
+import { updateOrderStatusSchema } from '../validations/order.validation.js';
 
 const router = express.Router();
 
@@ -33,11 +33,10 @@ router.use(protect);
  * @swagger
  * /api/orders:
  *   post:
- *     summary: Create a new order
+ *     summary: Retired direct order creation endpoint
  */
 router.post(
   '/',
-  validate(createOrderSchema),
   createOrder
 );
 

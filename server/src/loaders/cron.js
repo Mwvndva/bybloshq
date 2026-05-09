@@ -14,8 +14,7 @@ export default async () => {
         }
     }
 
-    // 2. Reconciliation Engine (Self-Healing) - Every 5 min
-    // Replaces orderDeadlineCron
+    // 2. Reconciliation Engine (Self-Healing)
     try {
         const ReconciliationEngine = (await import('../cron/reconciliationEngine.js')).default;
         await ReconciliationEngine.start();
@@ -24,8 +23,7 @@ export default async () => {
         logger.error('❌ Failed to start Reconciliation Engine:', err.message);
     }
 
-    // 5. Fulfillment Worker (Queue Processor) - Every 1 min
-    // Replaces completionRetryCron
+    // 5. Fulfillment Worker (Queue Processor)
     try {
         const FulfillmentWorker = (await import('../cron/fulfillmentWorker.js')).default;
         await FulfillmentWorker.start();

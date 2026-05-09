@@ -1,14 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 function read(path) {
   return readFileSync(resolve(root, path), 'utf8');
+}
+
+function exists(path) {
+  return existsSync(resolve(root, path));
+}
+
+function filesUnder(path) {
+  const absolute = resolve(root, path);
+  return readdirSync(absolute).flatMap(entry => {
+    const resolved = resolve(absolute, entry);
+    const stat = statSync(resolved);
+    if (stat.isDirectory()) {
+      return filesUnder(resolve(path, entry));
+    }
+    return stat.isFile() && resolved.endsWith('.js') ? [resolved] : [];
+  });
 }
 
 test('Payd payment webhook fails closed and uses raw-body HMAC verification', () => {
@@ -68,7 +84,7 @@ test('withdrawals consume caller idempotency keys instead of random-only keys', 
   const controller = read('src/controllers/withdrawal.controller.js');
   const service = read('src/services/withdrawal.service.js');
   const sellerApi = read('../src/api/sellerApi.ts');
-  const sellerDashboard = read('../src/components/seller/SellerDashboard.tsx');
+  const sellerWithdrawalsHook = read('../src/components/seller/dashboard/hooks/useSellerWithdrawals.ts');
 
   assert.match(controller, /req\.headers\['idempotency-key'\]/);
   assert.match(controller, /Idempotency-Key header is required/);
@@ -78,8 +94,8 @@ test('withdrawals consume caller idempotency keys instead of random-only keys', 
   assert.match(sellerApi, /idempotencyKey:\s*string/);
   assert.match(sellerApi, /Withdrawal idempotency key is required/);
   assert.doesNotMatch(sellerApi, /Math\.random\(\)/);
-  assert.match(sellerDashboard, /withdrawalIdempotencyKeyRef/);
-  assert.match(sellerDashboard, /idempotencyKey:\s*withdrawalIdempotencyKeyRef\.current/);
+  assert.match(sellerWithdrawalsHook, /withdrawalIdempotencyKeyRef/);
+  assert.match(sellerWithdrawalsHook, /idempotencyKey:\s*withdrawalIdempotencyKeyRef\.current/);
 });
 
 test('withdrawal retry claims rows with SKIP LOCKED lease', () => {
@@ -110,46 +126,87 @@ test('ambiguous payout provider failures are not auto-refunded', () => {
 
 test('payout callbacks can recover timeout paths by idempotency client reference', () => {
   const callback = read('src/controllers/callback.controller.js');
-  const service = read('src/services/withdrawal.service.js');
+  const stateMachine = read('src/services/payoutCallbackStateMachine.service.js');
 
-  assert.match(callback, /WithdrawalService\.handleProviderCallback/);
-  assert.match(service, /data\.client_reference \|\| data\.idempotency_key/);
-  assert.match(service, /wr\.idempotency_key = \$2/);
-  assert.match(service, /ppa\.idempotency_key = \$2/);
-  assert.match(service, /updatePayoutProviderAttempt/);
-  assert.match(service, /eventId:\s*`withdrawal\.\$\{finalStatus\}/);
+  assert.match(callback, /PayoutCallbackStateMachineService\.handleProviderCallback/);
+  assert.match(stateMachine, /data\.client_reference \|\| data\.idempotency_key/);
+  assert.match(stateMachine, /wr\.idempotency_key = \$2/);
+  assert.match(stateMachine, /ppa\.idempotency_key = \$2/);
+  assert.match(stateMachine, /updatePayoutProviderAttempt/);
+  assert.match(stateMachine, /eventId:\s*`withdrawal\.\$\{finalStatus\}/);
 });
 
 test('payout callback amount rejection preserves non-terminal manual-review state', () => {
-  const service = read('src/services/withdrawal.service.js');
+  const stateMachine = read('src/services/payoutCallbackStateMachine.service.js');
 
-  assert.match(service, /payout_callback_rejected/);
-  assert.match(service, /callback_amount_rejected/);
-  assert.match(service, /needs_manual_review/);
-  assert.match(service, /AND status = 'processing'/);
-  assert.doesNotMatch(service, /missing_valid_amount[\s\S]*updateStatusWithSideEffects\(request\.id, 'failed'/);
+  assert.match(stateMachine, /payout_callback_rejected/);
+  assert.match(stateMachine, /callback_amount_rejected/);
+  assert.match(stateMachine, /needs_manual_review/);
+  assert.match(stateMachine, /AND status = 'processing'/);
+  assert.doesNotMatch(stateMachine, /missing_valid_amount[\s\S]*updateStatusWithSideEffects\(request\.id, 'failed'/);
 });
 
 test('delayed payout success after refund enters compensation state without wallet mutation', () => {
   const callback = read('src/controllers/callback.controller.js');
-  const service = read('src/services/withdrawal.service.js');
+  const stateMachine = read('src/services/payoutCallbackStateMachine.service.js');
   const eventBus = read('src/events/eventBus.js');
   const migration = read('migrations/20260507231000_final_fintech_stabilization.sql');
 
-  assert.match(callback, /WithdrawalService\.handleProviderCallback/);
-  assert.match(service, /FOR UPDATE OF wr/);
-  assert.match(service, /isSuccess && request\.status === 'failed'/);
-  assert.match(service, /recordProviderSuccessAfterRefundLocked/);
-  assert.match(service, /async recordProviderSuccessAfterRefund/);
-  assert.match(service, /PROVIDER_SUCCESS_AFTER_REFUND/);
-  assert.match(service, /status = 'compensation_required'/);
-  assert.match(service, /provider_success_after_refund/);
-  assert.match(service, /freeze_payout_retries/);
-  assert.match(service, /AppEvents\.WITHDRAWAL\.COMPENSATION_REQUIRED/);
+  assert.match(callback, /PayoutCallbackStateMachineService\.handleProviderCallback/);
+  assert.match(stateMachine, /FOR UPDATE OF wr/);
+  assert.match(stateMachine, /isSuccess && request\.status === 'failed'/);
+  assert.match(stateMachine, /recordProviderSuccessAfterRefundLocked/);
+  assert.match(stateMachine, /async recordProviderSuccessAfterRefund/);
+  assert.match(stateMachine, /PROVIDER_SUCCESS_AFTER_REFUND/);
+  assert.match(stateMachine, /status = 'compensation_required'/);
+  assert.match(stateMachine, /provider_success_after_refund/);
+  assert.match(stateMachine, /freeze_payout_retries/);
+  assert.match(stateMachine, /AppEvents\.WITHDRAWAL\.COMPENSATION_REQUIRED/);
   assert.match(eventBus, /COMPENSATION_REQUIRED:\s*'withdrawal\.compensation_required'/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS payout_reconciliation_events/);
   assert.match(migration, /payout_reconciliation_events_unique_reference/);
   assert.doesNotMatch(callback, /updateStatusWithSideEffects\(request\.id,\s*'completed'/);
+});
+
+test('payout callback state machine is extracted from withdrawal service', () => {
+  const callback = read('src/controllers/callback.controller.js');
+  const withdrawal = read('src/services/withdrawal.service.js');
+  const stateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+
+  assert.match(callback, /PayoutCallbackStateMachineService\.handleProviderCallback\(data/);
+  assert.match(withdrawal, /PayoutCallbackStateMachineService\.handleProviderCallback\(providerPayload,\s*context\)/);
+  assert.match(withdrawal, /PayoutCallbackStateMachineService\.recordProviderSuccessAfterRefund\(requestId,\s*providerPayload,\s*refs\)/);
+  assert.match(stateMachine, /class PayoutCallbackStateMachineService/);
+  assert.match(stateMachine, /async handleProviderCallback\(providerPayload = \{\},\s*context = \{\}\)/);
+  assert.match(stateMachine, /async markPayoutCallbackRejected\(client,\s*request,\s*reason,\s*metadata\)/);
+  assert.match(stateMachine, /async recordProviderSuccessAfterRefundLocked\(client,\s*request,\s*providerPayload = \{\},\s*refs = \{\}\)/);
+  assert.match(stateMachine, /providerPayloadIndicatesSuccess/);
+  assert.match(stateMachine, /providerPayloadIndicatesFailure/);
+  assert.doesNotMatch(withdrawal, /async recordProviderSuccessAfterRefundLocked/);
+  assert.doesNotMatch(withdrawal, /async markPayoutCallbackRejected/);
+  assert.doesNotMatch(withdrawal, /async recordAmbiguousPayoutCallbackLocked/);
+  assert.doesNotMatch(withdrawal, /const PAYOUT_SUCCESS_STATUSES/);
+});
+
+test('EscrowManager remains isolated behind existing payout release callers', () => {
+  const services = filesUnder('src/services');
+  const escrowImporters = services
+    .filter(file => /from ['"]\.\/EscrowManager\.js['"]/.test(readFileSync(file, 'utf8')))
+    .map(file => basename(file))
+    .sort();
+
+  const orderService = read('src/services/order.service.js');
+  const deadlineService = read('src/services/orderDeadline.service.js');
+  const inventoryService = read('src/services/inventoryReservation.service.js');
+  const fulfillmentTransition = read('src/services/orderFulfillmentTransition.service.js');
+  const payoutCallbackStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+
+  assert.deepEqual(escrowImporters, ['order.service.js', 'orderDeadline.service.js']);
+  assert.match(orderService, /escrowManager\.releaseFunds\(client,\s*order,\s*'OrderService'\)/);
+  assert.match(deadlineService, /escrowManager\.releaseFunds\(client,\s*order,\s*'OrderDeadlineService'\)/);
+  assert.doesNotMatch(inventoryService, /EscrowManager|escrowManager|releaseFunds/);
+  assert.doesNotMatch(fulfillmentTransition, /EscrowManager|escrowManager|releaseFunds/);
+  assert.doesNotMatch(payoutCallbackStateMachine, /EscrowManager|escrowManager|releaseFunds/);
 });
 
 test('fulfillment retry cron routes through fulfillment queue', () => {
@@ -272,6 +329,72 @@ test('EventBus uses durable event-id dedupe for multi-instance notification supp
   assert.match(loader, /eventBus\.replayPendingOutbox/);
 });
 
+test('important post-commit lifecycle events prefer durable outbox rows', () => {
+  const eventBus = read('src/events/eventBus.js');
+  const orderService = read('src/services/order.service.js');
+  const withdrawalService = read('src/services/withdrawal.service.js');
+  const payoutStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+  const refundController = read('src/controllers/refund.controller.js');
+  const adminController = read('src/controllers/admin.controller.js');
+  const referralService = read('src/services/referral.service.js');
+  const coreOrder = read('src/core/CoreOrderService.js');
+
+  assert.match(eventBus, /async enqueue\(event, payload = \{\}\)/);
+  assert.match(eventBus, /dispatchAfterCommit\(eventId/);
+  assert.match(eventBus, /async enqueueAndDispatch\(event, payload = \{\}, context = 'EventBus'\)/);
+
+  assert.match(orderService, /enqueueInTransaction\(client,\s*AppEvents\.ORDER\.CREATED/);
+  assert.match(orderService, /enqueueInTransaction\(client,\s*AppEvents\.ORDER\.CANCELLED/);
+  assert.match(orderService, /enqueueInTransaction\(client,\s*AppEvents\.ORDER\.PAID/);
+  assert.match(orderService, /enqueueAndDispatch\(AppEvents\.ORDER\.UPDATED/);
+  assert.match(withdrawalService, /enqueueInTransaction\(client,\s*AppEvents\.WITHDRAWAL\.CREATED/);
+  assert.match(withdrawalService, /enqueueInTransaction\(client,\s*AppEvents\.WITHDRAWAL\.UPDATED/);
+  assert.match(payoutStateMachine, /enqueueInTransaction\(\s*client,\s*AppEvents\.WITHDRAWAL\.COMPENSATION_REQUIRED/);
+  assert.match(refundController, /enqueueInTransaction\(client,\s*AppEvents\.REFUND\.APPROVED/);
+  assert.match(refundController, /enqueueAndDispatch\(AppEvents\.REFUND\.REJECTED/);
+  assert.match(adminController, /enqueueInTransaction\(client,\s*AppEvents\.WITHDRAWAL\.UPDATED/);
+  assert.match(referralService, /enqueueInTransaction\(client,\s*AppEvents\.REFERRAL\.REWARD_CREATED/);
+  assert.match(orderService, /eventBus\.emit\(AppEvents\.INVENTORY\.LOW_STOCK/);
+  assert.match(orderService, /eventBus\.emit\(AppEvents\.INVENTORY\.OUT_OF_STOCK/);
+  assert.doesNotMatch(coreOrder, /eventBus\.emit|setImmediate/);
+
+  const activeRuntime = [
+    orderService,
+    withdrawalService,
+    payoutStateMachine,
+    refundController,
+    adminController,
+    referralService
+  ].join('\n');
+  assert.doesNotMatch(activeRuntime, /eventBus\.emit\(AppEvents\.(ORDER|PAYMENT|WITHDRAWAL|REFUND|REFERRAL)\./);
+
+  const directEmitSites = [
+    ['order.service.js', orderService],
+    ['withdrawal.service.js', withdrawalService],
+    ['payoutCallbackStateMachine.service.js', payoutStateMachine],
+    ['refund.controller.js', refundController],
+    ['admin.controller.js', adminController],
+    ['referral.service.js', referralService],
+    ['CoreOrderService.js', coreOrder],
+    ['CorePaymentService.js', read('src/core/CorePaymentService.js')],
+    ['payment.service.js', read('src/services/payment.service.js')],
+    ['orderDeadline.service.js', read('src/services/orderDeadline.service.js')],
+    ['fulfillmentQueue.service.js', read('src/services/fulfillmentQueue.service.js')]
+  ].flatMap(([file, source]) =>
+    Array.from(source.matchAll(/eventBus\.emit\(AppEvents\.(\w+)\.(\w+)/g))
+      .map(match => ({
+        file,
+        namespace: match[1],
+        event: match[2]
+      }))
+  ).sort((a, b) => `${a.file}:${a.namespace}:${a.event}`.localeCompare(`${b.file}:${b.namespace}:${b.event}`));
+
+  assert.deepEqual(directEmitSites, [
+    { file: 'order.service.js', namespace: 'INVENTORY', event: 'LOW_STOCK' },
+    { file: 'order.service.js', namespace: 'INVENTORY', event: 'OUT_OF_STOCK' }
+  ]);
+});
+
 test('EventBus outbox only completes after listener delivery succeeds', () => {
   const eventBus = read('src/events/eventBus.js');
   const orderEvents = read('src/events/order.events.js');
@@ -328,12 +451,26 @@ test('manual-review payment mapping failures are terminal and not retried as pen
   assert.match(core, /Payment is in a manual review terminal state/);
 });
 
-test('protected order creation requires checkout idempotency token', () => {
+test('direct order creation routes are retired in favor of payment initiation', () => {
   const controller = read('src/controllers/order.controller.js');
+  const orderRoutes = read('src/routes/orderRoutes.js');
+  const sellerRoutes = read('src/routes/seller.routes.js');
+  const orderValidation = read('src/validations/order.validation.js');
   const service = read('src/services/order.service.js');
+  const paymentRoutes = read('src/routes/payment.routes.js');
+  const createOrderHandler = controller.slice(
+    controller.indexOf('export const createOrder'),
+    controller.indexOf('export const getOrderById')
+  );
 
-  assert.match(controller, /Checkout idempotency token is required/);
-  assert.match(controller, /client_checkout_token:\s*checkoutToken\.trim\(\)\.slice\(0,\s*160\)/);
+  assert.match(createOrderHandler, /DIRECT_ORDER_CREATION_RETIRED/);
+  assert.match(createOrderHandler, /\/api\/payments\/initiate-product/);
+  assert.doesNotMatch(createOrderHandler, /OrderService\.createOrder/);
+  assert.doesNotMatch(orderRoutes, /validate\(createOrderSchema\)/);
+  assert.doesNotMatch(orderRoutes, /createOrderSchema/);
+  assert.doesNotMatch(orderValidation, /createOrderSchema/);
+  assert.match(sellerRoutes, /Retired direct order creation endpoint/);
+  assert.match(paymentRoutes, /\/initiate-product/);
   assert.match(service, /Checkout idempotency token is required/);
   assert.match(service, /SELECT \* FROM product_orders WHERE client_checkout_token = \$1 FOR UPDATE/);
   assert.match(service, /lock:order_create:\$\{normalizedCheckoutToken\}/);
@@ -418,6 +555,41 @@ test('payment completion resolves orders only from explicit order metadata', () 
   assert.doesNotMatch(core, /metadataOrderId/);
 });
 
+test('database payment status values cover every runtime payment status', () => {
+  const core = read('src/core/CorePaymentService.js');
+  const enums = read('src/shared/constants/enums.js');
+  const schemaCheck = read('src/loaders/schemaCheck.js');
+  const enumMigration = read('migrations/20260509010000_sync_payment_status_values.sql');
+  const columnMigration = read('migrations/20260509010100_enforce_payment_status_columns.sql');
+
+  for (const status of [
+    'pending',
+    'completed',
+    'failed',
+    'cancelled',
+    'success',
+    'paid',
+    'manual_review_required',
+    'payment_mapping_failed',
+    'compensation_required'
+  ]) {
+    assert.match(enumMigration, new RegExp(`'${status}'`));
+    assert.match(columnMigration, new RegExp(`'${status}'`));
+  }
+
+  assert.match(enums, /PAID:\s*'paid'/);
+  assert.match(core, /PaymentStatus\.PAID/);
+  assert.match(enumMigration, /CREATE TYPE public\.payment_status AS ENUM/);
+  assert.match(enumMigration, /ALTER TYPE public\.payment_status ADD VALUE IF NOT EXISTS 'compensation_required'/);
+  assert.match(columnMigration, /ALTER COLUMN status TYPE public\.payment_status/);
+  assert.match(columnMigration, /ALTER COLUMN payment_status TYPE public\.payment_status/);
+  assert.match(columnMigration, /Cannot convert payments\.status to payment_status/);
+  assert.match(columnMigration, /Cannot convert product_orders\.payment_status to payment_status/);
+  assert.match(schemaCheck, /REQUIRED_PAYMENT_STATUS_VALUES/);
+  assert.match(schemaCheck, /missing_payment_status_enum_value/);
+  assert.match(schemaCheck, /payment_status_column_type_mismatch/);
+});
+
 test('provider payment lookups cannot fall through to internal payment ids', () => {
   const core = read('src/core/CorePaymentService.js');
   const paymentService = read('src/services/payment.service.js');
@@ -432,12 +604,12 @@ test('provider payment lookups cannot fall through to internal payment ids', () 
 });
 
 test('payout callback references cannot resolve ambiguously across withdrawals', () => {
-  const service = read('src/services/withdrawal.service.js');
+  const stateMachine = read('src/services/payoutCallbackStateMachine.service.js');
   const migration = read('migrations/20260508020000_provider_callback_hardening.sql');
 
-  assert.match(service, /matchedRequests\.length > 1/);
-  assert.match(service, /PAYOUT_REFERENCE_AMBIGUOUS/);
-  assert.match(service, /Ambiguous payout callback reference rejected before mutation/);
+  assert.match(stateMachine, /matchedRequests\.length > 1/);
+  assert.match(stateMachine, /PAYOUT_REFERENCE_AMBIGUOUS/);
+  assert.match(stateMachine, /Ambiguous payout callback reference rejected before mutation/);
   assert.match(migration, /payout_provider_attempts_provider_reference_unique/);
   assert.match(migration, /withdrawal_requests_provider_reference_unique/);
 });
@@ -468,6 +640,31 @@ test('fulfillment worker delegates claiming and processing to queue service', ()
   assert.match(queue, /UPDATE fulfillment_jobs fj/);
   assert.match(queue, /FULFILLMENT_WORKER_CONCURRENCY/);
   assert.match(queue, /Promise\.allSettled/);
+  assert.match(queue, /OrderFulfillmentTransitionService\.executeFulfillment\(client,\s*order\)/);
+  assert.doesNotMatch(queue, /await import\('\.\/order\.service\.js'\)/);
+  assert.doesNotMatch(queue, /OrderService\.executeFulfillment/);
+});
+
+test('fulfillment transitions are isolated from order service orchestration', () => {
+  const orderService = read('src/services/order.service.js');
+  const transitionService = read('src/services/orderFulfillmentTransition.service.js');
+
+  assert.match(orderService, /OrderFulfillmentTransitionService\.executeFulfillment\(client,\s*order\)/);
+  assert.match(transitionService, /class OrderFulfillmentTransitionService/);
+  assert.match(transitionService, /static async completePhysicalOrder\(client,\s*order,\s*items\)/);
+  assert.match(transitionService, /static async completeServiceOrder\(client,\s*order\)/);
+  assert.match(transitionService, /static async completeDigitalOrder\(client,\s*order,\s*items\)/);
+  assert.match(transitionService, /InventoryReservationService\.commitReservedInventory\(client,\s*items\)/);
+  assert.match(transitionService, /BookingService\.finalizeSlot\(client,\s*order\.id\)/);
+  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.FULFILLMENT_PENDING/);
+  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.BOOKED/);
+  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.DELIVERY_PENDING/);
+  assert.doesNotMatch(orderService, /static async _completePhysicalOrder/);
+  assert.doesNotMatch(orderService, /static async _completeServiceOrder/);
+  assert.doesNotMatch(orderService, /static async _completeDigitalOrder/);
+  assert.doesNotMatch(orderService, /static async _grantDigitalAccessFlow/);
+  assert.doesNotMatch(orderService, /static async _finalizeServiceSlot/);
+  assert.doesNotMatch(orderService, /BookingService/);
 });
 
 test('fulfillment enqueue never reopens completed jobs', () => {
@@ -489,12 +686,36 @@ test('deadline reservation cleanup uses locked shared release helper', () => {
 });
 
 test('inventory finalization fails closed instead of masking reserved underflow', () => {
-  const orderService = read('src/services/order.service.js');
+  const inventoryService = read('src/services/inventoryReservation.service.js');
 
-  assert.match(orderService, /reserved_quantity = reserved_quantity - \$1/);
-  assert.match(orderService, /AND reserved_quantity >= \$1/);
-  assert.match(orderService, /Reserved inventory invariant failed/);
-  assert.doesNotMatch(orderService, /reserved_quantity = GREATEST\(0, reserved_quantity - \$1\)/);
+  assert.match(inventoryService, /reserved_quantity = p\.reserved_quantity - v\.qty/);
+  assert.match(inventoryService, /AND p\.reserved_quantity >= v\.qty/);
+  assert.match(inventoryService, /Reserved inventory invariant failed/);
+  assert.match(inventoryService, /COALESCE\(LOWER\(p\.product_type::text\), ''\) <> 'digital'/);
+  assert.doesNotMatch(inventoryService, /reserved_quantity = GREATEST\(0, reserved_quantity - \$1\)/);
+});
+
+test('order service delegates inventory reservation lifecycle to dedicated service', () => {
+  const orderService = read('src/services/order.service.js');
+  const reservationRelease = read('src/shared/utils/reservationRelease.js');
+  const inventoryService = read('src/services/inventoryReservation.service.js');
+  const transitionService = read('src/services/orderFulfillmentTransition.service.js');
+
+  assert.match(orderService, /InventoryReservationService\.enrichItemsWithProductData\(client,\s*items\)/);
+  assert.match(orderService, /InventoryReservationService\.checkInventory\(items\)/);
+  assert.match(orderService, /InventoryReservationService\.reserveInventory\(client,\s*items\)/);
+  assert.match(orderService, /InventoryReservationService\.releaseOrderInventory\(client,\s*orderId\)/);
+  assert.match(transitionService, /InventoryReservationService\.commitReservedInventory\(client,\s*items\)/);
+  assert.match(reservationRelease, /InventoryReservationService\.releaseOrderInventory\(client,\s*orderId\)/);
+  assert.match(inventoryService, /static async reserveInventory\(client,\s*items\)/);
+  assert.match(inventoryService, /static async releaseInventory\(client,\s*items\)/);
+  assert.match(inventoryService, /static async commitReservedInventory\(client,\s*items\)/);
+  assert.doesNotMatch(orderService, /static async _enrichItemsWithProductData/);
+  assert.doesNotMatch(orderService, /static async _reserveInventory/);
+  assert.doesNotMatch(orderService, /static async _releaseInventory/);
+  assert.doesNotMatch(orderService, /static _checkInventory/);
+  assert.doesNotMatch(orderService, /static async _finalizeInventory/);
+  assert.doesNotMatch(orderService, /ProductModel\.commit/);
 });
 
 test('WhatsApp delivery suppresses duplicate notifications', () => {
@@ -507,25 +728,32 @@ test('WhatsApp delivery suppresses duplicate notifications', () => {
 
 test('buyer product grid uses React Query cache instead of local fetch effect churn', () => {
   const productGrid = read('../src/components/ProductGrid.tsx');
+  const productGridHook = read('../src/components/product-grid/usePublicProductsGrid.ts');
 
-  assert.match(productGrid, /useQuery/);
-  assert.match(productGrid, /queryKey:\s*\['public-products'/);
-  assert.match(productGrid, /staleTime:\s*60_000/);
+  assert.match(productGrid, /usePublicProductsGrid/);
+  assert.match(productGridHook, /useQuery/);
+  assert.match(productGridHook, /queryKey:\s*\['public-products'/);
+  assert.match(productGridHook, /staleTime:\s*60_000/);
   assert.doesNotMatch(productGrid, /requestCache/);
   assert.doesNotMatch(productGrid, /fetchProducts/);
   assert.doesNotMatch(productGrid, /useEffect\(/);
+  assert.doesNotMatch(productGridHook, /useEffect\(/);
 });
 
 test('seller dashboard summary uses React Query cache and avoids page reload refreshes', () => {
   const sellerDashboard = read('../src/components/seller/SellerDashboard.tsx');
+  const sellerDashboardDataHook = read('../src/components/seller/dashboard/hooks/useSellerDashboardData.ts');
+  const sellerDashboardQueryKeys = read('../src/components/seller/dashboard/queryKeys.ts');
   const productCard = read('../src/components/ProductCard.tsx');
   const adminDashboard = read('../src/pages/admin/NewDashboardPage.tsx');
 
-  assert.match(sellerDashboard, /useQuery/);
-  assert.match(sellerDashboard, /queryKey:\s*\['seller-dashboard', 'summary'\]/);
-  assert.match(sellerDashboard, /staleTime:\s*60_000/);
-  assert.match(sellerDashboard, /queryClient\.fetchQuery/);
-  assert.match(sellerDashboard, /queryClient\.invalidateQueries/);
+  assert.match(sellerDashboard, /useSellerDashboardData/);
+  assert.match(sellerDashboardDataHook, /useQuery/);
+  assert.match(sellerDashboardQueryKeys, /products:\s*\['seller-dashboard', 'products'\]/);
+  assert.match(sellerDashboardQueryKeys, /analytics:\s*\['seller-dashboard', 'analytics'\]/);
+  assert.match(sellerDashboardDataHook, /staleTime:\s*60_000/);
+  assert.match(sellerDashboardDataHook, /queryClient\.fetchQuery/);
+  assert.match(sellerDashboardDataHook, /queryClient\.invalidateQueries/);
   assert.doesNotMatch(sellerDashboard, /window\.location\.reload/);
   assert.doesNotMatch(productCard, /Math\.random/);
   assert.doesNotMatch(adminDashboard, /Math\.random/);
@@ -536,7 +764,11 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
 });
 
 test('global auth revalidates on TTL expiry, route role change, focus, and visibility restore', () => {
-  const authContext = read('../src/contexts/GlobalAuthContext.tsx');
+  const authContext = read('../src/contexts/AuthCoreContext.tsx');
+  const globalAuthContext = read('../src/contexts/GlobalAuthContext.tsx');
+  const buyerAuthContext = read('../src/contexts/BuyerAuthContext.tsx');
+  const sellerAuthContext = read('../src/contexts/SellerAuthContext.tsx');
+  const adminAuthContext = read('../src/contexts/AdminAuthContext.tsx');
 
   assert.match(authContext, /lastRouteRoleRef/);
   assert.match(authContext, /routeRoleChanged/);
@@ -546,6 +778,15 @@ test('global auth revalidates on TTL expiry, route role change, focus, and visib
   assert.match(authContext, /document\.visibilityState === 'visible'/);
   assert.match(authContext, /checkAuth\(true\)/);
   assert.match(authContext, /window\.removeEventListener\('focus', revalidateOnResume\)/);
+  assert.match(authContext, /export function AuthCoreProvider/);
+  assert.doesNotMatch(authContext, /BuyerAuthContext\.Provider|SellerAuthContext\.Provider|AdminAuthContext\.Provider/);
+  assert.match(globalAuthContext, /<AuthCoreProvider>/);
+  assert.match(globalAuthContext, /<BuyerAuthProvider>/);
+  assert.match(globalAuthContext, /<SellerAuthProvider>/);
+  assert.match(globalAuthContext, /<AdminAuthProvider>/);
+  assert.match(buyerAuthContext, /export function BuyerAuthProvider/);
+  assert.match(sellerAuthContext, /export function SellerAuthProvider/);
+  assert.match(adminAuthContext, /export function AdminAuthProvider/);
 });
 
 test('public pagination and lists use deterministic ordering', () => {
@@ -566,18 +807,28 @@ test('webhook rate limiting uses Redis when available with local fallback', () =
 });
 
 test('shadow completion and deadline crons cannot bypass hardened services', () => {
-  const completionRetry = read('src/cron/completionRetryCron.js');
-  const orderDeadlineCron = read('src/cron/orderDeadlineCron.js');
+  const coreOrder = read('src/core/CoreOrderService.js');
+  const cronLoader = read('src/loaders/cron.js');
+  const index = read('src/index.js');
   const shadowOrder = read('src/modules/orders/order.service.js');
   const paymentCron = read('src/cron/paymentCron.js');
+  const fulfillmentWorker = read('src/cron/fulfillmentWorker.js');
+  const reconciliation = read('src/cron/reconciliationEngine.js');
 
-  assert.match(completionRetry, /FulfillmentQueueService\.enqueue\(null,\s*orderId\)/);
-  assert.match(completionRetry, /Deprecated shadow cron/);
-  assert.doesNotMatch(completionRetry, /OrderService\.completeOrder/);
+  assert.match(coreOrder, /USE_MODULAR_ORDERS is hard-disabled/);
+  assert.doesNotMatch(coreOrder, /getModularService/);
+  assert.doesNotMatch(coreOrder, /getActiveService/);
+  assert.doesNotMatch(coreOrder, /\.\.\/modules\/orders\/order\.service\.js/);
+  assert.doesNotMatch(coreOrder, /falling back to legacy/);
+  assert.equal(exists('src/cron/completionRetryCron.js'), false);
+  assert.equal(exists('src/cron/orderDeadlineCron.js'), false);
+  assert.doesNotMatch(cronLoader, /completionRetryCron|orderDeadlineCron/);
+  assert.doesNotMatch(index, /completionRetryCron|orderDeadlineCron/);
+  assert.match(paymentCron, /FulfillmentQueueService\.enqueue\(null,\s*payment\.order_id\)/);
+  assert.match(fulfillmentWorker, /FulfillmentQueueService\.processJobs/);
+  assert.match(reconciliation, /FulfillmentQueueService\.enqueue\(null,\s*order\.id\)/);
   assert.doesNotMatch(paymentCron, /legacy handlePaydCallback/);
   assert.doesNotMatch(paymentCron, /handlePaydCallback has an idempotency check/);
-  assert.match(orderDeadlineCron, /OrderDeadlineService\.runAllChecks/);
-  assert.doesNotMatch(orderDeadlineCron, /UPDATE product_orders[\s\S]*status = 'FAILED'/);
   assert.match(shadowOrder, /Deprecated modules\/orders service delegated/);
   assert.match(shadowOrder, /ActiveOrderService\.createOrder/);
   assert.match(shadowOrder, /ActiveOrderService\.updateOrderStatus/);

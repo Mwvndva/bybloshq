@@ -50,7 +50,7 @@ router.get('/analytics', analyticsController.getSellerAnalytics);
 // Seller orders
 router.route('/orders')
   .get(orderController.getSellerOrders)  // Get all orders for the current seller
-  .post(orderController.createOrder);    // Create a new order
+  .post(orderController.createOrder);    // Retired direct order creation endpoint
 
 router.route('/orders/:id')
   .get(orderController.getOrderById)     // Get a specific order
