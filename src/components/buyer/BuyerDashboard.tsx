@@ -476,7 +476,7 @@ function BuyerDashboard() {
     }}>
       {/* Header */}
       <div style={{
-        padding: '8px 18px 10px',
+        padding: '16px 18px 14px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -499,11 +499,18 @@ function BuyerDashboard() {
 
       {/* Search bar */}
       {(activeSection === 'shop' || activeSection === 'shops') && (
-        <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
+        <div style={{
+          padding: '6px 18px 20px',
+          flexShrink: 0,
+          display: 'flex',
+          justifyContent: 'center',
+        }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
             background: '#080808', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 10,
             padding: '0 12px', height: 36,
+            width: '100%',
+            maxWidth: activeSection === 'shop' ? 760 : 560,
           }}>
             <Search size={14} color="rgba(255,255,255,0.78)" style={{ flexShrink: 0 }} />
             <input
@@ -524,7 +531,7 @@ function BuyerDashboard() {
         flex: 1,
         overflowY: 'auto',
         overflowX: 'hidden',
-        padding: '0 18px 16px',
+        padding: '6px 18px 16px',
         WebkitOverflowScrolling: 'touch',
         scrollBehavior: 'smooth',
         overscrollBehavior: 'contain',
