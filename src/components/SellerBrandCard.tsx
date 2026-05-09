@@ -227,21 +227,21 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
             </div>
 
             <div className="mt-3 grid grid-cols-3 gap-1.5">
-                <div className="rounded-xl bg-white/10 px-2 py-2 text-center">
+                <div className="px-2 py-1.5 text-center">
                     <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
                         <Users className="h-3 w-3" />
                         <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Followers</span>
                     </div>
                     <p className="text-sm font-black tabular-nums text-white">{clientCount}</p>
                 </div>
-                <div className="rounded-xl bg-white/10 px-2 py-2 text-center">
+                <div className="px-2 py-1.5 text-center">
                     <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
                         <Heart className="h-3 w-3" />
                         <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Saved</span>
                     </div>
                     <p className="text-sm font-black tabular-nums text-white">{wishlistCount}</p>
                 </div>
-                <div className="rounded-xl bg-white/10 px-2 py-2 text-center">
+                <div className="px-2 py-1.5 text-center">
                     <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
                         <MousePointerClick className="h-3 w-3" />
                         <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Clicks</span>
