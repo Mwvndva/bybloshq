@@ -1,4 +1,5 @@
 import { pool } from '../shared/db/database.js';
+import { PaymentStatus } from '../shared/constants/enums.js';
 import logger from '../shared/utils/logger.js';
 
 const REQUIRED_TABLES = [
@@ -63,6 +64,8 @@ const REQUIRED_INDEXES = [
     'idx_event_recipient_deliveries_retry'
 ];
 
+const REQUIRED_PAYMENT_STATUS_VALUES = Object.values(PaymentStatus);
+
 async function tableExists(tableName) {
     const { rowCount } = await pool.query(
         `SELECT 1
@@ -109,6 +112,63 @@ async function columnIsNotNull(tableName, columnName) {
     return rows[0]?.is_nullable === 'NO';
 }
 
+async function enumValues(typeName) {
+    const { rows } = await pool.query(
+        `SELECT e.enumlabel AS value
+         FROM pg_type t
+         JOIN pg_namespace n ON n.oid = t.typnamespace
+         JOIN pg_enum e ON e.enumtypid = t.oid
+         WHERE n.nspname = 'public'
+           AND t.typname = $1
+         ORDER BY e.enumsortorder`,
+        [typeName]
+    );
+    return rows.map(row => row.value);
+}
+
+async function columnDefinition(tableName, columnName) {
+    const { rows } = await pool.query(
+        `SELECT data_type, udt_name, character_maximum_length
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = $1
+           AND column_name = $2`,
+        [tableName, columnName]
+    );
+    return rows[0] || null;
+}
+
+async function verifyPaymentStatusStorage(failures) {
+    const values = await enumValues('payment_status');
+    if (!values.length) {
+        failures.push({ type: 'missing_enum_type', name: 'payment_status' });
+    } else {
+        const missing = REQUIRED_PAYMENT_STATUS_VALUES.filter(value => !values.includes(value));
+        for (const value of missing) {
+            failures.push({ type: 'missing_payment_status_enum_value', name: `payment_status.${value}` });
+        }
+    }
+
+    for (const [table, column] of [['payments', 'status'], ['product_orders', 'payment_status']]) {
+        const definition = await columnDefinition(table, column);
+        if (!definition) {
+            continue;
+        }
+
+        if (definition.data_type === 'USER-DEFINED' && definition.udt_name === 'payment_status') {
+            continue;
+        }
+
+        failures.push({
+            type: 'payment_status_column_type_mismatch',
+            name: `${table}.${column}`,
+            requiredType: 'payment_status',
+            actualType: definition.data_type,
+            actualUdtName: definition.udt_name
+        });
+    }
+}
+
 async function verifyAdvisoryLocks() {
     const { rows } = await pool.query(`SELECT pg_try_advisory_lock(hashtext($1)) AS locked`, ['schema-check']);
     if (rows[0]?.locked) {
@@ -150,6 +210,8 @@ export const verifyRequiredIndexes = async () => {
             failures.push({ type: 'nullable_required_column', name: 'product_orders.client_checkout_token' });
         }
     }
+
+    await verifyPaymentStatusStorage(failures);
 
     if (!(await verifyAdvisoryLocks())) {
         failures.push({ type: 'advisory_lock_unavailable', name: 'pg_try_advisory_lock(hashtext(...))' });

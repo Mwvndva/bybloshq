@@ -1,35 +1,5 @@
 import { z } from 'zod';
 
-// Schema for creating a new order
-const createOrderSchema = z.object({
-  items: z.array(
-    z.object({
-      productId: z.string().min(1, 'Product ID is required'),
-      name: z.string().min(1, 'Product name is required'),
-      price: z.number().positive('Price must be positive'),
-      quantity: z.number().int().min(1, 'Quantity must be at least 1'),
-      image: z.string().url().optional()
-    })
-  ).min(1, 'Order items cannot be empty'),
-
-  shippingAddress: z.object({
-    firstName: z.string().min(1, 'First name is required'),
-    lastName: z.string().min(1, 'Last name is required'),
-    email: z.string().email('Invalid email address'),
-    phone: z.string().min(1, 'Phone number is required'),
-    address: z.string().min(1, 'Address is required'),
-    city: z.string().min(1, 'City is required'),
-    state: z.string().min(1, 'State/Region is required'),
-    postalCode: z.string().min(1, 'Postal code is required'),
-    country: z.string().min(1, 'Country is required'),
-    additionalInfo: z.string().optional().default('')
-  }),
-
-  paymentMethod: z.enum(['paystack', 'payd']),
-
-  sellerId: z.number().int()
-});
-
 // Schema for updating order status
 const updateOrderStatusSchema = z.object({
   status: z.enum(['processing', 'shipped', 'delivered', 'cancelled', 'refunded']),
@@ -74,7 +44,6 @@ const trackOrderSchema = z.object({
 });
 
 export {
-  createOrderSchema,
   updateOrderStatusSchema,
   orderQuerySchema,
   orderIdSchema,

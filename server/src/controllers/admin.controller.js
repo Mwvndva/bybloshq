@@ -558,6 +558,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
     }
 
     const client = await pool.connect();
+    let updatedEventId = null;
     try {
       await client.query('BEGIN');
 
@@ -604,9 +605,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
         newBalance = await payoutService.refundToWallet(client, request);
       }
 
-      await client.query('COMMIT');
-
-      eventBus.emit(AppEvents.WITHDRAWAL.UPDATED, {
+      const updatedEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.UPDATED, {
         eventId: `withdrawal.updated:${request.id}:admin:${status}`,
         withdrawal: {
           ...request,
@@ -619,6 +618,11 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
         reason: reason || (status === 'failed' ? 'Rejected by admin' : null),
         newBalance
       });
+      updatedEventId = updatedEvent.eventId;
+
+      await client.query('COMMIT');
+
+      eventBus.dispatchAfterCommit(updatedEventId, 'AdminController.updateWithdrawalRequestStatus');
 
       res.status(200).json({
         status: 'success',

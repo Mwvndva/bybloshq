@@ -1,5 +1,5 @@
 import logger from '../shared/utils/logger.js';
-import WithdrawalService from '../services/withdrawal.service.js';
+import PayoutCallbackStateMachineService from '../services/payoutCallbackStateMachine.service.js';
 
 /**
  * Handles POST /api/callbacks/payd-payout.
@@ -25,7 +25,7 @@ export const handlePaydPayoutCallback = async (req, res) => {
     });
 
     try {
-        const result = await WithdrawalService.handleProviderCallback(data, {
+        const result = await PayoutCallbackStateMachineService.handleProviderCallback(data, {
             replayEventId: req.webhookSecurity.replayEventId,
             clientIp: req.ip
         });

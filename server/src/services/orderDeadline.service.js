@@ -346,13 +346,7 @@ class OrderDeadlineService {
 
             logger.info(`Released service payment for order ${order.order_number}: KSh ${order.seller_payout_amount}`);
 
-            setImmediate(() => {
-                eventBus.dispatchOutboxEvent(durableEvent.eventId)
-                    .catch(error => logger.error('[OrderDeadline] Durable fulfillment event dispatch failed', {
-                        eventId: durableEvent.eventId,
-                        error: error.message
-                    }));
-            });
+            eventBus.dispatchAfterCommit(durableEvent.eventId, 'OrderDeadlineService.releaseServicePayment');
 
             return true;
         } catch (error) {
@@ -371,15 +365,15 @@ class OrderDeadlineService {
      */
     async sendCancellationNotifications(order, reason) {
         try {
-            eventBus.emit(AppEvents.ORDER.CANCELLED, {
+            await eventBus.enqueueAndDispatch(AppEvents.ORDER.CANCELLED, {
                 eventId: `order.cancelled:${order.id}:deadline`,
                 order,
                 cancelledBy: 'deadline',
                 reason
-            });
-            logger.info(`Emitted cancellation notification event for order ${order.order_number}`);
+            }, 'OrderDeadlineService.sendCancellationNotifications');
+            logger.info(`Queued durable cancellation notification event for order ${order.order_number}`);
         } catch (error) {
-            logger.error(`Error emitting cancellation notification event for order ${order.order_number}:`, error);
+            logger.error(`Error queueing cancellation notification event for order ${order.order_number}:`, error);
         }
     }
 

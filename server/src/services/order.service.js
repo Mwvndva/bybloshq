@@ -12,9 +12,9 @@ import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendP
 import cacheService from './cache.service.js';
 import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../shared/utils/fulfillment.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
-import ProductModel from '../models/product.model.js';
-import BookingService from '../modules/bookings/booking.service.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import InventoryReservationService from './inventoryReservation.service.js';
+import OrderFulfillmentTransitionService from './orderFulfillmentTransition.service.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -48,6 +48,7 @@ class OrderService {
 
     const isManaged = !externalClient;
     const client = externalClient || await pool.connect();
+    let createdEventId = null;
     try {
       // 1. Acquire Lock (P1-7 FIX: Redis outage must NOT crash order creation)
       let acquired;
@@ -101,8 +102,8 @@ class OrderService {
         logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
         // 4. Enrich items with product data and verify inventory
-        await this._enrichItemsWithProductData(client, items);
-        this._checkInventory(items);
+        await InventoryReservationService.enrichItemsWithProductData(client, items);
+        InventoryReservationService.checkInventory(items);
 
         // 4d. ENRICH PRODUCT TYPE & VIRTUAL STATUS
         const primaryProductType = items[0]?.productType || metadata.product_type || 'physical';
@@ -261,12 +262,22 @@ class OrderService {
 
         // Perform the actual transition (idempotent resource lock)
         if (orderType === OrderType.PHYSICAL) {
-          await this._reserveInventory(client, items);
+          await InventoryReservationService.reserveInventory(client, items);
         }
 
         await Order.updateStatusWithSideEffects(client, order.id, targetStatus, 'pending');
 
+        const createdEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.CREATED, {
+          eventId: `order.created:${order.id}`,
+          order,
+          items,
+          buyer,
+          sellerId
+        });
+        createdEventId = createdEvent.eventId;
+
         if (isManaged) await client.query('COMMIT');
+        if (isManaged) eventBus.dispatchAfterCommit(createdEventId, 'OrderService.createOrder');
         logger.info(`OrderService: Order ${order.id} created successfully`);
 
         return order;
@@ -417,10 +428,10 @@ class OrderService {
             notes: 'Status updated by seller'
           };
 
-          eventBus.emit(AppEvents.ORDER.UPDATED, {
+          await eventBus.enqueueAndDispatch(AppEvents.ORDER.UPDATED, {
             eventId: `order.updated:${orderId}:${newStatus}`,
             payload: notificationPayload
-          });
+          }, 'OrderService.updateOrderStatus');
         }
       } catch (e) {
         logger.error('Error sending status notification:', e);
@@ -441,6 +452,7 @@ class OrderService {
    */
   static async cancelOrder(orderId, reason = null) {
     const client = await pool.connect();
+    let cancelledEventId = null;
     try {
       await client.query('BEGIN');
 
@@ -486,16 +498,22 @@ class OrderService {
         const statusForRelease = String(order.status || '').toUpperCase();
         const canReleaseInventory = ['CREATED', 'RESERVED', 'HELD', 'PAYMENT_PENDING', 'FAILED', 'EXPIRED'].includes(statusForRelease);
         if (order.order_type === OrderType.PHYSICAL && canReleaseInventory) {
-          const { rows: items } = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [orderId]);
-          // Map structure for _releaseInventory
-          const formattedItems = items.map(i => ({ productId: i.product_id, quantity: i.quantity, trackInventory: true }));
-          await this._releaseInventory(client, formattedItems);
+          await InventoryReservationService.releaseOrderInventory(client, orderId);
         } else if (order.order_type === OrderType.PHYSICAL) {
           logger.warn(`[RESERVATION-RELEASE] Skipped inventory release for Order ${orderId} in status ${order.status}`);
         }
+
+        const cancelledEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.CANCELLED, {
+          eventId: `order.cancelled:${orderId}`,
+          order: updatedOrder,
+          cancelledBy: reason || 'system',
+          reason
+        });
+        cancelledEventId = cancelledEvent.eventId;
       }
 
       await client.query('COMMIT');
+      eventBus.dispatchAfterCommit(cancelledEventId, 'OrderService.cancelOrder');
 
       // 6. Send Notification
       try {
@@ -556,9 +574,8 @@ class OrderService {
           };
 
           // P1-2 FIX: Direct WhatsApp calls REMOVED from here.
-          // The EventBus listener in order.events.js (ORDER.CANCELLED event)
-          // handles buyer and seller notifications to prevent duplicate messages.
-          // The CoreOrderService emits ORDER.CANCELLED after cancelOrder returns.
+          // The durable ORDER.CANCELLED outbox event handles buyer and seller
+          // notifications after commit to prevent duplicate messages.
 
           // Keep logistics notification ONLY — it is NOT handled by the EventBus.
           // Removing it would silently break courier notifications.
@@ -643,125 +660,6 @@ class OrderService {
     }
   }
 
-  static async _enrichItemsWithProductData(client, items) {
-    const productIds = items.map(item => Number.parseInt(item.productId, 10));
-    const productsResult = await client.query(
-      'SELECT id, price, product_type::text as product_type, is_digital, service_options, track_inventory, quantity, reserved_quantity FROM products WHERE id = ANY($1)',
-      [productIds]
-    );
-    const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
-
-    items.forEach(item => {
-      const prod = productsMap.get(Number.parseInt(item.productId, 10));
-      if (prod) {
-        item.dbPrice = prod.price;
-        item.productType = prod.product_type;
-        item.isDigital = prod.is_digital;
-        item.trackInventory = prod.track_inventory;
-        item.availableQuantity = prod.quantity;
-
-        if (!item.productType && prod.service_options) {
-          item.productType = ProductType.SERVICE;
-        }
-      }
-    });
-  }
-
-  static _checkInventory(items) {
-    for (const item of items) {
-      if (item.trackInventory === true) {
-        const requestedQty = item.quantity || 1;
-
-        if (item.availableQuantity === null || item.availableQuantity === undefined) {
-          throw new Error(`Product "${item.name || item.productId}" has inventory tracking enabled but no quantity set`);
-        }
-
-        if (item.availableQuantity < requestedQty) {
-          throw new Error(`Insufficient stock for "${item.name || item.productId}". Available: ${item.availableQuantity}, Requested: ${requestedQty}`);
-        }
-
-        if (item.availableQuantity === 0) {
-          throw new Error(`Product "${item.name || item.productId}" is out of stock`);
-        }
-      }
-    }
-  }
-
-  /**
-   * PIN-03: ATOMIC BULK INVENTORY RESERVATION
-   * Uses UNNEST for a single-query bulk update instead of N queries.
-   * Atomicity preserved via the shared transaction client.
-   * ROLLBACK is handled by the caller's transaction if any row fails.
-   */
-  static async _reserveInventory(client, items) {
-    const trackable = items.filter(i => {
-      const productType = String(i.productType || i.product_type || '').toUpperCase();
-      return i.trackInventory === true && productType !== 'DIGITAL';
-    });
-    if (trackable.length === 0) return;
-
-    // Build parallel arrays for UNNEST
-    const ids = trackable.map(i => Number.parseInt(i.productId, 10));
-    const qtys = trackable.map(i => Number.parseInt(i.quantity, 10) || 1);
-
-    // Single bulk UPDATE using UNNEST — only updates rows where quantity >= requested
-    const { rows } = await client.query(
-      `UPDATE products AS p
-       SET quantity = p.quantity - v.qty,
-           reserved_quantity = p.reserved_quantity + v.qty,
-           updated_at = NOW()
-       FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
-       WHERE p.id = v.id AND p.quantity >= v.qty
-       RETURNING p.id, p.quantity, p.reserved_quantity`,
-      [ids, qtys]
-    );
-
-    // Verify every tracked item was successfully reserved
-    const reservedIds = new Set(rows.map(r => r.id));
-    const failed = trackable.filter(i => !reservedIds.has(Number.parseInt(i.productId, 10)));
-    if (failed.length > 0) {
-      const failedIds = failed.map(i => i.productId).join(', ');
-      throw new Error(`Inventory reservation failed for product(s) ${failedIds}. Items may have just sold out.`);
-    }
-
-    logger.info(`[RESERVATION] Bulk reserved inventory for ${rows.length} product(s)`);
-  }
-
-  /**
-   * PIN-04: ATOMIC BULK RELEASE RESERVATION
-   * Restores quantity for multiple items in one query (cancellation/timeout).
-   */
-  static async _releaseInventory(client, items) {
-    const trackable = items.filter(i => i.trackInventory === true);
-    if (trackable.length === 0) return;
-
-    const ids = trackable.map(i => Number.parseInt(i.productId, 10));
-    const qtys = trackable.map(i => Number.parseInt(i.quantity, 10) || 1);
-
-    const { rows } = await client.query(
-      `UPDATE products AS p
-       SET quantity = p.quantity + v.qty,
-           reserved_quantity = p.reserved_quantity - v.qty,
-           updated_at = NOW()
-       FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
-       WHERE p.id = v.id
-         AND p.reserved_quantity >= v.qty
-       RETURNING p.id, p.quantity, p.reserved_quantity`,
-      [ids, qtys]
-    );
-
-    if (rows.length !== trackable.length) {
-      logger.error('[RESERVATION-RELEASE] Reserved inventory invariant failed during release', {
-        expected: trackable.length,
-        released: rows.length,
-        ids
-      });
-      throw new Error('Reserved inventory invariant failed during release');
-    }
-
-    logger.info(`[RESERVATION-RELEASE] Bulk released inventory for ${rows.length} product(s)`);
-  }
-
   /**
    * PIN-07: ATOMIC SERVICE SLOT RESERVATION
    * Ensures no two buyers can book the same slot
@@ -817,81 +715,6 @@ class OrderService {
 
     logger.info(`[SLOT-RESERVATION] Reserved slot ${timeSlot.toISOString()} for service ${productId} (Order ${orderId})`);
     return result.rows[0];
-  }
-
-  /**
-   * PIN-05: FINALIZE RESERVATION
-   * Simply decrements reserved_quantity (used after successful payment)
-   */
-  static async _finalizeInventory(client, items) {
-    for (const item of items) {
-      if (item.trackInventory === true) {
-        const qty = Number.parseInt(item.quantity, 10) || 1;
-        const productId = Number.parseInt(item.productId, 10);
-
-        const query = `
-          UPDATE products 
-          SET 
-            reserved_quantity = reserved_quantity - $1,
-            updated_at = NOW()
-          WHERE id = $2
-            AND reserved_quantity >= $1
-          RETURNING id, reserved_quantity
-        `;
-
-        const finalizeResult = await client.query(query, [qty, productId]);
-        if (finalizeResult.rowCount !== 1) {
-          logger.error(`[RESERVATION-FINALIZE-ERROR] Reserved inventory invariant failed for product ${productId}.`);
-          throw new Error(`Reserved inventory invariant failed for product ${productId}`);
-        }
-        logger.info(`[RESERVATION-FINALIZED] Finalized ${qty} units for product ${productId}.`);
-      }
-    }
-  }
-
-  /**
-   * PIN-09: GRANT DIGITAL ACCESS
-   * Records digital entitlement after payment
-   */
-  static async _grantDigitalAccess(client, orderId, buyerId, items) {
-    for (const item of items) {
-      if (item.isDigital) {
-        const productId = Number.parseInt(item.productId, 10);
-
-        const query = `
-          INSERT INTO user_digital_access (user_id, product_id, order_id, access_status)
-          VALUES ($1, $2, $3, 'ACTIVE')
-          ON CONFLICT (user_id, product_id) DO UPDATE
-          SET 
-            access_status = 'ACTIVE',
-            updated_at = NOW()
-          RETURNING id
-        `;
-
-        await client.query(query, [buyerId, productId, orderId]);
-        logger.info(`[DIGITAL-ACCESS] Granted access for product ${productId} to user ${buyerId} (Order ${orderId})`);
-      }
-    }
-  }
-
-  /**
-   * PIN-10: FINALIZE SERVICE SLOT
-   * Transitions slot from RESERVED to BOOKED
-   */
-  static async _finalizeServiceSlot(client, orderId) {
-    const query = `
-      UPDATE service_slots 
-      SET 
-        status = 'BOOKED',
-        updated_at = NOW()
-      WHERE reserved_by_order_id = $1 AND status = 'RESERVED'
-      RETURNING id
-    `;
-
-    const { rows } = await client.query(query, [orderId]);
-    if (rows.length > 0) {
-      logger.info(`[SLOT-FINALIZED] Finalized booking for Order ${orderId}`);
-    }
   }
 
   static async _handleLocationUpdate(buyerId, buyerLocation, metadata) {
@@ -980,6 +803,7 @@ class OrderService {
   static async completeOrder(payment, externalClient = null) {
     const client = externalClient || await pool.connect();
     const shouldManageTransaction = !externalClient;
+    let paidEventId = null;
 
     try {
       const { metadata = {} } = payment;
@@ -992,10 +816,16 @@ class OrderService {
       if (rows.length === 0) throw new Error('Order not found');
       const order = rows[0];
 
-      // Execute fulfillment logic
-      await this.executeFulfillment(client, order);
+      await OrderFulfillmentTransitionService.executeFulfillment(client, order);
+      const paidEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.PAID, {
+        eventId: `order.paid:${order.id}:${payment.id}`,
+        order,
+        paymentId: payment.id
+      });
+      paidEventId = paidEvent.eventId;
 
       if (shouldManageTransaction) await client.query('COMMIT');
+      if (shouldManageTransaction) eventBus.dispatchAfterCommit(paidEventId, 'OrderService.completeOrder');
       return { success: true };
     } catch (err) {
       if (shouldManageTransaction) await client.query('ROLLBACK');
@@ -1006,130 +836,8 @@ class OrderService {
     }
   }
 
-  /**
-   * Execute fulfillment process for a PAID order.
-   * Called by FulfillmentQueueWorker or legacy completeOrder.
-   */
   static async executeFulfillment(client, order) {
-    const orderId = order.id;
-
-    // 1. Verify Status is PAID
-    if (order.status !== OrderStatus.PAID) {
-      logger.warn(`[FULFILLMENT] Order ${orderId} is not in PAID status (Current: ${order.status}). skipping.`);
-      return;
-    }
-
-    // 2. Fetch Items
-    const itemsQuery = `
-        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options, p.track_inventory, p.name as product_name
-        FROM order_items oi
-        LEFT JOIN products p ON oi.product_id = p.id
-        WHERE oi.order_id = $1
-      `;
-    const { rows: items } = await client.query(itemsQuery, [orderId]);
-
-    const orderType = order.order_type;
-    logger.info(`[FULFILLMENT] Starting execution for Order ${orderId} (${orderType})`);
-
-    if (orderType === OrderType.PHYSICAL) {
-      await this._completePhysicalOrder(client, order, items);
-    } else if (orderType === OrderType.SERVICE) {
-      await this._completeServiceOrder(client, order, items);
-    } else if (orderType === OrderType.DIGITAL) {
-      await this._completeDigitalOrder(client, order, items);
-    } else {
-      throw new Error(`Unknown order type: ${orderType}`);
-    }
-  }
-
-  /**
-   * Complete Physical Order: PAID -> FULFILLMENT_PENDING -> FULFILLED
-   */
-  static async _completePhysicalOrder(client, order, items) {
-    // 1. Transition to FULFILLMENT_PENDING
-    assertValidTransition(order.status, OrderStatus.FULFILLMENT_PENDING, order.id);
-    await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLMENT_PENDING, 'completed');
-
-    // 2. Commit Inventory (Decrement reserved_quantity)
-    for (const item of items) {
-      if (item.track_inventory) {
-        const committed = await ProductModel.commit(client, item.product_id, item.quantity);
-        if (!committed) {
-          throw new Error(`Reserved inventory missing for product ${item.product_id} on order ${order.id}`);
-        }
-      }
-    }
-
-    // 3. Initiate logistics/notifications
-    try {
-      // Re-fetch order status since it changed
-      const { rows } = await client.query('SELECT * FROM product_orders WHERE id = $1 FOR UPDATE', [order.id]);
-      const currentOrder = rows[0];
-
-      await this._initiatePhysicalFulfillment(currentOrder, items);
-
-      // 4. Transition to FULFILLED
-      assertValidTransition(currentOrder.status, OrderStatus.FULFILLED, order.id);
-      await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLED, 'completed');
-    } catch (err) {
-      logger.error(`[FULFILLMENT-PHYSICAL] Failed initiation for Order ${order.id}:`, err);
-      throw err;
-    }
-  }
-
-  /**
-   * Complete Service Order: PAID -> BOOKED
-   */
-  static async _completeServiceOrder(client, order, items) {
-    // 1. Transition to BOOKED
-    assertValidTransition(order.status, OrderStatus.BOOKED, order.id);
-    await this._finalizeServiceSlot(client, order.id);
-    await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.BOOKED, 'completed');
-
-    // Notifications are emitted by FulfillmentQueueService after the DB commit.
-  }
-
-  /**
-   * Complete Digital Order: PAID -> DELIVERY_PENDING -> DELIVERED
-   */
-  static async _completeDigitalOrder(client, order, items) {
-    // 1. Transition to DELIVERY_PENDING
-    assertValidTransition(order.status, OrderStatus.DELIVERY_PENDING, order.id);
-    await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.DELIVERY_PENDING, 'completed');
-
-    // 2. Grant Access
-    try {
-      await this._grantDigitalAccessFlow(client, order, items);
-
-      // 3. Transition to DELIVERED
-      assertValidTransition(OrderStatus.DELIVERY_PENDING, OrderStatus.DELIVERED, order.id);
-      await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.DELIVERED, 'completed');
-    } catch (err) {
-      logger.error(`[FULFILLMENT-DIGITAL] Failed delivery for Order ${order.id}:`, err);
-      throw err;
-    }
-  }
-
-  static async _initiatePhysicalFulfillment(order, items) {
-    logger.info(`[FULFILLMENT-PHYSICAL] DB fulfillment prepared for Order ${order.id}; notifications deferred until commit.`);
-  }
-
-  static async _grantDigitalAccessFlow(client, order, items) {
-    for (const item of items) {
-      if (item.is_digital) {
-        const accessToken = crypto.randomBytes(32).toString('hex');
-        await client.query(
-          `INSERT INTO digital_access (order_id, user_id, access_token)
-                   VALUES ($1, $2, $3)`,
-          [order.id, order.buyer_id, accessToken]
-        );
-      }
-    }
-    logger.info(`[FULFILLMENT-DIGITAL] Digital access granted for order ${order.id}; delivery notification is emitted after commit.`);
-  }
-
-  static async _finalizeServiceSlot(client, orderId) {
-    await BookingService.finalizeSlot(client, orderId);
+    return OrderFulfillmentTransitionService.executeFulfillment(client, order);
   }
 
   static async _processSellerPayout(client, order) {
@@ -1209,7 +917,7 @@ class OrderService {
 
           const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
-          eventBus.emit(AppEvents.ORDER.UPDATED, {
+          await eventBus.enqueueAndDispatch(AppEvents.ORDER.UPDATED, {
             eventId: `order.updated:${orderId}:${OrderStatus.COMPLETED}`,
             payload: {
               buyer: normalizedOrder.buyer,
@@ -1219,7 +927,7 @@ class OrderService {
               oldStatus: OrderStatus.COLLECTION_PENDING,
               notes: 'Status updated via dashboard'
             }
-          });
+          }, 'OrderService.markAsCollected');
         }
       } catch (e) {
         logger.error('Error sending collection notifications:', e);
@@ -1322,10 +1030,10 @@ class OrderService {
             notes: 'Service confirmed as done by buyer'
           };
 
-          eventBus.emit(AppEvents.ORDER.UPDATED, {
+          await eventBus.enqueueAndDispatch(AppEvents.ORDER.UPDATED, {
             eventId: `order.updated:${orderId}:${OrderStatus.COMPLETED}:receipt`,
             payload: notificationPayload
-          });
+          }, 'OrderService.confirmOrderReceipt');
         }
       } catch (e) {
         logger.error('Error sending confirmation notifications:', e);
@@ -1598,11 +1306,11 @@ class OrderService {
           normalizedOrder.downloadUrls = freshMeta.download_urls || freshMeta.downloadUrls || [];
         }
 
-        eventBus.emit(AppEvents.ORDER.FULFILLED, {
+        await eventBus.enqueueAndDispatch(AppEvents.ORDER.FULFILLED, {
           eventId: `order.fulfilled:${orderId}`,
           order: normalizedOrder,
           items
-        });
+        }, 'OrderService._handleOrderCompletionSideEffects');
 
         // Mark as sent
         await pool.query('UPDATE product_orders SET notification_sent = true WHERE id = $1', [orderId]);

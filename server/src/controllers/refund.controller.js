@@ -105,6 +105,7 @@ export const getRefundRequestById = async (req, res, next) => {
  */
 export const confirmRefundRequest = async (req, res, next) => {
   const client = await pool.connect();
+  let approvedEventId = null;
 
   try {
     const { id } = req.params;
@@ -182,11 +183,7 @@ export const confirmRefundRequest = async (req, res, next) => {
       [requestAmount, request.buyer_id]
     );
 
-    await client.query('COMMIT');
-
-    logger.info(`Refund request ${id} confirmed. Deducted KSh ${requestAmount} from buyer ${request.buyer_id}`);
-
-    eventBus.emit(AppEvents.REFUND.APPROVED, {
+    const approvedEvent = await eventBus.enqueueInTransaction(client, AppEvents.REFUND.APPROVED, {
       eventId: `refund.approved:${id}`,
       refund: {
         ...request,
@@ -196,6 +193,13 @@ export const confirmRefundRequest = async (req, res, next) => {
       },
       buyer
     });
+    approvedEventId = approvedEvent.eventId;
+
+    await client.query('COMMIT');
+
+    logger.info(`Refund request ${id} confirmed. Deducted KSh ${requestAmount} from buyer ${request.buyer_id}`);
+
+    eventBus.dispatchAfterCommit(approvedEventId, 'RefundController.confirmRefundRequest');
 
     res.status(200).json({
       status: 'success',
@@ -261,7 +265,7 @@ export const rejectRefundRequest = async (req, res, next) => {
 
     logger.info(`Refund request ${id} rejected`);
 
-    eventBus.emit(AppEvents.REFUND.REJECTED, {
+    await eventBus.enqueueAndDispatch(AppEvents.REFUND.REJECTED, {
       eventId: `refund.rejected:${id}`,
       refund: {
         id,
@@ -275,7 +279,7 @@ export const rejectRefundRequest = async (req, res, next) => {
         full_name,
         whatsapp_number
       }
-    });
+    }, 'RefundController.rejectRefundRequest');
 
     res.status(200).json({
       status: 'success',

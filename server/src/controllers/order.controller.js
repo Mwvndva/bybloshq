@@ -1,19 +1,18 @@
 /**
  * order.controller.js
  *
- * REFACTORED: Now delegates to CoreOrderService instead of directly to legacy services.
+ * Delegates runtime order actions to CoreOrderService.
  *
  * Architecture after refactor:
- *   OrderController → CoreOrderService → Legacy/Modular (via feature flags)
+ *   OrderController -> CoreOrderService -> hardened order service
  *
- * The CoreOrderService facade also emits ORDER.CREATED / ORDER.CANCELLED events
- * so WhatsApp and other side effects are fully decoupled from the transaction.
+ * The hardened order service owns durable order lifecycle outbox events so
+ * WhatsApp and other side effects are fully decoupled from the transaction.
  */
 import CoreOrderService from '../core/CoreOrderService.js';
 import Order from '../models/order.model.js';
 import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
-import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
 import { sanitizeOrder } from '../shared/utils/sanitize.js';
@@ -49,48 +48,11 @@ export const getSellerOrders = async (req, res) => {
 };
 
 export const createOrder = async (req, res) => {
-    try {
-        const checkoutToken = req.headers['idempotency-key']
-            || req.headers['x-checkout-token']
-            || req.body.checkout_token
-            || req.body.clientCheckoutToken
-            || req.body.checkoutAttemptId
-            || req.body.idempotencyKey
-            || req.body.metadata?.client_checkout_token;
-
-        if (typeof checkoutToken !== 'string' || !checkoutToken.trim()) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Checkout idempotency token is required'
-            });
-        }
-
-        // Assume request body contains necessary order details
-        // For a seller creating an order, we enforce their ID as sellerId
-        const orderData = {
-            ...req.body,
-            sellerId: req.user.sellerId,
-            idempotencyKey: checkoutToken.trim().slice(0, 160),
-            metadata: {
-                ...(req.body.metadata || {}),
-                client_checkout_token: checkoutToken.trim().slice(0, 160)
-            }
-        };
-
-        const order = await OrderService.createOrder(orderData);
-
-        const userType = req.user.userType || req.user.role;
-        res.status(201).json({
-            status: 'success',
-            data: { order: sanitizeOrder(order, userType) }
-        });
-    } catch (error) {
-        logger.error('Error creating order:', error);
-        res.status(500).json({
-            status: 'error',
-            message: error.message || 'Failed to create order'
-        });
-    }
+    return res.status(410).json({
+        status: 'error',
+        code: 'DIRECT_ORDER_CREATION_RETIRED',
+        message: 'Direct order creation is retired. Start checkout through /api/payments/initiate-product so order, payment, inventory, and fulfillment stay on the protected pipeline.'
+    });
 };
 
 export const getOrderById = async (req, res) => {

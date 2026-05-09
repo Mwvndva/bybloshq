@@ -72,7 +72,7 @@ const schedulePaymentProcessing = (options = {}) => {
 
 /**
  * P1-1 FIX: Unified fulfillment-retry cron.
- * Replaces the old completionRetryCron.js `needs_completion` key with `needs_fulfillment`.
+ * Repairs paid orders that need fulfillment by enqueueing fulfillment jobs.
  * Both keys are checked for backward compatibility with the legacy path.
  *
  * @param {Object} [options]

@@ -26,6 +26,7 @@ import eventBus, { AppEvents } from '../events/eventBus.js';
 import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 import { getProviderPayloadData, normalizeProviderReference } from '../shared/utils/providerReference.js';
 import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
+import { PaymentStatus } from '../shared/constants/enums.js';
 
 // ── Lazy imports to prevent circular dependencies ──
 let _legacyPaymentService = null;
@@ -46,14 +47,6 @@ async function getLegacyOrderService() {
     }
     return _legacyOrderService;
 }
-
-// ── PaymentStatus constants ──────────────────────────────────────
-const PaymentStatus = {
-    COMPLETED: 'completed',
-    SUCCESS: 'success',
-    FAILED: 'failed',
-    PENDING: 'pending',
-};
 
 const SUCCESS_STATUSES = new Set(['success', 'completed', 'processed', 'paid']);
 const FAILED_STATUSES = new Set(['failed', 'fail', 'declined', 'cancelled', 'canceled', 'expired', 'timeout']);
@@ -277,7 +270,7 @@ const CorePaymentService = {
             }
 
             const existingStatus = String(paymentRow.status || '').toLowerCase();
-            if ([PaymentStatus.COMPLETED, PaymentStatus.SUCCESS].includes(existingStatus)) {
+            if ([PaymentStatus.COMPLETED, PaymentStatus.SUCCESS, PaymentStatus.PAID].includes(existingStatus)) {
                 if (ownsTransaction) await client.query('COMMIT');
                 return { status: 'already_processed', payment: paymentRow, message: 'Payment already completed' };
             }
@@ -530,13 +523,7 @@ const CorePaymentService = {
             if (ownsTransaction) await client.query('COMMIT');
 
             if (ownsTransaction) {
-                setImmediate(() => {
-                    eventBus.dispatchOutboxEvent(durableEvent.eventId)
-                        .catch(error => logger.error('[CorePaymentService] Durable payment event dispatch failed', {
-                            eventId: durableEvent.eventId,
-                            error: error.message
-                        }));
-                });
+                eventBus.dispatchAfterCommit(durableEvent.eventId, 'CorePaymentService.completeVerifiedPayment');
             }
 
             return {
@@ -611,11 +598,16 @@ const CorePaymentService = {
 
         // P1-3 FIX: Withdrawal is only INITIATED here, not COMPLETED.
         // WITHDRAWAL.COMPLETED is emitted by callback.controller.js after Payd confirms.
-        setImmediate(() => {
-            if (result) {
-                eventBus.emit(AppEvents.WITHDRAWAL.INITIATED, { withdrawal: result });
-            }
-        });
+        if (result) {
+            eventBus.enqueueAndDispatch(
+                AppEvents.WITHDRAWAL.INITIATED,
+                { eventId: `withdrawal.initiated:${result.id}`, withdrawal: result },
+                'CorePaymentService.initiateWithdrawal'
+            ).catch(error => logger.error('[CorePaymentService] Durable withdrawal initiation event failed', {
+                withdrawalId: result.id,
+                error: error.message
+            }));
+        }
 
         return result;
     },

@@ -266,7 +266,7 @@ class ReferralService {
 
         let processed = 0;
         let totalCredited = 0;
-        const rewardEvents = [];
+        const rewardEventIds = [];
 
         const client = await pool.connect();
         try {
@@ -332,7 +332,7 @@ class ReferralService {
 
                 logger.info(`[REFERRAL-CRON] SUCCESS: Credited KES ${reward} to referrer ${referrer_seller_id} from referred ${referred_seller_id} (GMV: ${gmv})`);
 
-                rewardEvents.push({
+                const rewardEvent = await eventBus.enqueueInTransaction(client, AppEvents.REFERRAL.REWARD_CREATED, {
                     eventId: `referral.reward_created:${referrer_seller_id}:${referred_seller_id}:${year}:${month}`,
                     seller: {
                         id: referrer_seller_id,
@@ -346,6 +346,7 @@ class ReferralService {
                         periodYear: year
                     }
                 });
+                rewardEventIds.push(rewardEvent.eventId);
             }
 
             await client.query('COMMIT');
@@ -358,9 +359,7 @@ class ReferralService {
         }
 
         logger.info(`[REFERRAL-CRON] ✅ Done — processed: ${processed}, total credited: KES ${totalCredited}`);
-        for (const payload of rewardEvents) {
-            eventBus.emit(AppEvents.REFERRAL.REWARD_CREATED, payload);
-        }
+        eventBus.dispatchManyAfterCommit(rewardEventIds, 'ReferralService.processMonthlyRewards');
         return { processed, totalCredited };
     }
 

@@ -39,7 +39,7 @@ async function startServer() {
   // 2b. Initialize Loaders (DB, Express, Cron, Services)
   await loaders(app);
 
-  // 2c. Boot the unified fulfillment-retry cron (P1-1: replaces completionRetryCron for new path)
+  // 2c. Boot the unified fulfillment-retry cron.
   const { scheduleFulfillmentRetry } = await import('./cron/paymentCron.js');
   scheduleFulfillmentRetry();
   logger.info('[Cron] Unified fulfillment-retry cron registered (checks needs_fulfillment + needs_completion)');

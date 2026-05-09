@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format, isValid, parseISO } from 'date-fns';
-import { Order, OrderStatus, PaymentStatus } from '@/types/order';
+import { Order, OrderStatus } from '@/types/order';
 
 // Helper function to safely format dates
 const formatDate = (dateString: string | Date) => {
@@ -25,11 +26,14 @@ import { sellerApi } from '@/api/sellerApi';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { getOrderInstruction } from '@/utils/orderInstructions';
+import { useSellerOrders } from './dashboard/hooks/useSellerOrders';
+import { sellerDashboardQueryKeys } from './dashboard/queryKeys';
 
 export default function SellerOrdersSection() {
-    // Force TS re-check
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const ordersQuery = useSellerOrders();
+    const orders = useMemo(() => ordersQuery.data || [], [ordersQuery.data]);
+    const isLoading = ordersQuery.isLoading;
     const [isUpdating, setIsUpdating] = useState(false);
     // FIX (Task 18): Prevent duplicate order mutations via synchronous lock
     const { runWithLock } = useAsyncLock();
@@ -40,6 +44,13 @@ export default function SellerOrdersSection() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const { toast } = useToast();
+
+    const refreshOrders = useCallback(async () => {
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: sellerDashboardQueryKeys.orders }),
+            queryClient.invalidateQueries({ queryKey: sellerDashboardQueryKeys.analytics })
+        ]);
+    }, [queryClient]);
 
     // Filter orders based on search query
     const filteredOrders = useMemo(() => {
@@ -53,29 +64,6 @@ export default function SellerOrdersSection() {
             order.orderNumber?.toLowerCase().includes(query)
         );
     }, [orders, searchQuery]);
-
-    // Fetch orders from the API
-    const fetchOrders = async () => {
-        try {
-            setIsLoading(true);
-            const ordersData = await sellerApi.getOrders();
-            setOrders(ordersData);
-        } catch (err) {
-            console.error('Failed to fetch orders:', err);
-            toast({
-                title: 'Error',
-                description: 'Failed to load orders. Please try again.',
-                variant: 'destructive',
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Initial data fetch
-    useEffect(() => {
-        fetchOrders();
-    }, []);
 
     const handleReadyForPickupClick = (orderId: string) => {
         setSelectedOrderId(orderId);
@@ -92,18 +80,8 @@ export default function SellerOrdersSection() {
                 setIsUpdating(true);
 
                 // Update order status to DELIVERY_COMPLETE
-                const updatedOrder = await sellerApi.updateOrderStatus(selectedOrderId, 'DELIVERY_COMPLETE' as OrderStatus);
-
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order.id === selectedOrderId ? {
-                            ...order,
-                            status: 'DELIVERY_COMPLETE' as const,
-                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
-                            updatedAt: new Date().toISOString()
-                        } : order
-                    )
-                );
+                await sellerApi.updateOrderStatus(selectedOrderId, 'DELIVERY_COMPLETE' as OrderStatus);
+                await refreshOrders();
 
                 toast({
                     title: 'Order Ready for Pickup',
@@ -128,17 +106,8 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'DELIVERY_COMPLETE' as OrderStatus);
-
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order.id === orderId ? {
-                            ...updatedOrder,
-                            status: 'DELIVERY_COMPLETE' as const,
-                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'completed') as PaymentStatus
-                        } : order
-                    )
-                );
+                await sellerApi.updateOrderStatus(orderId, 'DELIVERY_COMPLETE' as OrderStatus);
+                await refreshOrders();
 
                 toast({
                     title: 'Order Delivered',
@@ -163,17 +132,8 @@ export default function SellerOrdersSection() {
             try {
                 setIsUpdating(true);
                 // Use COMPLETED status for services
-                const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'COMPLETED' as OrderStatus);
-
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order.id === orderId ? {
-                            ...updatedOrder,
-                            status: 'COMPLETED' as const,
-                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'completed') as PaymentStatus
-                        } : order
-                    )
-                );
+                await sellerApi.updateOrderStatus(orderId, 'COMPLETED' as OrderStatus);
+                await refreshOrders();
 
                 toast({
                     title: 'Service Completed',
@@ -197,18 +157,8 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'CONFIRMED' as OrderStatus);
-
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order.id === orderId ? {
-                            ...order,
-                            status: 'CONFIRMED' as const,
-                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
-                            updatedAt: new Date().toISOString()
-                        } : order
-                    )
-                );
+                await sellerApi.updateOrderStatus(orderId, 'CONFIRMED' as OrderStatus);
+                await refreshOrders();
 
                 toast({
                     title: 'Booking Confirmed',
@@ -242,17 +192,7 @@ export default function SellerOrdersSection() {
             try {
                 setIsUpdating(true);
                 const result = await sellerApi.cancelOrder(cancellingOrderId);
-
-                // Update the order status in the list
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order.id === cancellingOrderId ? {
-                            ...order,
-                            status: 'CANCELLED' as const,
-                            paymentStatus: 'reversed' as const
-                        } : order
-                    )
-                );
+                await refreshOrders();
 
                 toast({
                     title: 'Order Cancelled',
@@ -308,6 +248,25 @@ export default function SellerOrdersSection() {
                         </CardContent>
                     </Card>
                 ))}
+            </div>
+        );
+    }
+
+    if (ordersQuery.error) {
+        return (
+            <div className="text-center py-12 px-4 bg-black rounded-2xl border border-red-400/25">
+                <div className="mx-auto w-16 h-16 bg-red-500/15 border border-red-400/30 rounded-full flex items-center justify-center mb-4">
+                    <RefreshCw className="h-8 w-8 text-red-200" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Unable to load orders</h3>
+                <p className="text-white/75 max-w-md mx-auto mb-4">Please try refreshing your orders.</p>
+                <Button
+                    onClick={() => ordersQuery.refetch()}
+                    className="bg-yellow-400 text-black hover:bg-yellow-500"
+                >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                </Button>
             </div>
         );
     }

@@ -194,6 +194,49 @@ class AppEventBus extends EventEmitter {
         return { eventId, event, payload: durablePayload };
     }
 
+    async enqueue(event, payload = {}) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const durableEvent = await this.enqueueInTransaction(client, event, payload);
+            await client.query('COMMIT');
+            return durableEvent;
+        } catch (error) {
+            await client.query('ROLLBACK').catch(() => {});
+            logger.error('[EventBus] Failed to enqueue durable event', {
+                event,
+                error: error.message
+            });
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    dispatchAfterCommit(eventId, context = 'EventBus') {
+        if (!eventId) return;
+        setImmediate(() => {
+            this.dispatchOutboxEvent(eventId)
+                .catch(error => logger.error('[EventBus] Durable event dispatch failed', {
+                    context,
+                    eventId,
+                    error: error.message
+                }));
+        });
+    }
+
+    dispatchManyAfterCommit(eventIds = [], context = 'EventBus') {
+        for (const eventId of eventIds.filter(Boolean)) {
+            this.dispatchAfterCommit(eventId, context);
+        }
+    }
+
+    async enqueueAndDispatch(event, payload = {}, context = 'EventBus') {
+        const durableEvent = await this.enqueue(event, payload);
+        this.dispatchAfterCommit(durableEvent.eventId, context);
+        return durableEvent;
+    }
+
     async dispatchOutboxEvent(eventId) {
         const client = await pool.connect();
         let row = null;

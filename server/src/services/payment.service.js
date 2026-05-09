@@ -355,13 +355,7 @@ export class PaymentService {
 
             await client.query('COMMIT');
 
-            setImmediate(() => {
-                eventBus.dispatchOutboxEvent(durableEvent.eventId)
-                    .catch(error => logger.error('[PAYMENT-INITIATE] Durable failure event dispatch failed', {
-                        eventId: durableEvent.eventId,
-                        error: error.message
-                    }));
-            });
+            eventBus.dispatchAfterCommit(durableEvent.eventId, 'PaymentService.markInitiationFailed');
 
             return { payment: failedPayment, order: failedOrder, skipped: false };
         } catch (error) {
