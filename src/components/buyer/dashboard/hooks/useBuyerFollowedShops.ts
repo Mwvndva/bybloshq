@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import buyerApi from '@/api/buyerApi';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -11,6 +11,32 @@ import {
 
 const FOLLOWED_SHOPS_QUERY_KEY = ['buyer-followed-shops'] as const;
 const PUBLIC_SELLERS_QUERY_KEY = ['public-sellers'] as const;
+
+const updatePublicSellerCache = (
+  queryClient: QueryClient,
+  shopId: string,
+  updateSeller: (seller: any) => any
+) => {
+  queryClient.setQueriesData({ queryKey: PUBLIC_SELLERS_QUERY_KEY }, (current: any) => {
+    if (!current?.sellers) return current;
+    return {
+      ...current,
+      sellers: current.sellers.map((seller: any) => (
+        getShopId(seller) === shopId ? updateSeller(seller) : seller
+      ))
+    };
+  });
+};
+
+const updateFollowedShopCache = (
+  queryClient: QueryClient,
+  shopId: string,
+  updateShop: (shop: any) => any
+) => {
+  queryClient.setQueryData<any[]>(FOLLOWED_SHOPS_QUERY_KEY, (current = []) =>
+    current.map(item => getShopId(item) === shopId ? updateShop(item) : item)
+  );
+};
 
 export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
   const queryClient = useQueryClient();
@@ -85,17 +111,9 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
         current.filter(item => getShopId(item) !== shopId)
       );
 
-      queryClient.setQueriesData({ queryKey: PUBLIC_SELLERS_QUERY_KEY }, (current: any) => {
-        if (!current?.sellers) return current;
-        return {
-          ...current,
-          sellers: current.sellers.map((seller: any) => (
-            getShopId(seller) === shopId
-              ? updateSellerClientCount(seller, Math.max(0, Number(seller.clientCount ?? seller.client_count ?? 0) - 1))
-              : seller
-          ))
-        };
-      });
+      updatePublicSellerCache(queryClient, shopId, (seller) =>
+        updateSellerClientCount(seller, Math.max(0, Number(seller.clientCount ?? seller.client_count ?? 0) - 1))
+      );
 
       return { previousFollowedShops, previousPublicSellerQueries };
     },
@@ -115,17 +133,9 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
     onSuccess: (result: any, shop: any) => {
       const shopId = getShopId(shop);
       if (typeof result.clientCount === 'number') {
-        queryClient.setQueriesData({ queryKey: PUBLIC_SELLERS_QUERY_KEY }, (current: any) => {
-          if (!current?.sellers) return current;
-          return {
-            ...current,
-            sellers: current.sellers.map((seller: any) => (
-              getShopId(seller) === shopId
-                ? updateSellerClientCount(seller, result.clientCount)
-                : seller
-            ))
-          };
-        });
+        updatePublicSellerCache(queryClient, shopId, (seller) =>
+          updateSellerClientCount(seller, result.clientCount)
+        );
       }
       toast({
         title: 'Shop unfollowed',
@@ -143,18 +153,12 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
     const shopId = getShopId(shop);
     if (!shopId) return;
 
-    queryClient.setQueryData<any[]>(FOLLOWED_SHOPS_QUERY_KEY, (current = []) =>
-      current.map(item => getShopId(item) === shopId ? updateSellerClickCount(item, clickCount) : item)
+    updateFollowedShopCache(queryClient, shopId, (item) =>
+      updateSellerClickCount(item, clickCount)
     );
-    queryClient.setQueriesData({ queryKey: PUBLIC_SELLERS_QUERY_KEY }, (current: any) => {
-      if (!current?.sellers) return current;
-      return {
-        ...current,
-        sellers: current.sellers.map((seller: any) => (
-          getShopId(seller) === shopId ? updateSellerClickCount(seller, clickCount) : seller
-        ))
-      };
-    });
+    updatePublicSellerCache(queryClient, shopId, (seller) =>
+      updateSellerClickCount(seller, clickCount)
+    );
   }, [queryClient]);
 
   const handleUnfollowShop = useCallback((shop: any) => {

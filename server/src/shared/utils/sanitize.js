@@ -14,6 +14,14 @@ const pick = (obj, keys) => {
     }, {});
 };
 
+const parseImageList = (images) => {
+    try {
+        return typeof images === 'string' ? JSON.parse(images) : (images || []);
+    } catch {
+        return [];
+    }
+};
+
 
 export const sanitizeBuyer = (buyer) => {
     if (!buyer) return null;
@@ -83,10 +91,7 @@ export const sanitizeProduct = (product) => {
         description: p.description,
         price: Number.parseFloat(p.price),
         image_url: p.image_url,
-        images: (() => {
-            try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []); }
-            catch { return []; }
-        })(),
+        images: parseImageList(p.images),
         aesthetic: p.aesthetic,
         status: p.status || 'available',
         is_digital: !!(p.is_digital || p.isDigital),
@@ -118,10 +123,7 @@ export const sanitizePublicProduct = (product) => {
         description: p.description,
         price: Number.parseFloat(p.price),
         image_url: p.image_url || p.imageUrl,
-        images: (() => {
-            try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []); }
-            catch { return []; }
-        })(),
+        images: parseImageList(p.images),
         aesthetic: p.aesthetic,
         status: p.status || 'available',
         is_digital: !!(p.is_digital || p.isDigital),
