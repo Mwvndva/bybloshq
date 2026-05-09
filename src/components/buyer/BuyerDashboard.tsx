@@ -578,7 +578,7 @@ function BuyerDashboard() {
                     </span>
                   </div>
 
-                  <div className="grid gap-2.5">
+                  <div className="grid gap-3">
                     {isLoadingShops && shops.length === 0 && Array.from({ length: 3 }).map((_, index) => (
                       <SellerBrandCardSkeleton key={`${group.key}-skeleton-${index}`} />
                     ))}
