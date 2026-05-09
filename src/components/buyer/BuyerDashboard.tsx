@@ -158,6 +158,7 @@ function BuyerDashboard() {
   const [whatsappNumber, setWhatsappNumber] = useState<string>(user?.whatsappNumber || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
+  const [myShopsMobileTab, setMyShopsMobileTab] = useState<'online' | 'physical'>('online');
   const shopsQuery = useQuery({
     queryKey: ['buyer-followed-shops'],
     queryFn: () => buyerApi.getShops({ page: 1, limit: 48 }),
@@ -445,6 +446,23 @@ function BuyerDashboard() {
     return { onlineShops: online, physicalShops: physical };
   }, [filteredShops]);
 
+  const shopGroups = [
+    {
+      key: 'online',
+      title: 'Online Shops',
+      count: onlineShops.length,
+      shops: onlineShops,
+      empty: shopsSearchQuery ? 'No online shops match your search.' : 'No online shops followed yet.'
+    },
+    {
+      key: 'physical',
+      title: 'Physical Shops',
+      count: physicalShops.length,
+      shops: physicalShops,
+      empty: shopsSearchQuery ? 'No physical shops match your search.' : 'No physical shops followed yet.'
+    }
+  ] as const;
+
   const handleShopClickCountChange = useCallback((shop, clickCount) => {
     const shopId = getShopId(shop);
     if (!shopId) return;
@@ -553,23 +571,37 @@ function BuyerDashboard() {
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>{filteredShops.length} shops</span>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                {
-                  key: 'online',
-                  title: 'Online Shops',
-                  count: onlineShops.length,
-                  shops: onlineShops,
-                  empty: shopsSearchQuery ? 'No online shops match your search.' : 'No online shops followed yet.'
-                },
-                {
-                  key: 'physical',
-                  title: 'Physical Shops',
-                  count: physicalShops.length,
-                  shops: physicalShops,
-                  empty: shopsSearchQuery ? 'No physical shops match your search.' : 'No physical shops followed yet.'
-                }
-              ].map((group) => (
+            <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-white/15 bg-white/5 p-1 md:hidden">
+              {shopGroups.map((group) => {
+                const isActive = myShopsMobileTab === group.key;
+                return (
+                  <button
+                    key={group.key}
+                    type="button"
+                    onClick={() => setMyShopsMobileTab(group.key)}
+                    className="flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition"
+                    style={{
+                      background: isActive ? '#FACC15' : 'transparent',
+                      color: isActive ? '#000000' : '#FFFFFF'
+                    }}
+                  >
+                    <span>{group.title}</span>
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[10px]"
+                      style={{
+                        background: isActive ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)',
+                        color: isActive ? '#000000' : '#FFFFFF'
+                      }}
+                    >
+                      {group.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="hidden gap-4 md:grid md:grid-cols-2">
+              {shopGroups.map((group) => (
                 <section key={group.key} className="min-w-0 rounded-2xl border border-white/15 bg-white/5 p-2.5 shadow-sm">
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
                     <span className="text-xs font-black text-white">{group.title}</span>
@@ -581,6 +613,43 @@ function BuyerDashboard() {
                   <div className="grid gap-3">
                     {isLoadingShops && shops.length === 0 && Array.from({ length: 3 }).map((_, index) => (
                       <SellerBrandCardSkeleton key={`${group.key}-skeleton-${index}`} />
+                    ))}
+
+                    {!isLoadingShops && group.shops.map(shop => (
+                      <SellerBrandCard
+                        key={getShopId(shop)}
+                        seller={shop}
+                        isBuyer
+                        showUnfollow
+                        onUnfollow={handleUnfollowShop}
+                        onClickCountChange={handleShopClickCountChange}
+                        isUnfollowing={unfollowingShopId === getShopId(shop)}
+                      />
+                    ))}
+
+                    {!isLoadingShops && filteredShops.length > 0 && group.shops.length === 0 && (
+                      <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-8 text-center text-xs text-white">
+                        {group.empty}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              ))}
+            </div>
+
+            <div className="grid gap-3 md:hidden">
+              {shopGroups.filter(group => group.key === myShopsMobileTab).map((group) => (
+                <section key={group.key} className="min-w-0 rounded-2xl border border-white/15 bg-white/5 p-2.5 shadow-sm">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <span className="text-xs font-black text-white">{group.title}</span>
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white">
+                      {group.count}
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3">
+                    {isLoadingShops && shops.length === 0 && Array.from({ length: 3 }).map((_, index) => (
+                      <SellerBrandCardSkeleton key={`${group.key}-mobile-skeleton-${index}`} />
                     ))}
 
                     {!isLoadingShops && group.shops.map(shop => (
