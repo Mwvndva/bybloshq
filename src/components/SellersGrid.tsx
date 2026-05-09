@@ -14,8 +14,8 @@ const INITIAL_VISIBLE_SELLERS = 24;
 const VISIBLE_SELLERS_STEP = 24;
 
 const SellerGridSkeleton = () => (
-    <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6" aria-label="Loading shops">
-        {Array.from({ length: 6 }).map((_, index) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" aria-label="Loading shops">
+        {Array.from({ length: 12 }).map((_, index) => (
             <div
                 key={index}
                 className="h-[184px] overflow-hidden rounded-2xl border border-white/10 bg-[#111111] p-3"
@@ -86,7 +86,7 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
 
     return (
         <>
-            <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {visibleSellers.map((seller) => (
                     <SellerBrandCard key={seller.id} seller={seller} isBuyer={isBuyer} />
                 ))}
