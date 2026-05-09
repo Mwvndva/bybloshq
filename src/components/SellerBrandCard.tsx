@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Heart, MapPin, MousePointerClick, Store, UserMinus, Users, Wifi } from 'lucide-react';
+import { Heart, MapPin, MousePointerClick, Store, UserMinus, Users, Wifi } from 'lucide-react';
 import { cn, getImageUrl } from '@/lib/utils';
 import { publicApiService, Seller } from '@/api/publicApi';
 
@@ -152,11 +152,23 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
         onUnfollow(seller);
     }, [isUnfollowing, onUnfollow, seller]);
 
+    const handleCardKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        handleKnock();
+    }, [handleKnock]);
+
     return (
         <article className={cn(
-            "group relative overflow-hidden rounded-2xl border bg-black p-3 shadow-sm transition-colors duration-200 hover:bg-zinc-950",
+            "group relative cursor-pointer overflow-hidden rounded-2xl border bg-black p-3 shadow-sm transition-colors duration-200 hover:bg-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70",
             className
         )}
+            role="link"
+            tabIndex={0}
+            onClick={handleKnock}
+            onKeyDown={handleCardKeyDown}
+            aria-label={`Open ${shopName}`}
             style={{
                 borderColor: palette.border,
                 boxShadow: `0 16px 40px rgba(0,0,0,0.45), 0 0 24px ${palette.accentSoft}`
@@ -238,52 +250,23 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 </div>
             </div>
 
-            <div className={cn("mt-3 grid gap-2", showUnfollow ? "grid-cols-[1fr_auto]" : "grid-cols-1")}>
-                <button
-                    type="button"
-                    onClick={handleKnock}
-                    className="group/open relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-white shadow-sm backdrop-blur transition duration-200 hover:brightness-110 active:brightness-95"
-                    style={{
-                        background: `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, ${palette.accentSoft} 46%, rgba(0,0,0,0.6) 100%)`,
-                        borderColor: palette.border,
-                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 30px ${palette.accentSoft}, 0 0 0 1px ${palette.border}`,
-                        color: '#FFFFFF'
-                    }}
-                    aria-label={`Open ${shopName}`}
-                >
-                    <span
-                        className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-20deg] bg-white/20 opacity-0 blur-sm transition duration-500 group-hover/open:left-full group-hover/open:opacity-100"
-                    />
-                    <span
-                        className="pointer-events-none absolute inset-x-3 top-0 h-px"
-                        style={{ background: `linear-gradient(90deg, transparent, ${palette.accent}, transparent)` }}
-                    />
-                    <span
-                        className="flex h-5 w-5 items-center justify-center rounded-full"
-                        style={{
-                            backgroundColor: palette.accent,
-                            color: palette.buttonText,
-                            boxShadow: `0 0 18px ${palette.accentSoft}`
-                        }}
-                    >
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="relative">Open</span>
-                </button>
-
-                {showUnfollow && onUnfollow && (
+            {showUnfollow && onUnfollow && (
+                <div className="mt-3 flex justify-end">
                     <button
                         type="button"
                         disabled={isUnfollowing}
-                        onClick={handleUnfollow}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            handleUnfollow();
+                        }}
                         className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-400/35 bg-red-500/15 px-3 text-[11px] font-black text-white transition duration-200 hover:bg-red-500/25 active:bg-red-500/30 disabled:cursor-wait disabled:opacity-60"
                         aria-label={`Unfollow ${shopName}`}
                     >
                         <UserMinus className="h-3.5 w-3.5" />
                         <span>{isUnfollowing ? '...' : 'Unfollow'}</span>
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </article>
     );
 };
