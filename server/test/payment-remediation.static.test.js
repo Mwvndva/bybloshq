@@ -668,6 +668,29 @@ test('notification retries are tracked per recipient to avoid duplicate partial 
   assert.match(migration, /event_recipient_deliveries_unique/);
 });
 
+test('successful product payments send buyer order confirmation and unique receipt emails once', () => {
+  const core = read('src/core/CorePaymentService.js');
+  const paymentEvents = read('src/events/payment.events.js');
+  const receiptService = read('src/services/paymentReceipt.service.js');
+  const emailUtils = read('src/shared/utils/email.js');
+  const receiptTemplate = read('email-templates/product-payment-receipt.ejs');
+
+  assert.match(core, /receipt_id:\s*buildPaymentReceiptId\(paymentRow\)/);
+  assert.match(paymentEvents, /PaymentReceiptService\.sendBuyerEmailsAfterPayment/);
+  assert.match(receiptService, /sendProductOrderConfirmationEmail/);
+  assert.match(receiptService, /sendPaymentReceiptEmail/);
+  assert.match(receiptService, /payment:\$\{payment\.id\}:buyer:order_confirmation/);
+  assert.match(receiptService, /payment:\$\{payment\.id\}:buyer:payment_receipt/);
+  assert.match(receiptService, /Door delivery fee/);
+  assert.match(receiptService, /sendSellerPickupReceiptAfterPayment/);
+  assert.match(receiptService, /payment:\$\{payment\.id\}:seller:pickup_receipt/);
+  assert.match(paymentEvents, /PaymentReceiptService\.sendSellerPickupReceiptAfterPayment/);
+  assert.match(receiptService, /channel:\s*'email'/);
+  assert.match(emailUtils, /receiptId/);
+  assert.match(emailUtils, /confirmationNote/);
+  assert.match(receiptTemplate, /Receipt ID/);
+});
+
 test('EventBus defers side effects when outbox claim DB is unavailable', () => {
   const eventBus = read('src/events/eventBus.js');
   const outboxRepository = read('src/events/outboxRepository.js');

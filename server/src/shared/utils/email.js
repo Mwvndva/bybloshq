@@ -318,17 +318,29 @@ export const sendNewOrderNotificationEmail = async (email, orderData) => {
 
 export const sendPaymentReceiptEmail = async (email, orderData, isSeller = false) => {
   try {
+    const receiptId = orderData.receipt_id || orderData.receiptId || orderData.receipt_number || orderData.payment_reference || 'Receipt pending';
+    const transactionId = orderData.transaction_id
+      || orderData.transactionId
+      || orderData.payment_reference
+      || orderData.provider_reference
+      || receiptId;
+    const paymentDate = orderData.paid_at || orderData.paidAt || orderData.completed_at || new Date();
+
     const templateData = {
       appName: process.env.APP_NAME || 'Byblos Atelier',
       websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
       buyerName: orderData.buyer_name || 'Customer',
       buyerEmail: orderData.buyer_email || 'Not specified',
       orderNumber: orderData.order_number,
-      paymentDate: new Date().toLocaleDateString(), // Or use orderData.paid_at if available
+      receiptTitle: orderData.receipt_title || orderData.receiptTitle || 'Official Payment Receipt',
+      billingLabel: orderData.billing_label || orderData.billingLabel || 'Billed To',
+      confirmationNote: orderData.confirmation_note || orderData.confirmationNote || 'Payment confirmed. This serves as your official record of purchase.',
+      receiptId,
+      paymentDate: new Date(paymentDate).toLocaleDateString(),
       items: orderData.items || [],
       totalAmount: orderData.total_amount,
       paymentMethod: orderData.payment_method || 'mpesa',
-      transactionId: orderData.payment_reference || 'Ref pending',
+      transactionId,
       isSeller
     };
 

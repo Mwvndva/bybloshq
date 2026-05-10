@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+﻿import { useState, useEffect, useCallback, useRef, lazy, Suspense, type TouchEvent } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 
 // Lazy load the OrdersSection component
@@ -20,6 +20,13 @@ import { MyShopsSection } from './dashboard/MyShopsSection';
 import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
 
 
+type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
+type BuyerSection = DashboardSection | 'profile';
+
+const SWIPE_NAV_SECTIONS: DashboardSection[] = ['shop', 'shops', 'wishlist', 'orders'];
+const SWIPE_MIN_DISTANCE = 64;
+const SWIPE_MAX_VERTICAL_DRIFT = 80;
+const PROFILE_CLOSE_NAV_DELAY_MS = 180;
 
 // Main dashboard component
 function BuyerDashboard() {
@@ -28,7 +35,7 @@ function BuyerDashboard() {
   const { user, logout, updateBuyerProfile } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState<'shop' | 'shops' | 'wishlist' | 'orders' | 'profile'>(() => {
+  const [activeSection, setActiveSection] = useState<BuyerSection>(() => {
     // Priority 1: Pathname (new standard for direct linking)
     const pathname = location.pathname;
     if (pathname.includes('/buyer/orders')) return 'orders';
@@ -51,6 +58,8 @@ function BuyerDashboard() {
     return 'shop';
   });
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState(false);
+  const profileCloseNavigationTimerRef = useRef<number | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Sync active section with URL changes
   useEffect(() => {
@@ -210,9 +219,22 @@ function BuyerDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (profileCloseNavigationTimerRef.current !== null) {
+        window.clearTimeout(profileCloseNavigationTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleBack = () => navigate('/');
 
   const handleProfileSidebarOpenChange = useCallback((open: boolean) => {
+    if (profileCloseNavigationTimerRef.current !== null) {
+      window.clearTimeout(profileCloseNavigationTimerRef.current);
+      profileCloseNavigationTimerRef.current = null;
+    }
+
     setIsProfileSidebarOpen(open);
 
     if (open) {
@@ -229,7 +251,10 @@ function BuyerDashboard() {
       queryParams.get('section') === 'profile' ||
       queryParams.get('tab') === 'profile'
     ) {
-      navigate('/buyer/dashboard', { replace: true });
+      profileCloseNavigationTimerRef.current = window.setTimeout(() => {
+        navigate('/buyer/dashboard', { replace: true });
+        profileCloseNavigationTimerRef.current = null;
+      }, PROFILE_CLOSE_NAV_DELAY_MS);
     }
   }, [location.pathname, location.search, navigate]);
 
@@ -244,7 +269,7 @@ function BuyerDashboard() {
 
   const activeNav = isProfileSidebarOpen ? 'profile' : (activeSection === 'shop' ? 'shop' : activeSection);
 
-  const setActiveTab = (key: 'shop' | 'shops' | 'wishlist' | 'orders' | 'profile') => {
+  const setActiveTab = (key: BuyerSection) => {
     const pathMap = {
       shop: 'dashboard',
       shops: 'shops',
@@ -265,6 +290,36 @@ function BuyerDashboard() {
       setLastViewedOrdersTime(now);
       localStorage.setItem('buyer_last_viewed_orders', now);
       setHasUnreadOrders(false);
+    }
+  };
+
+  const handleDashboardTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (isProfileSidebarOpen || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleDashboardTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+
+    if (!start || isProfileSidebarOpen || event.changedTouches.length !== 1) return;
+    if (!SWIPE_NAV_SECTIONS.includes(activeSection as DashboardSection)) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE || Math.abs(deltaY) > SWIPE_MAX_VERTICAL_DRIFT) {
+      return;
+    }
+
+    const currentIndex = SWIPE_NAV_SECTIONS.indexOf(activeSection as DashboardSection);
+    const targetIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+    const targetSection = SWIPE_NAV_SECTIONS[targetIndex];
+
+    if (targetSection) {
+      setActiveTab(targetSection);
     }
   };
 
@@ -293,7 +348,10 @@ function BuyerDashboard() {
         WebkitOverflowScrolling: 'touch',
         scrollBehavior: 'smooth',
         overscrollBehavior: 'contain',
-      }}>
+      }}
+        onTouchStart={handleDashboardTouchStart}
+        onTouchEnd={handleDashboardTouchEnd}
+      >
         {activeSection === 'shop' && (
           <>
             <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />

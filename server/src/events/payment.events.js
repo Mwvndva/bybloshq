@@ -2,6 +2,7 @@ import eventBus, { AppEvents } from './eventBus.js';
 import logger from '../shared/utils/logger.js';
 import whatsappService from '../services/whatsapp.service.js';
 import LogisticsRequestService from '../services/logisticsRequest.service.js';
+import PaymentReceiptService from '../services/paymentReceipt.service.js';
 
 /**
  * Handle PAYMENT.COMPLETED event
@@ -38,6 +39,20 @@ eventBus.on(AppEvents.PAYMENT.COMPLETED, async ({ eventId, payment, order }) => 
             pickupLegId: pickupResult.pickupLegId
         });
     }
+
+    await PaymentReceiptService.sendBuyerEmailsAfterPayment({
+        eventBus,
+        eventId: eventId || `payment.completed:${payment.id}`,
+        payment,
+        order
+    });
+
+    await PaymentReceiptService.sendSellerPickupReceiptAfterPayment({
+        eventBus,
+        eventId: eventId || `payment.completed:${payment.id}`,
+        payment,
+        order
+    });
 });
 
 /**
