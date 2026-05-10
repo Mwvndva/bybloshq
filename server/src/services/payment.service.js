@@ -3,12 +3,12 @@ import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
 import { PaymentStatus } from '../shared/constants/enums.js';
 import OrderService from './order.service.js';
-import { PaydErrorCodes } from '../shared/utils/PaydError.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import { normalizeProviderPaymentStatus } from '../shared/utils/paymentStatusNormalizer.js';
 import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
 import PaydProviderClient from '../providers/PaydProviderClient.js';
+import PaystackProviderClient from '../providers/PaystackProviderClient.js';
 import LogisticsQuoteService from './logisticsQuote.service.js';
 import LogisticsRequestService from './logisticsRequest.service.js';
 
@@ -73,6 +73,18 @@ const isSellerPickupFeePayment = (metadata = {}) => {
         || metadata.logistics_payment_type === 'seller_pickup_fee';
 };
 
+const resolvePaymentProvider = () => {
+    const provider = String(process.env.PAYMENT_PROVIDER || 'payd').trim().toLowerCase();
+    if (provider === 'paystack' || provider === 'payd') {
+        return provider;
+    }
+
+    logger.warn('[PAYMENT-INIT] Unsupported PAYMENT_PROVIDER configured; falling back to payd', {
+        configuredProvider: provider
+    });
+    return 'payd';
+};
+
 const extractPickupLocation = (location = {}) => ({
     address: location.address || location.fullAddress || location.full_address || null,
     latitude: location.latitude ?? location.lat ?? null,
@@ -94,15 +106,19 @@ const ACTIVE_PICKUP_STATUSES = new Set(['pending', 'assigned', 'started', 'picke
 
 export class PaymentService {
     constructor() {
-        this.paydProviderClient = new PaydProviderClient();
-        this.baseUrl = this.paydProviderClient.baseUrl;
-        this.username = this.paydProviderClient.username;
-        this.password = this.paydProviderClient.password;
-        this.networkCode = process.env.PAYD_NETWORK_CODE;
-        this.channelId = process.env.PAYD_CHANNEL_ID;
-        this.payloadUsername = this.paydProviderClient.payloadUsername;
-        this.httpsAgent = this.paydProviderClient.httpsAgent;
-        this.client = this.paydProviderClient.client;
+        this.provider = resolvePaymentProvider();
+        this.paymentProviderClient = this.provider === 'paystack'
+            ? new PaystackProviderClient()
+            : new PaydProviderClient();
+        this.providerClient = this.paymentProviderClient;
+        this.baseUrl = this.paymentProviderClient.baseUrl;
+        this.httpsAgent = this.paymentProviderClient.httpsAgent;
+        this.client = this.paymentProviderClient.client;
+
+        logger.info('[PAYMENT-INIT] Payment provider selected', {
+            provider: this.provider,
+            baseUrl: this.baseUrl
+        });
     }
 
     async createPaymentProviderAttempt(client, {
@@ -187,9 +203,16 @@ export class PaymentService {
     isAmbiguousPaymentProviderError(error) {
         const status = error?.statusCode || error?.response?.status;
         const ambiguousCodes = new Set([
-            PaydErrorCodes.CONNECTION_FAILED,
-            PaydErrorCodes.TIMEOUT,
-            PaydErrorCodes.UNKNOWN_ERROR
+            'CONNECTION_FAILED',
+            'TIMEOUT',
+            'UNKNOWN_ERROR',
+            'ECONNRESET',
+            'ECONNREFUSED',
+            'ETIMEDOUT',
+            'ENOTFOUND',
+            'EAI_AGAIN',
+            'EPIPE',
+            'ECONNABORTED'
         ]);
 
         if (ambiguousCodes.has(error?.code)) return true;
@@ -387,30 +410,29 @@ export class PaymentService {
      * Helper to retry requests with exponential backoff
      */
     async _retryRequest(fn, retries = 3, delay = 1000) {
-        return this.paydProviderClient._retryRequest(fn, retries, delay);
+        return this.providerClient._retryRequest(fn, retries, delay);
     }
 
     _shouldRetry(error, attempt, maxRetries) {
-        return this.paydProviderClient._shouldRetry(error, attempt, maxRetries);
+        return this.providerClient._shouldRetry(error, attempt, maxRetries);
     }
 
     _getRetryReason(error) {
-        return this.paydProviderClient._getRetryReason(error);
+        return this.providerClient._getRetryReason(error);
     }
 
     /**
      * Get Authorization Header for Basic Auth
      */
     getAuthHeader() {
-        return this.paydProviderClient.getAuthHeader();
+        return this.providerClient.getAuthHeader();
     }
 
     /**
      * Initiate M-Pesa STK Push Payment
      * 
-     * Endpoint: POST https://api.payd.money/api/v2/payments
-     * Auth: Basic Auth
-     * Docs: https://magic.payd.one/kenya-payins
+     * Endpoint: POST https://api.paystack.co/charge
+     * Auth: Bearer token
      * 
      * @param {Object} paymentData
      * @param {string} paymentData.phone - Phone number (254XXXXXXXXX or 0XXXXXXXXX)
@@ -433,43 +455,43 @@ export class PaymentService {
             }
         }
 
-        return this.paydProviderClient.initiatePayment(paymentData);
+        return this.providerClient.initiatePayment(paymentData);
     }
 
     /**
      * Normalize phone number for PAYMENT (STK Push)
-     * Payd payment API accepts: 254XXXXXXXXX or 0XXXXXXXXX
+     * Paystack M-Pesa charges use normalized Kenyan phone numbers.
      * 
      * @param {string|number} phone
      * @returns {string} e.g., "254712345678" or "0712345678"
      */
     normalizePhoneForPayment(phone) {
-        return this.paydProviderClient.normalizePhoneForPayment(phone);
+        return this.providerClient.normalizePhoneForPayment(phone);
     }
 
     /**
      * Monitor HTTPS agent health
      */
     getAgentStatus() {
-        return this.paydProviderClient.getAgentStatus();
+        return this.providerClient.getAgentStatus();
     }
 
     /**
      * Reset HTTPS agent (use if connections are stale)
      */
     resetAgent() {
-        return this.paydProviderClient.resetAgent();
+        return this.providerClient.resetAgent();
     }
 
     /**
-     * Handle Payd Webhook/Callback
+     * Legacy callback entrypoint.
      */
-    async handlePaydCallback(callbackData) {
-        throw new Error('Legacy Payd callback entrypoint is disabled. Use the verified payment webhook controller.');
+    async handleProviderCallback(callbackData) {
+        throw new Error('Legacy payment callback entrypoint is disabled. Use the verified payment webhook controller.');
     }
 
     /**
-     * Parse and validate Payd callback data
+     * Parse and validate legacy callback data
      * @private
      */
     _parseCallbackData(callbackData) {
@@ -482,7 +504,7 @@ export class PaymentService {
         const mpesaReceipt = data.third_party_trans_id || null;
 
         if (!reference) {
-            logger.error('[PAYD-WEBHOOK] Missing reference in payload', callbackData);
+            logger.error('[PAYMENT-WEBHOOK] Missing reference in payload', callbackData);
             throw new Error('Webhook missing transaction reference');
         }
 
@@ -508,10 +530,10 @@ export class PaymentService {
 
 
     /**
-     * Map Payd provider status to internal status
+     * Map provider status to internal status
      * @private
      */
-    _mapPaydStatus(providerData) {
+    _mapProviderStatus(providerData) {
         return normalizeProviderPaymentStatus(providerData);
     }
 
@@ -536,11 +558,11 @@ export class PaymentService {
 
         if (!payment) throw new Error('Payment not found');
 
-        // If payment is pending and we have a provider_reference, check Payd status
+        // If payment is pending and we have a provider_reference, check provider status
         if (payment.status === PaymentStatus.PENDING && payment.provider_reference) {
             try {
-                const paydStatus = await this.checkTransactionStatus(payment.provider_reference);
-                const normalizedStatus = paydStatus.status; // already lowercased in checkTransactionStatus
+                const providerStatus = await this.checkTransactionStatus(payment.provider_reference);
+                const normalizedStatus = providerStatus.status; // already lowercased in checkTransactionStatus
 
                 if (['success', 'completed', 'processed', 'paid'].includes(normalizedStatus)) {
                     const { default: CorePaymentService } = await import('../core/CorePaymentService.js');
@@ -548,7 +570,7 @@ export class PaymentService {
                         paymentId: payment.id,
                         reference: payment.provider_reference,
                         providerPayload: {
-                            ...paydStatus,
+                            ...providerStatus,
                             status: normalizedStatus
                         },
                         source: 'status_polling'
@@ -601,15 +623,14 @@ export class PaymentService {
     /**
      * Check transaction status
      * 
-     * Endpoint: GET https://api.payd.money/api/v1/status/{transaction_reference}
-     * Auth: Basic Auth
-     * Docs: https://magic.payd.one/transaction-status
+     * Endpoint: GET https://api.paystack.co/transaction/verify/{reference}
+     * Auth: Bearer token
      * 
-     * @param {string} transactionId - Payd transaction reference
+     * @param {string} transactionId - provider transaction reference
      * @returns {Promise<Object>}
      */
     async checkTransactionStatus(transactionId) {
-        return this.paydProviderClient.checkTransactionStatus(transactionId);
+        return this.providerClient.checkTransactionStatus(transactionId);
     }
 
     /**
@@ -623,20 +644,16 @@ export class PaymentService {
      * @returns {Promise<Object>}
      */
     async pollTransactionStatus(transactionId, options = {}) {
-        return this.paydProviderClient.pollTransactionStatus(transactionId, options);
+        return this.providerClient.pollTransactionStatus(transactionId, options);
     }
 
     /**
-     * Check Payd platform account balance
-     * 
-     * Endpoint: GET https://api.payd.money/api/v1/accounts/{username}/all_balances
-     * Auth: Basic Auth
-     * Docs: https://magic.payd.one/balances
+     * Check payment provider platform account balance
      * 
      * @returns {Promise<Object>}
      */
     async checkBalance() {
-        return this.paydProviderClient.checkBalance();
+        return this.providerClient.checkBalance();
     }
 
     /**
@@ -647,7 +664,7 @@ export class PaymentService {
      * @returns {Promise<{sufficient: boolean, available: number, required: number}>}
      */
     async hasSufficientBalance(requiredAmount, bufferPercent = 10) {
-        return this.paydProviderClient.hasSufficientBalance(requiredAmount, bufferPercent);
+        return this.providerClient.hasSufficientBalance(requiredAmount, bufferPercent);
     }
 
     /**
@@ -658,26 +675,32 @@ export class PaymentService {
      * @returns {Object}
      */
     _extractErrorDetails(error) {
-        return this.paydProviderClient._extractErrorDetails(error);
+        return this.providerClient._extractErrorDetails(error);
     }
 
     /**
-     * Check container networking (DNS + HTTPS) to Google and Payd
+     * Check container networking (DNS + HTTPS) to payment provider
      * @returns {Promise<Object>}
      */
     async getNetworkStatus() {
-        return this.paydProviderClient.getNetworkStatus();
+        return this.providerClient.getNetworkStatus();
     }
 
     /**
-     * Handle Payd API errors and convert to PaydError
+     * Handle provider API errors.
      * 
      * @private
      * @param {Error} error - Original error
-     * @returns {PaydError}
+     * @returns {Error}
      */
-    _handlePaydError(error) {
-        return this.paydProviderClient._handlePaydError(error);
+    _handleProviderError(error) {
+        if (typeof this.providerClient._handlePaystackError === 'function') {
+            return this.providerClient._handlePaystackError(error);
+        }
+        if (typeof this.providerClient._handlePaydError === 'function') {
+            return this.providerClient._handlePaydError(error);
+        }
+        return error;
     }
 
     /**
@@ -782,7 +805,7 @@ export class PaymentService {
                     }
 
                     // Process based on determined status
-                    if (providerStatus === 'success') {
+                    if ([PaymentStatus.COMPLETED, PaymentStatus.SUCCESS, PaymentStatus.PAID].includes(providerStatus)) {
                         logger.info(`Payment ${payment.id} verified as SUCCESS via Cron`);
                         const { default: CorePaymentService } = await import('../core/CorePaymentService.js');
                         await CorePaymentService.completeVerifiedPayment({
@@ -791,7 +814,7 @@ export class PaymentService {
                             providerPayload: {
                                 ...(providerData || {}),
                                 api_ref: payment.api_ref,
-                                status: 'success'
+                                status: providerStatus
                             },
                             source: 'payment_cron'
                         });
@@ -1102,6 +1125,7 @@ export class PaymentService {
 
             const apiRef = `BYB-PU-${order.id}-${Date.now()}`;
             const invoiceId = `PICKUP-${order.id}-${Date.now()}`;
+            const provider = this.provider;
             const paymentMetadata = {
                 payment_purpose: 'seller_pickup_fee',
                 logistics_payment_type: 'seller_pickup_fee',
@@ -1129,7 +1153,7 @@ export class PaymentService {
 
             const insertRes = await client.query(
                 `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, api_ref, metadata)
-                  VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6, $7::jsonb)
+                  VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8::jsonb)
                   RETURNING *`,
                 [
                     invoiceId,
@@ -1137,6 +1161,7 @@ export class PaymentService {
                     mobilePayment,
                     order.seller_whatsapp_number || mobilePayment,
                     quote.feeAmount,
+                    provider,
                     apiRef,
                     JSON.stringify(paymentMetadata)
                 ]
@@ -1195,7 +1220,7 @@ export class PaymentService {
                 amount: quote.feeAmount,
                 currency: 'KES',
                 status: PaymentStatus.PENDING,
-                payment_method: 'payd',
+                payment_method: provider,
                 phone_number: mobilePayment,
                 phone: mobilePayment,
                 email: order.seller_email || undefined,
@@ -1432,8 +1457,13 @@ export class PaymentService {
         }
 
         // 4. Create Order (PIN-02: UNIFIED ORDER CONTEXT)
+        const provider = this.provider;
         const orderData = {
             ...normalizedOrder,
+            payment: {
+                ...(normalizedOrder.payment || {}),
+                method: provider
+            },
             sellerId: Number.parseInt(product.seller_id),
             service: {
                 ...service,
@@ -1508,7 +1538,7 @@ export class PaymentService {
                 amount: payableTotal,
                 currency: 'KES',
                 status: PaymentStatus.PENDING,
-                payment_method: 'payd',
+                payment_method: provider,
                 phone_number: buyerMobilePayment,
                 email: buyerEmail,
                 metadata: {
@@ -1529,8 +1559,8 @@ export class PaymentService {
 
             const insertRes = await client.query(
                 `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, api_ref, metadata)
-                  VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6, $7) RETURNING *`,
-                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, payableTotal, apiRef, JSON.stringify(paymentData.metadata)]
+                  VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8::jsonb) RETURNING *`,
+                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, payableTotal, provider, apiRef, JSON.stringify(paymentData.metadata)]
             );
             const payment = insertRes.rows[0];
 

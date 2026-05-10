@@ -590,7 +590,7 @@ const adminResolveLogisticsDispute = async (req, res, next) => {
 };
 
 // PATCH /api/admin/withdrawal-requests/:id/status
-// Admin can only override to 'completed' or 'failed' — Payd handles real processing
+// Admin can only override to 'completed' or 'failed'; the payout provider handles real processing.
 const updateWithdrawalRequestStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -836,9 +836,9 @@ const getMonthlyFinancialData = async (req, res, next) => {
 };
 
 /**
- * Get Payd balances (both Pay-ins and Payouts)
+ * Get payment provider balance/status for pay-ins and payouts.
  */
-const getPaydBalances = async (req, res, next) => {
+const getPaymentProviderBalances = async (req, res, next) => {
   try {
     const [payinBalance, payoutBalance] = await Promise.all([
       paymentService.checkBalance().catch(err => ({ error: err.message })),
@@ -854,14 +854,14 @@ const getPaydBalances = async (req, res, next) => {
       }
     });
   } catch (error) {
-    logger.error('Error fetching Payd balances:', error);
-    next(new AppError('Failed to fetch Payd balances', 500));
+    logger.error('Error fetching payment provider balance/status:', error);
+    next(new AppError('Failed to fetch payment provider balance/status', 500));
   }
 };
 
 export {
   adminLogin,
-  getPaydBalances,
+  getPaymentProviderBalances,
 
   processPendingPayments,
   getDashboardStats,

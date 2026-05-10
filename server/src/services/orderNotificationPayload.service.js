@@ -63,7 +63,7 @@ class OrderNotificationPayloadService {
       },
       payment: {
         status: fullOrder.payment_status || 'pending',
-        method: fullOrder.payment_method || 'payd',
+        method: fullOrder.payment_method || 'paystack',
         reference: fullOrder.payment_reference || null
       },
       items: items.map(i => ({

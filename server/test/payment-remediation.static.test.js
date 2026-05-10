@@ -27,15 +27,18 @@ function filesUnder(path) {
   });
 }
 
-test('Payd payment webhook fails closed and uses raw-body HMAC verification', () => {
+test('Paystack payment webhook fails closed and uses raw-body HMAC verification', () => {
   const controller = read('src/controllers/payment.controller.js');
   const core = read('src/core/CorePaymentService.js');
-  const middleware = read('src/middleware/paydWebhookSecurity.js');
+  const middleware = read('src/middleware/paystackWebhookSecurity.js');
 
-  assert.match(controller, /signature:\s*req\.headers\['x-payd-signature'\]/);
-  assert.match(controller, /rawBody:\s*req\.rawBody/);
+  assert.match(controller, /CorePaymentService\.handlePaystackWebhook\(webhookData/);
+  assert.match(controller, /hmacVerified:\s*req\.webhookSecurity\?\.hmacVerified === true/);
   assert.match(core, /verifyWebhookSignature\(security\.signature,\s*security\.rawBody\)/);
-  assert.match(middleware, /normalizeProviderReference\(req\.body\)/);
+  assert.match(middleware, /req\.headers\['x-paystack-signature'\]/);
+  assert.match(middleware, /verifyPaystackHmacSignature\(signature,\s*req\.rawBody\)/);
+  assert.match(middleware, /getPaystackProviderReference\(root,\s*data\)/);
+  assert.match(middleware, /Invalid webhook payload/);
   assert.doesNotMatch(core, /:\s*true;\s*\/\/ fallback/);
 });
 
@@ -54,12 +57,74 @@ test('public polling and cron delegate successful completion to CorePaymentServi
 
   assert.match(paymentService, /source:\s*'status_polling'/);
   assert.match(paymentService, /source:\s*'payment_cron'/);
-  assert.match(paymentService, /Legacy Payd callback entrypoint is disabled/);
+  assert.match(paymentService, /Legacy payment callback entrypoint is disabled/);
   assert.doesNotMatch(paymentService, /this\.handleSuccessfulPayment\(\{/);
   assert.doesNotMatch(paymentService, /amount:\s*paydStatus\.amount\s*\?\?\s*payment\.amount/);
   assert.doesNotMatch(paymentService, /amount:\s*providerData\?\.amount\s*\?\?\s*payment\.amount/);
   assert.match(paymentService, /Legacy payment success mutation is disabled/);
   assert.match(paymentService, /Legacy payment callback mutation is disabled/);
+});
+
+test('payment service selects configured payin provider and persists provider payment method', () => {
+  const paymentService = read('src/services/payment.service.js');
+
+  assert.match(paymentService, /process\.env\.PAYMENT_PROVIDER \|\| 'payd'/);
+  assert.match(paymentService, /this\.paymentProviderClient = this\.provider === 'paystack'[\s\S]*new PaystackProviderClient\(\)[\s\S]*new PaydProviderClient\(\)/);
+  assert.match(paymentService, /this\.providerClient = this\.paymentProviderClient/);
+  assert.match(paymentService, /payment:\s*\{[\s\S]*method:\s*provider/);
+  assert.match(paymentService, /payment_method:\s*provider/);
+  assert.match(paymentService, /VALUES \(\$1, \$2, \$3, \$4, \$5, 'pending', \$6, \$7, \$8::jsonb\)/);
+});
+
+test('withdrawal payouts route through configured provider after wallet deduction commit', () => {
+  const payoutService = read('src/services/payout.service.js');
+  const withdrawalService = read('src/services/withdrawal.service.js');
+
+  assert.match(payoutService, /process\.env\.PAYOUT_PROVIDER \|\| 'paystack'/);
+  assert.match(payoutService, /this\.provider = resolvePayoutProvider\(\)/);
+  assert.match(payoutService, /this\.payoutProviderClient = this\._buildProviderClient\(this\.provider\)/);
+  assert.match(payoutService, /if \(provider === 'paystack'\)[\s\S]*new PaystackTransferClient\(\)/);
+  assert.match(payoutService, /this\.transferClient = this\.payoutProviderClient/);
+  assert.match(payoutService, /this\.transferClient\.initiateTransfer/);
+  assert.match(payoutService, /this\.transferClient\.verifyTransfer/);
+  assert.match(withdrawalService, /UPDATE sellers SET balance = balance - \$1[\s\S]*INSERT INTO withdrawal_requests[\s\S]*await client\.query\('COMMIT'\)[\s\S]*this\._callProviderAndUpdate/);
+  assert.match(payoutService, /UPDATE sellers SET balance = balance \+ \$1/);
+});
+
+test('Paystack payout rollout adds only provider lookup indexes and preserves M-PESA wallet columns', () => {
+  const migration = read('migrations/20260510060000_add_paystack_provider_lookup_indexes.sql');
+  const withdrawalService = read('src/services/withdrawal.service.js');
+  const callbackStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+
+  assert.match(migration, /CREATE INDEX IF NOT EXISTS idx_payments_payment_method_status\s+ON payments\(payment_method,\s*status\)/);
+  assert.match(migration, /CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_method_status\s+ON withdrawal_requests\(\(metadata->>'provider'\),\s*status\)/);
+  assert.doesNotMatch(migration, /ALTER TABLE\s+(payments|withdrawal_requests)/i);
+  assert.doesNotMatch(migration, /RENAME COLUMN|DROP COLUMN/i);
+  assert.match(withdrawalService, /mpesa_number,\s*mpesa_name/);
+  assert.match(callbackStateMachine, /mpesa_receipt/);
+});
+
+test('admin payment labels are provider-neutral while raw provider payloads remain durable', () => {
+  const adminDashboard = read('../src/pages/admin/NewDashboardPage.tsx');
+  const adminApi = read('../src/api/adminApi.ts');
+  const footer = read('../src/components/Footer.tsx');
+  const productCard = read('../src/components/ProductCard.tsx');
+  const adminController = read('src/controllers/admin.controller.js');
+  const paymentModel = read('src/models/payment.model.js');
+  const withdrawalService = read('src/services/withdrawal.service.js');
+  const fintechMigration = read('migrations/20260507231000_final_fintech_stabilization.sql');
+
+  assert.match(adminDashboard, /Provider health/);
+  assert.match(adminDashboard, /Payment provider balance\/status/);
+  assert.match(adminDashboard, /Provider reference/);
+  assert.match(adminApi, /getPaymentProviderBalances/);
+  assert.match(adminController, /payment provider balance\/status/);
+  assert.doesNotMatch(footer, />Payd</);
+  assert.doesNotMatch(productCard, /Payd payments/);
+  assert.match(paymentModel, /raw_response/);
+  assert.match(withdrawalService, /SET provider_reference = \$1, raw_response = \$2/);
+  assert.match(fintechMigration, /payment_provider_attempts[\s\S]*response_payload JSONB/);
+  assert.match(fintechMigration, /payout_provider_attempts[\s\S]*response_payload JSONB/);
 });
 
 test('payment cron claims rows with SKIP LOCKED before provider verification', () => {
@@ -261,8 +326,8 @@ test('ambiguous gateway initiation failures stay pending for webhook recovery', 
   const paymentService = read('src/services/payment.service.js');
 
   assert.match(paymentService, /isAmbiguousPaymentProviderError/);
-  assert.match(paymentService, /PaydErrorCodes\.TIMEOUT/);
-  assert.match(paymentService, /PaydErrorCodes\.CONNECTION_FAILED/);
+  assert.match(paymentService, /'TIMEOUT'/);
+  assert.match(paymentService, /'CONNECTION_FAILED'/);
   assert.match(paymentService, /markPaymentProviderAttemptAmbiguous/);
   assert.match(paymentService, /provider_result_ambiguous/);
   assert.match(paymentService, /markPaymentInitiationAmbiguous/);
@@ -277,10 +342,36 @@ test('fraud evidence is persisted outside the rolled-back transaction', () => {
   assert.match(core, /recordFraudEvent\(fraudEvent\)/);
   assert.match(core, /missing_or_invalid_success_amount/);
   assert.match(core, /amount_mismatch/);
+  assert.match(core, /manual_review_reason:\s*'amount_mismatch'/);
+  assert.match(core, /status = 'manual_review_required'/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS fraud_events/);
   assert.match(migration, /expected_amount/);
   assert.match(migration, /provider_amount/);
   assert.match(migration, /payload JSONB/);
+});
+
+test('Paystack production-switch regression plan protects payin, logistics, polling, and payout gates', () => {
+  const fintechIntegration = read('test/fintech-remediation.integration.test.js');
+  const criticalRegression = read('test/critical-systems.regression.test.js');
+  const paymentEvents = read('src/events/payment.events.js');
+  const logisticsService = read('src/services/logisticsRequest.service.js');
+  const paymentService = read('src/services/payment.service.js');
+  const payoutStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+
+  assert.match(fintechIntegration, /Paystack accepted charge returns pending status/);
+  assert.match(fintechIntegration, /payment webhook completes through one atomic transaction/);
+  assert.match(fintechIntegration, /duplicate Paystack charge\.success does not duplicate fulfillment/);
+  assert.match(criticalRegression, /Paystack amount mismatch blocks completion with fraud evidence and manual review/);
+  assert.match(criticalRegression, /Paystack completion without order metadata is blocked before fulfillment/);
+  assert.match(fintechIntegration, /pending Paystack charge is checked by status polling/);
+  assert.match(fintechIntegration, /Paystack transfer success completes withdrawal/);
+  assert.match(fintechIntegration, /Paystack transfer failure refunds seller wallet once/);
+  assert.match(fintechIntegration, /Paystack transfer reversal after completion requires compensation without wallet mutation/);
+  assert.match(paymentEvents, /AppEvents\.PAYMENT\.COMPLETED[\s\S]*activateDoorDeliveryAfterPayment/);
+  assert.match(paymentEvents, /AppEvents\.PAYMENT\.COMPLETED[\s\S]*activateSellerPickupAfterPayment/);
+  assert.match(logisticsService, /payment_not_completed/);
+  assert.match(paymentService, /this\.provider === 'paystack'[\s\S]*new PaystackProviderClient\(\)/);
+  assert.match(payoutStateMachine, /providerPayloadIndicatesReversal/);
 });
 
 test('external notification side effects are emitted through EventBus from critical services', () => {
@@ -422,16 +513,16 @@ test('EventBus outbox only completes after listener delivery succeeds', () => {
 
 test('payout callbacks require HMAC, timestamp, and replay protection before mutation', () => {
   const route = read('src/routes/callback.routes.js');
-  const middleware = read('src/middleware/paydWebhookSecurity.js');
+  const middleware = read('src/middleware/paystackWebhookSecurity.js');
   const callback = read('src/controllers/callback.controller.js');
   const migration = read('migrations/20260508010000_webhook_replay_and_notification_delivery.sql');
   const hardeningMigration = read('migrations/20260508020000_provider_callback_hardening.sql');
 
-  assert.match(route, /requirePaydWebhookHmac/);
-  assert.match(route, /webhookRateLimiter,\s*verifyPaydWebhook,\s*requirePaydWebhookHmac,\s*handlePaydPayoutCallback/);
-  assert.match(middleware, /verifyPaydHmacSignature/);
-  assert.match(middleware, /x-payd-signature/);
-  assert.match(middleware, /x-payd-timestamp/);
+  assert.match(route, /requirePaystackWebhookHmac/);
+  assert.match(route, /verifyPaystackWebhook,[\s\S]*webhookRateLimiter,[\s\S]*requirePaystackWebhookHmac,[\s\S]*handlePaystackTransferCallback/);
+  assert.match(middleware, /verifyPaystackHmacSignature/);
+  assert.match(middleware, /x-paystack-signature/);
+  assert.match(middleware, /PAYSTACK_WEBHOOK_IPS/);
   assert.match(middleware, /webhook_replay_dedupe/);
   assert.match(middleware, /Webhook already processed/);
   assert.match(middleware, /Webhook already processing/);
@@ -440,11 +531,31 @@ test('payout callbacks require HMAC, timestamp, and replay protection before mut
   assert.match(hardeningMigration, /ADD COLUMN IF NOT EXISTS status/);
 });
 
+test('Paystack transfer callbacks map terminal events through payout state machine only', () => {
+  const route = read('src/routes/callback.routes.js');
+  const controller = read('src/controllers/callback.controller.js');
+  const normalizer = read('src/shared/utils/paystackTransferNormalizer.js');
+  const stateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+
+  assert.match(route, /router\.post\(\s*'\/paystack-transfer'/);
+  assert.match(controller, /normalizePaystackTransferPayload\(req\.body\)/);
+  assert.match(controller, /PayoutCallbackStateMachineService\.handleProviderCallback\(data/);
+  assert.doesNotMatch(controller, /refundToWallet|UPDATE\s+sellers|UPDATE\s+withdrawal_requests/i);
+  assert.match(normalizer, /event === 'transfer\.success'[\s\S]*'success'/);
+  assert.match(normalizer, /event === 'transfer\.failed' \|\| event === 'transfer\.reversed'[\s\S]*'failed'/);
+  assert.match(stateMachine, /providerPayloadIndicatesReversal/);
+  assert.match(stateMachine, /isReversal && request\.status === 'completed'/);
+  assert.match(stateMachine, /recordProviderReversalAfterCompletionLocked/);
+  assert.match(stateMachine, /PROVIDER_REVERSAL_AFTER_COMPLETION/);
+  assert.match(stateMachine, /provider_reversal_after_completion/);
+  assert.match(stateMachine, /if \(!isSuccess\)[\s\S]*payoutService\.refundToWallet\(client,\s*request\)/);
+});
+
 test('payment webhook route also requires HMAC and replay protection', () => {
   const route = read('src/routes/payment.routes.js');
 
-  assert.match(route, /requirePaydWebhookHmac/);
-  assert.match(route, /verifyPaydWebhook,\s*webhookRateLimiter,\s*requirePaydWebhookHmac,\s*paymentController\.handlePaydWebhook/);
+  assert.match(route, /requirePaystackWebhookHmac/);
+  assert.match(route, /verifyPaystackWebhook,[\s\S]*webhookRateLimiter,[\s\S]*requirePaystackWebhookHmac,[\s\S]*paymentController\.handlePaystackWebhook/);
 });
 
 test('manual-review payment mapping failures are terminal and not retried as pending', () => {
@@ -603,11 +714,13 @@ test('database payment status values cover every runtime payment status', () => 
 test('door delivery payment totals are recalculated by backend and do not inflate seller payout', () => {
   const paymentRoutes = read('src/routes/payment.routes.js');
   const paymentController = read('src/controllers/payment.controller.js');
+  const core = read('src/core/CorePaymentService.js');
   const paymentService = read('src/services/payment.service.js');
   const paymentEvents = read('src/events/payment.events.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
   const quoteService = read('src/services/logisticsQuote.service.js');
   const orderModel = read('src/models/order.model.js');
+  const orderService = read('src/services/order.service.js');
   const sanitize = read('src/shared/utils/sanitize.js');
   const logisticsStatusMigration = read('migrations/20260510020000_add_delivery_pending_logistics_status.sql');
   const productCard = read('../src/components/ProductCard.tsx');
@@ -623,8 +736,14 @@ test('door delivery payment totals are recalculated by backend and do not inflat
   assert.match(paymentService, /LogisticsQuoteService\.quoteBuyerDoorDelivery\(buyerDeliveryLocation\)/);
   assert.match(paymentService, /payableTotal\s*=\s*roundMoney\(productSubtotal \+ buyerDeliveryFee\)/);
   assert.match(paymentService, /amount:\s*payableTotal/);
+  assert.match(paymentService, /service:\s*\{[\s\S]*total:\s*payableTotal/);
+  assert.match(paymentService, /price:\s*dbPrice/);
+  assert.match(paymentService, /subtotal:\s*productSubtotal/);
   assert.match(paymentService, /seller_payout_base:\s*productSubtotal/);
   assert.match(paymentService, /seller_payout_excludes_delivery_fee:\s*true/);
+  assert.match(orderService, /const \{ totalAmount, platformFee, sellerPayout \} = this\._calculateTotals\(items\)/);
+  assert.match(orderService, /total_amount:\s*service\.total \|\| totalAmount/);
+  assert.match(orderService, /seller_payout_amount:\s*sellerPayout/);
   assert.match(paymentService, /LogisticsRequestService\.createDoorDeliveryPaymentPending\(client/);
   assert.match(paymentService, /LogisticsRequestService\.createDoorDeliveryPaymentPending\(client[\s\S]*await this\.createPaymentProviderAttempt\(client[\s\S]*await client\.query\('COMMIT'\)[\s\S]*await this\.initiatePayment\(gwPayload\)/);
   assert.match(paymentService, /cancelPaymentPendingLegsForPaymentFailure/);
@@ -638,6 +757,11 @@ test('door delivery payment totals are recalculated by backend and do not inflat
   assert.match(logisticsRequestService, /status = 'delivery_pending'/);
   assert.match(logisticsRequestService, /status = 'active'/);
   assert.match(logisticsRequestService, /Buyer paid for door delivery/);
+  assert.match(core, /handlePaystackWebhook\(webhookData/);
+  assert.match(core, /return this\.completeVerifiedPayment\(/);
+  assert.match(core, /eventBus\.enqueueInTransaction\([\s\S]*AppEvents\.PAYMENT\.COMPLETED/);
+  assert.doesNotMatch(paymentController, /LogisticsRequestService|logistics_legs|activateDoorDeliveryAfterPayment/);
+  assert.doesNotMatch(core, /LogisticsRequestService|logistics_legs|activateDoorDeliveryAfterPayment/);
   assert.match(logisticsStatusMigration, /'delivery_pending'/);
   assert.match(orderModel, /AS logistics/);
   assert.match(sanitize, /sanitizeLogistics/);
@@ -667,6 +791,9 @@ test('seller pickup fee payment activates pickup logistics without mutating prod
   assert.match(orderController, /requestSellerPickup/);
   assert.match(orderController, /initiateSellerPickupPayment/);
   assert.match(paymentService, /LogisticsQuoteService\.quoteSellerPickup\(pickup\)/);
+  assert.match(paymentService, /const provider = this\.provider/);
+  assert.match(paymentService, /INSERT INTO payments[\s\S]*payment_method[\s\S]*VALUES \(\$1, \$2, \$3, \$4, \$5, 'pending', \$6, \$7, \$8::jsonb\)/);
+  assert.match(paymentService, /payment_method:\s*provider/);
   assert.match(paymentService, /payment_purpose:\s*'seller_pickup_fee'/);
   assert.match(paymentService, /logistics_payment_type:\s*'seller_pickup_fee'/);
   assert.match(paymentService, /LogisticsRequestService\.createSellerPickupPaymentPending/);
@@ -900,13 +1027,13 @@ test('public pagination and lists use deterministic ordering', () => {
   assert.match(publicController, /ORDER BY time_slot ASC, id ASC/);
 });
 
-test('webhook rate limiting uses Redis when available with local fallback', () => {
-  const middleware = read('src/middleware/paydWebhookSecurity.js');
+test('webhook rate limiting protects requests with local fallback', () => {
+  const middleware = read('src/middleware/paystackWebhookSecurity.js');
 
-  assert.match(middleware, /cacheService/);
-  assert.match(middleware, /redis\?\.incr/);
-  assert.match(middleware, /rate:webhook:payd/);
-  assert.match(middleware, /fallbackMemoryLimit/);
+  assert.match(middleware, /const requests = new Map\(\)/);
+  assert.match(middleware, /MAX_REQUESTS = 100/);
+  assert.match(middleware, /Too many webhook requests/);
+  assert.match(middleware, /PAYSTACK_WEBHOOK_IPS/);
 });
 
 test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for money state', () => {

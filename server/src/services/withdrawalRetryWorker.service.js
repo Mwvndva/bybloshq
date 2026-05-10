@@ -70,7 +70,7 @@ class WithdrawalRetryWorkerService {
           whatsapp_number: request.whatsapp_number
         };
 
-        await withdrawalService._callPaydAndUpdate(request, entity, Number.parseFloat(request.amount), request.mpesa_number)
+        await withdrawalService._callProviderAndUpdate(request, entity, Number.parseFloat(request.amount), request.mpesa_number)
           .catch(err => logger.error(`[WithdrawalRetryWorker] Retry failed for request ${request.id}:`, err));
 
         await pool.query(

@@ -34,7 +34,7 @@ const Footer = () => {
           <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-widest">
             <span className="text-white/75">Partners:</span>
             <span className="text-white italic font-serif">Mzigoego</span>
-            <span className="text-white italic">Payd</span>
+            <span className="text-white italic">Payment Provider</span>
             <span className="text-white">EVOLVE</span>
           </div>
 

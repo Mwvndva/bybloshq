@@ -12,29 +12,32 @@ import LogisticsQuoteService from '../services/logisticsQuote.service.js';
 
 class PaymentController {
   /**
-   * Handle Payd STK Push webhook (payment confirmation).
+   * Handle Paystack M-Pesa charge webhook.
    */
-  async handlePaydWebhook(req, res) {
+  async handlePaystackWebhook(req, res) {
     const webhookData = req.body;
+    const data = webhookData.data || webhookData || {};
 
-    logger.info('[PaymentController] Payd webhook received', {
-      transaction_reference: webhookData.transaction_reference || webhookData.data?.api_ref,
-      result_code: webhookData.result_code,
-      success: webhookData.success,
+    logger.info('[PaymentController] Paystack webhook received', {
+      event: webhookData.event,
+      reference: data.reference,
+      status: data.status,
     });
 
     try {
-      await CorePaymentService.handlePaydWebhook(webhookData, {
-        signature: req.headers['x-payd-signature'],
-        rawBody: req.rawBody
+      await CorePaymentService.handlePaystackWebhook(webhookData, {
+        signature: req.headers['x-paystack-signature'],
+        rawBody: req.rawBody,
+        replayEventId: req.webhookSecurity?.replayEventId,
+        hmacVerified: req.webhookSecurity?.hmacVerified === true
       });
-      logger.info('[PaymentController] Payd webhook processed successfully', {
-        transaction_reference: webhookData.transaction_reference
+      logger.info('[PaymentController] Paystack webhook processed successfully', {
+        reference: data.reference
       });
       return res.status(200).json({ received: true });
     } catch (error) {
-      logger.error('[PaymentController] Payd webhook processing failed:', {
-        transaction_reference: webhookData.transaction_reference,
+      logger.error('[PaymentController] Paystack webhook processing failed:', {
+        reference: data.reference,
         error: error.message
       });
       if (
@@ -157,7 +160,7 @@ class PaymentController {
   async resetAgent(req, res) {
     try {
       paymentService.resetAgent();
-      res.status(200).json({ status: 'success', message: 'Payd HTTPS agent reset successfully', timestamp: new Date().toISOString() });
+      res.status(200).json({ status: 'success', message: 'Payment provider HTTPS agent reset successfully', timestamp: new Date().toISOString() });
     } catch (error) {
       logger.error('[PaymentController] Failed to reset agent:', error);
       res.status(500).json({ status: 'error', message: 'Failed to reset agent', error: error.message });

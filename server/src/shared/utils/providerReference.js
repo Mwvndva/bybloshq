@@ -15,6 +15,8 @@ export function normalizeProviderReference(payload = {}, explicitReference = nul
         || data.correlator_id
         || data.transaction_id
         || data.reference
+        || data.transfer_code
+        || data.transferCode
         || data.tracking_id
         || data.payment_reference
         || null;
