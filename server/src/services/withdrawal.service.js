@@ -40,7 +40,7 @@ function isAmbiguousPayoutProviderError(error) {
  * 6. Call payout provider asynchronously (non-blocking to caller)
  *    - On API success: store provider reference
  *    - On API failure: refund balance, mark request 'failed'
- * 7. Paystack sends webhook to /api/callbacks/paystack-transfer
+ * 7. Paystack sends webhook to /api/webhooks/paystack
  *    - callback.controller handles final status update
  */
 class WithdrawalService {

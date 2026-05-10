@@ -97,9 +97,10 @@ export function validateEnvironment() {
     const urls = [
         'FRONTEND_URL',
         'BACKEND_URL',
-        'PAYSTACK_BASE_URL',
-        'PAYSTACK_PAYMENT_CALLBACK_URL',
-        'PAYSTACK_PAYOUT_CALLBACK_URL'
+    'PAYSTACK_BASE_URL',
+    'PAYSTACK_WEBHOOK_URL',
+    'PAYSTACK_PAYMENT_CALLBACK_URL',
+    'PAYSTACK_PAYOUT_CALLBACK_URL'
     ];
 
     urls.forEach(urlVar => {

@@ -180,6 +180,7 @@ export default async (app) => {
             req.path.startsWith('/api/payments/webhook') ||
             req.path.startsWith('/api/payments/initiate-product') ||
             req.path.startsWith('/api/callbacks/') ||
+            req.path.startsWith('/api/webhooks/') ||
             req.path.startsWith('/api/whatsapp/');
 
         if (isExcluded) return next();

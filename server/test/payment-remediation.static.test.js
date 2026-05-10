@@ -551,6 +551,30 @@ test('Paystack transfer callbacks map terminal events through payout state machi
   assert.match(stateMachine, /if \(!isSuccess\)[\s\S]*payoutService\.refundToWallet\(client,\s*request\)/);
 });
 
+test('single Paystack dashboard webhook route dispatches charge and transfer events internally', () => {
+  const routeIndex = read('src/routes/index.js');
+  const unifiedRoute = read('src/routes/webhook.routes.js');
+  const controller = read('src/controllers/paystackWebhook.controller.js');
+  const expressLoader = read('src/loaders/express.js');
+  const dockerCompose = read('../docker-compose.yml');
+  const envExample = read('.env.production.example');
+  const readme = read('../README.md');
+
+  assert.match(routeIndex, /import webhookRoutes from '\.\/webhook\.routes\.js'/);
+  assert.match(routeIndex, /router\.use\('\/webhooks', webhookRoutes\)/);
+  assert.match(unifiedRoute, /router\.post\(\s*'\/paystack'/);
+  assert.match(unifiedRoute, /verifyPaystackWebhook,[\s\S]*webhookRateLimiter,[\s\S]*requirePaystackWebhookHmac,[\s\S]*handleUnifiedPaystackWebhook/);
+  assert.match(controller, /CHARGE_EVENTS[\s\S]*'charge\.success'/);
+  assert.match(controller, /TRANSFER_EVENTS[\s\S]*'transfer\.success'/);
+  assert.match(controller, /paymentController\.handlePaystackWebhook\(req,\s*res,\s*next\)/);
+  assert.match(controller, /handlePaystackTransferCallback\(req,\s*res,\s*next\)/);
+  assert.match(controller, /ignored:\s*true/);
+  assert.match(expressLoader, /req\.path\.startsWith\('\/api\/webhooks\/'\)/);
+  assert.match(dockerCompose, /PAYSTACK_WEBHOOK_URL:\s*\$\{PAYSTACK_WEBHOOK_URL:-https:\/\/bybloshq\.space\/api\/webhooks\/paystack\}/);
+  assert.match(envExample, /PAYSTACK_WEBHOOK_URL=https:\/\/bybloshq\.space\/api\/webhooks\/paystack/);
+  assert.match(readme, /PAYSTACK_WEBHOOK_URL=https:\/\/bybloshq\.space\/api\/webhooks\/paystack/);
+});
+
 test('payment webhook route also requires HMAC and replay protection', () => {
   const route = read('src/routes/payment.routes.js');
 
