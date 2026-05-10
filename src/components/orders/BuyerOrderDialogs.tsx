@@ -54,7 +54,7 @@ export function BuyerOrderDialogs({
 
   const confirmationContent = currentIsService ? (
     <div className="space-y-4">
-      <p>By clicking <strong>"Mark as Done"</strong>, you agree that the service has been completed to your satisfaction.</p>
+      <p>By clicking <strong>"Mark Service Completed"</strong>, you agree that the service has been completed to your satisfaction.</p>
       <p className="text-sm text-white/70">
         Once confirmed, funds will be released to the provider.
       </p>

@@ -1119,6 +1119,11 @@ class OrderService {
         throw new Error('Unauthorized: You can only update your own orders');
       }
 
+      const metadata = typeof order.metadata === 'string'
+        ? JSON.parse(order.metadata || '{}')
+        : (order.metadata || {});
+      const orderType = String(order.order_type || metadata.product_type || metadata.order_type || '').toLowerCase();
+      const isServiceOrder = orderType === 'service';
       const buyerConfirmStatuses = [
         OrderStatus.DELIVERY_COMPLETE,
         OrderStatus.COLLECTION_PENDING,
@@ -1126,6 +1131,9 @@ class OrderService {
       ];
 
       let canConfirmReceipt = buyerConfirmStatuses.includes(order.status);
+      if (!canConfirmReceipt && isServiceOrder) {
+        canConfirmReceipt = [OrderStatus.CONFIRMED, OrderStatus.FULFILLING].includes(order.status);
+      }
       if (!canConfirmReceipt && order.status === OrderStatus.FULFILLING) {
         const deliveryLegResult = await client.query(
           `SELECT ll.status

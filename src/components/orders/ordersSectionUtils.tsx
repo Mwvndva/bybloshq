@@ -57,11 +57,17 @@ export const isDigitalOrder = (order: Order): boolean => {
 
 export const isServiceOrder = (order?: Order | null): boolean => {
   if (!order) return false;
-  return order.status === 'CONFIRMED' || order.items.some((item: any) => item.productType === 'service' || item.isService);
+  const metadata = (order.metadata as any) || {};
+  const orderType = String((order as any).order_type || (order as any).type || metadata.product_type || metadata.order_type || '').toLowerCase();
+  return orderType === 'service' || order.items.some((item: any) => item.productType === 'service' || item.isService);
 };
 
 export const canConfirmOrderReceipt = (order?: Order | null): boolean => {
   if (!order) return false;
+
+  if (isServiceOrder(order)) {
+    return ['CONFIRMED', 'FULFILLING', 'READY_FOR_BUYER', 'DELIVERY_COMPLETE', 'COLLECTION_PENDING'].includes(order.status);
+  }
 
   if (['DELIVERY_COMPLETE', 'READY_FOR_BUYER', 'COLLECTION_PENDING'].includes(order.status)) {
     return true;
@@ -76,7 +82,7 @@ export const canConfirmOrderReceipt = (order?: Order | null): boolean => {
 };
 
 export const getConfirmReceiptLabel = (order?: Order | null): string => {
-  return isServiceOrder(order) ? 'Mark as Done' : 'Confirm Receipt';
+  return isServiceOrder(order) ? 'Mark Service Completed' : 'Confirm Receipt';
 };
 
 export const getStatusBadge = (status: string) => {
