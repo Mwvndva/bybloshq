@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom/vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthCoreProvider, useGlobalAuth } from './AuthCoreContext';
@@ -99,6 +99,20 @@ function AuthProbe() {
   );
 }
 
+function BuyerLoginProbe() {
+  const auth = useGlobalAuth();
+  return (
+    <div>
+      <button type="button" onClick={() => auth.login('buyer@byblos.test', 'secret', 'buyer')}>
+        Login buyer
+      </button>
+      <span data-testid="role">{auth.role || 'none'}</span>
+      <span data-testid="authenticated">{String(auth.isAuthenticated)}</span>
+      <span data-testid="profile-email">{auth.user?.profile?.email || 'none'}</span>
+    </div>
+  );
+}
+
 describe('AuthCoreProvider integration', () => {
   let nowSpy: ReturnType<typeof vi.spyOn>;
 
@@ -110,6 +124,7 @@ describe('AuthCoreProvider integration', () => {
 
   afterEach(() => {
     nowSpy.mockRestore();
+    cleanup();
   });
 
   it('downgrades stale admin auth on focus when backend session is no longer valid', async () => {
@@ -150,6 +165,45 @@ describe('AuthCoreProvider integration', () => {
     });
 
     expect(mocks.mockAdminApi.getMe.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(localStorage.getItem('adminSessionActive')).toBeNull();
+  });
+
+  it('persists buyer auth marker after successful login without relying on page reload state', async () => {
+    mocks.mockBuyerApi.login.mockResolvedValueOnce({
+      buyer: {
+        id: 7,
+        fullName: 'Buyer Seven',
+        email: 'buyer@byblos.test',
+        is_verified: true,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/buyer/login']}>
+        <AuthCoreProvider>
+          <BuyerLoginProbe />
+        </AuthCoreProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Login buyer' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Login buyer' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('role')).toHaveTextContent('buyer');
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
+      expect(screen.getByTestId('profile-email')).toHaveTextContent('buyer@byblos.test');
+    });
+
+    expect(mocks.mockBuyerApi.login).toHaveBeenCalledWith({
+      email: 'buyer@byblos.test',
+      password: 'secret',
+    });
+    expect(localStorage.getItem('buyerSessionActive')).toBe('true');
+    expect(localStorage.getItem('sellerSessionActive')).toBeNull();
     expect(localStorage.getItem('adminSessionActive')).toBeNull();
   });
 });

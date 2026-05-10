@@ -1,9 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Download, Loader2, Package, RefreshCw, Users } from 'lucide-react';
+import { Download, Loader2, RefreshCw, Users } from 'lucide-react';
 import type { Order } from '@/types/order';
 import { getImageUrl } from '@/lib/utils';
 import { getOrderInstruction } from '@/utils/orderInstructions';
+import { OrderLogisticsTracking } from './OrderLogisticsTracking';
 import {
   detailPillClass,
   formatOrderCurrency,
@@ -102,6 +103,15 @@ export function BuyerOrderCard({
             {instruction.text}
           </div>
         )}
+
+        <div className="mx-4 sm:mx-6">
+          <OrderLogisticsTracking
+            order={order}
+            view="buyer"
+            isPhysical={productType.toLowerCase() === 'physical'}
+            formatCurrency={(value, currency) => formatOrderCurrency(value || 0, currency || order.currency)}
+          />
+        </div>
 
         <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
           {order.items.slice(0, 2).map((item, idx) => (

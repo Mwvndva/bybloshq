@@ -16,6 +16,7 @@ import { pool } from '../shared/db/database.js';
 import path from 'path';
 import fs from 'fs/promises';
 import { sanitizeOrder } from '../shared/utils/sanitize.js';
+import paymentService from '../services/payment.service.js';
 
 const OrderService = CoreOrderService;
 
@@ -107,6 +108,48 @@ export const updateOrderStatus = async (req, res) => {
         res.status(statusCode).json({
             status: 'error',
             message: error.message
+        });
+    }
+};
+
+export const requestSellerPickup = async (req, res) => {
+    try {
+        const sellerId = req.user.sellerId;
+        if (!sellerId) {
+            return res.status(403).json({ status: 'error', message: 'Seller profile is required' });
+        }
+
+        const idempotencyKey = req.headers['idempotency-key']
+            || req.headers['x-checkout-token']
+            || req.body.idempotencyKey
+            || req.body.checkout_token
+            || null;
+
+        const result = await paymentService.initiateSellerPickupPayment({
+            orderId: req.params.id,
+            sellerId,
+            pickupLocation: req.body.pickupLocation || req.body.location,
+            mobilePayment: req.body.mobilePayment || req.body.phone,
+            idempotencyKey
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: result.alreadyPending
+                ? 'Pickup payment is already pending confirmation.'
+                : 'Pickup payment initiated. Check your phone.',
+            data: result
+        });
+    } catch (error) {
+        logger.error('Error requesting seller pickup:', error);
+        const statusCode = error.message?.includes('not found') ? 404
+            : error.message?.includes('already') ? 409
+                : error.message?.includes('only') || error.message?.includes('required') || error.message?.includes('Valid') ? 400
+                    : 500;
+
+        res.status(statusCode).json({
+            status: 'error',
+            message: error.message || 'Failed to request pickup'
         });
     }
 };

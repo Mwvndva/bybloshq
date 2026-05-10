@@ -18,6 +18,8 @@ import whatsappRoutes from './whatsapp.routes.js';
 import refreshTokenRoutes from './refreshToken.routes.js';
 import wishlistRoutes from './wishlist.routes.js';
 import marketingRoutes from './marketing.routes.js';
+import logisticsRoutes from './logistics.routes.js';
+import trackingRoutes from './tracking.routes.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -36,5 +38,7 @@ router.use('/callbacks', callbackRoutes);
 router.use('/orders', orderRoutes);
 router.use('/whatsapp', whatsappRoutes);
 router.use('/wishlist', wishlistRoutes);
+router.use('/logistics', logisticsRoutes);
+router.use('/tracking', trackingRoutes);
 
 export default router;

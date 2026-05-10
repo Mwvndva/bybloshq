@@ -78,5 +78,10 @@ router.delete('/users/:id', adminController.deleteUser);
 router.get('/withdrawal-requests', adminController.getAllWithdrawalRequests);
 router.patch('/withdrawal-requests/:id/status', adminController.updateWithdrawalRequestStatus);
 
+// Logistics oversight
+router.get('/logistics/requests', adminController.getAdminLogisticsRequests);
+router.patch('/logistics/requests/:requestId/legs/:legType/status', adminController.adminUpdateLogisticsLegStatus);
+router.post('/logistics/requests/:requestId/disputes/resolve', adminController.adminResolveLogisticsDispute);
+
 export default router;
 

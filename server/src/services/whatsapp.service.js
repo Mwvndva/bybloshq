@@ -757,6 +757,75 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
         return this.sendMessage(buyerWhatsApp, message);
     }
 
+    formatLogisticsAmount(value, currency = 'KES') {
+        const amount = Number.parseFloat(value || 0);
+        const safeCurrency = String(currency || 'KES').toUpperCase();
+        const label = safeCurrency === 'KES' || safeCurrency === 'KSH' ? 'KSh' : safeCurrency;
+        return `${label} ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    logisticsMilestoneTitle(notificationType) {
+        const titles = {
+            delivery_paid: 'Door delivery paid',
+            pickup_paid: 'Seller pickup paid',
+            pickup_assigned: 'Pickup assigned',
+            picked_up_from_seller: 'Package picked up from seller',
+            dropped_at_hub: 'Package dropped at hub',
+            out_for_delivery: 'Package out for delivery',
+            delivered: 'Package delivered',
+            delivery_delayed: 'Delivery delayed',
+            delivery_failed: 'Delivery failed',
+            pickup_failed: 'Pickup failed'
+        };
+        return titles[notificationType] || 'Logistics update';
+    }
+
+    async sendLogisticsMilestoneNotification(phone, { recipientRole, notificationType, context }) {
+        if (!phone || phone === 'N/A') return false;
+
+        const order = context?.order || {};
+        const request = context?.request || {};
+        const leg = context?.leg || {};
+        const buyer = context?.buyer || {};
+        const seller = context?.seller || {};
+        const title = this.logisticsMilestoneTitle(notificationType);
+        const orderNumber = order.orderNumber || order.id || 'pending';
+        const packageCode = request.packageCode || `Order ${orderNumber}`;
+        const fee = this.formatLogisticsAmount(leg.feeAmount, leg.feeCurrency);
+        const location = leg.type === 'pickup'
+            ? (leg.origin || seller.location || 'Pickup location pending')
+            : (leg.destination || 'Delivery address pending');
+        const itemSummary = Array.isArray(order.items) && order.items.length
+            ? order.items.map(item => `${item.name || 'Item'} x${item.quantity || 1}`).join(', ')
+            : 'Package';
+        const trackingLink = recipientRole === 'seller'
+            ? context?.trackingLinks?.seller?.url
+            : context?.trackingLinks?.buyer?.url;
+
+        const audienceLine = recipientRole === 'partner'
+            ? `Coordinate this ${leg.type || 'logistics'} leg in the Mzigo dashboard.`
+            : `Track here: ${trackingLink || 'Open Byblos to view the official tracking timeline.'}`;
+
+        const message = `
+*${title}*
+Order: *#${orderNumber}*
+Package: *${packageCode}*
+Items: ${itemSummary}
+
+Buyer: ${buyer.name || 'Buyer'}
+Seller: ${seller.name || 'Seller'}
+Leg: ${leg.type || 'logistics'}
+Status: ${String(leg.status || notificationType).replace(/_/g, ' ')}
+Fee: ${fee}
+Location: ${location}
+
+${audienceLine}
+_WhatsApp is notification only. Byblos tracking is the source of truth._
+`.trim();
+
+        return this.sendMessage(phone, message);
+    }
+
     async sendLogisticsNotification(order) {
         if (!this.COURIER_NUMBER || this.COURIER_NUMBER === 'N/A') {
             logger.warn('[LOGISTICS] No courier number configured. Set COURIER_WHATSAPP_NUMBER env var.');

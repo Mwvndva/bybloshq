@@ -25,11 +25,25 @@ const initiateProductSchema = z.object({
   idempotencyKey: z.string().optional().nullable(),
   // PIN-12: PERSISTENCE SHIELD (Do not strip these fields)
   buyerLocation: z.any().optional(),
+  delivery: z.any().optional(),
   metadata: z.any().optional(),
 });
 
 const checkStatusSchema = z.object({
   invoiceId: z.coerce.string().min(1, 'Invoice ID is required'),
+});
+
+const logisticsQuoteSchema = z.object({
+  legType: z.enum(['delivery', 'pickup']).optional(),
+  location: z.object({
+    address: z.string().optional().nullable(),
+    fullAddress: z.string().optional().nullable(),
+    full_address: z.string().optional().nullable(),
+    latitude: z.coerce.number().optional(),
+    longitude: z.coerce.number().optional(),
+    lat: z.coerce.number().optional(),
+    lng: z.coerce.number().optional(),
+  }).passthrough(),
 });
 
 // Public routes (no authentication required)
@@ -45,6 +59,13 @@ publicRouter.post(
   paymentRateLimiter,
   validate(initiateProductSchema),
   paymentController.initiateProductPayment
+);
+
+publicRouter.post(
+  '/logistics-quote',
+  paymentRateLimiter,
+  validate(logisticsQuoteSchema),
+  paymentController.quoteLogistics
 );
 
 // Webhook endpoint (public) - Paystack

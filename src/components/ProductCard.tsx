@@ -1,28 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart, ExternalLink, ChevronLeft, ChevronRight, Info } from 'lucide-react';
+import { useState, useRef, type CSSProperties, type MouseEvent } from 'react';
+import { Card } from '@/components/ui/card';
+import { Loader2, Heart } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { cn, formatCurrency, getImageUrl, isSellerShopless, formatFileSize } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
-import { BuyerInfoModal, BuyerInfo } from '@/components/BuyerInfoModal';
-import PhoneCheckModal from '@/components/PhoneCheckModal';
-import { ServiceBookingModal } from '@/components/ServiceBookingModal';
-import { PaymentStatusModal } from '@/components/PaymentStatusModal';
 import buyerApi from '@/api/buyerApi';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/lib/apiClient';
-import { clearAllAuthData } from '@/lib/authCleanup';
-import ProductImage from '@/components/common/ProductImage';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
-
-type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+import { ProductCardDetails } from '@/components/product-card/ProductCardDetails';
+import { ProductCardMedia } from '@/components/product-card/ProductCardMedia';
+import { ProductCardModals } from '@/components/product-card/ProductCardModals';
+import { createCheckoutAttemptToken, getProductFlags, getThemeClasses, normalizePhone, type Theme } from '@/components/product-card/productCardUtils';
+import type { DoorDeliverySelection } from '@/components/PhoneCheckModal';
 
 
 interface ProductCardProps {
@@ -56,10 +49,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
-  // Helper variables for product types
-  const isDigital = product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital;
-  const isService = product.product_type === 'service' || (product as any).productType === 'service';
-  const isHybrid = isService && (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid');
+  const { isDigital, isService, isHybrid, isOutOfStock, isSold } = getProductFlags(product);
 
   const [paymentModalData, setPaymentModalData] = useState<{
     isOpen: boolean;
@@ -70,7 +60,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   }>({ isOpen: false, orderNumber: null, invoiceId: null, isGuest: false });
 
   // Loading states
-  const [isImageLoading, setIsImageLoading] = useState(true);
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
@@ -78,110 +67,22 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   // FIX (Task 14): Prevent duplicate payment triggers and race conditions
   const { runWithLock, isLocked } = useAsyncLock();
 
-  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isMounted = useRef(true); // FIX (Task 14): Prevent memory leaks / state updates on unmounted component
   const checkoutAttemptTokenRef = useRef<string | null>(null);
+  const doorDeliverySelectionRef = useRef<DoorDeliverySelection | null>(null);
 
   const getCheckoutAttemptToken = () => {
     if (!checkoutAttemptTokenRef.current) {
-      const fallbackBytes = new Uint32Array(4);
-      globalThis.crypto?.getRandomValues?.(fallbackBytes);
-      const randomPart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Array.from(fallbackBytes).map(value => value.toString(36)).join('')}`;
-      checkoutAttemptTokenRef.current = `checkout:${product.id}:${randomPart}`;
+      checkoutAttemptTokenRef.current = createCheckoutAttemptToken(product.id);
     }
     return checkoutAttemptTokenRef.current;
   };
-
-  /**
-   * FIX (Task 21): Normalize phone numbers before API calls
-   * Converts +2547... to 07... and removes spaces
-   */
-  const normalizePhone = (phone: string): string => {
-    let normalized = phone.replace(/\s+/g, '');
-    if (normalized.startsWith('+254')) {
-      normalized = '0' + normalized.slice(4);
-    } else if (normalized.startsWith('254')) {
-      normalized = '0' + normalized.slice(3);
-    }
-    return normalized;
-  };
-
-
 
   // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
 
-  // Check if product is out of stock (inventory tracking)
-  const isOutOfStock = (product as any).track_inventory === true && ((product as any).quantity === 0 || (product as any).quantity === null);
-  const isSold = product.status === 'sold' || product.isSold || isOutOfStock;
   const isWishlisted = isInWishlist(product.id);
-
-  const glassCardStyle: React.CSSProperties = {
-    background: 'rgba(17, 17, 17, 0.7)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
-  };
-
-
-  useEffect(() => {
-
-  }, [product.id, isWishlisted]);
-
-  // Define all product images
-  const allImages = [
-    ...(product.image_url && (!product.images || product.images.length === 0 || product.images[0] !== product.image_url) ? [product.image_url] : []),
-    ...(product.images || [])
-  ];
-
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Sync scroll position when index changes (for arrows)
-  const scrollToImage = (index: number) => {
-    if (scrollRef.current) {
-      const container = scrollRef.current;
-      const child = container.children[index] as HTMLElement;
-      if (child) {
-        container.scrollTo({
-          left: child.offsetLeft,
-          behavior: 'smooth'
-        });
-      }
-    }
-  };
-
-  const handleNextImage = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const nextIndex = (currentImageIndex + 1) % allImages.length;
-    setCurrentImageIndex(nextIndex);
-    scrollToImage(nextIndex);
-  };
-
-  const handlePrevImage = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const prevIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
-    setCurrentImageIndex(prevIndex);
-    scrollToImage(prevIndex);
-  };
-
-  // Sync index when user swipes manually
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    const scrollLeft = container.scrollLeft;
-    const width = container.offsetWidth;
-    if (width > 0) {
-      const newIndex = Math.round(scrollLeft / width);
-      if (newIndex !== currentImageIndex && newIndex >= 0 && newIndex < allImages.length) {
-        setCurrentImageIndex(newIndex);
-      }
-    }
-  };
-  const toggleWishlist = async (e: React.MouseEvent) => {
+  const toggleWishlist = async (e: MouseEvent) => {
     e.stopPropagation();
     if (isWishlistLoading || wishlistActionLoading || isSold) return;
     setWishlistActionLoading(true);
@@ -207,7 +108,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string; locationType?: string } | null>(null);
 
-  const handleBuyClick = async (e: React.MouseEvent) => {
+  const handleBuyClick = async (e: MouseEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
 
@@ -215,6 +116,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
     // 1. Service Product + Not Authenticated? -> Verification First Flow
     if (isService && !isAuthenticated) {
+      doorDeliverySelectionRef.current = null;
       setIsBookingFlowActive(true);
       setBookingData(null);
       setCurrentPhone('');
@@ -225,6 +127,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
     // 2. Service Product + Authenticated? -> Booking Flow
     if (isService) {
+      doorDeliverySelectionRef.current = null;
       setIsBookingFlowActive(true);
       setBookingData(null);
       setCurrentPhone('');
@@ -238,6 +141,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setBookingData(null);
     setCurrentPhone('');
     setBuyerId(null);
+    doorDeliverySelectionRef.current = null;
     setIsPhoneCheckModalOpen(true);
   };
 
@@ -269,9 +173,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const handlePhoneSubmit = async (phone: string) => {
+  const handlePhoneSubmit = async (phone: string, delivery?: DoorDeliverySelection) => {
     setIsCheckingPhone(true);
     try {
+      doorDeliverySelectionRef.current = delivery?.doorDelivery ? delivery : null;
       // FIX (Task 21): Normalize phone number before checking status
       const normalizedPhone = normalizePhone(phone);
       const result = await buyerApi.checkBuyerByPhone(normalizedPhone);
@@ -414,11 +319,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     bookingDetails: any = null,
     buyerId?: string | number
   ) => {
+    const activeDoorDeliverySelection = doorDeliverySelectionRef.current;
+    const estimatedPayableAmount = product.price + (activeDoorDeliverySelection?.doorDelivery ? Number(activeDoorDeliverySelection?.quote?.feeAmount || 0) : 0);
+
     // 0. Minimum Amount Validation (Payd documentation requirement)
-    if (product.price < 10) {
+    if (estimatedPayableAmount < 10) {
       toast({
         title: "Minimum Amount Not Met",
-        description: `Payd payments must be at least 10 KES. Current price: ${product.price} KES.`,
+        description: `Payd payments must be at least 10 KES. Current total: ${estimatedPayableAmount} KES.`,
         variant: "destructive"
       });
       setIsProcessingPurchase(false);
@@ -428,20 +336,24 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setIsProcessingPurchase(true);
     try {
       const activeBooking = bookingDetails || bookingData;
+      const doorDeliverySelection = doorDeliverySelectionRef.current;
       console.log('[PAYLOAD-DEBUG] Outgoing Payment Payload:', {
         buyerDetails,
         bookingDetails,
         bookingData,
         resolvedBooking: activeBooking,
+        doorDeliverySelection,
         buyerLocation: activeBooking?.buyerLocation
       });
       const isService = product.product_type === 'service' || (product as any).productType === 'service';
+      const wantsDoorDelivery = !isService && !isDigital && doorDeliverySelection?.doorDelivery === true;
+      const paymentEstimate = product.price + (wantsDoorDelivery ? Number(doorDeliverySelection?.quote?.feeAmount || 0) : 0);
       const checkoutToken = getCheckoutAttemptToken();
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
         mobilePayment: buyerDetails.mobilePayment,
         email: buyerDetails.email,
-        amount: product.price,
+        amount: paymentEstimate,
         productId: product.id,
         sellerId: product.sellerId || displaySeller?.id,
         productName: product.name,
@@ -452,11 +364,25 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         clientCheckoutToken: checkoutToken,
         // Provide structured buyerLocation if it came from booking/map
         // root city/location fields are deprecated and ignored by backend
-        buyerLocation: activeBooking?.buyerLocation || (buyerDetails.city && buyerDetails.location ? {
+        buyerLocation: wantsDoorDelivery ? {
+          address: doorDeliverySelection?.address,
+          lat: doorDeliverySelection?.lat,
+          lng: doorDeliverySelection?.lng
+        } : activeBooking?.buyerLocation || (buyerDetails.city && buyerDetails.location ? {
           address: `${buyerDetails.city}, ${buyerDetails.location}`,
           lat: (buyerDetails as any).latitude || 0,
           lng: (buyerDetails as any).longitude || 0
         } : undefined),
+        delivery: wantsDoorDelivery ? {
+          doorDelivery: true,
+          deliveryMode: 'DOOR_DELIVERY',
+          address: doorDeliverySelection?.address,
+          latitude: doorDeliverySelection?.lat,
+          longitude: doorDeliverySelection?.lng,
+          frontendQuote: doorDeliverySelection?.quote
+        } : {
+          doorDelivery: false
+        },
         metadata: activeBooking ? {
           booking_date: format(activeBooking.date, 'yyyy-MM-dd'),
           booking_time: activeBooking.time,
@@ -464,9 +390,31 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           service_requirements: activeBooking.serviceRequirements,
           buyer_location: activeBooking.buyerLocation,
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
+          delivery: wantsDoorDelivery ? {
+            doorDelivery: true,
+            door_delivery: true,
+            delivery_mode: 'DOOR_DELIVERY',
+            buyerDeliveryLocation: {
+              address: doorDeliverySelection?.address,
+              lat: doorDeliverySelection?.lat,
+              lng: doorDeliverySelection?.lng
+            },
+            frontendQuote: doorDeliverySelection?.quote
+          } : { doorDelivery: false },
           client_checkout_token: checkoutToken
         } : {
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
+          delivery: wantsDoorDelivery ? {
+            doorDelivery: true,
+            door_delivery: true,
+            delivery_mode: 'DOOR_DELIVERY',
+            buyerDeliveryLocation: {
+              address: doorDeliverySelection?.address,
+              lat: doorDeliverySelection?.lat,
+              lng: doorDeliverySelection?.lng
+            },
+            frontendQuote: doorDeliverySelection?.quote
+          } : { doorDelivery: false },
           client_checkout_token: checkoutToken
         }
       };
@@ -535,16 +483,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
-    setIsImageLoading(false);
-  };
-
-  const handleImageLoad = () => setIsImageLoading(false);
-
   // Get theme styles dynamically from CSS variables (set by ShopPage)
-  const themedCardStyle: React.CSSProperties = {
+  const themedCardStyle: CSSProperties = {
     background: 'var(--theme-card-bg, rgba(5, 5, 5, 0.96))',
     backdropFilter: 'blur(16px)',
     WebkitBackdropFilter: 'blur(16px)',
@@ -553,48 +493,24 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     boxShadow: '0 10px 34px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--theme-border, rgba(255, 255, 255, 0.14))'
   };
 
-  const getThemeClasses = () => {
-    // When inside a themed shop, we prefer CSS variables
-    const isThemedShop = theme !== 'default';
+  const themeClasses = getThemeClasses(theme);
 
-    switch (theme) {
-      case 'black':
-        return {
-          card: 'bg-[#0a0a0a]/95 text-white border-white/10 hover:border-[var(--theme-accent, #f59e0b)]/50 hover:shadow-[0_0_30px_rgba(var(--theme-accent-rgb, 245,158,11),0.15)]',
-          price: 'text-[var(--theme-accent, #f59e0b)]',
-          button: 'bg-[var(--theme-button-bg, #f59e0b)] hover:opacity-90 text-[var(--theme-button-text, black)] font-bold shadow-[0_0_15px_rgba(var(--theme-accent-rgb, 245,158,11),0.3)]',
-          seller: 'text-gray-300',
-          description: 'text-gray-300',
-          icon: 'text-[var(--theme-accent, #f59e0b)]',
-        };
-      case 'pink':
-      case 'orange':
-      case 'green':
-      case 'red':
-      case 'yellow':
-      case 'brown':
-        // These themes generally have colored backgrounds where white/light text works better for descriptions
-        return {
-          card: 'bg-[var(--theme-card-bg, white)] text-black border-[var(--theme-border)] hover:shadow-xl hover:shadow-[var(--theme-accent)]/10',
-          price: 'text-[var(--theme-accent)]',
-          button: 'bg-[var(--theme-button-bg)] hover:opacity-90 text-[var(--theme-button-text)] shadow-md',
-          seller: 'text-gray-800 opacity-80',
-          description: (theme === 'yellow' || theme === 'orange') ? 'text-gray-800' : 'text-gray-100', // Yellow/Orange use dark text, others use light
-          icon: 'text-[var(--theme-accent)]',
-        };
-      default: // default/glass theme
-        return {
-          card: 'border-0',
-          price: 'text-yellow-600',
-          button: 'bg-yellow-400 hover:bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/10',
-          seller: 'text-white',
-          description: 'text-white',
-          icon: 'text-white',
-        };
+  const openShop = () => {
+    if (displaySeller?.shopName) {
+      navigate(`/shop/${displaySeller.shopName}`);
+    } else if (displaySeller?.id) {
+      navigate(`/shop/${displaySeller.id}`);
     }
   };
 
-  const themeClasses = getThemeClasses();
+  const handleBuyButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.nativeEvent) {
+      event.nativeEvent.stopImmediatePropagation();
+    }
+    handleBuyClick(event);
+  };
 
   return (
     <Card
@@ -608,8 +524,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       aria-label={`Product: ${product.name}`}
       onClick={(e) => e.stopPropagation()}
     >
-
-      {/* Wishlist Button */}
       {!hideWishlist && (
         <button
           onClick={toggleWishlist}
@@ -631,289 +545,52 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </button>
       )}
 
-      {/* Product Image — always renders, shows placeholder when no image */}
-      <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
-        {isDigital && (
-          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-            <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-md">
-              <FileText className="h-3 w-3 mr-1" />
-              Digital
-            </Badge>
-            {product.digital_file_size && (
-              <Badge className="bg-black/60 text-white border-0 text-[10px] py-0.5 px-2 backdrop-blur-md rounded-full">
-                {formatFileSize(product.digital_file_size)}
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {isService && (
-          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-            <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-md">
-              <Handshake className="h-3 w-3 mr-1" />
-              Service
-            </Badge>
-            {isHybrid && (
-              <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-md">
-                Hybrid
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Out of Stock Badge */}
-        {isOutOfStock && (
-          <div className="absolute top-2 right-2 z-10">
-            <Badge className="bg-[#000000] text-red-500 border-2 border-red-500 font-bold backdrop-blur-sm shadow-lg animate-pulse">
-              SOLD OUT
-            </Badge>
-          </div>
-        )}
-
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[1]" />
-
-        <ProductImage
-          src={product.image_url}
-          alt={product.name}
-          className="w-full aspect-[3/4] transition-transform duration-700 sm:group-hover:scale-105"
-        />
-      </div>
-
-      <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 h-6 sm:h-6 text-base sm:text-base antialiased",
-          (theme === 'black' || forceWhiteText) ? 'text-white' : 'text-black'
-        )}>
-          {product.name}
-        </h3>
-        <p className={cn("font-black text-base sm:text-base mb-1 sm:mb-1.5 flex items-center gap-1.5 sm:gap-2",
-          (product.product_type === 'service' || (product as any).productType === 'service')
-            ? 'text-purple-600'
-            : (forceWhiteText && theme === 'default') ? 'text-yellow-400' : themeClasses.price
-        )}>
-          {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) ? (
-            <span className="text-red-600">
-              {formatCurrency(product.price)}
-            </span>
-          ) : (
-            formatCurrency(product.price)
-          )}
-          {(product.product_type === 'service' || (product as any).productType === 'service') && (product.service_options?.price_type === 'hourly' || (product as any).serviceOptions?.price_type === 'hourly') && (
-            <span className="text-sm font-medium text-gray-300 ml-1">/hr</span>
-          )}
-        </p>
-
-        {product.description && (
-          <div className="relative group/desc h-10 overflow-y-auto no-scrollbar mb-1.5 sm:mb-2 overscroll-contain">
-            <p className={cn("mobile-text leading-tight text-[11px] sm:text-xs min-h-full",
-              (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
-            )}>
-              {product.description}
-            </p>
-          </div>
-        )}
-
-        {/* Service Location Info */}
-        {isService && (
-          <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
-            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
-          )}>
-            <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-            <span className="line-clamp-2 text-sm">
-              {(product.service_options?.location_type === 'seller_visits_buyer' || (product as any).serviceOptions?.location_type === 'seller_visits_buyer') ? (
-                "Mobile Service"
-              ) : (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') ? (
-                "In-store & Mobile"
-              ) : (
-                (isSellerShopless(displaySeller) ? "Mobile Service" : "In-store")
-              )}
-            </span>
-          </div>
-        )}
-
-        {/* Seller Info */}
-        <div className={cn("flex items-center gap-1 sm:gap-1.5 pt-1.5 sm:pt-2 border-t mt-1.5 sm:mt-2",
-          (theme === 'black' || forceWhiteText) ? 'border-gray-800' : 'border-gray-100'
-        )}>
-          <Store className={cn("h-3.5 w-3.5 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
-          <span
-            className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90 cursor-pointer hover:underline text-sm sm:text-xs",
-              (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-800'
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (displaySeller?.shopName) {
-                navigate(`/shop/${displaySeller.shopName}`);
-              } else if (displaySeller?.id) {
-                // Fallback to ID if shopName is missing
-                navigate(`/shop/${displaySeller.id}`);
-              }
-            }}
-          >
-            {displaySellerName}
-          </span>
-          {/* Shop Type Indicator */}
-          <div className="shrink-0 flex items-center">
-            {isSellerShopless(displaySeller) ? (
-              <Badge variant="outline" className="h-4 px-1 text-[8px] border-zinc-500/30 text-zinc-400 bg-zinc-500/10 font-bold uppercase tracking-wider">
-                Online Only
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="h-4 px-1 text-[8px] border-emerald-500/30 text-emerald-400 bg-emerald-500/10 font-bold uppercase tracking-wider">
-                Physical Shop
-              </Badge>
-            )}
-          </div>
-          {displaySeller && !isSellerShopless(displaySeller) && (product.product_type !== 'digital' && !(product as any).isDigital) && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "h-6 px-2 text-[10px] font-bold gap-1 transition-all duration-300",
-                      "bg-[var(--theme-accent)]/10 text-[var(--theme-accent)] border-[var(--theme-accent)]/20 hover:bg-[var(--theme-accent)]/20 shadow-sm"
-                    )}
-                  >
-                    <Store className="w-3 h-3" />
-                    Visit Shop
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-0 shadow-xl border-green-100 overflow-hidden z-50">
-                  <div className="bg-green-50/50 p-3 border-b border-green-100">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="bg-green-100 p-1.5 rounded-full">
-                        <MapPin className="w-4 h-4 text-green-700" />
-                      </div>
-                      <span className="font-semibold text-green-900 text-sm">Physical Store</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-white space-y-3">
-                    <div className="text-sm text-gray-600 leading-relaxed">
-                      {displaySeller.physicalAddress}
-                    </div>
-
-                    <Button
-                      size="sm"
-                      className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 text-xs h-8"
-                      onClick={() => {
-                        // Open Google Maps
-                        const query = encodeURIComponent(displaySeller.physicalAddress || '');
-                        if (displaySeller.latitude && displaySeller.longitude) {
-                          window.open(`https://www.google.com/maps/search/?api=1&query=${displaySeller.latitude},${displaySeller.longitude}`, '_blank');
-                        } else {
-                          window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
-                        }
-                      }}
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Get Directions
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
-        </div>
-
-        {/* Buy Button */}
-        <Button
-          variant="default"
-          size="default"
-          className={cn(
-            'button-mobile w-full h-12 sm:h-10 font-bold transition-colors mt-3 sm:mt-2.5',
-            'focus-visible:ring-2 focus-visible:ring-offset-2',
-            'flex items-center justify-center gap-2 sm:gap-2 text-base sm:text-sm',
-            'disabled:opacity-50 disabled:pointer-events-none',
-            isSold
-              ? 'bg-gray-400 hover:bg-gray-400'
-              : (product.product_type === 'service' || (product as any).productType === 'service')
-                ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital)
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : themeClasses.button,
-            (product.product_type !== 'service' && (product as any).productType !== 'service' && product.product_type !== 'digital' && (product as any).productType !== 'digital' && !product.is_digital && !(product as any).isDigital) && themeClasses.button
-          )}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.nativeEvent) {
-              e.nativeEvent.stopImmediatePropagation();
-            }
-            handleBuyClick(e);
-          }}
-          disabled={isSold || isLocked}
-          aria-busy={isLocked}
-        >
-          {isLocked ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Processing...</span>
-            </>
-          ) : (
-            <>
-              {(product.product_type === 'service' || (product as any).productType === 'service') ? (
-                <Calendar className="h-4 w-4" />
-              ) : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) ? (
-                <FileText className="h-4 w-4" />
-              ) : (
-                <ShoppingCart className="h-4 w-4" />
-              )}
-              <span>
-                {isSold
-                  ? 'Sold Out'
-                  : (product.product_type === 'service' || (product as any).productType === 'service')
-                    ? 'Book Now'
-                    : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital)
-                      ? 'Download Now'
-                      : 'Buy Now'}
-              </span>
-            </>
-          )}
-        </Button>
-      </CardContent>
-
-
-
-      {/* Buyer Information Modal */}
-      <PhoneCheckModal
-        isOpen={isPhoneCheckModalOpen}
-        onClose={() => setIsPhoneCheckModalOpen(false)}
-        onPhoneSubmit={handlePhoneSubmit}
-        isLoading={isCheckingPhone}
-        purchaseDetails={{
-          shopName: displaySellerName,
-          productName: product.name,
-          productPrice: Number(product.price || 0),
-        }}
-      />
-
-      <BuyerInfoModal
-        isOpen={isBuyerModalOpen}
-        onClose={() => setIsBuyerModalOpen(false)}
-        onSubmit={async (buyerInfo) => {
-          await handleBuyerInfoSubmit({
-            ...buyerInfo,
-            fullName: buyerInfo.fullName || `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim(),
-          }, null, shouldSkipSave);
-        }}
-        isLoading={isProcessingPurchase}
-        theme={theme}
-        phoneNumber={currentPhone}
-        initialData={initialBuyerData}
-      />
-
-      <ServiceBookingModal
+      <ProductCardMedia
         product={product}
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        onConfirm={handleBookingConfirm}
-        initialBuyerLocation={initialBuyerLocation}
+        isDigital={isDigital}
+        isService={isService}
+        isHybrid={isHybrid}
+        isOutOfStock={isOutOfStock}
       />
 
-      <PaymentStatusModal
-        {...paymentModalData}
-        onClose={() => setPaymentModalData(prev => ({ ...prev, isOpen: false }))}
+      <ProductCardDetails
+        product={product}
+        displaySeller={displaySeller}
+        displaySellerName={displaySellerName}
+        theme={theme}
+        forceWhiteText={forceWhiteText}
+        themeClasses={themeClasses}
+        isDigital={isDigital}
+        isService={isService}
+        isSold={isSold}
+        isLocked={isLocked}
+        onBuyClick={handleBuyButtonClick}
+        onOpenShop={openShop}
+      />
+
+      <ProductCardModals
+        product={product}
+        theme={theme}
+        displaySellerName={displaySellerName}
+        isPhoneCheckModalOpen={isPhoneCheckModalOpen}
+        isBuyerModalOpen={isBuyerModalOpen}
+        isBookingModalOpen={isBookingModalOpen}
+        isCheckingPhone={isCheckingPhone}
+        isProcessingPurchase={isProcessingPurchase}
+        currentPhone={currentPhone}
+        initialBuyerData={initialBuyerData}
+        initialBuyerLocation={initialBuyerLocation}
+        shouldSkipSave={shouldSkipSave}
+        paymentModalData={paymentModalData}
+        onPhoneCheckClose={() => setIsPhoneCheckModalOpen(false)}
+        onBuyerModalClose={() => setIsBuyerModalOpen(false)}
+        onBookingModalClose={() => setIsBookingModalOpen(false)}
+        onPaymentModalClose={() => setPaymentModalData(prev => ({ ...prev, isOpen: false }))}
+        onPhoneSubmit={handlePhoneSubmit}
+        onBuyerInfoSubmit={async (buyerInfo, skipSave) => {
+          await handleBuyerInfoSubmit(buyerInfo, null, skipSave);
+        }}
+        onBookingConfirm={handleBookingConfirm}
       />
     </Card>
   );

@@ -25,31 +25,10 @@ import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
 import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 import { getProviderPayloadData, normalizeProviderReference } from '../shared/utils/providerReference.js';
+import { normalizeProviderAmount, normalizeProviderPaymentStatus } from '../shared/utils/paymentStatusNormalizer.js';
 import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
 import { PaymentStatus } from '../shared/constants/enums.js';
 
-// ── Lazy imports to prevent circular dependencies ──
-let _legacyPaymentService = null;
-let _legacyOrderService = null;
-
-async function getLegacyPaymentService() {
-    if (!_legacyPaymentService) {
-        const { default: svc } = await import('../services/payment.service.js');
-        _legacyPaymentService = svc;
-    }
-    return _legacyPaymentService;
-}
-
-async function getLegacyOrderService() {
-    if (!_legacyOrderService) {
-        const { default: svc } = await import('../services/order.service.js');
-        _legacyOrderService = svc;
-    }
-    return _legacyOrderService;
-}
-
-const SUCCESS_STATUSES = new Set(['success', 'completed', 'processed', 'paid']);
-const FAILED_STATUSES = new Set(['failed', 'fail', 'declined', 'cancelled', 'canceled', 'expired', 'timeout']);
 const FULFILLABLE_ORDER_STATUSES = new Set(['CREATED', 'RESERVED', 'HELD', 'PAYMENT_PENDING', 'PENDING']);
 const PAID_TERMINAL_ORDER_STATUSES = new Set(['PAID', 'PROCESSING', 'FULFILLMENT_PENDING', 'FULFILLED', 'DELIVERED', 'BOOKED', 'COMPLETED']);
 const CANNOT_FULFILL_ORDER_STATUSES = new Set(['CANCELLED', 'EXPIRED', 'REFUNDED', 'FAILED', 'COMPENSATION_REQUIRED']);
@@ -67,23 +46,6 @@ function parseJson(value, fallback = {}) {
 
 function extractPaymentReference(providerPayload = {}, explicitReference) {
     return normalizeProviderReference(providerPayload, explicitReference);
-}
-
-function extractProviderStatus(providerPayload = {}) {
-    const data = getProviderPayloadData(providerPayload);
-    const resultCode = Number.parseInt(data.result_code ?? data.resultCode ?? data.code, 10);
-    const rawStatus = String(data.status || data.state || data.result || '').toLowerCase();
-
-    if (SUCCESS_STATUSES.has(rawStatus) || resultCode === 0 || resultCode === 200) return 'success';
-    if (FAILED_STATUSES.has(rawStatus) || (Number.isFinite(resultCode) && resultCode !== 0 && resultCode !== 200)) return 'failed';
-    return rawStatus || 'pending';
-}
-
-function extractProviderAmount(providerPayload = {}) {
-    const data = getProviderPayloadData(providerPayload);
-    const rawAmount = data.amount ?? data.Amount ?? data.value ?? data.transaction_amount;
-    const amount = Number.parseFloat(rawAmount);
-    return { rawAmount, amount };
 }
 
 function extractReceipt(providerPayload = {}) {
@@ -105,6 +67,12 @@ function resolveOrderIdFromMetadata(metadata = {}) {
 
     const orderId = Number.parseInt(rawOrderId, 10);
     return Number.isSafeInteger(orderId) && orderId > 0 ? orderId : null;
+}
+
+function isSellerPickupFeePayment(metadata = {}) {
+    const meta = parseJson(metadata);
+    return meta.payment_purpose === 'seller_pickup_fee'
+        || meta.logistics_payment_type === 'seller_pickup_fee';
 }
 
 async function recordFraudEvent(event) {
@@ -219,13 +187,8 @@ function requireValidWebhookSignature(signature, rawBody) {
 
 const CorePaymentService = {
 
-    /**
-     * Initiate an STK Push payment.
-     * Fully delegated to legacy — no changes to initiation flow.
-     */
     async initiatePayment(paymentData) {
-        const svc = await getLegacyPaymentService();
-        return svc.initiatePayment(paymentData);
+        throw new Error('CorePaymentService.initiatePayment is disabled. Use PaymentService.initiatePayment for provider initiation and CorePaymentService.completeVerifiedPayment for completion.');
     },
 
     verifyWebhookSignature(signature, rawBody) {
@@ -234,7 +197,7 @@ const CorePaymentService = {
 
     async completeVerifiedPayment({ dbClient = null, reference, paymentId = null, providerPayload = {}, source = 'unknown' }) {
         const providerReference = extractPaymentReference(providerPayload, reference);
-        const providerStatus = extractProviderStatus(providerPayload);
+        const providerStatus = normalizeProviderPaymentStatus(providerPayload);
         const isSuccess = providerStatus === 'success';
         const isFailed = providerStatus === 'failed';
 
@@ -289,7 +252,7 @@ const CorePaymentService = {
                 return { status: 'already_failed', payment: paymentRow, message: 'Payment already failed' };
             }
 
-            const { rawAmount, amount: providerAmount } = extractProviderAmount(providerPayload);
+            const { rawAmount, amount: providerAmount } = normalizeProviderAmount(providerPayload);
             if (isSuccess) {
                 if (rawAmount === undefined || rawAmount === null || Number.isNaN(providerAmount) || providerAmount <= 0) {
                     fraudEvent = {
@@ -396,6 +359,7 @@ const CorePaymentService = {
                 };
             }
 
+            const logisticsFeePayment = isSellerPickupFeePayment(paymentRow.metadata);
             const receipt = extractReceipt(providerPayload);
             const completionMetadata = {
                 completion_source: source,
@@ -433,7 +397,13 @@ const CorePaymentService = {
                 );
                 orderRow = orderRows[0] || null;
 
-                if (orderRow) {
+                if (orderRow && logisticsFeePayment) {
+                    logger.info('[CorePaymentService] Completed logistics fee payment without mutating order payment or fulfillment state', {
+                        paymentId: paymentRow.id,
+                        orderId,
+                        source
+                    });
+                } else if (orderRow) {
                     const currentStatus = String(orderRow.status || '').toUpperCase();
 
                     if (isSuccess) {
@@ -579,13 +549,8 @@ const CorePaymentService = {
         });
     },
 
-    /**
-     * Check payment status by identifier.
-     * Fully delegated to legacy service.
-     */
     async checkPaymentStatus(identifier) {
-        const svc = await getLegacyPaymentService();
-        return svc.checkPaymentStatus(identifier);
+        throw new Error('CorePaymentService.checkPaymentStatus is disabled. Use PaymentService.checkPaymentStatus so provider polling remains outside the Core completion boundary.');
     },
 
     /**

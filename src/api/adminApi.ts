@@ -1,5 +1,11 @@
 import axios from 'axios';
 import { getFreshCsrfToken } from '@/lib/apiClient';
+import type {
+  LogisticsDashboardResponse,
+  LogisticsLegType,
+  LogisticsSort,
+  LogisticsStatusUpdate
+} from '@/api/logisticsApi';
 
 // Type for axios instance
 type AxiosInstance = any; // Simplified type for Axios 1.12.2 compatibility
@@ -45,6 +51,25 @@ export const adminApiInstance: AxiosInstance = axios.create({
 });
 
 const api = adminApiInstance;
+
+export type AdminLogisticsStatusFilter =
+  | 'all'
+  | 'active'
+  | 'in_progress'
+  | 'completed'
+  | 'failed'
+  | 'delayed'
+  | 'manual_review'
+  | 'overdue';
+
+export interface AdminLogisticsResponse extends LogisticsDashboardResponse {
+  status: AdminLogisticsStatusFilter;
+  summary: {
+    failed: number;
+    delayed: number;
+    manualReview: number;
+  };
+}
 
 // CSRF Token Cache for admin instance
 let csrfTokenCache: string | null = null;
@@ -434,6 +459,53 @@ export const adminApi = {
       console.error('Error fetching monthly financial data:', error);
       return [];
     }
+  },
+
+  async getLogisticsRequests({
+    status = 'all',
+    sort = 'priority',
+  }: {
+    status?: AdminLogisticsStatusFilter;
+    sort?: LogisticsSort;
+  } = {}) {
+    const response = await api.get('/admin/logistics/requests', {
+      params: { status, sort },
+    });
+    return response.data?.data as AdminLogisticsResponse;
+  },
+
+  async updateLogisticsLegStatus({
+    requestId,
+    legType,
+    status,
+    reason,
+  }: {
+    requestId: number;
+    legType: LogisticsLegType;
+    status: LogisticsStatusUpdate;
+    reason?: string;
+  }) {
+    const response = await api.patch(`/admin/logistics/requests/${requestId}/legs/${legType}/status`, {
+      status,
+      reason,
+    });
+    return response.data?.data;
+  },
+
+  async resolveLogisticsDispute({
+    requestId,
+    resolution,
+    note,
+  }: {
+    requestId: number;
+    resolution: 'manual_review' | 'continue_delivery' | 'mark_failed' | 'resolved';
+    note?: string;
+  }) {
+    const response = await api.post(`/admin/logistics/requests/${requestId}/disputes/resolve`, {
+      resolution,
+      note,
+    });
+    return response.data?.data;
   }
 };
 

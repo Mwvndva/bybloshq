@@ -4,6 +4,76 @@ import Fees from '../config/fees.js';
 import { OrderStatus, PaymentStatus, ProductType } from '../shared/constants/enums.js';
 import { safeJson } from '../shared/utils/order.utils.js';
 
+const LOGISTICS_SUMMARY_SELECT = `
+        (
+          SELECT json_build_object(
+            'requestId', lr.id,
+            'packageCode', lr.package_code,
+            'status', lr.status,
+            'serviceLevel', lr.service_level,
+            'deadlineAt', lr.deadline_at,
+            'completedAt', lr.completed_at,
+            'deliveryLeg', CASE WHEN dl.id IS NULL THEN NULL ELSE json_build_object(
+              'id', dl.id,
+              'status', dl.status,
+              'feeAmount', dl.fee_amount,
+              'feeCurrency', dl.fee_currency,
+              'distanceKm', dl.distance_km,
+              'originLabel', dl.origin_label,
+              'originAddress', dl.origin_address,
+              'originLat', dl.origin_lat,
+              'originLng', dl.origin_lng,
+              'destinationLabel', dl.destination_label,
+              'destinationAddress', dl.destination_address,
+              'destinationLat', dl.destination_lat,
+              'destinationLng', dl.destination_lng,
+              'deadlineAt', dl.deadline_at,
+              'completedAt', dl.completed_at
+            ) END,
+            'pickupLeg', CASE WHEN pl.id IS NULL THEN NULL ELSE json_build_object(
+              'id', pl.id,
+              'status', pl.status,
+              'feeAmount', pl.fee_amount,
+              'feeCurrency', pl.fee_currency,
+              'distanceKm', pl.distance_km,
+              'originLabel', pl.origin_label,
+              'originAddress', pl.origin_address,
+              'originLat', pl.origin_lat,
+              'originLng', pl.origin_lng,
+              'destinationLabel', pl.destination_label,
+              'destinationAddress', pl.destination_address,
+              'destinationLat', pl.destination_lat,
+              'destinationLng', pl.destination_lng,
+              'deadlineAt', pl.deadline_at,
+              'completedAt', pl.completed_at
+            ) END,
+            'events', COALESCE((
+              SELECT json_agg(json_build_object(
+                'id', e.id,
+                'type', e.event_type,
+                'status', e.status,
+                'message', e.message,
+                'source', e.source,
+                'createdAt', e.created_at
+              ) ORDER BY e.created_at, e.id)
+              FROM (
+                SELECT id, event_type, status, message, source, created_at
+                FROM logistics_tracking_events
+                WHERE logistics_request_id = lr.id
+                ORDER BY created_at, id
+                LIMIT 10
+              ) e
+            ), '[]'::json)
+          )
+          FROM logistics_requests lr
+          LEFT JOIN logistics_legs dl ON dl.logistics_request_id = lr.id
+                                     AND dl.leg_type = 'delivery'
+          LEFT JOIN logistics_legs pl ON pl.logistics_request_id = lr.id
+                                     AND pl.leg_type = 'pickup'
+          WHERE lr.order_id = o.id
+          LIMIT 1
+        ) AS logistics`;
+
 class Order {
   /**
    * Pure DAO method to insert an order record
@@ -238,6 +308,7 @@ class Order {
         o.location_lng as "locationLng",
         o.service_title as "serviceTitle",
         o.notification_sent as "notificationSent",
+        ${LOGISTICS_SUMMARY_SELECT},
         json_build_object(
           'id', s.id,
           'name', s.full_name,
@@ -311,6 +382,7 @@ class Order {
         o.location_lng as "locationLng",
         o.service_title as "serviceTitle",
         o.notification_sent as "notificationSent",
+        ${LOGISTICS_SUMMARY_SELECT},
         json_build_object(
           'id', s.id,
           'name', s.full_name,
@@ -390,6 +462,7 @@ class Order {
         o.location_lng as "locationLng",
         o.service_title as "serviceTitle",
         o.notification_sent as "notificationSent",
+        ${LOGISTICS_SUMMARY_SELECT},
         json_build_object(
           'id', s.id,
           'name', s.full_name,
@@ -499,6 +572,7 @@ class Order {
         o.location_lng as "locationLng",
         o.service_title as "serviceTitle",
         o.notification_sent as "notificationSent",
+        ${LOGISTICS_SUMMARY_SELECT},
         COALESCE(
           json_agg(
             json_build_object(

@@ -109,5 +109,9 @@ export default defineConfig(({ command, mode }) => {
       port: 3000,
       strictPort: true,
     },
+    test: {
+      include: ['src/**/*.{test,spec}.{ts,tsx}', 'src/**/*.integration.test.{ts,tsx}'],
+      exclude: ['node_modules/**', 'dist/**', 'server/**'],
+    },
   };
 });

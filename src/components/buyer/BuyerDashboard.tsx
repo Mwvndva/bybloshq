@@ -1,35 +1,21 @@
 ﻿import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { Input } from '@/components/ui/input';
-import { AestheticWithNone } from '@/types/components';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
-  ChevronLeft,
-  Search, Heart, User,
-  Users, Store, Package, LogOut
+  Heart, User,
+  Users, Store, Package
 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import buyerApi from '@/api/buyerApi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
-import AestheticCategories from '@/components/AestheticCategories';
-import ProductGrid from '@/components/ProductGrid';
-import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
-import { format } from 'date-fns';
-
-import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
+import { BuyerBottomNav } from './dashboard/BuyerBottomNav';
+import { BuyerDashboardHeader } from './dashboard/BuyerDashboardHeader';
+import { BuyerDashboardSearch } from './dashboard/BuyerDashboardSearch';
+import { BuyerProfileSheet } from './dashboard/BuyerProfileSheet';
 import { MyShopsSection } from './dashboard/MyShopsSection';
 import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
 
@@ -42,7 +28,6 @@ function BuyerDashboard() {
   const { user, logout, updateBuyerProfile } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const { toast } = useToast();
-  const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
   const [activeSection, setActiveSection] = useState<'shop' | 'shops' | 'wishlist' | 'orders' | 'profile'>(() => {
     // Priority 1: Pathname (new standard for direct linking)
     const pathname = location.pathname;
@@ -96,8 +81,6 @@ function BuyerDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
-  const [priceMin, setPriceMin] = useState<string>('');
-  const [priceMax, setPriceMax] = useState<string>('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [fullName, setFullName] = useState<string>(user?.fullName || '');
   const [city, setCity] = useState<string>(user?.city || '');
@@ -114,8 +97,6 @@ function BuyerDashboard() {
   const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
     localStorage.getItem('buyer_last_viewed_orders')
   );
-
-  const isMissingLocation = !user?.city || !user?.location;
 
   const locationData: Record<string, string[]> = {
     'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
@@ -206,10 +187,6 @@ function BuyerDashboard() {
     }
   }, [user, lastViewedOrdersTime]);
 
-  const handleAestheticChange = (aesthetic: Aesthetic) => {
-    setSelectedAesthetic(aesthetic);
-  };
-
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -298,57 +275,14 @@ function BuyerDashboard() {
       overflow: 'hidden',
       background: '#000000',
     }}>
-      {/* Header */}
-      <div style={{
-        padding: '16px 18px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
-        <button onClick={handleBack} style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          background: 'none', border: 'none', color: 'rgba(255,255,255,0.86)',
-          fontSize: 12, cursor: 'pointer', padding: '4px 0',
-        }}>
-          <ChevronLeft size={14} /> Back
-        </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.2px' }}>
-          Trusted Businesses
-        </span>
-        <div style={{ width: 30, height: 30 }} />
-      </div>
-
-
-
-      {/* Search bar */}
-      {(activeSection === 'shop' || activeSection === 'shops') && (
-        <div style={{
-          padding: '6px 18px 20px',
-          flexShrink: 0,
-          display: 'flex',
-          justifyContent: 'center',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: '#080808', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 10,
-            padding: '0 12px', height: 36,
-            width: '100%',
-            maxWidth: activeSection === 'shop' ? 760 : 560,
-          }}>
-            <Search size={14} color="rgba(255,255,255,0.78)" style={{ flexShrink: 0 }} />
-            <input
-              value={activeSection === 'shop' ? searchQuery : shopsSearchQuery}
-              onChange={e => activeSection === 'shop' ? setSearchQuery(e.target.value) : setShopsSearchQuery(e.target.value)}
-              placeholder={activeSection === 'shop' ? "Search products..." : "Search my shops..."}
-              style={{
-                flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                color: '#FFFFFF', fontSize: 13,
-              }}
-            />
-          </div>
-        </div>
-      )}
+      <BuyerDashboardHeader onBack={handleBack} />
+      <BuyerDashboardSearch
+        activeSection={activeSection}
+        productSearchQuery={searchQuery}
+        shopsSearchQuery={shopsSearchQuery}
+        onProductSearchChange={setSearchQuery}
+        onShopsSearchChange={setShopsSearchQuery}
+      />
 
       {/* Main Content Area */}
       <div style={{
@@ -399,193 +333,32 @@ function BuyerDashboard() {
           </div>
         )}
 
-        {activeSection === 'profile' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>Profile</span>
-              <button
-                onClick={() => setIsEditingProfile(!isEditingProfile)}
-                style={{ background: 'none', border: 'none', color: '#F5C518', fontSize: 12, fontWeight: 600 }}
-              >
-                {isEditingProfile ? 'Cancel' : 'Edit'}
-              </button>
-            </div>
-
-            {/* Minimalist Profile Info */}
-            <div style={{ background: '#050505', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Full Name</div>
-                <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.fullName}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email Address</div>
-                <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.email}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 20 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>City</div>
-                  <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.city || 'ΓÇö'}</div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Area</div>
-                  <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.location || 'ΓÇö'}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Edit mode placeholder - preserving existing logic would require more detailed injection, 
-                 but keeping it functional by just showing the state for now or wrapping existing inputs */}
-            {isEditingProfile && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-white/5 border border-white/15 text-white h-10" />
-                <Select value={city} onValueChange={setCity}>
-                  <SelectTrigger className="bg-white/5 border border-white/15 text-white h-10">
-                    <SelectValue placeholder="Select City" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(locationData).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="bg-[#F5C518] text-black h-10 font-bold">
-                  {isSavingProfile ? 'Saving...' : 'Save Profile'}
-                </Button>
-              </div>
-            )}
-
-            <RefundCard refundAmount={user?.refunds || 0} />
-          </div>
-        )}
       </div>
 
-      <Sheet open={isProfileSidebarOpen} onOpenChange={handleProfileSidebarOpenChange}>
-        <SheetContent side="right" className="w-full max-w-sm overflow-y-auto bg-black text-white border-l border-white/15 shadow-2xl shadow-black/70">
-          <SheetHeader className="text-left">
-            <SheetTitle className="text-white">Buyer Profile</SheetTitle>
-          </SheetHeader>
+      <BuyerProfileSheet
+        city={city}
+        fullName={fullName}
+        isEditingProfile={isEditingProfile}
+        isOpen={isProfileSidebarOpen}
+        isSavingProfile={isSavingProfile}
+        locationArea={locationArea}
+        locationData={locationData}
+        mobilePayment={mobilePayment}
+        refundAmount={user?.refunds || 0}
+        user={user}
+        whatsappNumber={whatsappNumber}
+        onCityChange={setCity}
+        onFullNameChange={setFullName}
+        onLocationAreaChange={setLocationArea}
+        onLogout={handleLogout}
+        onMobilePaymentChange={setMobilePayment}
+        onOpenChange={handleProfileSidebarOpenChange}
+        onSaveProfile={handleSaveProfile}
+        onToggleEdit={() => setIsEditingProfile(!isEditingProfile)}
+        onWhatsappNumberChange={setWhatsappNumber}
+      />
 
-          <div className="mt-6 flex flex-col gap-4">
-            <div className="rounded-2xl border border-white/15 bg-white/5 p-4 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Full Name</div>
-              <div className="mt-1 text-base font-semibold text-white">{user?.fullName || 'Not set'}</div>
-              <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-white/60">Email Address</div>
-              <div className="mt-1 text-sm font-semibold text-white break-words">{user?.email || 'Not set'}</div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">City</div>
-                  <div className="mt-1 text-sm font-semibold text-white">{user?.city || 'Not set'}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Area</div>
-                  <div className="mt-1 text-sm font-semibold text-white">{user?.location || 'Not set'}</div>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-3">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Mobile Payment</div>
-                  <div className="mt-1 text-sm font-semibold text-white">{user?.mobilePayment || 'Not set'}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">WhatsApp</div>
-                  <div className="mt-1 text-sm font-semibold text-white">{user?.whatsappNumber || 'Not set'}</div>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsEditingProfile(!isEditingProfile)}
-              className="h-10 rounded-xl border border-white/15 bg-white/10 text-sm font-semibold text-white hover:bg-white/15"
-            >
-              {isEditingProfile ? 'Cancel Editing' : 'Edit Profile'}
-            </button>
-
-            {isEditingProfile && (
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 shadow-sm space-y-3">
-                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-black border border-white/15 text-white h-10" />
-                <Select value={city} onValueChange={(value) => {
-                  setCity(value);
-                  setLocationArea('');
-                }}>
-                  <SelectTrigger className="bg-black border border-white/15 text-white h-10">
-                    <SelectValue placeholder="Select City" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(locationData).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={locationArea} onValueChange={setLocationArea} disabled={!city}>
-                  <SelectTrigger className="bg-black border border-white/15 text-white h-10">
-                    <SelectValue placeholder="Select Area" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(locationData[city] || []).map(area => <SelectItem key={area} value={area}>{area}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Input value={mobilePayment} onChange={e => setMobilePayment(e.target.value)} placeholder="Mobile Payment Number" className="bg-black border border-white/15 text-white h-10" />
-                <Input value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="WhatsApp Number" className="bg-black border border-white/15 text-white h-10" />
-                <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="w-full bg-[#F5C518] text-black h-10 font-bold">
-                  {isSavingProfile ? 'Saving...' : 'Save Profile'}
-                </Button>
-              </div>
-            )}
-
-            <RefundCard refundAmount={user?.refunds || 0} />
-
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="h-10 w-full justify-center gap-2 border-red-400/25 bg-red-500/10 text-red-100 hover:bg-red-500/15"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Bottom navigation bar */}
-      <div style={{
-        height: 56,
-        background: '#050505',
-        borderTop: '0.5px solid rgba(255,255,255,0.16)',
-        display: 'flex',
-        alignItems: 'stretch',
-        flexShrink: 0,
-      }}>
-        {navItems.map(item => (
-          <button
-            key={item.key}
-            onClick={() => setActiveTab(item.key)}
-            style={{
-              flex: 1,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              gap: 3, background: 'none', border: 'none',
-              cursor: 'pointer',
-              position: 'relative',
-              transition: 'opacity 0.15s',
-            }}
-          >
-            <item.Icon
-              size={18}
-              color={activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.68)'}
-            />
-            <span style={{
-              fontSize: 9, fontWeight: 500,
-              color: activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.68)',
-            }}>
-              {item.label}
-            </span>
-            {item.badge && (
-              <div style={{
-                position: 'absolute', top: 6, right: '50%',
-                transform: 'translateX(10px)',
-                width: 5, height: 5, borderRadius: '50%',
-                background: '#F5C518',
-              }} />
-            )}
-          </button>
-        ))}
-      </div>
+      <BuyerBottomNav activeNav={activeNav} navItems={navItems} onSelect={setActiveTab} />
     </div>
   );
 }

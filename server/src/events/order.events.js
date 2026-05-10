@@ -34,11 +34,8 @@ eventBus.on(AppEvents.ORDER.CREATED, async ({ eventId, order, items, seller, buy
  */
 eventBus.on(AppEvents.ORDER.PAID, async ({ eventId, order, items, seller, buyer }) => {
     logger.info(`[Event:OrderPaid] Processing for Order #${order.order_number}`);
-    await deliverAll('Event:OrderPaid', eventId, [
-        (order.fulfillment_type === 'SELLER_TO_HUB' || !seller.has_physical_shop)
-            ? { key: `order:${order.id}:logistics:paid`, run: () => whatsappService.sendLogisticsNotification(order) }
-            : null
-    ]);
+    // Door-delivery and seller-pickup WhatsApp messages are sent only from
+    // logistics.notification after the logistics leg has been durably updated.
 });
 
 /**

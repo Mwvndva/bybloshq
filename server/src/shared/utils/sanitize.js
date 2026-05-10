@@ -22,6 +22,61 @@ const parseImageList = (images) => {
     }
 };
 
+const parseObject = (value, fallback = {}) => {
+    if (!value) return fallback;
+    if (typeof value === 'object') return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return fallback;
+    }
+};
+
+const sanitizeLogistics = (logistics) => {
+    const data = parseObject(logistics, null);
+    if (!data) return null;
+
+    const sanitizeLeg = (leg) => leg ? {
+        id: leg.id,
+        status: leg.status,
+        feeAmount: Number.parseFloat(leg.feeAmount || leg.fee_amount || 0),
+        feeCurrency: leg.feeCurrency || leg.fee_currency || 'KES',
+        distanceKm: leg.distanceKm !== undefined || leg.distance_km !== undefined
+            ? Number.parseFloat(leg.distanceKm ?? leg.distance_km)
+            : null,
+        originLabel: leg.originLabel || leg.origin_label || null,
+        originAddress: leg.originAddress || leg.origin_address || null,
+        destinationLabel: leg.destinationLabel || leg.destination_label || null,
+        destinationAddress: leg.destinationAddress || leg.destination_address || null,
+        deadlineAt: leg.deadlineAt || leg.deadline_at || null,
+        completedAt: leg.completedAt || leg.completed_at || null
+    } : null;
+
+    const deliveryLeg = data.deliveryLeg || data.delivery_leg || null;
+    const pickupLeg = data.pickupLeg || data.pickup_leg || null;
+
+    return {
+        requestId: data.requestId || data.request_id || null,
+        packageCode: data.packageCode || data.package_code || null,
+        status: data.status || null,
+        serviceLevel: data.serviceLevel || data.service_level || null,
+        deadlineAt: data.deadlineAt || data.deadline_at || null,
+        completedAt: data.completedAt || data.completed_at || null,
+        deliveryLeg: sanitizeLeg(deliveryLeg),
+        pickupLeg: sanitizeLeg(pickupLeg),
+        events: Array.isArray(data.events)
+            ? data.events.map(event => ({
+                id: event.id,
+                type: event.type || event.event_type || null,
+                status: event.status || null,
+                message: event.message || null,
+                source: event.source || null,
+                createdAt: event.createdAt || event.created_at || null
+            }))
+            : []
+    };
+};
+
 
 export const sanitizeBuyer = (buyer) => {
     if (!buyer) return null;
@@ -162,6 +217,8 @@ export const sanitizePublicSeller = (seller) => {
 export const sanitizeOrder = (order, userType = 'buyer') => {
     if (!order) return null;
     const orderObj = order.toObject ? order.toObject() : order;
+    const metadata = parseObject(orderObj.metadata, {});
+    const logistics = sanitizeLogistics(orderObj.logistics || metadata.delivery?.logistics);
 
     // Safe items — strip internal inventory and tracking fields
     const safeItems = (orderObj.items || []).map(item => ({
@@ -193,8 +250,14 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         items: safeItems,
         isDigital: (orderObj.items || []).some(i => i.isDigital || i.is_digital),
         metadata: {
-            product_type: orderObj.metadata?.product_type || null,
+            product_type: metadata.product_type || null,
+            delivery: metadata.delivery ? {
+                doorDelivery: metadata.delivery.doorDelivery === true || metadata.delivery.door_delivery === true,
+                deliveryMode: metadata.delivery.deliveryMode || metadata.delivery.delivery_mode || null,
+                pricing: metadata.pricing || null
+            } : null,
         },
+        logistics,
         fulfillment_type: orderObj.fulfillment_type || orderObj.fulfillmentType || null,
         location_address: orderObj.location_address || orderObj.locationAddress || null,
         location_lat: orderObj.location_lat || orderObj.locationLat || null,

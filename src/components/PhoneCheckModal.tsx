@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Phone, Loader2 } from 'lucide-react';
+import { Phone, Loader2, MapPin, Truck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import LocationPicker from '@/components/common/LocationPicker';
+import apiClient from '@/lib/apiClient';
+
+export interface DoorDeliverySelection {
+  doorDelivery: boolean;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  quote?: {
+    feeAmount: number;
+    distanceKm: number;
+    chargeableDistanceKm: number;
+    rateKesPerKm: number;
+    totalAmount: number;
+  };
+}
 
 interface PhoneCheckModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPhoneSubmit: (phone: string) => void;
+  onPhoneSubmit: (phone: string, delivery?: DoorDeliverySelection) => void;
   isLoading?: boolean;
+  isPhysicalProduct?: boolean;
   purchaseDetails?: {
     shopName: string;
     productName: string;
@@ -23,10 +40,91 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   onClose,
   onPhoneSubmit,
   isLoading = false,
+  isPhysicalProduct = false,
   purchaseDetails
 }) => {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [doorDeliveryEnabled, setDoorDeliveryEnabled] = useState(false);
+  const [deliveryLocation, setDeliveryLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
+    address: '',
+    lat: null,
+    lng: null
+  });
+  const [deliveryQuote, setDeliveryQuote] = useState<DoorDeliverySelection['quote'] | null>(null);
+  const [quoteError, setQuoteError] = useState('');
+  const [isQuoteLoading, setIsQuoteLoading] = useState(false);
+
+  const productPrice = Number(purchaseDetails?.productPrice || 0);
+  const displayedDeliveryFee = doorDeliveryEnabled ? Number(deliveryQuote?.feeAmount || 0) : 0;
+  const displayedTotal = productPrice + displayedDeliveryFee;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setError('');
+      setDoorDeliveryEnabled(false);
+      setDeliveryLocation({ address: '', lat: null, lng: null });
+      setDeliveryQuote(null);
+      setQuoteError('');
+      setIsQuoteLoading(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!doorDeliveryEnabled) {
+      setDeliveryQuote(null);
+      setQuoteError('');
+      setIsQuoteLoading(false);
+      return;
+    }
+
+    if (deliveryLocation.lat === null || deliveryLocation.lng === null) {
+      setDeliveryQuote(null);
+      setQuoteError('');
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setIsQuoteLoading(true);
+      setQuoteError('');
+      try {
+        const response = await apiClient.post('/payments/logistics-quote', {
+          legType: 'delivery',
+          location: {
+            address: deliveryLocation.address,
+            latitude: deliveryLocation.lat,
+            longitude: deliveryLocation.lng
+          }
+        }, {
+          signal: controller.signal
+        });
+        const quote = response.data?.data;
+        const feeAmount = Number(quote?.feeAmount || 0);
+        setDeliveryQuote({
+          feeAmount,
+          distanceKm: Number(quote?.distanceKm || 0),
+          chargeableDistanceKm: Number(quote?.chargeableDistanceKm || 0),
+          rateKesPerKm: Number(quote?.rateKesPerKm || 40),
+          totalAmount: productPrice + feeAmount
+        });
+      } catch (quoteError: any) {
+        if (quoteError?.name !== 'CanceledError' && quoteError?.code !== 'ERR_CANCELED') {
+          setDeliveryQuote(null);
+          setQuoteError(quoteError?.response?.data?.error || quoteError?.message || 'Could not calculate delivery fee');
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsQuoteLoading(false);
+        }
+      }
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [doorDeliveryEnabled, deliveryLocation.address, deliveryLocation.lat, deliveryLocation.lng, productPrice]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +142,30 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       return;
     }
 
-    onPhoneSubmit(phone.trim());
+    if (doorDeliveryEnabled) {
+      if (!deliveryLocation.address.trim() || deliveryLocation.lat === null || deliveryLocation.lng === null) {
+        setError('Please pin your delivery location and enter the full address');
+        return;
+      }
+
+      if (isQuoteLoading) {
+        setError('Please wait while we calculate the delivery fee');
+        return;
+      }
+
+      if (!deliveryQuote || quoteError) {
+        setError(quoteError || 'Delivery fee could not be calculated. Please adjust the location and try again.');
+        return;
+      }
+    }
+
+    onPhoneSubmit(phone.trim(), doorDeliveryEnabled ? {
+      doorDelivery: true,
+      address: deliveryLocation.address.trim(),
+      lat: deliveryLocation.lat ?? undefined,
+      lng: deliveryLocation.lng ?? undefined,
+      quote: deliveryQuote ?? undefined
+    } : { doorDelivery: false });
   };
 
   return (
@@ -92,6 +213,70 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                     <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Price</span>
                     <span className="text-sm sm:text-base font-black text-yellow-300">{formatCurrency(purchaseDetails.productPrice)}</span>
                   </div>
+                  {isPhysicalProduct && (
+                    <div className="border-t border-yellow-200 pt-3 space-y-3">
+                      <label className="flex items-center justify-between gap-3 rounded-xl border border-yellow-200 bg-white/70 px-3 py-2 cursor-pointer">
+                        <span className="flex items-center gap-2 text-xs font-black text-slate-950">
+                          <Truck className="h-4 w-4 text-yellow-500" />
+                          Door delivery
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={doorDeliveryEnabled}
+                          disabled={isLoading}
+                          onChange={(event) => setDoorDeliveryEnabled(event.target.checked)}
+                          className="h-4 w-4 accent-yellow-400"
+                        />
+                      </label>
+
+                      {doorDeliveryEnabled && (
+                        <div className="space-y-3">
+                          <div className="rounded-2xl border border-yellow-200 bg-white p-3">
+                            <LocationPicker
+                              label="Delivery Location"
+                              detailedLabel="Full Delivery Address"
+                              placeholder="Search delivery location..."
+                              autoPopulate
+                              onLocationChange={(address, coordinates) => {
+                                setDeliveryLocation({
+                                  address,
+                                  lat: coordinates?.lat ?? null,
+                                  lng: coordinates?.lng ?? null
+                                });
+                              }}
+                              className="[&_label]:!text-slate-700 [&_p]:!text-slate-500"
+                            />
+                          </div>
+
+                          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Delivery fee</span>
+                              <span className="text-xs font-black text-slate-950">
+                                {isQuoteLoading ? 'Calculating...' : formatCurrency(displayedDeliveryFee)}
+                              </span>
+                            </div>
+                            {deliveryQuote && (
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Distance</span>
+                                <span className="text-xs font-bold text-slate-700">
+                                  {deliveryQuote.chargeableDistanceKm} km billed
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between gap-3 border-t border-yellow-200 pt-2">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Total to pay</span>
+                              <span className="text-sm font-black text-slate-950">{formatCurrency(displayedTotal)}</span>
+                            </div>
+                            {quoteError && <p className="text-xs text-red-500 font-bold">{quoteError}</p>}
+                            <div className="flex items-start gap-2 rounded-xl bg-white p-2 text-[11px] font-bold leading-relaxed text-slate-700">
+                              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />
+                              <span>Deliveries are made within 24 hours.</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

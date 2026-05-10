@@ -5,28 +5,26 @@ import { useAdminAuth } from '@/contexts/GlobalAuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Search } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight, Percent, TrendingUp, Lock, Unlock, Users2, Mail, Instagram, Facebook, Music2, Globe, Heart } from 'lucide-react';
+import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, Percent, TrendingUp, Lock, Unlock, Users2, Mail, Instagram, Facebook, Music2, Globe, Heart } from 'lucide-react';
 import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import RefundRequestsPage from './RefundRequestsPage';
+import { AdminEntityModals } from './components/AdminEntityModals';
+import { AdminDashboardHeader } from './components/AdminDashboardHeader';
+import { AdminDashboardTabs } from './components/AdminDashboardTabs';
+import { AdminOverviewTab } from './components/AdminOverviewTab';
+import { AdminLogisticsTab } from './components/AdminLogisticsTab';
+import {
+  StatsCard,
+  type StatsCardProps
+} from './components/AdminDashboardCharts';
 
 // Custom tooltip for the events chart
-
-// Types
-interface StatsCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  description: string;
-  trend: number | null;
-}
-
 
 interface DashboardAnalytics {
   totalRevenue?: number;
@@ -53,17 +51,6 @@ interface DashboardAnalytics {
 
 // ... (existing interfaces)
 
-
-// ... (Render logic to include these charts in the 'overview' tab)
-// In the TabsContent value="overview" section:
-/*
-  <div className="grid gap-6 grid-cols-4 mt-6">
-      <UserGrowthChart />
-      <RevenueChart />
-      <ProductStatusChart />
-      <GeoDistributionChart />
-  </div>
-*/
 
 interface MonthlyMetricsData {
   month: string;
@@ -134,188 +121,6 @@ interface DashboardState {
   clients: any[];
   topShops: any[];
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
-// Chart Components
-const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
-  <div className="relative group">
-    {/* Glow pulse on hover */}
-    <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/0 to-yellow-500/0 rounded-[2rem] blur opacity-0 group-hover:opacity-30 group-hover:from-yellow-500/50 group-hover:to-orange-500/50 transition duration-500"></div>
-
-    <Card className="relative bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden transition-all duration-500 group-hover:bg-[#0A0A0A]/60 group-hover:scale-[1.02] group-hover:border-white/20">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none"></div>
-
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
-        <CardTitle className="text-sm font-semibold text-gray-400 tracking-wide uppercase">
-          {title}
-        </CardTitle>
-        <div className="h-12 w-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-yellow-500 group-hover:scale-110 group-hover:text-yellow-400 transition-all duration-500 shadow-inner">
-          {icon}
-        </div>
-      </CardHeader>
-
-      <CardContent className="relative z-10 pt-0">
-        <div className="text-3xl font-black text-white tracking-tight tabular-nums group-hover:text-yellow-50 transition-colors duration-500">
-          {value}
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          {trend !== null && trend !== undefined && (
-            <div className={`flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${trend >= 0 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-              {trend >= 0 ? <ArrowUpRight className="h-2.5 w-2.5 mr-0.5" /> : <ArrowDownRight className="h-2.5 w-2.5 mr-0.5" />}
-              {Math.abs(trend)}%
-            </div>
-          )}
-          <span className="text-xs text-gray-500 font-medium truncate">{description}</span>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
-
-const ChartContainer = ({ title, description, children, className = "" }: { title: string, description: string, children: React.ReactNode, className?: string }) => (
-  <Card className={`${className} bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden group hover:border-white/20 transition-all duration-500`}>
-    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
-    <CardHeader className="relative z-10 pb-2">
-      <CardTitle className="text-xl font-bold text-white group-hover:text-yellow-50 transition-colors">{title}</CardTitle>
-      <CardDescription className="text-gray-400 font-medium">{description}</CardDescription>
-    </CardHeader>
-    <CardContent className="relative z-10 h-[350px] w-full pt-4">
-      {children}
-    </CardContent>
-  </Card>
-);
-
-const UserGrowthChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="User Growth" description="New buyers and sellers growth trend" className="col-span-4 lg:col-span-2">
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data}>
-        <defs>
-          <linearGradient id="colorBuyers" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id="colorSellers" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-        <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
-        <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
-        <Tooltip
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)', color: '#fff' }}
-          itemStyle={{ color: '#e5e7eb', fontSize: '12px' }}
-        />
-        <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
-        <Line type="monotone" dataKey="buyers" stroke="#06b6d4" strokeWidth={4} dot={{ r: 4, fill: '#06b6d4', strokeWidth: 2, stroke: '#0A0A0A' }} activeDot={{ r: 6, strokeWidth: 0 }} name="Buyers" />
-        <Line type="monotone" dataKey="sellers" stroke="#f59e0b" strokeWidth={4} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#0A0A0A' }} activeDot={{ r: 6, strokeWidth: 0 }} name="Sellers" />
-      </LineChart>
-    </ResponsiveContainer>
-  </ChartContainer>
-);
-
-const RevenueChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="Revenue Trends" description="Monthly platform earnings (KSh)" className="col-span-4 lg:col-span-2">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
-        <defs>
-          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.4} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-        <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
-        <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
-        <Tooltip
-          cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-          itemStyle={{ color: '#e5e7eb' }}
-        />
-        <Bar dataKey="revenue" fill="url(#colorRevenue)" radius={[8, 8, 0, 0]} name="Revenue (KSh)" barSize={40} />
-      </BarChart>
-    </ResponsiveContainer>
-  </ChartContainer>
-);
-
-const SalesChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="Sales Volume" description="Total marketplace transaction volume" className="col-span-4 lg:col-span-2">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
-        <defs>
-          <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-            <stop offset="100%" stopColor="#10b981" stopOpacity={0.4} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-        <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
-        <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
-        <Tooltip
-          cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-          itemStyle={{ color: '#e5e7eb' }}
-        />
-        <Bar dataKey="sales" fill="url(#colorSales)" radius={[8, 8, 0, 0]} name="Sales (KSh)" barSize={40} />
-      </BarChart>
-    </ResponsiveContainer>
-  </ChartContainer>
-);
-
-const ProductStatusChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="Product Distribution" description="Inventory breakdown by status" className="col-span-4 lg:col-span-2">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={80}
-          outerRadius={110}
-          paddingAngle={8}
-          dataKey="value"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-        />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
-  </ChartContainer>
-);
-
-const GeoDistributionChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="Geographic Reach" description="Top 5 Areas by user density" className="col-span-4 lg:col-span-2">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={80}
-          outerRadius={110}
-          paddingAngle={5}
-          dataKey="value"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} stroke="none" />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-        />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
-  </ChartContainer>
-);
-
-
 
 const NewAdminDashboard = () => {
   // All hooks must be called unconditionally at the top level
@@ -821,38 +626,7 @@ const NewAdminDashboard = () => {
         </div>
 
         <div className="relative z-10 max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
-          {/* Premium Header */}
-          <header className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-[2.5rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-1000"></div>
-            <div className="relative bg-[#0A0A0A]/60 backdrop-blur-3xl border border-white/10 rounded-3xl md:rounded-[2.5rem] p-5 md:p-10 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <div className="absolute -inset-2 bg-yellow-500/20 rounded-2xl blur opacity-50 animate-pulse"></div>
-                  <div className="relative w-16 h-16 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl flex items-center justify-center border border-white/10 shadow-2xl">
-                    <Shield className="h-8 w-8 text-yellow-500" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">
-                    Admin <span className="text-yellow-500">Dashboard</span>
-                  </h1>
-                  <p className="text-gray-400 font-medium mt-1 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
-                    System Operational • Welcome back, Administrator
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 bg-white/5 p-2 rounded-2xl border border-white/5">
-                <div className="px-4 py-2 bg-yellow-500/10 text-yellow-500 rounded-xl text-sm font-black border border-yellow-500/20 tracking-wider">
-                  ROOT ACCESS
-                </div>
-                <div className="px-4 py-2 bg-white/5 text-gray-400 rounded-xl text-sm font-bold border border-white/10 italic">
-                  {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </div>
-              </div>
-            </div>
-          </header>
+          <AdminDashboardHeader />
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -863,456 +637,24 @@ const NewAdminDashboard = () => {
 
           {/* Navigation & Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-            <div className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-2xl md:rounded-[2rem] p-1 md:p-2 shadow-2xl sticky top-4 z-40 overflow-hidden">
-              <TabsList className="bg-transparent border-0 p-0 h-auto flex flex-nowrap overflow-x-auto no-scrollbar gap-1 md:gap-2">
-                {[
-                  { id: 'overview', label: 'Overview', color: 'from-yellow-400 to-orange-500' },
-                  { id: 'sellers', label: 'Sellers', color: 'from-blue-400 to-cyan-500' },
-                  { id: 'buyers', label: 'Buyers', color: 'from-purple-400 to-indigo-500' },
-                  { id: 'withdrawals', label: 'Withdrawals', color: 'from-green-400 to-emerald-500' },
-                  { id: 'refunds', label: 'Refunds', color: 'from-red-400 to-rose-500' },
-                  { id: 'clients', label: 'Clients', color: 'from-pink-400 to-fuchsia-500' }
-                ].map((tab) => (
-                  <TabsTrigger
-                    key={tab.id}
-                    value={tab.id}
-                    className={`flex-shrink-0 min-w-[100px] md:flex-1 rounded-xl md:rounded-2xl px-4 md:px-6 py-2.5 md:py-3.5 text-[10px] md:text-sm font-black transition-all duration-500
-                    data-[state=active]:bg-gradient-to-r ${tab.color} data-[state=active]:text-black data-[state=active]:shadow-[0_0_20px_rgba(245,158,11,0.3)]
-                    data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5
-                    uppercase tracking-widest`}
-                  >
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+            <AdminDashboardTabs />
 
-            {/* Modals Layer */}
-            <div className="z-[100]">
-              {/* Seller Details Modal */}
-              {selectedSeller && (
-                <div
-                  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="seller-modal-title"
-                >
-                  <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] w-full max-w-6xl max-h-[95dvh] flex flex-col shadow-[0_0_50px_rgba(245,158,11,0.1)] scale-in-95 duration-300">
-                    <div className="flex items-center justify-between p-5 md:p-8 border-b border-white/10 bg-white/[0.02]">
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-inner">
-                          <Store className="h-7 w-7 text-yellow-500" />
-                        </div>
-                        <div>
-                          <h3 id="seller-modal-title" className="text-2xl font-black text-white tracking-tight">{selectedSeller.shop_name || selectedSeller.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className="bg-yellow-500/10 text-yellow-500 border-none px-2 py-0.5 text-[10px] font-black uppercase tracking-widest">Verified Merchant</Badge>
-                            <span className="text-gray-500 text-xs font-medium flex items-center gap-1.5">
-                              <Calendar className="h-3 w-3" />
-                              Joined {selectedSeller.created_at ? format(new Date(selectedSeller.created_at), 'MMMM dd, yyyy') : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={closeSellerModal} className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/10 group">
-                        <X className="h-5 w-5 md:h-6 md:w-6 text-gray-400 group-hover:text-white group-hover:rotate-90 transition-all" />
-                      </button>
-                    </div>
-                    <div className="overflow-auto flex-1 p-5 md:p-8 custom-scrollbar space-y-6 md:space-y-8">
-                      {isLoadingSeller ? (
-                        <div className="flex flex-col items-center justify-center h-60 space-y-4">
-                          <Loader2 className="h-12 w-12 text-yellow-500 animate-spin" />
-                          <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Accessing Encrypted Data...</p>
-                        </div>
-                      ) : (
-                        <>
-                          {selectedSeller.banner_image && (
-                            <div className="w-full h-32 md:h-48 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-white/10 mb-8 relative group">
-                              <img src={selectedSeller.banner_image} alt={`${selectedSeller.shop_name || selectedSeller.name} branding`} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent" />
-                              <div className="absolute bottom-4 left-6 flex items-end gap-5">
-                                {selectedSeller.avatar_url && (
-                                  <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-[1.5rem] border-2 border-white/10 overflow-hidden shadow-2xl bg-[#0A0A0A]">
-                                    <img src={selectedSeller.avatar_url} alt={`${selectedSeller.shop_name || selectedSeller.name} profile`} className="w-full h-full object-cover" />
-                                  </div>
-                                )}
-                                <div className="mb-2">
-                                  <Badge className="bg-yellow-500 text-black font-black text-[9px] tracking-widest px-3 py-1 mb-2">OFFICIAL STORE</Badge>
-                                  <h4 className="text-xl font-black text-white tracking-tighter">{selectedSeller.shop_name}</h4>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                            {/* Section 1: Core Identity */}
-                            <Card className="bg-white/[0.02] border border-white/10 rounded-2xl md:rounded-[2rem] p-5 md:p-6 shadow-2xl">
-                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <UserCircle className="h-4 w-4 text-yellow-500" />
-                                Merchant Identity
-                              </h4>
-                              <div className="space-y-4">
-                                {[
-                                  { label: 'Full Legal Name', value: selectedSeller.name, icon: <User className="h-3.5 w-3.5" /> },
-                                  { label: 'Email Protocol', value: selectedSeller.email, icon: <Mail className="h-3.5 w-3.5" /> },
-                                  { label: 'Secure Line', value: selectedSeller.phone, icon: <Activity className="h-3.5 w-3.5" /> },
-                                  { label: 'Operating Hub', value: `${selectedSeller.city}${selectedSeller.location ? `, ${selectedSeller.location}` : ''}`, icon: <MapPin className="h-3.5 w-3.5" /> },
-                                  { label: 'Merchant Balance', value: `KSh ${parseFloat(selectedSeller.balance || 0).toLocaleString()}`, highlight: true, icon: <DollarSign className="h-3.5 w-3.5" /> }
-                                ].map((item, i) => (
-                                  <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0 group/item">
-                                    <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                      <span className="opacity-40 group-hover/item:opacity-100 transition-opacity">{item.icon}</span>
-                                      {item.label}
-                                    </span>
-                                    <span className={`text-sm font-bold ${(item as any).highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </Card>
-
-                            {/* Section 2: Marketplace Profile */}
-                            <Card className="bg-white/[0.02] border border-white/10 rounded-2xl md:rounded-[2rem] p-5 md:p-6 shadow-2xl">
-                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <Globe className="h-4 w-4 text-blue-500" />
-                                Digital Presence
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="space-y-3">
-                                  <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                    <Globe className="h-3.5 w-3.5 opacity-40" />
-                                    Public Shop Link
-                                  </span>
-                                  <a
-                                    href={`https://bybloshq.space/shop/${selectedSeller.slug || selectedSeller.shop_name?.toLowerCase()}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block p-3 rounded-xl bg-white/5 border border-white/10 text-blue-400 font-bold text-xs truncate hover:bg-blue-500/10 hover:border-blue-500/20 transition-all flex items-center justify-between group/link"
-                                  >
-                                    /{selectedSeller.slug || selectedSeller.shop_name?.toLowerCase()}
-                                    <ArrowUpRight className="h-4 w-4 opacity-0 group-hover/link:opacity-100 transition-all" />
-                                  </a>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2 pt-2">
-                                  {[
-                                    { link: selectedSeller.instagram_link, icon: <Instagram className="h-5 w-5" />, color: 'hover:text-pink-500', label: 'Instagram' },
-                                    { link: selectedSeller.facebook_link, icon: <Facebook className="h-5 w-5" />, color: 'hover:text-blue-600', label: 'Facebook' },
-                                    { link: selectedSeller.tiktok_link, icon: <Music2 className="h-5 w-5" />, color: 'hover:text-white', label: 'TikTok' }
-                                  ].map((social, i) => (
-                                    <a
-                                      key={i}
-                                      href={social.link ? (social.link.startsWith('http') ? social.link : `https://${social.link}`) : '#'}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={`h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center transition-all ${social.link ? `text-gray-400 ${social.color} hover:bg-white/10` : 'text-gray-700 cursor-not-allowed opacity-30 hover:bg-transparent'}`}
-                                      title={social.label}
-                                    >
-                                      {social.icon}
-                                    </a>
-                                  ))}
-                                </div>
-                                <div className="pt-2">
-                                  <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Merchant Bio</span>
-                                  <p className="text-xs text-gray-400 leading-relaxed font-medium bg-white/5 rounded-xl p-3 border border-white/5 min-h-[60px]">
-                                    {selectedSeller.bio || 'Enterprise-grade merchant specializing in premium logistics and high-quality products.'}
-                                  </p>
-                                </div>
-                              </div>
-                            </Card>
-
-                            {/* Section 3: Engagement Metrics */}
-                            <div className="grid grid-cols-2 lg:grid-cols-1 gap-6">
-                              <Card className="bg-white/[0.02] border border-white/10 rounded-2xl md:rounded-[2rem] p-5 md:p-6 shadow-2xl flex flex-col justify-between">
-                                <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                  <Activity className="h-4 w-4 text-purple-500" />
-                                  Growth & Engagement
-                                </h4>
-                                <div className="flex-1 flex flex-col justify-center gap-6">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                                        <Users2 className="h-5 w-5 text-purple-500" />
-                                      </div>
-                                      <div>
-                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Active Clients</p>
-                                        <p className="text-2xl font-black text-white">{selectedSeller.client_count || 0}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <div className="h-10 w-10 rounded-xl bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
-                                        <Heart className="h-5 w-5 text-pink-500" />
-                                      </div>
-                                      <div>
-                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Wishlist Hits</p>
-                                        <p className="text-2xl font-black text-white">{selectedSeller.metrics?.wishlistCount || 0}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                        <Package className="h-5 w-5 text-blue-500" />
-                                      </div>
-                                      <div>
-                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Inventory</p>
-                                        <p className="text-2xl font-black text-white">{selectedSeller.metrics?.totalProducts || 0}</p>
-                                      </div>
-                                    </div>
-                                    <div className="h-10 w-32 bg-white/5 rounded-full border border-white/10 flex items-center justify-center">
-                                      <Badge className="bg-transparent text-gray-400 font-bold border-none">Active Fleet</Badge>
-                                    </div>
-                                  </div>
-                                </div>
-                              </Card>
-                            </div>
-
-                            {/* Section 4: Performance Analytics */}
-                            <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
-                              {[
-                                { label: 'Total Volume', value: selectedSeller.metrics?.totalSales, color: 'text-green-400', icon: <DollarSign className="h-4 w-4" /> },
-                                { label: 'Platform Revenue', value: selectedSeller.metrics?.totalCommission, color: 'text-yellow-400', icon: <Percent className="h-4 w-4" /> },
-                                { label: 'Merchant Net', value: selectedSeller.metrics?.netSales, color: 'text-blue-400', icon: <TrendingUp className="h-4 w-4" /> },
-                                { label: 'Order Chain', value: selectedSeller.metrics?.totalOrders, color: 'text-purple-400', icon: <ShoppingCart className="h-4 w-4" />, noCurrency: true }
-                              ].map((met, i) => (
-                                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 hover:bg-white/[0.05] transition-all group/met">
-                                  <div className={`h-8 w-8 rounded-xl bg-white/5 flex items-center justify-center ${met.color} mb-3 shadow-inner group-hover/met:scale-110 transition-transform`}>{met.icon}</div>
-                                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{met.label}</p>
-                                  <p className={`text-xl font-black mt-1 ${met.color}`}>
-                                    {met.noCurrency ? met.value || 0 : `KSh ${(met.value || 0).toLocaleString()}`}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Recent Orders Section */}
-                          <Card className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                            <div className="p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                              <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
-                                  <ShoppingBag className="h-5 w-5 text-yellow-500" />
-                                </div>
-                                <h4 className="text-sm font-black text-white uppercase tracking-widest">Operational Stream</h4>
-                              </div>
-                              <Badge className="bg-yellow-500 text-black font-black px-4 py-1.5 border-none text-[10px] tracking-widest">LIVE DATA FEED</Badge>
-                            </div>
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-left">
-                                <thead className="bg-white/[0.03] text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
-                                  <tr>
-                                    <th className="px-8 py-6">ID Reference</th>
-                                    <th className="px-8 py-6">End Consumer</th>
-                                    <th className="px-8 py-6">Transaction Value</th>
-                                    <th className="px-8 py-6">Operational Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                  {selectedSeller.recentOrders?.map((order: any) => (
-                                    <tr key={order.id} className="text-sm hover:bg-white/[0.02] transition-colors group/row">
-                                      <td className="px-8 py-6">
-                                        <code className="text-yellow-500 font-bold bg-yellow-500/5 px-3 py-1.5 rounded-lg border border-yellow-500/10 text-[10px]">
-                                          #{order.orderNumber || String(order.id).slice(0, 12).toUpperCase()}
-                                        </code>
-                                      </td>
-                                      <td className="px-8 py-6">
-                                        <div className="flex items-center gap-3">
-                                          <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                                            <User className="h-4 w-4 text-gray-400" />
-                                          </div>
-                                          <span className="text-white font-black tracking-tight">{order.buyerName}</span>
-                                        </div>
-                                      </td>
-                                      <td className="px-8 py-6">
-                                        <span className="text-white font-black italic text-lg tracking-tighter">KSh {order.totalAmount?.toLocaleString()}</span>
-                                      </td>
-                                      <td className="px-8 py-6">
-                                        <Badge className={`
-                                          ${order.status === 'COMPLETED' || order.status === 'DELIVERY_COMPLETE' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                            order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                              'bg-blue-500/10 text-blue-400 border-blue-500/20'} 
-                                          font-black text-[10px] tracking-widest px-4 py-1.5 border
-                                        `}>
-                                          {order.status}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  {(!selectedSeller.recentOrders || selectedSeller.recentOrders.length === 0) && (
-                                    <tr>
-                                      <td colSpan={4} className="px-8 py-12 text-center text-gray-500 font-black uppercase tracking-widest text-xs opacity-50">
-                                        No recent operational data found
-                                      </td>
-                                    </tr>
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                          </Card>
-                        </>
-                      )}
-                    </div>
-                    <div className="p-8 border-t border-white/10 bg-white/[0.02] flex justify-between items-center">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Session ID: {inspectionSessionId}</p>
-                      <Button onClick={closeSellerModal} className="bg-white text-black font-black uppercase tracking-widest px-12 py-5 rounded-[1.5rem] hover:bg-gray-200 transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 group">
-                        Close Inspection
-                        <X className="ml-3 h-5 w-5 group-hover:rotate-90 transition-transform" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Buyer Details Modal */}
-              {selectedBuyer && (
-                <div
-                  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="buyer-modal-title"
-                >
-                  <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] w-full max-w-4xl max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(6,182,212,0.1)] scale-in-95 duration-300">
-                    <div className="flex items-center justify-between p-5 md:p-8 border-b border-white/10 bg-white/[0.02]">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 md:h-14 md:w-14 rounded-xl md:rounded-2xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-inner">
-                          <UserCircle className="h-5 w-5 md:h-7 md:w-7 text-cyan-500" />
-                        </div>
-                        <div>
-                          <h3 id="buyer-modal-title" className="text-xl md:text-2xl font-black text-white tracking-tight">{selectedBuyer.name}</h3>
-                          <p className="text-xs md:text-sm text-gray-400 font-medium">Customer Intelligence Report</p>
-                        </div>
-                      </div>
-                      <button onClick={closeBuyerModal} className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/10 group">
-                        <X className="h-5 w-5 md:h-6 md:w-6 text-gray-400 group-hover:text-white group-hover:rotate-90 transition-all" />
-                      </button>
-                    </div>
-                    <div className="overflow-auto flex-1 p-5 md:p-8 custom-scrollbar space-y-6 md:space-y-8">
-                      {isLoadingBuyer ? (
-                        <div className="flex flex-col items-center justify-center h-60 space-y-4">
-                          <Loader2 className="h-12 w-12 text-cyan-500 animate-spin" />
-                          <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Analyzing User Patterns...</p>
-                        </div>
-                      ) : (
-                        <>
-                          <Card className="bg-white/[0.02] border border-white/10 rounded-[2rem] p-8">
-                            <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Identity Protocol</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                              {[
-                                { label: 'Full Legal Name', value: selectedBuyer.name },
-                                { label: 'Primary Communications', value: selectedBuyer.email },
-                                { label: 'Mobile Link', value: selectedBuyer.phone },
-                                { label: 'Primary City', value: selectedBuyer.city },
-                                { label: 'Last Known Location', value: selectedBuyer.location },
-                                { label: 'Account Status', value: selectedBuyer.status, isBadge: true },
-                                { label: 'Joined Network', value: safeFormatDate(selectedBuyer.createdAt) }
-                              ].map((info, i) => (
-                                <div key={i} className="flex justify-between items-center py-2 border-b border-white/5">
-                                  <span className="text-gray-500 text-sm font-medium">{info.label}</span>
-                                  {info.isBadge ? (
-                                    <Badge className="bg-green-500/10 text-green-400 border-none">{info.value}</Badge>
-                                  ) : (
-                                    <span className="text-sm font-bold text-gray-200">{info.value || 'N/A'}</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
-                        </>
-                      )}
-                    </div>
-                    <div className="p-8 border-t border-white/10 bg-white/[0.02] flex justify-end">
-                      <Button onClick={closeBuyerModal} className="bg-white text-black font-black uppercase tracking-widest px-10 py-4 rounded-2xl hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-                        Close Report
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
+            <AdminEntityModals
+              selectedSeller={selectedSeller}
+              isLoadingSeller={isLoadingSeller}
+              closeSellerModal={closeSellerModal}
+              selectedBuyer={selectedBuyer}
+              isLoadingBuyer={isLoadingBuyer}
+              closeBuyerModal={closeBuyerModal}
+              safeFormatDate={safeFormatDate}
+              inspectionSessionId={inspectionSessionId}
+            />
             <TabsContent value="overview" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-              {/* Visual Analytics Layer */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
-                <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
-                <SalesChart data={dashboardState.analytics.salesTrends || []} />
-                <ProductStatusChart data={dashboardState.analytics.productStatus || []} />
-                <GeoDistributionChart data={dashboardState.analytics.geoDistribution || []} />
-
-                <ChartContainer title="Premium Entities" description="Top shops by client conversion" className="col-span-4 lg:col-span-2">
-                  <div className="space-y-4 h-full flex flex-col justify-center">
-                    {dashboardState.topShops?.slice(0, 3).map((shop, index) => (
-                      <div key={shop.id} className="flex items-center justify-between p-5 bg-white/[0.03] rounded-[1.5rem] border border-white/5 hover:bg-white/10 transition-all duration-500 group/shop">
-                        <div className="flex items-center gap-5">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black italic shadow-inner transition-transform group-hover/shop:scale-110 ${index === 0 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
-                            index === 1 ? 'bg-gray-400/20 text-gray-400 border border-gray-400/30' :
-                              'bg-orange-800/20 text-orange-600 border border-orange-800/30'
-                            }`}>
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="text-lg font-bold text-white tracking-tight">{shop.shopName || shop.name}</p>
-                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1 opacity-50">{shop.name}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-3xl font-black text-white tracking-tighter tabular-nums group-hover/shop:text-yellow-500 transition-colors">{shop.clientCount}</p>
-                          <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest opacity-50">Pulse</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ChartContainer>
-
-                <Card className="lg:col-span-4 bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
-                  <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 md:p-8 border-b border-white/5 bg-white/[0.01] gap-4">
-                    <div>
-                      <CardTitle className="text-xl md:text-2xl font-black text-white tracking-tighter">Velocity Stream</CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Recently authenticated merchants</CardDescription>
-                    </div>
-                    <Button variant="outline" className="border-white/10 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-xl font-black uppercase tracking-widest h-12 px-8 transition-all" onClick={() => setActiveTab('sellers')}>
-                      Archive
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                          <tr>
-                            <th className="px-5 md:px-10 py-4 md:py-6">Operator</th>
-                            <th className="px-5 md:px-10 py-4 md:py-6 text-center hidden sm:table-cell">Protocol Status</th>
-                            <th className="px-5 md:px-10 py-4 md:py-6 text-right">Timestamp</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                          {dashboardState.sellers.slice(0, 5).map((seller) => (
-                            <tr key={seller.id} className="hover:bg-white/[0.02] transition-all group">
-                              <td className="px-5 md:px-10 py-4 md:py-6">
-                                <div className="flex items-center gap-3 md:gap-5">
-                                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-yellow-500/30 transition-all">
-                                    <Store className="w-4 h-4 md:w-5 md:h-5 text-gray-500 group-hover:text-yellow-500 transition-all" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm md:text-base font-bold text-white tracking-tight truncate">{seller.name}</p>
-                                    <p className="text-[10px] md:text-xs text-gray-500 font-medium italic opacity-60 truncate">{seller.email}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-5 md:px-10 py-4 md:py-6 text-center hidden sm:table-cell">
-                                <Badge className={`px-3 md:px-5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border-none ${seller.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
-                                  {seller.status}
-                                </Badge>
-                              </td>
-                              <td className="px-5 md:px-10 py-4 md:py-6 text-right text-[10px] md:text-sm font-bold text-gray-400 tabular-nums">
-                                {safeFormatDate(seller.createdAt)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <AdminOverviewTab
+                dashboardState={dashboardState}
+                safeFormatDate={safeFormatDate}
+                onShowSellers={() => setActiveTab('sellers')}
+              />
             </TabsContent>
 
             {/* Sellers Tab */}
@@ -1642,6 +984,10 @@ const NewAdminDashboard = () => {
                   </div>
                 </CardFooter>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="logistics" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <AdminLogisticsTab />
             </TabsContent>
 
             {/* Refunds Tab */}

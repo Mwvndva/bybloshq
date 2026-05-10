@@ -10,6 +10,9 @@ import ShopPage from '@/pages/ShopPage';
 const MarketingLogin = safeLazy(() => import('@/pages/marketing/MarketingLogin'));
 const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
 const VerifyEmail = safeLazy(() => import('@/pages/auth/VerifyEmail'));
+const MzigoLogin = safeLazy(() => import('@/pages/logistics/MzigoLoginPage'));
+const MzigoDashboard = safeLazy(() => import('@/pages/logistics/MzigoDashboardPage'));
+const TrackingPage = safeLazy(() => import('@/pages/TrackingPage'));
 
 // Main routes configuration
 export const routes = [
@@ -21,6 +24,14 @@ export const routes = [
   {
     path: '/shop/:shopName',
     element: <ShopPage />,
+  },
+  {
+    path: '/track/:token',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <TrackingPage />
+      </Suspense>
+    ),
   },
   {
     path: '/admin/marketing/login',
@@ -43,6 +54,38 @@ export const routes = [
     element: (
       <Suspense fallback={<RouteFallback />}>
         <VerifyEmail />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/mzigo/login',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MzigoLogin />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/mzigo/dashboard',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MzigoDashboard />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/logistics/login',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MzigoLogin />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/logistics/dashboard',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MzigoDashboard />
       </Suspense>
     ),
   },
