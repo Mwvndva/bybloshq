@@ -131,18 +131,22 @@
             <h1>
                 <%= appName %>
             </h1>
-            <p>Official Payment Receipt</p>
+            <p><%= receiptTitle %></p>
         </div>
         <div class="content">
             <div class="receipt-header">
                 <h2>Receipt</h2>
-                <p style="margin: 5px 0; color: #718096; font-size: 14px;">Transaction ID: <%= transactionId %>
+                <p style="margin: 5px 0; color: #718096; font-size: 14px;">Receipt ID: <%= receiptId %>
                 </p>
+                <% if (transactionId && transactionId !== receiptId) { %>
+                    <p style="margin: 5px 0; color: #718096; font-size: 13px;">Provider Reference: <%= transactionId %>
+                    </p>
+                    <% } %>
             </div>
 
             <div class="info-grid">
                 <div>
-                    <h4 style="margin: 0 0 5px 0; color: #718096; text-transform: uppercase; font-size: 12px;">Billed To
+                    <h4 style="margin: 0 0 5px 0; color: #718096; text-transform: uppercase; font-size: 12px;"><%= billingLabel %>
                     </h4>
                     <strong>
                         <%= buyerName %>
@@ -189,8 +193,7 @@
             <div
                 style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin: 20px 0;">
                 <p style="margin: 0; font-size: 14px; color: #0369a1;">
-                    <strong>Payment Confirmed.</strong> This serves as your official record of purchase.
-                    The seller has been notified to begin fulfillment.
+                    <strong>Payment Confirmed.</strong> <%= confirmationNote %>
                 </p>
             </div>
 

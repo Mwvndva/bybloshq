@@ -59,6 +59,10 @@ function extractReceipt(providerPayload = {}) {
         || null;
 }
 
+function buildPaymentReceiptId(paymentRow = {}) {
+    return `BYB-RCPT-${String(paymentRow.id).padStart(8, '0')}`;
+}
+
 function resolveOrderIdFromMetadata(metadata = {}) {
     const meta = parseJson(metadata);
     const rawOrderId = meta.order_id ?? meta.product_order_id ?? null;
@@ -405,6 +409,7 @@ const CorePaymentService = {
                 provider_status: providerStatus,
                 provider_reference: providerReference,
                 provider_amount: rawAmount ?? null,
+                ...(isSuccess ? { receipt_id: buildPaymentReceiptId(paymentRow) } : {}),
                 completed_at: isSuccess ? new Date().toISOString() : undefined,
                 failed_at: isFailed ? new Date().toISOString() : undefined,
                 provider_payload: providerPayload

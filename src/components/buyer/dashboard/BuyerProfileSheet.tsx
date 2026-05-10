@@ -84,7 +84,7 @@ export function BuyerProfileSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-dvh w-full max-w-none flex-col overflow-hidden border-l border-white/15 bg-black p-0 text-white shadow-2xl shadow-black/70 sm:max-w-[430px]"
+        className="flex h-dvh w-full max-w-none transform-gpu flex-col overflow-hidden border-l border-white/15 bg-black p-0 text-white shadow-2xl shadow-black/70 will-change-transform data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[430px]"
       >
         <SheetHeader className="border-b border-white/10 bg-[#050505] px-5 py-5 pr-14 text-left">
           <div className="flex items-center gap-3">
