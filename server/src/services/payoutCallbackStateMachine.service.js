@@ -29,6 +29,12 @@ export function providerPayloadIndicatesFailure(data = {}) {
         || String(data.success).toLowerCase() === 'false';
 }
 
+export function providerPayloadIndicatesReversal(data = {}) {
+    const normalizedEvent = normalizePayoutStatus(data.paystack_event || data.event || data.provider_event || data.raw_response?.event);
+    const normalizedStatus = normalizePayoutStatus(data.status || data.state || data.result || data.transaction_status);
+    return normalizedEvent === 'transfer.reversed' || normalizedStatus === 'reversed';
+}
+
 class PayoutCallbackStateMachineService {
     async handleProviderCallback(providerPayload = {}, context = {}) {
         const data = providerPayload?.data || providerPayload || {};
@@ -36,10 +42,11 @@ class PayoutCallbackStateMachineService {
         const clientReference = data.client_reference || data.idempotency_key || null;
         const isSuccess = providerPayloadIndicatesSuccess(data);
         const isFailure = providerPayloadIndicatesFailure(data);
+        const isReversal = providerPayloadIndicatesReversal(data);
         const finalStatus = isSuccess ? 'completed' : 'failed';
         const providerAmount = Number.parseFloat(data.amount);
         const mpesaReceipt = data.third_party_trans_id || data.mpesa_receipt || null;
-        const remarks = data.remarks || data.message || (isSuccess ? 'Payout successful' : 'Payout failed');
+        const remarks = data.remarks || data.message || (isReversal ? 'Payout reversed by provider' : isSuccess ? 'Payout successful' : 'Payout failed');
 
         if (!transactionReference && !clientReference) {
             logger.warn('[PayoutCallbackStateMachine] Payout callback missing all references', { keys: Object.keys(data) });
@@ -150,6 +157,41 @@ class PayoutCallbackStateMachineService {
                 return { status: 'rejected_amount_mismatch', withdrawalId };
             }
 
+            if (isReversal && request.status === 'completed') {
+                const { updatedRequest, reconciliationEvent } = await this.recordProviderReversalAfterCompletionLocked(client, request, data, {
+                    providerReference: transactionReference,
+                    clientReference,
+                    providerAmount: Number.isNaN(providerAmount) ? null : providerAmount,
+                    remarks,
+                    mpesaReceipt
+                });
+                const compensationEvent = await eventBus.enqueueInTransaction(
+                    client,
+                    AppEvents.WITHDRAWAL.COMPENSATION_REQUIRED,
+                    {
+                        eventId: `withdrawal.compensation_required:${request.id}:provider_reversal:${transactionReference || clientReference}`,
+                        withdrawal: updatedRequest,
+                        reconciliationEvent,
+                        reason: 'provider_reversal_after_completion'
+                    }
+                );
+                const updatedEvent = await eventBus.enqueueInTransaction(
+                    client,
+                    AppEvents.WITHDRAWAL.UPDATED,
+                    {
+                        eventId: `withdrawal.updated:${request.id}:compensation_required:provider_reversal:${transactionReference || clientReference}`,
+                        withdrawal: updatedRequest,
+                        seller: { whatsapp_number: request.entity_phone },
+                        reason: 'provider_reversal_after_completion',
+                        newBalance: null
+                    }
+                );
+                postCommitEventIds.push(compensationEvent.eventId, updatedEvent.eventId);
+                await client.query('COMMIT');
+                this.dispatchPostCommitEvents(postCommitEventIds);
+                return { status: 'compensation_required', withdrawalId };
+            }
+
             if (request.status === 'completed') {
                 await this.updatePayoutProviderAttempt(client, request.id, transactionReference, 'callback_replayed_completed', data);
                 await client.query('COMMIT');
@@ -226,7 +268,15 @@ class PayoutCallbackStateMachineService {
                     transactionReference,
                     mpesaReceipt,
                     JSON.stringify({
-                        payd_callback: {
+                        provider_callback: {
+                            remarks,
+                            third_party_trans_id: mpesaReceipt,
+                            replay_event_id: context.replayEventId,
+                            provider_reference: transactionReference,
+                            client_reference: clientReference,
+                            processed_at: new Date().toISOString()
+                        },
+                        paystack_callback: {
                             remarks,
                             third_party_trans_id: mpesaReceipt,
                             replay_event_id: context.replayEventId,
@@ -516,6 +566,78 @@ class PayoutCallbackStateMachineService {
         );
 
         await this.updatePayoutProviderAttempt(client, request.id, providerReference, 'provider_success_after_refund', providerPayload);
+        return { updatedRequest, reconciliationEvent: eventInsert.rows[0] };
+    }
+
+    async recordProviderReversalAfterCompletionLocked(client, request, providerPayload = {}, refs = {}) {
+        const {
+            providerReference = null,
+            clientReference = null,
+            providerAmount = null,
+            remarks = 'Provider reversed a completed payout',
+            mpesaReceipt = null
+        } = refs;
+        const referenceKey = String(providerReference || clientReference || `withdrawal:${request.id}`).slice(0, 255);
+        const metadata = {
+            provider_reversal_after_completion: {
+                previous_status: request.status,
+                provider_reference: providerReference,
+                client_reference: clientReference,
+                provider_amount: providerAmount,
+                mpesa_receipt: mpesaReceipt,
+                remarks,
+                detected_at: new Date().toISOString()
+            },
+            manual_reconciliation_required: true,
+            freeze_payout_retries: true
+        };
+
+        const eventInsert = await client.query(
+            `INSERT INTO payout_reconciliation_events (
+                 withdrawal_request_id,
+                 seller_id,
+                 event_type,
+                 provider_reference,
+                 client_reference,
+                 reference_key,
+                 amount,
+                 payload,
+                 metadata
+             )
+             VALUES ($1, $2, 'PROVIDER_REVERSAL_AFTER_COMPLETION', $3, $4, $5, $6, $7::jsonb, $8::jsonb)
+             ON CONFLICT (withdrawal_request_id, event_type, reference_key)
+             DO UPDATE SET
+                 payload = EXCLUDED.payload,
+                 metadata = payout_reconciliation_events.metadata || EXCLUDED.metadata
+             RETURNING *`,
+            [
+                request.id,
+                request.seller_id,
+                providerReference,
+                clientReference,
+                referenceKey,
+                providerAmount,
+                JSON.stringify(providerPayload || {}),
+                JSON.stringify(metadata)
+            ]
+        );
+
+        const { rows: [updatedRequest] } = await client.query(
+            `UPDATE withdrawal_requests
+             SET status = 'compensation_required',
+                 provider_reference = COALESCE($2, provider_reference),
+                 mpesa_receipt = COALESCE($3, mpesa_receipt),
+                 api_call_pending = FALSE,
+                 retry_started_at = NULL,
+                 retry_worker_id = NULL,
+                 metadata = COALESCE(metadata, '{}'::jsonb) || $4::jsonb,
+                 updated_at = NOW()
+             WHERE id = $1
+             RETURNING *`,
+            [request.id, providerReference, mpesaReceipt, JSON.stringify(metadata)]
+        );
+
+        await this.updatePayoutProviderAttempt(client, request.id, providerReference, 'provider_reversal_after_completion', providerPayload);
         return { updatedRequest, reconciliationEvent: eventInsert.rows[0] };
     }
 

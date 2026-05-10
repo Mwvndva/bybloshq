@@ -65,8 +65,8 @@ router.get('/metrics/monthly', adminController.getMonthlyMetrics);
 router.get('/metrics/financial', adminController.getFinancialMetrics);
 router.get('/metrics/financial/monthly', adminController.getMonthlyFinancialData);
 
-// Payd Management
-router.get('/payd/balances', adminController.getPaydBalances);
+// Payment provider health
+router.get('/payment-provider/balances', adminController.getPaymentProviderBalances);
 
 // Clients management
 router.get('/clients', adminController.getAllClients);

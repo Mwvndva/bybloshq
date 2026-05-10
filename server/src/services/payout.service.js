@@ -1,114 +1,66 @@
-import axios from 'axios';
-import https from 'https';
 import crypto from 'crypto';
 import logger from '../shared/utils/logger.js';
 import Fees from '../config/fees.js';
-import { PaydError, PaydErrorCodes } from '../shared/utils/PaydError.js';
+import PaystackTransferClient from '../providers/PaystackTransferClient.js';
 
-/**
- * PayoutService — Payd Kenya M-Pesa Payouts
- * 
- * API: POST https://api.payd.money/api/v2/withdrawal
- * Auth: HTTP Basic Auth (username:password)
- * Docs: https://magic.payd.money/kenya-payouts
- */
+const SUPPORTED_PAYOUT_PROVIDERS = new Set(['paystack']);
+
+function resolvePayoutProvider() {
+    const configuredProvider = String(process.env.PAYOUT_PROVIDER || 'paystack').trim().toLowerCase();
+    if (SUPPORTED_PAYOUT_PROVIDERS.has(configuredProvider)) {
+        return configuredProvider;
+    }
+
+    logger.warn('[PayoutService] Unsupported PAYOUT_PROVIDER configured; falling back to paystack transfers', {
+        configuredProvider,
+        supportedProviders: Array.from(SUPPORTED_PAYOUT_PROVIDERS)
+    });
+    return 'paystack';
+}
+
 class PayoutService {
     constructor() {
-        // Separate base URL for payouts (v2) vs payments (v3)
-        this.baseUrl = process.env.PAYD_PAYOUT_BASE_URL || 'https://api.payd.money/api/v2';
-        this.username = process.env.PAYD_USERNAME;
-        this.password = process.env.PAYD_PASSWORD;
-
-        this.client = axios.create({
-            baseURL: this.baseUrl,
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'ByblosHQ/2.0 (Node.js)'
-            },
-            timeout: 30000,
-            httpsAgent: new https.Agent({
-                rejectUnauthorized: true, // Enabled for production security
-                keepAlive: true,
-                family: 4 // Force IPv4
-            })
+        this.provider = resolvePayoutProvider();
+        this.payoutProviderClient = this._buildProviderClient(this.provider);
+        this.transferClient = this.payoutProviderClient;
+        logger.info('[PayoutService] Initialized payout provider', {
+            provider: this.provider,
+            baseUrl: this.transferClient.baseUrl
         });
-
-        logger.info(`[PayoutService] Initialized. Base URL: ${this.baseUrl}`);
     }
 
-    /**
-     * Build Basic Auth header
-     */
-    getAuthHeader() {
-        if (!this.username || !this.password) {
-            throw new Error('Payd payout credentials (PAYD_USERNAME, PAYD_PASSWORD) not configured');
+    _buildProviderClient(provider) {
+        if (provider === 'paystack') {
+            return new PaystackTransferClient();
         }
-        return `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`;
+
+        throw new Error(`Unsupported payout provider: ${provider}`);
     }
 
-    /**
-     * Get payout callback URL
-     * SEPARATE from payment callback — uses /api/callbacks/payd-payout
-     */
-    getCallbackUrl() {
-        if (process.env.PAYD_PAYOUT_CALLBACK_URL) {
-            return process.env.PAYD_PAYOUT_CALLBACK_URL;
-        }
-        const base = process.env.BACKEND_URL || 'https://bybloshq.space';
-        return `${base}/api/callbacks/payd-payout`;
-    }
-
-    /**
-     * Normalize phone number for PAYOUT API
-     * 
-     * Payd payout API requires 0XXXXXXXXX format (10 digits, starts with 0)
-     * This is DIFFERENT from the payment (STK push) API which uses 254XXXXXXXXX
-     * 
-     * @param {string|number} phone
-     * @returns {string} e.g. "0712345678"
-     */
     normalizePhoneForPayout(phone) {
-        if (!phone) throw new Error('Phone number is required for payout')
-        // Strip all non-digit characters (handles +, spaces, dashes, parentheses)
-        let digits = phone.toString().replace(/\D/g, '')
+        if (!phone) throw new Error('Phone number is required for payout');
+        let digits = phone.toString().replace(/\D/g, '');
 
-        // 254XXXXXXXXX (12 digits) → 0XXXXXXXXX
         if (digits.startsWith('254') && digits.length === 12) {
-            digits = '0' + digits.substring(3)
-        }
-        // 9-digit bare number → 0XXXXXXXXX
-        else if (digits.length === 9) {
-            digits = '0' + digits
-        }
-        // 0XXXXXXXXX — already in correct format
-        else if (digits.startsWith('0') && digits.length === 10) {
-            // good
-        }
-        else {
-            throw new Error(
-                `Invalid phone number format: "${phone}". ` +
-                `Payout requires a valid Kenyan number (e.g. 0712345678)`
-            )
+            digits = `0${digits.substring(3)}`;
+        } else if (digits.length === 9 && /^[17]/.test(digits)) {
+            digits = `0${digits}`;
+        } else if (digits.startsWith('0') && digits.length === 10) {
+            // already in local display/storage format
+        } else {
+            throw new Error(`Invalid phone number format: "${phone}". Payout requires a valid Kenyan number.`);
         }
 
-        // Validate it's an actual Kenyan mobile number
         if (!/^0[17]\d{8}$/.test(digits)) {
-            throw new Error(
-                `"${digits}" is not a valid Kenyan mobile number. Must start with 07 or 01.`
-            )
+            throw new Error(`"${digits}" is not a valid Kenyan mobile number. Must start with 07 or 01.`);
         }
 
-        return digits
+        return digits;
     }
 
-    /**
-     * Validate withdrawal amount against Payd limits
-     * @param {number} amount
-     * @returns {number} validated amount
-     */
     validateAmount(amount) {
         const parsed = Number.parseFloat(amount);
-        if (isNaN(parsed) || parsed <= 0) {
+        if (!Number.isFinite(parsed) || parsed <= 0) {
             throw new Error('Invalid withdrawal amount');
         }
         if (parsed < Fees.MIN_WITHDRAWAL_AMOUNT) {
@@ -120,375 +72,83 @@ class PayoutService {
         return parsed;
     }
 
-    /**
-     * Initiate a Kenya M-Pesa payout via Payd
-     * 
-     * @param {Object} params
-     * @param {string} params.phone_number - Raw phone (will be normalized)
-     * @param {number} params.amount - Amount in KES
-     * @param {string} params.narration - Description shown to recipient
-     * @returns {Promise<{correlator_id: string, message: string, status: string}>}
-     */
-    /**
-     * Initiate M-Pesa B2C Payout
-     * 
-     * Endpoint: POST https://api.payd.money/api/v2/withdrawal
-     * Auth: Basic Auth
-     * Docs: https://magic.payd.one/kenya-payouts
-     * 
-     * @param {Object} params
-     * @param {string} params.phone_number - 0XXXXXXXXX format
-     * @param {number} params.amount - Amount in KES
-     * @param {string} params.narration - Description for recipient
-     * @param {string} [params.callback_url] - Webhook URL
-     * @returns {Promise<Object>}
-     */
-    async initiatePayout({ phone_number, amount, narration, callback_url, idempotency_key }) {
-        const startTime = Date.now();
+    async initiatePayout({ phone_number, amount, narration, idempotency_key, recipient_name }) {
+        const validatedAmount = this.validateAmount(amount);
+        const normalizedPhone = this.normalizePhoneForPayout(phone_number);
+        const reference = typeof idempotency_key === 'string' && idempotency_key.trim()
+            ? idempotency_key.trim().slice(0, 120)
+            : `po-${crypto.randomUUID()}`;
 
         try {
-            // ============================================================
-            // STEP 1: VALIDATE INPUTS
-            // ============================================================
-            const validatedAmount = this.validateAmount(amount);
-            const normalizedPhone = this.normalizePhoneForPayout(phone_number);
-            const callbackUrl = callback_url || this.getCallbackUrl();
-            const payoutIdempotencyKey = typeof idempotency_key === 'string' && idempotency_key.trim()
-                ? idempotency_key.trim().slice(0, 120)
-                : `PO-${crypto.randomUUID()}`;
-
-            logger.info('[PAYD-PAYOUT] Initiating payout', {
-                phone: normalizedPhone,
+            const result = await this.transferClient.initiateTransfer({
                 amount: validatedAmount,
-                narration
+                phoneNumber: normalizedPhone,
+                name: recipient_name || normalizedPhone,
+                narration: narration || 'Byblos seller withdrawal',
+                reference
             });
 
-            // ============================================================
-            // STEP 2: CHECK BALANCE (Optional but recommended)
-            // ============================================================
-            try {
-                const balance = await this.checkPayoutBalance();
-                const available = Number.parseFloat(balance.available_balance || 0);
-                if (available < validatedAmount) {
-                    logger.warn('[PAYD-PAYOUT] Balance may be insufficient', {
-                        available,
-                        required: validatedAmount,
-                        note: 'Balance endpoint is undocumented — Payd will confirm at withdrawal time'
-                    });
-                    // Do NOT throw here — let Payd validate at withdrawal time
-                }
-            } catch (balanceError) {
-                // Balance check uses undocumented endpoint — failure is non-critical
-                logger.warn('[PAYD-PAYOUT] Balance check skipped (undocumented endpoint):', balanceError.message);
-            }
+            logger.info('[PAYSTACK-TRANSFER] Payout initiated successfully', {
+                reference: result.reference,
+                transferCode: result.transfer_code,
+                amount: validatedAmount
+            });
 
-            // ============================================================
-            // STEP 3: BUILD PAYOUT REQUEST (CRITICAL FIX: PAYOUT-IDEMPOTENCY)
-            // ============================================================
-            const payload = {
+            return {
+                ...result,
+                provider: this.provider,
+                correlator_id: result.reference,
+                transaction_reference: result.reference,
+                provider_reference: result.reference,
+                client_reference: reference,
                 phone_number: normalizedPhone,
                 amount: validatedAmount,
-                narration: narration || 'Payout from ByblosHQ',
-                callback_url: callbackUrl,
-                channel: 'MPESA',
-                currency: 'KES',
-                client_reference: payoutIdempotencyKey
+                message: result.message || 'Transfer request accepted'
             };
-
-            // ============================================================
-            // STEP 4: MAKE API REQUEST
-            // ============================================================
-            const response = await this._retryRequest(async () => {
-                return await this.client.post('/withdrawal', payload, {
-                    headers: {
-                        'Authorization': this.getAuthHeader(),
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
-            }, 3, 2000); // 3 retries with 2s delay
-
-            const duration = Date.now() - startTime;
-
-            // ============================================================
-            // STEP 5: PARSE RESPONSE
-            // ============================================================
-            const data = response.data;
-
-            const reference = data.correlator_id || data.transaction_reference;
-
-            if (!reference) {
-                logger.warn('[PAYD-PAYOUT] No correlator_id in response', { data });
-            }
-
-            logger.info('[PAYD-PAYOUT] Payout initiated successfully', {
-                duration: `${duration}ms`,
-                reference: reference,
-                status: data.status,
-                message: data.message
-            });
-
-            return {
-                success: true,
-                correlator_id: reference,
-                transaction_reference: reference,  // alias for backwards compat
-                status: data.status || 'processing',
-                amount: data.amount,
-                requested_amount: validatedAmount,
-                phone_number: data.phone_number || normalizedPhone,
-                message: data.message || 'Payout initiated',
-                original_response: data
-            };
-
         } catch (error) {
-            const duration = Date.now() - startTime;
-
-            logger.error('[PAYD-PAYOUT] Payout initiation failed', {
-                duration: `${duration}ms`,
-                phone: phone_number,
-                amount,
-                error: this._extractErrorDetails(error)
+            logger.error('[PAYSTACK-TRANSFER] Payout initiation failed', {
+                phone: normalizedPhone,
+                amount: validatedAmount,
+                error: error.message,
+                status: error.response?.status,
+                data: error.response?.data
             });
-
-            throw this._handlePaydError(error);
+            throw this._handleProviderError(error);
         }
     }
 
-    /**
-     * Retry request with exponential backoff
-     * 
-     * @private
-     * @param {Function} requestFn - Async function that makes the request
-     * @param {number} maxRetries - Maximum retry attempts
-     * @param {number} initialDelayMs - Initial delay in milliseconds
-     * @returns {Promise<any>}
-     */
-    async _retryRequest(requestFn, maxRetries = 3, initialDelayMs = 1000) {
-        let lastError;
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                return await requestFn();
-            } catch (error) {
-                lastError = error;
-
-                // Don't retry for client errors (4xx)
-                if (error.response?.status >= 400 && error.response?.status < 500) {
-                    throw error;
-                }
-
-                if (attempt < maxRetries) {
-                    const delay = initialDelayMs * Math.pow(2, attempt - 1);
-                    logger.warn(`[PAYD-RETRY] Attempt ${attempt} failed, retrying in ${delay}ms`, {
-                        error: error.message
-                    });
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-        }
-
-        throw lastError;
+    async checkPayoutStatus(reference) {
+        const result = await this.transferClient.verifyTransfer(reference);
+        return {
+            ...result,
+            provider: this.provider,
+            correlator_id: result.reference,
+            transaction_reference: result.reference,
+            provider_reference: result.reference
+        };
     }
 
-    /**
-     * Check payout transaction status
-     * 
-     * Note: Payd v2 payout API may not have a dedicated status endpoint.
-     * This method is a placeholder for when/if Payd adds this feature.
-     * 
-     * @param {string} correlatorId - Payd correlator_id from payout initiation
-     * @returns {Promise<Object>}
-     */
-    async checkPayoutStatus(correlatorId) {
-        try {
-            logger.info('[PAYD-PAYOUT-STATUS] Checking payout status', {
-                correlator_id: correlatorId
-            });
-
-            // Attempt to check status (endpoint may or may not exist)
-            const response = await this.client.get(`/withdrawal/${correlatorId}/status`, {
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Accept': 'application/json'
-                }
-            });
-
-            const data = response.data;
-
-            logger.info('[PAYD-PAYOUT-STATUS] Status retrieved', {
-                correlator_id: correlatorId,
-                status: data.status
-            });
-
-            return {
-                success: true,
-                correlator_id: correlatorId,
-                status: data.status,
-                amount: data.amount,
-                phone_number: data.phone_number,
-                created_at: data.created_at,
-                completed_at: data.completed_at,
-                raw_response: data
-            };
-
-        } catch (error) {
-            // If endpoint doesn't exist (404), return a helpful message
-            if (error.response?.status === 404) {
-                logger.warn('[PAYD-PAYOUT-STATUS] Status endpoint not available for payouts');
-                return {
-                    success: false,
-                    message: 'Payout status checking not available in Payd v2 API',
-                    fallback: 'Use webhook callbacks for status updates'
-                };
-            }
-
-            logger.error('[PAYD-PAYOUT-STATUS] Status check failed', {
-                correlator_id: correlatorId,
-                error: this._extractErrorDetails(error)
-            });
-
-            throw this._handlePaydError(error);
-        }
-    }
-
-    /**
-     * Check Payd payout account balance
-     * 
-     * Endpoint: GET https://api.payd.money/api/v1/accounts/{username}/all_balances
-     * Auth: Basic Auth
-     * 
-     * @returns {Promise<Object>}
-     */
     async checkPayoutBalance() {
-        try {
-            logger.info('[PAYD-PAYOUT-BALANCE] Checking payout balance');
-
-            const response = await this.client.get(`/accounts/${this.username}/all_balances`, {
-                baseURL: 'https://api.payd.money/api/v1',
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Accept': 'application/json'
-                }
-            });
-
-            const data = response.data;
-            const fiat = data.fiat_balance || {};
-
-            logger.info('[PAYD-PAYOUT-BALANCE] Balance retrieved', {
-                available: fiat.balance,
-                currency: fiat.currency
-            });
-
-            return {
-                success: true,
-                available_balance: fiat.balance,
-                ledger_balance: fiat.balance, // Unified in v1
-                currency: fiat.currency || 'KES',
-                last_updated: new Date().toISOString(),
-                raw_response: data
-            };
-
-        } catch (error) {
-            logger.error('[PAYD-PAYOUT-BALANCE] Balance check failed', {
-                error: this._extractErrorDetails(error)
-            });
-
-            throw this._handlePaydError(error);
-        }
+        return this.transferClient.checkBalance();
     }
 
-    /**
-     * Extract error details from Axios error
-     * 
-     * @private
-     * @param {Error} error - Axios error object
-     * @returns {Object}
-     */
     _extractErrorDetails(error) {
-        if (error.response) {
-            return {
-                type: 'http_error',
-                status: error.response.status,
-                data: error.response.data
-            };
-        } else if (error.request) {
-            return {
-                type: 'no_response',
-                message: error.message
-            };
-        } else {
-            return {
-                type: 'request_setup',
-                message: error.message
-            };
-        }
+        return {
+            message: error.message,
+            code: error.code,
+            status: error.statusCode || error.response?.status,
+            data: error.details || error.response?.data || null,
+            provider: this.provider
+        };
     }
 
-    /**
-     * Handle Payd API errors and convert to PaydError
-     * 
-     * @private
-     * @param {Error} error - Original error
-     * @returns {PaydError}
-     */
-    _handlePaydError(error) {
-        if (error instanceof PaydError) return error;
-
-        if (error.response) {
-            const status = error.response.status;
-            const data = error.response.data;
-
-            if (status === 401 || status === 403) {
-                return new PaydError('Authentication failed', PaydErrorCodes.AUTHENTICATION_FAILED, 401, { original: data });
-            }
-            if (status === 404) {
-                return new PaydError('Not found', PaydErrorCodes.TRANSACTION_NOT_FOUND, 404, { original: data });
-            }
-            return new PaydError(data.message || 'Payd API error', PaydErrorCodes.TRANSACTION_FAILED, status, { original: data });
-        }
-
-        return new PaydError(error.message, PaydErrorCodes.UNKNOWN_ERROR, 500, { original: error });
-    }
-
-    /**
-     * Refund a failed withdrawal back to the entity's wallet balance.
-     * Called inside a DB transaction.
-     * 
-     * @param {Object} client - Active DB transaction client
-     * @param {Object} request - withdrawal_requests row
-     * @returns {Promise<number|null>} newBalance
-     */
-    /**
-     * Verify Payd webhook signature.
-     * Kept for compatibility; active callback routes use paydWebhookSecurity middleware.
-     */
-    static verifyWebhookSignature(signature, rawBody) {
-        if (!signature || !rawBody) return false;
-
-        const secret = process.env.PAYD_WEBHOOK_SECRET || process.env.PAYD_CALLBACK_SECRET;
-        if (!secret) {
-            logger.error('PAYD_WEBHOOK_SECRET/PAYD_CALLBACK_SECRET is not set. Webhook verification fails closed.');
-            return false;
-        }
-
-        try {
-            const hmac = crypto.createHmac('sha256', secret);
-            const digest = hmac.update(rawBody).digest('hex');
-
-            // Use timingSafeEqual to prevent timing attacks
-            const normalizedSignature = String(signature).replace(/^sha256=/i, '').trim();
-            const signatureBuffer = Buffer.from(normalizedSignature, 'hex');
-            const digestBuffer = Buffer.from(digest, 'hex');
-
-            if (signatureBuffer.length !== digestBuffer.length) {
-                return false;
-            }
-
-            return crypto.timingSafeEqual(signatureBuffer, digestBuffer);
-        } catch (error) {
-            logger.error('[Webhook] Verification error:', error.message);
-            return false;
-        }
+    _handleProviderError(error) {
+        const wrapped = new Error(error.response?.data?.message || error.message || 'Paystack transfer request failed');
+        wrapped.code = error.code || error.response?.data?.code || 'PAYSTACK_TRANSFER_ERROR';
+        wrapped.statusCode = error.statusCode || error.response?.status || 500;
+        wrapped.details = error.details || error.response?.data || null;
+        wrapped.provider = this.provider;
+        return wrapped;
     }
 
     async refundToWallet(client, request) {
@@ -513,5 +173,3 @@ class PayoutService {
 }
 
 export default new PayoutService();
-
-

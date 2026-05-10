@@ -322,11 +322,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     const activeDoorDeliverySelection = doorDeliverySelectionRef.current;
     const estimatedPayableAmount = product.price + (activeDoorDeliverySelection?.doorDelivery ? Number(activeDoorDeliverySelection?.quote?.feeAmount || 0) : 0);
 
-    // 0. Minimum Amount Validation (Payd documentation requirement)
+    // 0. Minimum Amount Validation (payment provider requirement)
     if (estimatedPayableAmount < 10) {
       toast({
         title: "Minimum Amount Not Met",
-        description: `Payd payments must be at least 10 KES. Current total: ${estimatedPayableAmount} KES.`,
+        description: `Mobile payments must be at least 10 KES. Current total: ${estimatedPayableAmount} KES.`,
         variant: "destructive"
       });
       setIsProcessingPurchase(false);
@@ -359,7 +359,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         productName: product.name,
         customerName: buyerDetails.fullName,
         narrative: `Purchase of ${product.name}`,
-        paymentMethod: 'payd',
+        paymentMethod: 'paystack',
         checkout_token: checkoutToken,
         clientCheckoutToken: checkoutToken,
         // Provide structured buyerLocation if it came from booking/map

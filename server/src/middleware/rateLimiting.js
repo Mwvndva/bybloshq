@@ -6,7 +6,7 @@ import logger from '../shared/utils/logger.js';
  * 
  * Different endpoints have different rate limit requirements:
  * - Authentication: Strict limits to prevent brute force
- * - Webhooks: Moderate limits (already handled in paydWebhookSecurity.js)
+ * - Webhooks: Moderate limits (handled in provider webhook security middleware)
  * - Public API: Generous limits for normal usage
  * - Admin: More generous for authenticated admins
  */

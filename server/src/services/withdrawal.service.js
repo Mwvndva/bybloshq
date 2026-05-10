@@ -2,7 +2,6 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import payoutService from './payout.service.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
-import { PaydErrorCodes } from '../shared/utils/PaydError.js';
 import PayoutCallbackStateMachineService, {
     providerPayloadIndicatesSuccess,
     providerPayloadIndicatesFailure
@@ -10,9 +9,16 @@ import PayoutCallbackStateMachineService, {
 import WithdrawalRetryWorkerService from './withdrawalRetryWorker.service.js';
 
 const AMBIGUOUS_PAYOUT_ERROR_CODES = new Set([
-    PaydErrorCodes.CONNECTION_FAILED,
-    PaydErrorCodes.TIMEOUT,
-    PaydErrorCodes.UNKNOWN_ERROR
+    'CONNECTION_FAILED',
+    'TIMEOUT',
+    'UNKNOWN_ERROR',
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+    'EAI_AGAIN',
+    'EPIPE',
+    'ECONNABORTED'
 ]);
 
 function isAmbiguousPayoutProviderError(error) {
@@ -31,10 +37,10 @@ function isAmbiguousPayoutProviderError(error) {
  * 3. Deduct balance from entity wallet
  * 4. Insert withdrawal_requests record (status: 'processing')
  * 5. Commit DB transaction
- * 6. Call Payd API asynchronously (non-blocking to caller)
- *    - On API success: store correlator_id as provider_reference
+ * 6. Call payout provider asynchronously (non-blocking to caller)
+ *    - On API success: store provider reference
  *    - On API failure: refund balance, mark request 'failed'
- * 7. Payd sends webhook to /api/callbacks/payd-payout
+ * 7. Paystack sends webhook to /api/callbacks/paystack-transfer
  *    - callback.controller handles final status update
  */
 class WithdrawalService {
@@ -70,7 +76,8 @@ class WithdrawalService {
                 phone_number: phone,
                 amount,
                 narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`,
-                idempotency_key: request.idempotency_key
+                idempotency_key: request.idempotency_key,
+                recipient_name: request.mpesa_name || entity.full_name || 'ByblosHQ Seller'
             };
 
             if (existing) {
@@ -184,7 +191,8 @@ class WithdrawalService {
             }
 
             const metadataUpdate = {
-                payd_callback: { remarks, third_party_trans_id: mpesa_receipt },
+                provider_callback: { remarks, third_party_trans_id: mpesa_receipt },
+                paystack_callback: { remarks, third_party_trans_id: mpesa_receipt },
                 mpesa_receipt,
                 remarks
             };
@@ -365,21 +373,21 @@ class WithdrawalService {
             client.release();
         }
 
-        // --- Phase 3: Call Payd API asynchronously ---
+        // --- Phase 3: Call payout provider asynchronously ---
         // Do NOT await — return the request immediately to caller
         eventBus.dispatchAfterCommit(createdEventId, 'WithdrawalService.createWithdrawalRequest');
 
-        this._callPaydAndUpdate(request, entity, validatedAmount, normalizedPhone)
-            .catch(err => logger.error(`[WithdrawalService] _callPaydAndUpdate failed for request ${request.id}: `, err));
+        this._callProviderAndUpdate(request, entity, validatedAmount, normalizedPhone)
+            .catch(err => logger.error(`[WithdrawalService] _callProviderAndUpdate failed for request ${request.id}: `, err));
 
         return request;
     }
 
     /**
-     * Private: Call Payd, store correlator_id, or refund on failure.
+     * Private: call payout provider, store provider reference, or refund on failure.
      * Runs asynchronously after the DB transaction is committed.
      */
-    async _callPaydAndUpdate(request, entity, amount, phone) {
+    async _callProviderAndUpdate(request, entity, amount, phone) {
         try {
             // IDEMPOTENCY CHECK: Before initiating a new payout, check if we already have a reference
             // and if that payout was already successfully processed by the provider.
@@ -388,7 +396,7 @@ class WithdrawalService {
                     const statusCheck = await payoutService.checkPayoutStatus(request.provider_reference);
                     // Status strings may vary, 'success' and 'completed' are terminal success states
                     if (statusCheck.success && (statusCheck.status === 'success' || statusCheck.status === 'completed')) {
-                        logger.info(`[WithdrawalService] Request ${request.id} already successful on Payd (${statusCheck.status}). Syncing state.`);
+                        logger.info(`[WithdrawalService] Request ${request.id} already successful at payout provider (${statusCheck.status}). Syncing state.`);
                         await this.updateStatusWithSideEffects(request.id, 'completed', {
                             provider_reference: request.provider_reference,
                             remarks: 'Payout confirmed via status check'
@@ -401,10 +409,10 @@ class WithdrawalService {
                 }
             }
 
-            logger.info(`[WithdrawalService] Calling Payd for request ${request.id}`);
+            logger.info(`[WithdrawalService] Calling payout provider for request ${request.id}`);
             const attempt = await this.startPayoutProviderAttempt(request, entity, amount, phone);
             if (attempt.skip) {
-                logger.warn(`[WithdrawalService] Skipping Payd call for request ${request.id}: ${attempt.reason}`);
+                logger.warn(`[WithdrawalService] Skipping payout provider call for request ${request.id}: ${attempt.reason}`);
                 if (attempt.providerReference && !request.provider_reference) {
                     await pool.query(
                         `UPDATE withdrawal_requests
@@ -418,34 +426,37 @@ class WithdrawalService {
                 return;
             }
 
-            const paydResponse = await payoutService.initiatePayout({
+            const providerResponse = await payoutService.initiatePayout({
                 phone_number: phone,
                 amount,
                 narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`,
-                idempotency_key: request.idempotency_key // PASS IDEMPOTENCY KEY
+                idempotency_key: request.idempotency_key,
+                recipient_name: request.mpesa_name || entity.full_name || 'ByblosHQ Seller'
             });
 
-            // Payd withdrawal response uses 'correlator_id'; the webhook uses 'transaction_reference'
-            // They are the same value — store correlator_id as our provider_reference
-            const reference = paydResponse.correlator_id || paydResponse.transaction_reference
+            // Store the provider reference for webhook reconciliation.
+            const reference = providerResponse.correlator_id
+                || providerResponse.transaction_reference
+                || providerResponse.provider_reference
+                || providerResponse.reference;
 
             if (reference) {
                 await pool.query(
                     `UPDATE withdrawal_requests 
                      SET provider_reference = $1, raw_response = $2, api_call_pending = FALSE
                      WHERE id = $3`,
-                    [reference, JSON.stringify(paydResponse), request.id]
+                    [reference, JSON.stringify(providerResponse), request.id]
                 );
-                await this.markPayoutProviderAttemptAccepted(request.id, reference, paydResponse);
-                logger.info(`[WithdrawalService] Request ${request.id} → Payd correlator_id: ${reference}`);
+                await this.markPayoutProviderAttemptAccepted(request.id, reference, providerResponse);
+                logger.info(`[WithdrawalService] Request ${request.id} provider reference: ${reference}`);
             } else {
-                // Payd accepted but returned no reference — log raw response
+                // Provider accepted but returned no reference; log raw response.
                 await pool.query(
                     'UPDATE withdrawal_requests SET raw_response = $1, api_call_pending = FALSE WHERE id = $2',
-                    [JSON.stringify(paydResponse), request.id]
+                    [JSON.stringify(providerResponse), request.id]
                 );
-                await this.markPayoutProviderAttemptAccepted(request.id, null, paydResponse);
-                logger.warn(`[WithdrawalService] Request ${request.id}: Payd returned no transaction_reference`, paydResponse);
+                await this.markPayoutProviderAttemptAccepted(request.id, null, providerResponse);
+                logger.warn(`[WithdrawalService] Request ${request.id}: payout provider returned no transaction_reference`, providerResponse);
             }
 
             try {
@@ -459,7 +470,7 @@ class WithdrawalService {
                     seller: entity,
                     reason: null,
                     newBalance: null
-                }, 'WithdrawalService._callPaydAndUpdate');
+                }, 'WithdrawalService._callProviderAndUpdate');
             } catch (eventError) {
                 logger.error('[WithdrawalService] Failed to persist provider-accepted withdrawal event', {
                     withdrawalId: request.id,
@@ -468,8 +479,8 @@ class WithdrawalService {
             }
 
         } catch (apiError) {
-            // Payd API call failed — refund the balance and mark as failed
-            logger.error(`[WithdrawalService] Payd API failed for request ${request.id}: ${apiError.message} `);
+            // Provider call failed; refund the balance and mark as failed when safe.
+            logger.error(`[WithdrawalService] Payout provider API failed for request ${request.id}: ${apiError.message} `);
             const errorPayload = {
                 message: apiError.message,
                 code: apiError.code,
@@ -530,7 +541,7 @@ class WithdrawalService {
                         ]
                     );
                     await client.query('COMMIT');
-                    logger.warn(`[WithdrawalService] Request ${request.id} has ambiguous Payd result; left processing for callback/manual review.`);
+                    logger.warn(`[WithdrawalService] Request ${request.id} has ambiguous payout provider result; left processing for callback/manual review.`);
                     return;
                 }
 
@@ -562,7 +573,7 @@ class WithdrawalService {
                 await client.query('COMMIT');
                 logger.info(`[WithdrawalService] Request ${request.id} marked failed.Balance refunded.`);
 
-                eventBus.dispatchAfterCommit(failureEventId, 'WithdrawalService._callPaydAndUpdate.failure');
+                eventBus.dispatchAfterCommit(failureEventId, 'WithdrawalService._callProviderAndUpdate.failure');
 
             } catch (refundErr) {
                 await client.query('ROLLBACK');
@@ -585,8 +596,7 @@ class WithdrawalService {
     /**
      * Reconcile withdrawal requests stuck in 'processing' for over hoursAgo hours.
      * Called by cron job hourly.
-     * Note: Payd does NOT expose a status-check endpoint in the v2 docs.
-     * This marks long-stuck requests for manual review rather than auto-resolving.
+     * Status checks are best-effort; unresolved stuck requests require manual review.
      */
     async reconcileStuckWithdrawals(hoursAgo = 2) {
         logger.info(`[WithdrawalService] Reconciling requests stuck > ${hoursAgo} hours`);
@@ -608,7 +618,7 @@ class WithdrawalService {
         for (const request of stuck) {
             try {
                 if (!request.provider_reference) {
-                    // No correlator_id stored — Payd API may have failed silently
+                    // No provider reference stored; provider API may have failed silently.
                     logger.warn(`[WithdrawalService] Request ${request.id} has no provider_reference.Marking needs_review.`);
                     await pool.query(
                         `UPDATE withdrawal_requests 
@@ -619,7 +629,7 @@ class WithdrawalService {
                     continue;
                 }
 
-                // Try provider reconciliation first; only flag for manual review when Payd cannot confirm a terminal state.
+                // Try provider reconciliation first; only flag for manual review when the provider cannot confirm a terminal state.
                 try {
                     const statusCheck = await payoutService.checkPayoutStatus(request.provider_reference);
                     const statusPayload = statusCheck?.raw_response || statusCheck || {};
@@ -713,14 +723,14 @@ class WithdrawalService {
                wr.updated_at,
                CASE
                  WHEN wr.status = 'failed'
-                 THEN COALESCE(wr.metadata->>'api_error', wr.metadata->'payd_callback'->>'remarks', 'Unknown error')
+                 THEN COALESCE(wr.metadata->>'api_error', wr.metadata->'provider_callback'->>'remarks', wr.metadata->'paystack_callback'->>'remarks', 'Unknown error')
                  ELSE NULL
                END AS failure_reason,
                COALESCE(
                  wr.mpesa_receipt,
                  CASE
                    WHEN wr.status = 'completed'
-                   THEN wr.metadata->'payd_callback'->>'third_party_trans_id'
+                   THEN COALESCE(wr.metadata->'provider_callback'->>'third_party_trans_id', wr.metadata->'paystack_callback'->>'third_party_trans_id')
                    ELSE NULL
                  END
                ) AS mpesa_receipt

@@ -68,6 +68,7 @@ interface WithdrawalRequest {
   sellerId: string;
   sellerName: string;
   sellerEmail: string;
+  providerReference?: string | null;
   createdAt: string;
   processedAt?: string;
   processedBy?: string;
@@ -120,6 +121,7 @@ interface DashboardState {
   monthlyFinancialData: MonthlyFinancialData[];
   clients: any[];
   topShops: any[];
+  providerHealth: any;
 }
 
 const NewAdminDashboard = () => {
@@ -177,7 +179,8 @@ const NewAdminDashboard = () => {
     },
     monthlyFinancialData: [],
     clients: [],
-    topShops: []
+    topShops: [],
+    providerHealth: null
   });
 
   useEffect(() => {
@@ -196,7 +199,8 @@ const NewAdminDashboard = () => {
           adminApi.getFinancialMetrics(),
           adminApi.getMonthlyFinancialData(),
           adminApi.getDashboardStats(),
-          adminApi.getClients()
+          adminApi.getClients(),
+          adminApi.getPaymentProviderBalances()
         ]);
 
         const [
@@ -208,7 +212,8 @@ const NewAdminDashboard = () => {
           financialRes,
           statsRes,
           dashboardStatsRes,
-          clientsRes
+          clientsRes,
+          providerHealthRes
         ] = results;
 
         const analytics = analyticsRes.status === 'fulfilled' ? analyticsRes.value : null;
@@ -220,6 +225,7 @@ const NewAdminDashboard = () => {
         const monthlyFinancialData = statsRes.status === 'fulfilled' ? statsRes.value : [];
         const dashboardStats = dashboardStatsRes.status === 'fulfilled' ? dashboardStatsRes.value : null;
         const clients = clientsRes.status === 'fulfilled' ? clientsRes.value : [];
+        const providerHealth = providerHealthRes.status === 'fulfilled' ? providerHealthRes.value : null;
 
         const totalSellersCount = Array.isArray(sellers) ? sellers.length : 0;
         const totalBuyersCount = Array.isArray(buyers) ? buyers.length : 0;
@@ -270,7 +276,8 @@ const NewAdminDashboard = () => {
           },
           monthlyFinancialData: Array.isArray(monthlyFinancialData) ? monthlyFinancialData : [],
           clients: Array.isArray(clients) ? clients : [],
-          topShops: dashboardStats?.topShops || []
+          topShops: dashboardStats?.topShops || [],
+          providerHealth
         });
 
         // Show warning if some requests failed
@@ -311,6 +318,20 @@ const NewAdminDashboard = () => {
       return 'N/A';
     }
   };
+
+  const formatProviderBalance = (account: any) => {
+    if (!account) return 'Unavailable';
+    if (account.error) return 'Check needed';
+    const balance = account.available_balance ?? account.availableBalance ?? account.balance;
+    if (balance === undefined || balance === null || Number.isNaN(Number(balance))) return 'Connected';
+    const currency = account.currency || 'KES';
+    return `${currency} ${Number(balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const providerHealthAvailable = Boolean(dashboardState.providerHealth);
+  const providerHealthOk = providerHealthAvailable
+    && !dashboardState.providerHealth?.payin?.error
+    && !dashboardState.providerHealth?.payout?.error;
 
   const statsCards: StatsCardProps[] = [
     {
@@ -893,6 +914,25 @@ const NewAdminDashboard = () => {
                     />
                   </div>
                 </CardHeader>
+                <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.015] p-5 md:grid-cols-3 md:p-8">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Provider health</p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <span className={`h-2.5 w-2.5 rounded-full ${providerHealthOk ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                      <p className="text-sm font-black text-white">{providerHealthOk ? 'Connected' : providerHealthAvailable ? 'Check needed' : 'Loading'}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payment provider balance/status</p>
+                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(dashboardState.providerHealth?.payin)}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Pay-in account</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payment provider balance/status</p>
+                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(dashboardState.providerHealth?.payout)}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Payout account</p>
+                  </div>
+                </div>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -900,7 +940,7 @@ const NewAdminDashboard = () => {
                         <tr>
                           <th className="px-5 md:px-8 py-4 md:py-6">Merchant Beneficiary</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 text-right sm:text-left">Capital Amount</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 hidden xl:table-cell">Payout Endpoint</th>
+                          <th className="px-5 md:px-8 py-4 md:py-6 hidden xl:table-cell">Provider reference</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Protocol Status</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 text-right">Settlement</th>
                         </tr>
@@ -924,8 +964,8 @@ const NewAdminDashboard = () => {
                                   <DollarSign className="h-4 w-4 text-green-500" />
                                 </div>
                                 <div>
-                                  <p className="text-sm font-bold text-gray-300 font-mono">{request.mpesaNumber}</p>
-                                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">{request.mpesaName}</p>
+                                  <p className="text-sm font-bold text-gray-300 font-mono">{request.providerReference || 'Pending provider reference'}</p>
+                                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">{request.mpesaNumber} · {request.mpesaName}</p>
                                 </div>
                               </div>
                             </td>

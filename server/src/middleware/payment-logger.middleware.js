@@ -5,7 +5,7 @@ import logger from '../shared/utils/logger.js';
  * Logs all payment-related requests while redacting sensitive PII
  */
 const paymentRequestLogger = (req, res, next) => {
-  if (req.path.includes('/payment') || req.path.includes('/paystack') || req.path.includes('/payd')) {
+  if (req.path.includes('/payment') || req.path.includes('/paystack')) {
     const redact = (obj) => {
       const sanitized = { ...obj };
       ['phone', 'email', 'whatsapp_number', 'mobile_payment', 'token', 'authorization'].forEach(key => {

@@ -9,10 +9,7 @@ process.env.DB_HOST ||= 'localhost';
 process.env.DB_NAME ||= 'byblos_test';
 process.env.DB_USER ||= 'byblos_test';
 process.env.DB_PASSWORD ||= 'byblos_test';
-process.env.PAYD_USERNAME ||= 'payd_user';
-process.env.PAYD_PASSWORD ||= 'payd_pass';
-process.env.PAYD_WEBHOOK_SECRET ||= 'critical-regression-secret';
-process.env.PAYD_CALLBACK_SECRET ||= 'critical-regression-secret';
+process.env.PAYSTACK_SECRET_KEY ||= 'critical-regression-secret';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -35,7 +32,7 @@ async function runtime() {
         runtimePromise = Promise.all([
             import('../src/shared/db/database.js'),
             import('../src/core/CorePaymentService.js'),
-            import('../src/middleware/paydWebhookSecurity.js'),
+            import('../src/middleware/paystackWebhookSecurity.js'),
             import('../src/services/EscrowManager.js'),
             import('../src/services/authorization.service.js'),
             import('../src/shared/utils/OrderStatusGuard.js'),
@@ -53,7 +50,7 @@ async function runtime() {
         ]) => ({
             pool: database.pool,
             CorePaymentService: corePayment.default,
-            requirePaydWebhookHmac: webhookSecurity.requirePaydWebhookHmac,
+            requirePaystackWebhookHmac: webhookSecurity.requirePaystackWebhookHmac,
             EscrowManager: escrowManager.default,
             AuthorizationService: authorizationService.default,
             assertValidTransition: orderStatusGuard.assertValidTransition,
@@ -132,15 +129,13 @@ function indexOfQuery(client, pattern) {
 function signedWebhook(payload, headers = {}) {
     const rawBody = JSON.stringify(payload);
     const signature = crypto
-        .createHmac('sha256', process.env.PAYD_WEBHOOK_SECRET)
+        .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
         .update(Buffer.from(rawBody))
         .digest('hex');
     return {
         rawBody,
         headers: {
-            'x-payd-signature': signature,
-            'x-payd-timestamp': String(Date.now()),
-            'x-payd-event-id': 'evt-critical-regression',
+            'x-paystack-signature': signature,
             ...headers
         }
     };
@@ -176,8 +171,8 @@ test('payment lifecycle rejects provider success without amount and persists fra
         id: 501,
         amount: '120.00',
         status: 'pending',
-        provider_reference: 'PAYD-MISSING-AMOUNT',
-        api_ref: 'PAYD-MISSING-AMOUNT',
+        provider_reference: 'PAYSTACK-MISSING-AMOUNT',
+        api_ref: 'PAYSTACK-MISSING-AMOUNT',
         invoice_id: null,
         metadata: { order_id: 701 }
     };
@@ -220,13 +215,137 @@ test('payment lifecycle rejects provider success without amount and persists fra
     assert.equal(fraudEvents[0].params[3], 'missing_or_invalid_success_amount');
 });
 
+test('Paystack amount mismatch blocks completion with fraud evidence and manual review', async () => {
+    const { pool, CorePaymentService } = await runtime();
+    const payment = {
+        id: 502,
+        amount: '120.00',
+        status: 'pending',
+        provider_reference: 'PAYSTACK-MISMATCH',
+        api_ref: 'PAYSTACK-MISMATCH',
+        invoice_id: null,
+        metadata: { order_id: 702 }
+    };
+    const client = new FakeClient([
+        respond(text => /SELECT \* FROM payments WHERE id = \$1 FOR UPDATE/.test(text), [payment]),
+        respond(text => /UPDATE payments/.test(text) && /status = 'manual_review_required'/.test(text), [{
+            ...payment,
+            status: 'manual_review_required',
+            metadata: {
+                ...payment.metadata,
+                requires_manual_review: true,
+                manual_review_reason: 'amount_mismatch'
+            }
+        }])
+    ]);
+    const fraudEvents = [];
+
+    await withPatches([
+        [pool, 'connect', async () => client],
+        [pool, 'query', async (sql, params = []) => {
+            fraudEvents.push({ sql: String(sql), params });
+            return { rows: [], rowCount: 1 };
+        }]
+    ], async () => {
+        const result = await CorePaymentService.completeVerifiedPayment({
+            paymentId: payment.id,
+            reference: payment.provider_reference,
+            providerPayload: {
+                transaction_reference: payment.provider_reference,
+                status: 'success',
+                amount: '150.00'
+            },
+            source: 'paystack_amount_mismatch_regression'
+        });
+
+        assert.equal(result.status, 'requires_manual_review');
+        assert.equal(result.payment.status, 'manual_review_required');
+        assert.equal(result.orderId, 702);
+    });
+
+    assert.ok(indexOfQuery(client, /^BEGIN$/) > -1);
+    assert.ok(indexOfQuery(client, /UPDATE payments/) > indexOfQuery(client, /SELECT \* FROM payments/));
+    assert.ok(indexOfQuery(client, /^COMMIT$/) > indexOfQuery(client, /UPDATE payments/));
+    assert.equal(indexOfQuery(client, /FROM product_orders/), -1);
+    assert.equal(indexOfQuery(client, /INSERT INTO fulfillment_jobs/), -1);
+    assert.equal(client.released, true);
+    assert.equal(fraudEvents.length, 1);
+    assert.match(fraudEvents[0].sql, /INSERT INTO fraud_events/);
+    assert.equal(fraudEvents[0].params[0], payment.id);
+    assert.equal(fraudEvents[0].params[1], 702);
+    assert.equal(fraudEvents[0].params[3], 'amount_mismatch');
+    assert.equal(fraudEvents[0].params[4], 120);
+    assert.equal(fraudEvents[0].params[5], 150);
+});
+
+test('Paystack completion without order metadata is blocked before fulfillment', async () => {
+    const { pool, CorePaymentService } = await runtime();
+    const payment = {
+        id: 503,
+        amount: '120.00',
+        status: 'pending',
+        provider_reference: 'PAYSTACK-NO-ORDER',
+        api_ref: 'PAYSTACK-NO-ORDER',
+        invoice_id: null,
+        metadata: {}
+    };
+    const client = new FakeClient([
+        respond(text => /SELECT \* FROM payments WHERE id = \$1 FOR UPDATE/.test(text), [payment]),
+        respond(text => /UPDATE payments/.test(text) && /status = 'manual_review_required'/.test(text), [{
+            ...payment,
+            status: 'manual_review_required',
+            metadata: {
+                requires_manual_review: true,
+                manual_review_reason: 'missing_order_reference'
+            }
+        }])
+    ]);
+    const fraudEvents = [];
+
+    await withPatches([
+        [pool, 'connect', async () => client],
+        [pool, 'query', async (sql, params = []) => {
+            fraudEvents.push({ sql: String(sql), params });
+            return { rows: [], rowCount: 1 };
+        }]
+    ], async () => {
+        const result = await CorePaymentService.completeVerifiedPayment({
+            paymentId: payment.id,
+            reference: payment.provider_reference,
+            providerPayload: {
+                transaction_reference: payment.provider_reference,
+                status: 'success',
+                amount: '120.00'
+            },
+            source: 'paystack_missing_order_regression'
+        });
+
+        assert.equal(result.status, 'requires_manual_review');
+        assert.equal(result.orderId, null);
+        assert.equal(result.message, 'Payment has no valid order_id or product_order_id metadata');
+    });
+
+    assert.ok(indexOfQuery(client, /^COMMIT$/) > indexOfQuery(client, /UPDATE payments/));
+    assert.equal(indexOfQuery(client, /FROM product_orders/), -1);
+    assert.equal(indexOfQuery(client, /INSERT INTO fulfillment_jobs/), -1);
+    assert.equal(client.released, true);
+    assert.equal(fraudEvents.length, 1);
+    assert.match(fraudEvents[0].sql, /INSERT INTO fraud_events/);
+    assert.equal(fraudEvents[0].params[0], payment.id);
+    assert.equal(fraudEvents[0].params[1], null);
+    assert.equal(fraudEvents[0].params[3], 'missing_order_reference');
+});
+
 test('webhook retry protection claims first delivery and suppresses completed replay', async () => {
-    const { pool, requirePaydWebhookHmac } = await runtime();
+    const { pool, requirePaystackWebhookHmac } = await runtime();
     const payload = {
-        api_ref: 'PAYD-REPLAY-1',
-        amount: '100.00',
-        status: 'success',
-        result_code: 0
+        event: 'charge.success',
+        data: {
+            id: 'evt-critical-regression',
+            reference: 'PAYSTACK-REPLAY-1',
+            amount: 10000,
+            status: 'success'
+        }
     };
     const signed = signedWebhook(payload);
     const queries = [];
@@ -245,24 +364,24 @@ test('webhook retry protection claims first delivery and suppresses completed re
             rawBody: signed.rawBody,
             headers: signed.headers,
             ip: '127.0.0.1',
-            originalUrl: '/api/payments/webhook/payd'
+            originalUrl: '/api/payments/webhook/paystack'
         };
         const res = createMockRes();
         let nextCalled = false;
 
-        await requirePaydWebhookHmac(req, res, () => {
+        await requirePaystackWebhookHmac(req, res, () => {
             nextCalled = true;
         });
 
         assert.equal(nextCalled, true);
         assert.equal(req.webhookSecurity.hmacVerified, true);
-        assert.equal(req.webhookSecurity.replayEventId, 'evt-critical-regression');
+        assert.equal(req.webhookSecurity.replayEventId, 'paystack:charge.success:evt-critical-regression');
         res.finish();
         await Promise.resolve();
     });
 
     assert.match(queries[0].sql, /webhook_replay_dedupe/);
-    assert.equal(queries[0].params[0], 'evt-critical-regression');
+    assert.equal(queries[0].params[0], 'paystack:charge.success:evt-critical-regression');
     assert.match(queries.some(query => /SET status = \$2/.test(query.sql)) ? 'SET status = $2' : '', /SET status = \$2/);
 
     await withPatches([
@@ -279,12 +398,12 @@ test('webhook retry protection claims first delivery and suppresses completed re
             rawBody: signed.rawBody,
             headers: signed.headers,
             ip: '127.0.0.1',
-            originalUrl: '/api/payments/webhook/payd'
+            originalUrl: '/api/payments/webhook/paystack'
         };
         const res = createMockRes();
         let nextCalled = false;
 
-        await requirePaydWebhookHmac(req, res, () => {
+        await requirePaystackWebhookHmac(req, res, () => {
             nextCalled = true;
         });
 

@@ -128,7 +128,7 @@ class Order {
       data.total_amount || 0,                                // $4
       data.platform_fee_amount || 0,                         // $5
       data.seller_payout_amount || 0,                        // $6
-      data.payment_method || 'payd',                         // $7
+      data.payment_method || 'paystack',                     // $7
       data.buyer_name || null,                               // $8
       data.buyer_email || null,                              // $9
       data.buyer_mobile_payment || null,                     // $10

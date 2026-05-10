@@ -284,7 +284,7 @@ export async function normalizeOrderInput(req) {
         location,
         payment: {
             status: 'pending',
-            method: body.paymentMethod || 'payd',
+            method: body.paymentMethod || 'paystack',
             reference: null,
         },
         metadata: {

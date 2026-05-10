@@ -112,6 +112,16 @@ JWT_SECRET=generate_a_strong_secret_here
 JWT_EXPIRES_IN=24h
 JWT_REFRESH_EXPIRES_IN=7d
 
+# Payment providers
+PAYMENT_PROVIDER=paystack
+PAYOUT_PROVIDER=paystack
+PAYSTACK_SECRET_KEY=
+PAYSTACK_PUBLIC_KEY=
+PAYSTACK_BASE_URL=https://api.paystack.co
+PAYSTACK_WEBHOOK_IPS=52.31.139.75,52.49.173.169,52.214.14.220
+PAYSTACK_PAYMENT_CALLBACK_URL=https://bybloshq.space/api/payments/webhook/paystack
+PAYSTACK_PAYOUT_CALLBACK_URL=https://bybloshq.space/api/callbacks/paystack-transfer
+
 # Email (optional)
 # SMTP_HOST=smtp.example.com
 # SMTP_PORT=587

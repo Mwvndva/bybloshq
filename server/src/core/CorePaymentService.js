@@ -26,6 +26,7 @@ import eventBus, { AppEvents } from '../events/eventBus.js';
 import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 import { getProviderPayloadData, normalizeProviderReference } from '../shared/utils/providerReference.js';
 import { normalizeProviderAmount, normalizeProviderPaymentStatus } from '../shared/utils/paymentStatusNormalizer.js';
+import { normalizePaystackChargePayload } from '../shared/utils/paystackPaymentNormalizer.js';
 import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
 import { PaymentStatus } from '../shared/constants/enums.js';
 
@@ -157,30 +158,30 @@ async function findPaymentByProviderReference(client, providerReference, source 
 }
 
 function requireValidWebhookSignature(signature, rawBody) {
-    const secret = process.env.PAYD_WEBHOOK_SECRET || process.env.PAYD_CALLBACK_SECRET;
+    const secret = process.env.PAYSTACK_SECRET_KEY;
     if (!signature || !rawBody || !secret) {
-        logger.error('[CorePaymentService] Rejected Payd webhook with missing signature, raw body, or secret');
+        logger.error('[CorePaymentService] Rejected Paystack webhook with missing signature, raw body, or secret');
         return false;
     }
 
     const bodyBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody));
     const expected = crypto
-        .createHmac('sha256', secret)
+        .createHmac('sha512', secret)
         .update(bodyBuffer)
         .digest('hex');
 
-    const received = String(signature).replace(/^sha256=/i, '').trim();
+    const received = String(signature).trim();
     const expectedBuffer = Buffer.from(expected, 'hex');
     const receivedBuffer = Buffer.from(received, 'hex');
 
     if (expectedBuffer.length !== receivedBuffer.length) {
-        logger.error('[CorePaymentService] Rejected Payd webhook with malformed signature');
+        logger.error('[CorePaymentService] Rejected Paystack webhook with malformed signature');
         return false;
     }
 
     const valid = crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
     if (!valid) {
-        logger.error('[CorePaymentService] Rejected Payd webhook with invalid HMAC signature');
+        logger.error('[CorePaymentService] Rejected Paystack webhook with invalid HMAC signature');
     }
     return valid;
 }
@@ -270,9 +271,10 @@ const CorePaymentService = {
 
                 const dbAmount = Number.parseFloat(paymentRow.amount || 0);
                 if (Math.abs(providerAmount - dbAmount) > PAYMENT_AMOUNT_TOLERANCE_KES) {
+                    const orderId = resolveOrderIdFromMetadata(paymentRow.metadata);
                     fraudEvent = {
                         paymentId: paymentRow.id,
-                        orderId: resolveOrderIdFromMetadata(paymentRow.metadata),
+                        orderId,
                         providerReference,
                         eventType: 'amount_mismatch',
                         expectedAmount: dbAmount,
@@ -285,6 +287,34 @@ const CorePaymentService = {
                             detected_at: new Date().toISOString()
                         }
                     };
+                    const manualReviewMetadata = {
+                        requires_manual_review: true,
+                        manual_review_reason: 'amount_mismatch',
+                        completion_blocked: {
+                            source,
+                            provider_status: providerStatus,
+                            provider_reference: providerReference,
+                            db_amount: dbAmount,
+                            provider_amount: providerAmount,
+                            provider_payload: providerPayload,
+                            blocked_at: new Date().toISOString()
+                        }
+                    };
+                    const { rows: reviewRows } = await client.query(
+                        `UPDATE payments
+                         SET status = 'manual_review_required',
+                             provider_reference = COALESCE($1, provider_reference),
+                             metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                             updated_at = NOW()
+                         WHERE id = $3
+                         RETURNING *`,
+                        [
+                            providerReference,
+                            JSON.stringify(manualReviewMetadata),
+                            paymentRow.id
+                        ]
+                    );
+                    paymentRow = reviewRows[0] || paymentRow;
                     logger.error('[CorePaymentService] Payment amount mismatch rejected', {
                         paymentId: paymentRow.id,
                         reference: providerReference,
@@ -292,7 +322,16 @@ const CorePaymentService = {
                         providerAmount,
                         source
                     });
-                    throw new Error(`Payment amount mismatch: DB=${dbAmount}, provider=${providerAmount}`);
+                    if (ownsTransaction) await client.query('COMMIT');
+                    await recordFraudEvent(fraudEvent);
+                    return {
+                        status: 'requires_manual_review',
+                        payment: paymentRow,
+                        order: null,
+                        paymentId: paymentRow.id,
+                        orderId,
+                        message: 'Payment amount mismatch requires manual review'
+                    };
                 }
             }
 
@@ -525,18 +564,19 @@ const CorePaymentService = {
     },
 
     /**
-     * Handle the Payd payment webhook (STK Push confirmation).
-     *
-     * KEY FIX: This method now uses a SINGLE database client to update
-     * both `payments` AND `orders` inside one atomic transaction, eliminating
-     * the payment/order state race identified in the audit.
+     * Handle the Paystack payment webhook after route-level verification.
      */
-    async handlePaydWebhook(webhookData, security = {}) {
-        if (!this.verifyWebhookSignature(security.signature, security.rawBody)) {
-            throw new Error('Invalid Payd webhook signature');
+    async handlePaystackWebhook(webhookData, security = {}) {
+        if (!security.hmacVerified && security.signature && security.rawBody) {
+            if (!this.verifyWebhookSignature(security.signature, security.rawBody)) {
+                throw new Error('Invalid Paystack webhook signature');
+            }
+        } else if (!security.hmacVerified) {
+            throw new Error('Invalid Paystack webhook signature');
         }
 
-        const verifiedReference = extractPaymentReference(webhookData);
+        const providerPayload = normalizePaystackChargePayload(webhookData);
+        const verifiedReference = extractPaymentReference(providerPayload);
         if (!verifiedReference) {
             logger.warn('[CorePaymentService] Webhook received with no payment reference. Ignoring.', webhookData);
             return { status: 'ignored', message: 'No reference in webhook' };
@@ -544,8 +584,8 @@ const CorePaymentService = {
 
         return this.completeVerifiedPayment({
             reference: verifiedReference,
-            providerPayload: webhookData,
-            source: 'webhook'
+            providerPayload,
+            source: 'paystack_webhook'
         });
     },
 
@@ -562,7 +602,7 @@ const CorePaymentService = {
         const result = await withdrawalService.createWithdrawalRequest(params);
 
         // P1-3 FIX: Withdrawal is only INITIATED here, not COMPLETED.
-        // WITHDRAWAL.COMPLETED is emitted by callback.controller.js after Payd confirms.
+        // WITHDRAWAL.COMPLETED is emitted by callback.controller.js after the payout provider confirms.
         if (result) {
             eventBus.enqueueAndDispatch(
                 AppEvents.WITHDRAWAL.INITIATED,
@@ -578,7 +618,7 @@ const CorePaymentService = {
     },
 
     /**
-     * Handle payout callback (Payd → our system).
+     * Handle payout callback (provider -> our system).
      * NO-TOUCH: Fully delegated to legacy withdrawal service.
      */
     async handlePayoutCallback(callbackData) {

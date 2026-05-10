@@ -401,6 +401,7 @@ export const adminApi = {
         sellerId: String(request.seller_id || request.sellerId || ''),
         sellerName: String(request.seller_name || request.sellerName || 'Unknown Seller'),
         sellerEmail: String(request.seller_email || request.sellerEmail || ''),
+        providerReference: request.provider_reference || request.providerReference || null,
         // Use camelCase for consistency
         createdAt: request.created_at || request.createdAt || new Date().toISOString(),
         processedAt: request.processed_at || request.processedAt || null,
@@ -458,6 +459,20 @@ export const adminApi = {
     } catch (error) {
       console.error('Error fetching monthly financial data:', error);
       return [];
+    }
+  },
+
+  async getPaymentProviderBalances() {
+    try {
+      const response = await api.get('/admin/payment-provider/balances');
+      return response.data.data || null;
+    } catch (error) {
+      console.error('Error fetching payment provider balance/status:', error);
+      return {
+        payin: { error: 'Unavailable' },
+        payout: { error: 'Unavailable' },
+        timestamp: new Date().toISOString()
+      };
     }
   },
 

@@ -3,7 +3,7 @@ import { validate } from '../middleware/validate.js';
 import { z } from 'zod';
 import paymentController from '../controllers/payment.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
-import { requirePaydWebhookHmac, verifyPaydWebhook, webhookRateLimiter } from '../middleware/paydWebhookSecurity.js';
+import { requirePaystackWebhookHmac, verifyPaystackWebhook, webhookRateLimiter } from '../middleware/paystackWebhookSecurity.js';
 import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
 import { paymentRateLimiter } from '../middleware/rateLimiting.js';
 
@@ -18,7 +18,7 @@ const initiateProductSchema = z.object({
   productName: z.string().optional().nullable(),
   customerName: z.string().optional().nullable(),
   narrative: z.string().optional().nullable(),
-  paymentMethod: z.enum(['paystack', 'payd']).optional(),
+  paymentMethod: z.enum(['paystack']).optional(),
   checkout_token: z.string().optional().nullable(),
   clientCheckoutToken: z.string().optional().nullable(),
   checkoutAttemptId: z.string().optional().nullable(),
@@ -70,21 +70,12 @@ publicRouter.post(
 
 // Webhook endpoint (public) - Paystack
 publicRouter.post(
-  '/webhook/payd',
-  verifyPaydWebhook,
+  '/webhook/paystack',
+  verifyPaystackWebhook,
   webhookRateLimiter,
-  requirePaydWebhookHmac,
-  paymentController.handlePaydWebhook // Updated method name
+  requirePaystackWebhookHmac,
+  paymentController.handlePaystackWebhook
 );
-
-
-// Paystack callback endpoint (public) - Legacy support
-// Paystack callback endpoint (public) - Legacy support
-// publicRouter.post(
-//   '/paystack/callback',
-//   express.json(),
-//   paymentController.handlePaydWebhook // Was handlePaystackWebhook, commented out as we migrated
-// );
 
 // Check payment status (public)
 publicRouter.get(
@@ -105,12 +96,12 @@ const protectedRouter = express.Router();
 protectedRouter.use(protect);
 
 // Add health check routes (admin only)
-protectedRouter.get('/health/payd-agent',
+protectedRouter.get('/health/provider',
   hasPermission('manage-all'),
   paymentController.getAgentStatus
 );
 
-protectedRouter.post('/health/payd-agent/reset',
+protectedRouter.post('/health/provider/reset',
   hasPermission('manage-all'),
   paymentController.resetAgent
 );
