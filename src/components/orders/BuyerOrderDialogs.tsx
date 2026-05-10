@@ -4,8 +4,10 @@ import { CheckCircle, Package, RefreshCw, Users, XCircle } from 'lucide-react';
 import type { Order } from '@/types/order';
 import { getImageUrl } from '@/lib/utils';
 import {
+  canConfirmOrderReceipt,
   formatOrderCurrency,
   formatOrderDate,
+  getConfirmReceiptLabel,
   getPaymentStatusBadge,
   getStatusBadge,
   isServiceOrder
@@ -17,19 +19,15 @@ interface BuyerOrderDialogsProps {
   isConfirming: string | null;
   showCancelDialog: boolean;
   showReceiptDialog: boolean;
-  showCollectionDialog: boolean;
   selectedOrderForDetails: Order | null;
   viewingImage: string | null;
   onCancelDialogChange: (open: boolean) => void;
   onReceiptDialogChange: (open: boolean) => void;
-  onCollectionDialogChange: (open: boolean) => void;
   onSelectedOrderChange: (order: Order | null) => void;
   onViewingImageChange: (image: string | null) => void;
   onCancelOrder: () => void;
   onConfirmReceipt: () => void;
-  onMarkAsCollected: () => void;
   onConfirmReceiptClick: (orderId: string) => void;
-  onCollectionClick: (orderId: string) => void;
 }
 
 export function BuyerOrderDialogs({
@@ -38,23 +36,21 @@ export function BuyerOrderDialogs({
   isConfirming,
   showCancelDialog,
   showReceiptDialog,
-  showCollectionDialog,
   selectedOrderForDetails,
   viewingImage,
   onCancelDialogChange,
   onReceiptDialogChange,
-  onCollectionDialogChange,
   onSelectedOrderChange,
   onViewingImageChange,
   onCancelOrder,
   onConfirmReceipt,
-  onMarkAsCollected,
-  onConfirmReceiptClick,
-  onCollectionClick
+  onConfirmReceiptClick
 }: BuyerOrderDialogsProps) {
   const currentOrder = orders.find(order => order.id === currentOrderId) || null;
   const currentIsService = isServiceOrder(currentOrder);
-  const showPhysicalReceiptLocation = currentOrder && !currentIsService && currentOrder.status !== 'CONFIRMED';
+  const currentFulfillmentType = currentOrder?.fulfillment_type?.toUpperCase() || '';
+  const currentIsHubCollection = currentOrder && !currentIsService && ['COURIER', 'SELLER_TO_HUB'].includes(currentFulfillmentType);
+  const showPhysicalReceiptLocation = Boolean(currentIsHubCollection);
 
   const confirmationContent = currentIsService ? (
     <div className="space-y-4">
@@ -65,7 +61,12 @@ export function BuyerOrderDialogs({
     </div>
   ) : (
     <div className="space-y-4">
-      <p>Have you picked up and inspected your package from <strong>"{currentOrder?.seller?.physicalAddress || 'Dynamic Mall, along Tomboya Street - shop number SL 32'}"</strong>?</p>
+      <p>
+        Have you picked up and inspected your package from{' '}
+        <strong>
+          "{currentIsHubCollection ? 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32' : currentOrder?.seller?.physicalAddress || currentOrder?.seller?.shopName || 'the seller'}"
+        </strong>?
+      </p>
       <p className="text-sm text-white/70">
         Please only confirm after you have physically received and inspected your package.
       </p>
@@ -220,7 +221,7 @@ export function BuyerOrderDialogs({
               </div>
 
               <DialogFooter className="gap-2">
-                {(selectedOrderForDetails.status === 'DELIVERY_COMPLETE' || selectedOrderForDetails.status === 'CONFIRMED') && (
+                {canConfirmOrderReceipt(selectedOrderForDetails) && (
                   <Button
                     className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
                     onClick={() => {
@@ -228,18 +229,7 @@ export function BuyerOrderDialogs({
                       onSelectedOrderChange(null);
                     }}
                   >
-                    {selectedOrderForDetails.status === 'CONFIRMED' ? 'Mark as Done' : 'Confirm Receipt'}
-                  </Button>
-                )}
-                {selectedOrderForDetails.status === 'COLLECTION_PENDING' && (
-                  <Button
-                    className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"
-                    onClick={() => {
-                      onCollectionClick(selectedOrderForDetails.id);
-                      onSelectedOrderChange(null);
-                    }}
-                  >
-                    Mark as Collected
+                    {getConfirmReceiptLabel(selectedOrderForDetails)}
                   </Button>
                 )}
                 <Button
@@ -317,66 +307,7 @@ export function BuyerOrderDialogs({
               ) : (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  {currentIsService ? 'Mark as Done' : 'Confirm Receipt'}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showCollectionDialog} onOpenChange={onCollectionDialogChange}>
-        <DialogContent className="sm:max-w-[425px] bg-black border border-white/15 text-white shadow-xl shadow-black/60">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                <Package className="h-4 w-4 text-white" />
-              </div>
-              Confirm Collection
-            </DialogTitle>
-            <DialogDescription className="text-sm text-white/70 leading-relaxed">
-              Please confirm that you have physically collected this item from the seller's shop.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="bg-blue-500/15 border border-blue-400/30 rounded-xl p-4 my-4">
-            <p className="text-sm text-blue-100 font-semibold mb-2">
-              Collection Location
-            </p>
-            <p className="text-sm text-blue-100/85">
-              Please verify you picked up from the seller's shop as indicated in your order details.
-            </p>
-          </div>
-
-          <div className="bg-yellow-500/15 border border-yellow-400/30 rounded-xl p-3 mb-4">
-            <p className="text-sm text-yellow-100 font-semibold">
-              Funds will be immediately released to the seller once you confirm collection.
-            </p>
-          </div>
-
-          <DialogFooter className="mt-4 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => onCollectionDialogChange(false)}
-              disabled={isConfirming === currentOrderId}
-              className="border-white/20 text-white hover:bg-white/10"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={onMarkAsCollected}
-              disabled={isConfirming === currentOrderId}
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              {isConfirming === currentOrderId ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Yes, I Collected It
+                  {getConfirmReceiptLabel(currentOrder)}
                 </>
               )}
             </Button>

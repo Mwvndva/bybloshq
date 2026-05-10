@@ -274,7 +274,7 @@ test('payout callback state machine is extracted from withdrawal service', () =>
   assert.doesNotMatch(withdrawal, /const PAYOUT_SUCCESS_STATUSES/);
 });
 
-test('EscrowManager remains isolated behind existing payout release callers', () => {
+test('EscrowManager remains isolated behind buyer confirmation release callers', () => {
   const services = filesUnder('src/services');
   const escrowImporters = services
     .filter(file => /from ['"]\.\/EscrowManager\.js['"]/.test(readFileSync(file, 'utf8')))
@@ -287,9 +287,9 @@ test('EscrowManager remains isolated behind existing payout release callers', ()
   const fulfillmentTransition = read('src/services/orderFulfillmentTransition.service.js');
   const payoutCallbackStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
 
-  assert.deepEqual(escrowImporters, ['order.service.js', 'orderDeadline.service.js']);
+  assert.deepEqual(escrowImporters, ['order.service.js']);
   assert.match(orderService, /escrowManager\.releaseFunds\(client,\s*order,\s*'OrderService'\)/);
-  assert.match(deadlineService, /escrowManager\.releaseFunds\(client,\s*order,\s*'OrderDeadlineService'\)/);
+  assert.doesNotMatch(deadlineService, /EscrowManager|escrowManager|releaseFunds/);
   assert.doesNotMatch(inventoryService, /EscrowManager|escrowManager|releaseFunds/);
   assert.doesNotMatch(fulfillmentTransition, /EscrowManager|escrowManager|releaseFunds/);
   assert.doesNotMatch(payoutCallbackStateMachine, /EscrowManager|escrowManager|releaseFunds/);
@@ -1317,7 +1317,7 @@ test('unified order flow exposes seller hub handoff and service booking actions'
   assert.match(sellerOrders, /Request pickup/);
   assert.match(sellerOrders, /Mark Dropped Off at Hub/);
   assert.match(sellerOrders, /Confirm Booking/);
-  assert.match(sellerOrders, /Mark Service Completed/);
+  assert.match(sellerOrders, /Mark Service Delivered/);
   assert.match(sellerOrders, /within 24 hours/);
 });
 

@@ -4,7 +4,6 @@
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
-import escrowManager from './EscrowManager.js';
 import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
 
 class OrderDeadlineService {
@@ -133,17 +132,14 @@ class OrderDeadlineService {
     }
 
     /**
-     * Check and release service payments (24 hours after booking date)
+     * Legacy compatibility check for service payments.
+     * Services now require buyer confirmation before seller funds are released.
      */
     async checkServicePaymentRelease() {
         try {
             const result = await pool.query(
-                `SELECT po.*, 
-                        b.whatsapp_number as buyer_whatsapp, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_whatsapp, s.full_name as seller_name, s.balance as seller_balance, s.physical_address as physical_address
+                `SELECT po.id, po.order_number
                  FROM product_orders po
-                 LEFT JOIN buyers b ON po.buyer_id = b.id
-                 LEFT JOIN sellers s ON po.seller_id = s.id
                  WHERE po.status = 'DELIVERY_COMPLETE'
                    AND po.payment_status != 'completed'
                    AND po.metadata->>'product_type' = 'service'
@@ -151,18 +147,17 @@ class OrderDeadlineService {
             );
 
             const serviceOrders = result.rows;
-            logger.info(`Found ${serviceOrders.length} service orders ready for payment release`);
-
-            for (const order of serviceOrders) {
-                await this.releaseServicePayment(order);
+            if (serviceOrders.length > 0) {
+                logger.info(`Found ${serviceOrders.length} service orders awaiting buyer confirmation for payment release`);
             }
 
             return {
-                processedCount: serviceOrders.length,
+                processedCount: 0,
+                awaitingBuyerConfirmation: serviceOrders.length,
                 orders: serviceOrders.map((/** @type {any} */ o) => o.order_number)
             };
         } catch (error) {
-            logger.error('Error checking service payment release:', error);
+            logger.error('Error checking service orders awaiting buyer confirmation:', error);
             throw error;
         }
     }
@@ -307,55 +302,14 @@ class OrderDeadlineService {
     }
 
     /**
-     * Release service payment to seller
+     * Disabled legacy path. Buyer confirmation is the only release trigger.
      * @param {any} order
      */
     async releaseServicePayment(order) {
-        const client = await pool.connect();
-
-        try {
-            await client.query('BEGIN');
-
-            // Update order to completed
-            await client.query(
-                `UPDATE product_orders 
-                 SET status = 'COMPLETED',
-                     payment_status = 'completed',
-                     payment_completed_at = NOW(),
-                     completed_at = NOW()
-                 WHERE id = $1`,
-                [order.id]
-            );
-
-            // Release funds through EscrowManager — the single source of truth
-            // for all seller balance/revenue/sales updates and payouts table entries.
-            const releaseResult = await escrowManager.releaseFunds(client, order, 'OrderDeadlineService');
-            if (!releaseResult.success && !releaseResult.alreadyReleased) {
-                throw new Error(
-                    `EscrowManager.releaseFunds failed for order ${order.id}: ` +
-                    `${releaseResult.reason || 'unknown reason'}`
-                );
-            }
-
-            const durableEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.FULFILLED, {
-                eventId: `order.fulfilled:${order.id}:deadline-release`,
-                order
-            });
-
-            await client.query('COMMIT');
-
-            logger.info(`Released service payment for order ${order.order_number}: KSh ${order.seller_payout_amount}`);
-
-            eventBus.dispatchAfterCommit(durableEvent.eventId, 'OrderDeadlineService.releaseServicePayment');
-
-            return true;
-        } catch (error) {
-            await client.query('ROLLBACK');
-            logger.error(`Error releasing service payment for order ${order.order_number}:`, error);
-            throw error;
-        } finally {
-            client.release();
-        }
+        logger.warn(
+            `Blocked automatic service payment release for order ${order?.order_number || order?.id || 'unknown'}; buyer confirmation is required`
+        );
+        throw new Error('Buyer confirmation is required to release service funds');
     }
 
     /**

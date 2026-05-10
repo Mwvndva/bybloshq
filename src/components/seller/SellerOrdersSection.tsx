@@ -294,24 +294,23 @@ export default function SellerOrdersSection() {
         });
     };
 
-    const markAsServiceCompleted = async (orderId: string) => {
+    const markServiceReadyForBuyerConfirmation = async (orderId: string) => {
         // FIX (Task 18): Prevent duplicate order mutations
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                // Use COMPLETED status for services
-                await sellerApi.updateOrderStatus(orderId, 'COMPLETED' as OrderStatus);
+                await sellerApi.updateOrderStatus(orderId, 'READY_FOR_BUYER' as OrderStatus);
                 await refreshOrders();
 
                 toast({
-                    title: 'Service Completed',
-                    description: 'The service booking has been marked as completed.',
+                    title: 'Service Delivered',
+                    description: 'The buyer can now confirm completion to release the funds.',
                 });
             } catch (err) {
                 console.error('Failed to update order status:', err);
                 toast({
                     title: 'Error',
-                    description: 'Failed to mark service as completed. Please try again.',
+                    description: 'Failed to mark the service as delivered. Please try again.',
                     variant: 'destructive',
                 });
             } finally {
@@ -802,11 +801,11 @@ export default function SellerOrdersSection() {
                                                             <Button
                                                                 size="sm"
                                                                 className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
-                                                                onClick={() => markAsServiceCompleted(order.id)}
+                                                                onClick={() => markServiceReadyForBuyerConfirmation(order.id)}
                                                                 disabled={isUpdating}
                                                             >
                                                                 <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                                Mark Service Completed
+                                                                Mark Service Delivered
                                                             </Button>
                                                         </div>
                                                     )}
