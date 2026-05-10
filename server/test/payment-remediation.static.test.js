@@ -914,6 +914,8 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
   const middleware = read('src/middleware/logisticsAuth.js');
   const routes = read('src/routes/logistics.routes.js');
   const routeIndex = read('src/routes/index.js');
+  const logisticsEvents = read('src/events/logistics.events.js');
+  const trackingService = read('src/services/logisticsTrackingLink.service.js');
   const migration = read('migrations/20260510030000_add_logistics_dashboard_auth.sql');
   const roleConstraintMigration = read('migrations/20260510050000_allow_logistics_user_role.sql');
   const frontendRoutes = read('../src/routes/index.tsx');
@@ -944,6 +946,9 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
   assert.match(service, /lr\.partner_id = \$1/);
   assert.match(service, /pl\.status <> 'payment_pending'/);
   assert.match(service, /dp\.status::text = ANY\(\$3::text\[\]\)/);
+  assert.match(service, /oi\.product_name/);
+  assert.match(service, /oi\.product_price/);
+  assert.doesNotMatch(`${service}\n${logisticsEvents}\n${trackingService}`, /\boi\.(name|price)\b/);
   assert.doesNotMatch(requestReadMethod, /UPDATE\s+(payments|product_orders|withdrawal_requests)/i);
   assert.doesNotMatch(requestReadMethod, /INSERT INTO\s+(payments|product_orders|withdrawal_requests)/i);
   assert.doesNotMatch(service, /UPDATE\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
