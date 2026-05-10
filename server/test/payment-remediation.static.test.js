@@ -65,6 +65,24 @@ test('public polling and cron delegate successful completion to CorePaymentServi
   assert.match(paymentService, /Legacy payment callback mutation is disabled/);
 });
 
+test('public order status polling resolves order numbers and surfaces provider failures', () => {
+  const publicController = read('src/controllers/public.controller.js');
+  const paymentModal = read('../src/components/PaymentStatusModal.tsx');
+  const productCard = read('../src/components/ProductCard.tsx');
+
+  assert.match(publicController, /po\.order_number = \$1[\s\S]*OR po\.id::text = \$1/);
+  assert.match(publicController, /paymentService\.checkTransactionStatus\(reference\)/);
+  assert.match(publicController, /CorePaymentService\.completeVerifiedPayment/);
+  assert.match(publicController, /source:\s*'public_order_status_poll'/);
+  assert.match(publicController, /PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS = 15000/);
+  assert.match(publicController, /failureReason: extractPublicPaymentFailureReason\(order\)/);
+  assert.match(productCard, /invoiceId:\s*String\(orderNumber \|\| orderId\)/);
+  assert.match(paymentModal, /const isOrderPaid = \['PAID', 'FULFILLMENT_PENDING', 'FULFILLED', 'DELIVERED', 'COMPLETED', 'BOOKED', 'COLLECTION_PENDING'\]/);
+  assert.match(paymentModal, /const isPaymentFailure = \['failed', 'cancelled', 'manual_review_required', 'payment_mapping_failed', 'compensation_required'\]/);
+  assert.doesNotMatch(paymentModal, /!?\['PENDING', 'RESERVED'\]\.includes\(orderStatus\)/);
+  assert.match(paymentModal, /insufficient balance, a wrong M-Pesa PIN, cancellation, or timeout/);
+});
+
 test('payment service selects configured payin provider and persists provider payment method', () => {
   const paymentService = read('src/services/payment.service.js');
   const paymentMethodMigration = read('migrations/20260510070000_allow_paystack_payment_method.sql');

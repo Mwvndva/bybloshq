@@ -443,7 +443,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           setPaymentModalData({
             isOpen: true,
             orderNumber: orderNumber,
-            invoiceId: String(orderId || orderNumber),
+            invoiceId: String(orderNumber || orderId),
             isGuest: !isAuthenticated,
             email: buyerDetails.email
           });

@@ -19,6 +19,7 @@ interface Props {
 export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, onSuccess, isGuest, email }: Props) => {
     const [state, setState] = useState<ModalState>('POLLING');
     const [attempts, setAttempts] = useState(0);
+    const [failureReason, setFailureReason] = useState<string | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const { loginWithToken } = useBuyerAuth();
     const MAX_ATTEMPTS = 60; // 5 minutes at 5s intervals
@@ -28,6 +29,7 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
         if (isOpen && invoiceId) {
             setState('POLLING');
             setAttempts(0);
+            setFailureReason(null);
         }
     }, [isOpen, invoiceId]);
 
@@ -50,13 +52,16 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
             try {
                 const res = await buyerApi.getOrderStatus(invoiceId);
                 const status = (res.paymentStatus || '').toLowerCase();
-                const orderStatus = res.status;
+                const paymentRecordStatus = (res.paymentRecordStatus || '').toLowerCase();
+                const orderStatus = String(res.status || '').toUpperCase();
 
-                // SUCCESS: Payment is confirmed OR order has moved to a post-payment state
-                const isPaymentSuccess = ['completed', 'success'].includes(status);
-                const isOrderProgressed = orderStatus && !['PENDING', 'RESERVED'].includes(orderStatus);
+                const isPaymentSuccess = ['completed', 'success', 'paid'].includes(status) || ['completed', 'success', 'paid'].includes(paymentRecordStatus);
+                const isOrderPaid = ['PAID', 'FULFILLMENT_PENDING', 'FULFILLED', 'DELIVERED', 'COMPLETED', 'BOOKED', 'COLLECTION_PENDING'].includes(orderStatus);
+                const isPaymentFailure = ['failed', 'cancelled', 'manual_review_required', 'payment_mapping_failed', 'compensation_required'].includes(status)
+                    || ['failed', 'cancelled', 'manual_review_required', 'payment_mapping_failed', 'compensation_required'].includes(paymentRecordStatus)
+                    || ['FAILED', 'CANCELLED', 'COMPENSATION_REQUIRED'].includes(orderStatus);
 
-                if (isPaymentSuccess || isOrderProgressed) {
+                if (isPaymentSuccess || isOrderPaid) {
                     setState('SUCCESS');
                     if (intervalRef.current) clearInterval(intervalRef.current);
 
@@ -69,7 +74,8 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                     return;
                 }
 
-                if (status === 'failed') {
+                if (isPaymentFailure) {
+                    setFailureReason(res.failureReason || null);
                     setState('FAILED');
                     if (intervalRef.current) clearInterval(intervalRef.current);
                     return;
@@ -84,6 +90,13 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                 });
             } catch (err) {
                 console.error('Poll error:', err);
+                setAttempts(prev => {
+                    if (prev + 1 >= MAX_ATTEMPTS) {
+                        setState('TIMEOUT');
+                        if (intervalRef.current) clearInterval(intervalRef.current);
+                    }
+                    return prev + 1;
+                });
             }
         };
 
@@ -166,7 +179,7 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                             </div>
                             <h2 className="text-slate-950 text-2xl font-bold mb-3">Payment Failed</h2>
                             <p className="text-slate-500 text-base mb-8">
-                                No charges were made. This could be due to a timeout or cancellation.
+                                {failureReason || 'No charges were made. This could be due to insufficient balance, a wrong M-Pesa PIN, cancellation, or timeout.'}
                             </p>
                             <button
                                 type="button"
