@@ -922,6 +922,7 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
   const requestReadMethod = service.slice(service.indexOf('static async getDashboardRequests'));
 
   assert.match(migration, /VALUES \('Logistics', 'logistics'\)/);
+  assert.doesNotMatch(migration, /updated_at/);
   assert.match(routes, /router\.post\('\/login'/);
   assert.match(routes, /router\.get\('\/requests', protectLogistics/);
   assert.match(routes, /router\.patch\('\/requests\/:requestId\/legs\/:legType\/status', protectLogistics/);
