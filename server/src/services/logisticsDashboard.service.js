@@ -7,6 +7,7 @@ import eventBus, { AppEvents } from '../events/eventBus.js';
 import LogisticsTrackingLinkService from './logisticsTrackingLink.service.js';
 
 const MZIGO_EGO_SLUG = 'mzigo-ego';
+const DROPOFF_LOCATION = process.env.DROPOFF_LOCATION || 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32';
 const COMPLETED_PAYMENT_STATUSES = new Set(['completed', 'success', 'paid']);
 const LOGISTICS_VISIBLE_REQUEST_STATUSES = new Set([
     'active',
@@ -288,7 +289,8 @@ function mapLeg(row, prefix) {
 function groupType(hasPickup, hasDelivery) {
     if (hasPickup && hasDelivery) return 'pickup_delivery';
     if (hasDelivery) return 'delivery_only';
-    return 'pickup_only';
+    if (hasPickup) return 'pickup_only';
+    return 'hub_dropoff';
 }
 
 function mapRequestRow(row) {
@@ -353,8 +355,8 @@ function mapRequestRow(row) {
         pickupFeeStatus: pickupLeg?.feeStatus || 'not_requested',
         deliveryFeeStatus: deliveryLeg?.feeStatus || 'not_requested',
         sellerDropoff: {
-            address: pickupLeg?.destination?.address || deliveryLeg?.origin?.address || null,
-            label: pickupLeg?.destination?.label || deliveryLeg?.origin?.label || 'Drop off point',
+            address: pickupLeg?.destination?.address || deliveryLeg?.origin?.address || DROPOFF_LOCATION,
+            label: pickupLeg?.destination?.label || deliveryLeg?.origin?.label || 'Hub drop-off',
             mapLink: pickupLeg?.destination?.mapLink || deliveryLeg?.origin?.mapLink || null
         },
         events: row.events || [],
@@ -366,7 +368,8 @@ function groupRequests(requests) {
     return {
         pickupDelivery: requests.filter(request => request.group === 'pickup_delivery'),
         deliveryOnly: requests.filter(request => request.group === 'delivery_only'),
-        pickupOnly: requests.filter(request => request.group === 'pickup_only')
+        pickupOnly: requests.filter(request => request.group === 'pickup_only'),
+        hubDropoff: requests.filter(request => request.group === 'hub_dropoff')
     };
 }
 
@@ -1278,6 +1281,7 @@ class LogisticsDashboardService {
                AND (
                     (pl.id IS NOT NULL AND (pl.status <> 'payment_pending' OR pp.status::text = ANY($3::text[])))
                  OR (dl.id IS NOT NULL AND (dl.status <> 'payment_pending' OR dp.status::text = ANY($3::text[])))
+                 OR (pl.id IS NULL AND dl.id IS NULL AND lr.metadata->>'seller_handoff_method' = 'seller_dropoff')
                )
              ORDER BY ${orderBy}
              LIMIT $4 OFFSET $5`,
@@ -1323,6 +1327,7 @@ class LogisticsDashboardService {
             `(
                 (pl.id IS NOT NULL AND (pl.status <> 'payment_pending' OR pp.status::text = ANY($2::text[])))
              OR (dl.id IS NOT NULL AND (dl.status <> 'payment_pending' OR dp.status::text = ANY($2::text[])))
+             OR (pl.id IS NULL AND dl.id IS NULL AND lr.metadata->>'seller_handoff_method' = 'seller_dropoff')
             )`
         ];
 

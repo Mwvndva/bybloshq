@@ -31,8 +31,19 @@ import { releaseOrderReservations } from '../shared/utils/reservationRelease.js'
 import { PaymentStatus } from '../shared/constants/enums.js';
 
 const FULFILLABLE_ORDER_STATUSES = new Set(['CREATED', 'RESERVED', 'HELD', 'PAYMENT_PENDING', 'PENDING']);
-const PAID_TERMINAL_ORDER_STATUSES = new Set(['PAID', 'PROCESSING', 'FULFILLMENT_PENDING', 'FULFILLED', 'DELIVERED', 'BOOKED', 'COMPLETED']);
-const CANNOT_FULFILL_ORDER_STATUSES = new Set(['CANCELLED', 'EXPIRED', 'REFUNDED', 'FAILED', 'COMPENSATION_REQUIRED']);
+const PAID_TERMINAL_ORDER_STATUSES = new Set([
+    'PAID',
+    'AWAITING_SELLER_ACTION',
+    'FULFILLING',
+    'READY_FOR_BUYER',
+    'PROCESSING',
+    'FULFILLMENT_PENDING',
+    'FULFILLED',
+    'DELIVERED',
+    'BOOKED',
+    'COMPLETED'
+]);
+const CANNOT_FULFILL_ORDER_STATUSES = new Set(['CANCELLED', 'EXPIRED', 'REFUNDED', 'FAILED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED']);
 const PAYMENT_AMOUNT_TOLERANCE_KES = 1;
 
 function parseJson(value, fallback = {}) {

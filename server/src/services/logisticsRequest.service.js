@@ -64,6 +64,22 @@ function hasDoorDelivery(payment, order) {
         || delivery.delivery_mode === 'DOOR_DELIVERY';
 }
 
+function isSellerPickupFeePayment(payment) {
+    const metadata = parseJson(payment?.metadata);
+    return metadata.payment_purpose === 'seller_pickup_fee'
+        || metadata.logistics_payment_type === 'seller_pickup_fee';
+}
+
+function isPhysicalOnlineOrder(order) {
+    const metadata = parseJson(order?.metadata);
+    const orderType = String(order?.order_type || order?.orderType || '').toUpperCase();
+    const productType = String(metadata.product_type || '').toLowerCase();
+    const fulfillmentType = String(order?.fulfillment_type || order?.fulfillmentType || '').toUpperCase();
+
+    return (orderType === 'PHYSICAL' || productType === 'physical')
+        && fulfillmentType === 'COURIER';
+}
+
 class LogisticsRequestService {
     static async getMzigoEgoPartner(client) {
         const { rows } = await client.query(
@@ -510,6 +526,153 @@ class LogisticsRequestService {
             });
             await client.query('COMMIT');
             return { cancelled };
+        } catch (error) {
+            await client.query('ROLLBACK').catch(() => {});
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    static async ensurePhysicalOnlineRequestAfterPayment({
+        payment,
+        order,
+        eventId = null
+    }) {
+        if (!payment?.id || !order?.id) {
+            return { ensured: false, reason: 'missing_payment_or_order' };
+        }
+
+        if (isSellerPickupFeePayment(payment)) {
+            return { ensured: false, reason: 'seller_pickup_payment' };
+        }
+
+        if (!isPhysicalOnlineOrder(order)) {
+            return { ensured: false, reason: 'not_physical_online_order' };
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const { rows: paymentRows } = await client.query(
+                `SELECT *
+                 FROM payments
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [payment.id]
+            );
+            const lockedPayment = paymentRows[0];
+
+            const { rows: orderRows } = await client.query(
+                `SELECT *
+                 FROM product_orders
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [order.id]
+            );
+            const lockedOrder = orderRows[0];
+
+            if (!lockedPayment || !lockedOrder) {
+                throw new Error(`Cannot ensure logistics request: missing payment/order ${payment.id}/${order.id}`);
+            }
+
+            if (!COMPLETED_PAYMENT_STATUSES.has(String(lockedPayment.status || '').toLowerCase())
+                || String(lockedOrder.payment_status || '').toLowerCase() !== 'completed') {
+                await client.query('COMMIT');
+                return { ensured: false, reason: 'payment_not_completed' };
+            }
+
+            const partner = await this.getMzigoEgoPartner(client);
+            const deadlineAt = logisticsDeadline();
+            const packageCode = buildPackageCode(lockedOrder);
+            const requestMetadata = {
+                source: 'payment_completed_physical_online_order',
+                seller_handoff_method: 'none',
+                seller_handoff_status: 'not_selected',
+                payment_id: lockedPayment.id,
+                payment_completed_event_id: eventId,
+                hub_dropoff_deadline_hours: 24
+            };
+
+            const { rows: requestRows } = await client.query(
+                `INSERT INTO logistics_requests
+                    (order_id, partner_id, package_code, status, service_level, deadline_at, metadata)
+                 VALUES ($1, $2, $3, 'awaiting_seller_choice', 'standard', $4, $5::jsonb)
+                 ON CONFLICT (order_id) DO UPDATE
+                 SET package_code = COALESCE(logistics_requests.package_code, EXCLUDED.package_code),
+                     status = CASE
+                       WHEN logistics_requests.status IN ('pending') THEN EXCLUDED.status
+                       ELSE logistics_requests.status
+                     END,
+                     deadline_at = COALESCE(logistics_requests.deadline_at, EXCLUDED.deadline_at),
+                     metadata = logistics_requests.metadata || EXCLUDED.metadata,
+                     updated_at = NOW()
+                 RETURNING *`,
+                [
+                    lockedOrder.id,
+                    partner.id,
+                    packageCode,
+                    deadlineAt,
+                    JSON.stringify(requestMetadata)
+                ]
+            );
+            const request = requestRows[0];
+
+            await LogisticsTrackingLinkService.ensureLinksForRequest(client, request.id);
+
+            await client.query(
+                `INSERT INTO logistics_tracking_events
+                    (
+                        logistics_request_id,
+                        event_key,
+                        event_type,
+                        status,
+                        message,
+                        source,
+                        metadata
+                    )
+                 VALUES ($1, $2, 'seller_handoff.awaiting_choice', 'awaiting_seller_choice', $3, 'system', $4::jsonb)
+                 ON CONFLICT (event_key) DO NOTHING`,
+                [
+                    request.id,
+                    `logistics.seller_handoff.awaiting_choice:${lockedOrder.id}:${lockedPayment.id}`,
+                    'Buyer payment completed. Seller must choose hub drop-off or paid Mzigo pickup.',
+                    JSON.stringify({
+                        order_id: lockedOrder.id,
+                        payment_id: lockedPayment.id,
+                        payment_completed_event_id: eventId
+                    })
+                ]
+            );
+
+            await client.query(
+                `UPDATE product_orders
+                 SET metadata = jsonb_set(
+                        COALESCE(metadata, '{}'::jsonb),
+                        '{seller_handoff}',
+                        COALESCE(metadata->'seller_handoff', '{}'::jsonb) || $2::jsonb,
+                        true
+                     ),
+                     updated_at = NOW()
+                 WHERE id = $1`,
+                [
+                    lockedOrder.id,
+                    JSON.stringify({
+                        method: 'none',
+                        status: 'not_selected',
+                        deadline_at: deadlineAt.toISOString(),
+                        logistics_request_id: request.id
+                    })
+                ]
+            );
+
+            await client.query('COMMIT');
+            return {
+                ensured: true,
+                requestId: request.id,
+                status: request.status
+            };
         } catch (error) {
             await client.query('ROLLBACK').catch(() => {});
             throw error;

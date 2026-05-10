@@ -43,9 +43,6 @@ class OrderFulfillmentTransitionService {
     }
 
     static async completePhysicalOrder(client, order, items) {
-        assertValidTransition(order.status, OrderStatus.FULFILLMENT_PENDING, order.id);
-        await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLMENT_PENDING, 'completed');
-
         await InventoryReservationService.commitReservedInventory(client, items);
 
         try {
@@ -54,8 +51,8 @@ class OrderFulfillmentTransitionService {
 
             await this.preparePhysicalFulfillment(currentOrder);
 
-            assertValidTransition(currentOrder.status, OrderStatus.FULFILLED, order.id);
-            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLED, 'completed');
+            assertValidTransition(currentOrder.status, OrderStatus.AWAITING_SELLER_ACTION, order.id);
+            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.AWAITING_SELLER_ACTION, 'completed');
         } catch (err) {
             logger.error(`[FULFILLMENT-PHYSICAL] Failed initiation for Order ${order.id}:`, err);
             throw err;
@@ -63,20 +60,20 @@ class OrderFulfillmentTransitionService {
     }
 
     static async completeServiceOrder(client, order) {
-        assertValidTransition(order.status, OrderStatus.BOOKED, order.id);
+        assertValidTransition(order.status, OrderStatus.AWAITING_SELLER_ACTION, order.id);
         await BookingService.finalizeSlot(client, order.id);
-        await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.BOOKED, 'completed');
+        await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.AWAITING_SELLER_ACTION, 'completed');
     }
 
     static async completeDigitalOrder(client, order, items) {
-        assertValidTransition(order.status, OrderStatus.DELIVERY_PENDING, order.id);
-        await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.DELIVERY_PENDING, 'completed');
+        assertValidTransition(order.status, OrderStatus.FULFILLING, order.id);
+        await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLING, 'completed');
 
         try {
             await this.grantDigitalAccess(client, order, items);
 
-            assertValidTransition(OrderStatus.DELIVERY_PENDING, OrderStatus.DELIVERED, order.id);
-            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.DELIVERED, 'completed');
+            assertValidTransition(OrderStatus.FULFILLING, OrderStatus.COMPLETED, order.id);
+            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.COMPLETED, 'completed');
         } catch (err) {
             logger.error(`[FULFILLMENT-DIGITAL] Failed delivery for Order ${order.id}:`, err);
             throw err;

@@ -62,5 +62,26 @@ export const sellerOrdersApi = {
       }
     );
     return response.data.data;
+  },
+
+  async selectHubDropoff(orderId: string): Promise<Order> {
+    const response = await sellerApiInstance.post<{ data: Order }>(
+      `/sellers/orders/${orderId}/select-hub-dropoff`
+    );
+    return response.data.data;
+  },
+
+  async markDroppedAtHub(orderId: string): Promise<Order> {
+    const response = await sellerApiInstance.post<{ data: Order }>(
+      `/sellers/orders/${orderId}/mark-dropped-at-hub`
+    );
+    return response.data.data;
+  },
+
+  async confirmBooking(orderId: string): Promise<Order> {
+    const response = await sellerApiInstance.post<{ data: Order }>(
+      `/sellers/orders/${orderId}/confirm-booking`
+    );
+    return response.data.data;
   }
 };

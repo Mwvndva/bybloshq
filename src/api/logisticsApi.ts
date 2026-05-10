@@ -52,7 +52,7 @@ export interface LogisticsLeg {
 export interface LogisticsRequestCard {
   id: number;
   packageCode?: string;
-  group: 'pickup_delivery' | 'delivery_only' | 'pickup_only';
+  group: 'pickup_delivery' | 'delivery_only' | 'pickup_only' | 'hub_dropoff';
   status: string;
   deadlineAt?: string | null;
   completedAt?: string | null;
@@ -131,6 +131,7 @@ export interface LogisticsDashboardResponse {
     pickupDelivery: LogisticsRequestCard[];
     deliveryOnly: LogisticsRequestCard[];
     pickupOnly: LogisticsRequestCard[];
+    hubDropoff: LogisticsRequestCard[];
   };
 }
 

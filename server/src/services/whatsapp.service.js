@@ -397,6 +397,37 @@ class WhatsAppService {
         const isMobileService = isService && !hasShop;
         const isShopService = isService && hasShop;
 
+        if (status === 'AWAITING_SELLER_ACTION') {
+            if (isBuyer) {
+                if (isService) return '*Next Step:* Waiting for the seller to confirm your booking.';
+                if (isSystemDelivery) return `*Next Step:* The seller must choose hub drop-off or paid Mzigo pickup. You will be notified when the package reaches ${this.DROPOFF_LOCATION}.`;
+                if (isShopPickup) return '*Next Step:* The seller is preparing your order for shop pickup.';
+            }
+            if (isService) return '*Next Step:* Confirm the booking in your dashboard, then complete the service as scheduled.';
+            if (isSystemDelivery) return `*Next Step:* Choose "I will drop off at hub" or "Request Mzigo pickup". Hub drop-off is due within 24 hours at ${this.DROPOFF_LOCATION}.`;
+            if (isShopPickup) return '*Next Step:* Prepare the order and mark it ready for shop pickup.';
+        }
+
+        if (status === 'FULFILLING') {
+            if (isBuyer) {
+                if (isDigital) return '*Notice:* Your digital item is being prepared for access.';
+                if (isService) return '*Notice:* Your booking is confirmed and the seller is scheduled to deliver the service.';
+                if (isSystemDelivery) return '*Notice:* Package movement is in progress. Your dashboard has the latest logistics updates.';
+                return '*Notice:* The seller is preparing your pickup.';
+            }
+            if (isService) return '*Next Step:* Complete the service, then mark it completed.';
+            if (isSystemDelivery) return '*Next Step:* Complete your selected handoff. If dropping off, mark the package dropped at hub after delivery.';
+            return '*Next Step:* Prepare the order for buyer pickup.';
+        }
+
+        if (status === 'READY_FOR_BUYER') {
+            if (isBuyer) {
+                if (isSystemDelivery) return `*Next Step:* Your order is ready for collection at ${this.DROPOFF_LOCATION}.`;
+                if (isShopPickup || isShopService) return '*Next Step:* Your order is ready at the shop. Please collect it and confirm receipt.';
+            }
+            return '*Status:* Buyer has been notified. Hand over the package/service and ask them to confirm receipt.';
+        }
+
         // 1. INITIAL STATES (PENDING/PAID/CONFIRMED/RESERVED)
         if (['CONFIRMED', 'PAID', 'PENDING', 'RESERVED'].includes(status)) {
             if (isBuyer) {
@@ -406,7 +437,7 @@ class WhatsAppService {
                 if (isMobileService) return "⏳ *Next Step:* Appointment confirmed! The professional will visit your location at the scheduled time.";
                 if (isShopService) return "⏳ *Next Step:* Appointment confirmed! Please visit the shop at the scheduled time for your service.";
             } else {
-                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 48 hours to initiate delivery.`;
+                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 24 hours to initiate delivery.`;
                 if (isShopPickup) return "👉 *Next Step:* Prepare the items. Once ready, update status to 'Ready for Collection' in your dashboard.";
                 if (isMobileService) return "👉 *Next Step:* Please proceed to the buyer's location at the scheduled time to provide the service.";
                 if (isShopService) return "👉 *Next Step:* Prepare for the buyer's arrival at your shop at the scheduled time.";
@@ -431,7 +462,7 @@ class WhatsAppService {
         }
 
         // 4. COLLECTION (READY)
-        if (status === 'COLLECTION_PENDING' || status === 'READY_FOR_COLLECTION') {
+        if (status === 'COLLECTION_PENDING' || status === 'READY_FOR_COLLECTION' || status === 'READY_FOR_BUYER') {
             if (isBuyer) {
                 if (isShopPickup || isShopService) return "📍 *Next Step:* YOUR ORDER IS READY! Please visit the shop now to collect/receive service.";
                 if (isSystemDelivery) return `📍 *Next Step:* ARRIVED AT HUB! Your order is ready for pickup at ${this.DROPOFF_LOCATION}.`;
@@ -666,7 +697,7 @@ _Keep this message private. Your buyer dashboard also has your downloads._
                 : null;
             locationDetails = `📍 *At Shop:* ${shopAddr}\n`;
             if (mapsLink) locationDetails += `🔗 *Navigate:* ${mapsLink}\n`;
-        } else if (isSystemDelivery && (newStatus === 'COLLECTION_PENDING' || newStatus === 'DELIVERY_COMPLETE')) {
+        } else if (isSystemDelivery && ['AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER', 'COLLECTION_PENDING', 'DELIVERY_COMPLETE'].includes(newStatus)) {
             locationDetails = `📍 *At Hub:* ${this.DROPOFF_LOCATION}\n`;
         } else if (isMobileService) {
             locationDetails = `📍 *Your Service Address:* ${loc.address}\n`;
@@ -723,7 +754,7 @@ _Check your dashboard for full details._
         if (isMobileService) {
             const mapsLink = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
             locationDetails = `📍 *Buyer Location:* ${loc.address}\n🔗 *Navigate:* ${mapsLink}\n`;
-        } else if (isSystemDelivery && newStatus === 'CONFIRMED') {
+        } else if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER'].includes(newStatus)) {
             locationDetails = `📍 *Drop-off Point:* ${this.DROPOFF_LOCATION}\n`;
         }
 

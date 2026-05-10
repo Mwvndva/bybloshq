@@ -154,6 +154,72 @@ export const requestSellerPickup = async (req, res) => {
     }
 };
 
+export const selectHubDropoff = async (req, res) => {
+    try {
+        const sellerId = req.user.sellerId;
+        if (!sellerId) {
+            return res.status(403).json({ status: 'error', message: 'Seller profile is required' });
+        }
+
+        const updatedOrder = await OrderService.selectHubDropoff(req.params.id, sellerId);
+        res.status(200).json({
+            status: 'success',
+            message: 'Hub drop-off selected. Drop the package at the hub within 24 hours.',
+            data: sanitizeOrder(updatedOrder, 'seller')
+        });
+    } catch (error) {
+        logger.error('Error selecting hub drop-off:', error);
+        const statusCode = error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
+            : error.message?.includes('only') || error.message?.includes('cannot') || error.message?.includes('after') ? 400
+                : 500;
+        res.status(statusCode).json({ status: 'error', message: error.message || 'Failed to select hub drop-off' });
+    }
+};
+
+export const markDroppedAtHub = async (req, res) => {
+    try {
+        const sellerId = req.user.sellerId;
+        if (!sellerId) {
+            return res.status(403).json({ status: 'error', message: 'Seller profile is required' });
+        }
+
+        const updatedOrder = await OrderService.markDroppedAtHub(req.params.id, sellerId);
+        res.status(200).json({
+            status: 'success',
+            message: 'Package marked as dropped at the hub.',
+            data: sanitizeOrder(updatedOrder, 'seller')
+        });
+    } catch (error) {
+        logger.error('Error marking dropped at hub:', error);
+        const statusCode = error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
+            : error.message?.includes('only') || error.message?.includes('cannot') || error.message?.includes('after') ? 400
+                : 500;
+        res.status(statusCode).json({ status: 'error', message: error.message || 'Failed to mark package dropped at hub' });
+    }
+};
+
+export const confirmBooking = async (req, res) => {
+    try {
+        const sellerId = req.user.sellerId;
+        if (!sellerId) {
+            return res.status(403).json({ status: 'error', message: 'Seller profile is required' });
+        }
+
+        const updatedOrder = await OrderService.confirmBooking(req.params.id, sellerId);
+        res.status(200).json({
+            status: 'success',
+            message: 'Booking confirmed.',
+            data: sanitizeOrder(updatedOrder, 'seller')
+        });
+    } catch (error) {
+        logger.error('Error confirming booking:', error);
+        const statusCode = error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
+            : error.message?.includes('only') || error.message?.includes('Cannot') || error.message?.includes('after') ? 400
+                : 500;
+        res.status(statusCode).json({ status: 'error', message: error.message || 'Failed to confirm booking' });
+    }
+};
+
 export const getUserOrders = async (req, res) => {
     try {
         // CROSS-ROLE FIX

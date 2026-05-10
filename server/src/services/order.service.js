@@ -18,6 +18,7 @@ import OrderFulfillmentTransitionService from './orderFulfillmentTransition.serv
 import OrderCancellationService from './orderCancellation.service.js';
 import OrderReadService from './orderRead.service.js';
 import OrderNotificationPayloadService from './orderNotificationPayload.service.js';
+import LogisticsRequestService from './logisticsRequest.service.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -370,11 +371,14 @@ class OrderService {
       const validTransitions = {
         [OrderStatus.PENDING]: [OrderStatus.RESERVED, OrderStatus.PROCESSING, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.PAID, OrderStatus.CANCELLED],
         [OrderStatus.RESERVED]: [OrderStatus.PAID, OrderStatus.EXPIRED, OrderStatus.CANCELLED, OrderStatus.FAILED],
-        [OrderStatus.PAID]: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
-        [OrderStatus.PROCESSING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.CONFIRMED, OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-        [OrderStatus.SERVICE_PENDING]: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
-        [OrderStatus.DELIVERY_PENDING]: [OrderStatus.PROCESSING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.CANCELLED],
-        [OrderStatus.COLLECTION_PENDING]: [OrderStatus.PROCESSING, OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
+        [OrderStatus.PAID]: [OrderStatus.AWAITING_SELLER_ACTION, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
+        [OrderStatus.AWAITING_SELLER_ACTION]: [OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
+        [OrderStatus.FULFILLING]: [OrderStatus.READY_FOR_BUYER, OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.READY_FOR_BUYER]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.PROCESSING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.CONFIRMED, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.SERVICE_PENDING]: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.FULFILLING, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
+        [OrderStatus.DELIVERY_PENDING]: [OrderStatus.PROCESSING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED],
+        [OrderStatus.COLLECTION_PENDING]: [OrderStatus.PROCESSING, OrderStatus.READY_FOR_BUYER, OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
         [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.EXPIRED]: [OrderStatus.RESERVED, OrderStatus.CANCELLED], // Can potentially be re-reserved if user retries
@@ -444,6 +448,392 @@ class OrderService {
 
     } catch (error) {
       await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  static _parseMetadata(value) {
+    if (!value) return {};
+    if (typeof value === 'object') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return {};
+    }
+  }
+
+  static _isPaidOrder(order) {
+    return ['completed', 'success', 'paid'].includes(String(order.payment_status || order.paymentStatus || '').toLowerCase());
+  }
+
+  static _isPhysicalOnlineOrder(order) {
+    const metadata = this._parseMetadata(order.metadata);
+    const orderType = String(order.order_type || order.orderType || '').toUpperCase();
+    const productType = String(metadata.product_type || '').toLowerCase();
+    const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
+
+    return (orderType === OrderType.PHYSICAL || productType === ProductType.PHYSICAL)
+      && fulfillmentType === FulfillmentType.COURIER;
+  }
+
+  static _hasBuyerDoorDelivery(order) {
+    const metadata = this._parseMetadata(order.metadata);
+    const delivery = metadata.delivery || {};
+    return delivery.doorDelivery === true
+      || delivery.door_delivery === true
+      || delivery.deliveryMode === 'DOOR_DELIVERY'
+      || delivery.delivery_mode === 'DOOR_DELIVERY';
+  }
+
+  static _hasActivePickup(order) {
+    const pickupStatus = order.pickup_leg_status || order.pickupLegStatus || order.logistics?.pickupLeg?.status;
+    return pickupStatus && !['failed', 'cancelled'].includes(String(pickupStatus).toLowerCase());
+  }
+
+  static async _ensureSellerDropoffRequest(client, order, deadlineAt, status = 'active') {
+    const partner = await LogisticsRequestService.getMzigoEgoPartner(client);
+    const packageCode = `BYB-LOG-${order.id}`;
+    const requestMetadata = {
+      source: 'seller_hub_dropoff',
+      seller_handoff_method: 'seller_dropoff',
+      seller_handoff_status: status === 'completed' ? 'dropped_at_hub' : 'dropoff_selected',
+      hub_dropoff_deadline_at: deadlineAt.toISOString()
+    };
+
+    const { rows } = await client.query(
+      `INSERT INTO logistics_requests
+          (order_id, partner_id, package_code, status, service_level, deadline_at, metadata)
+       VALUES ($1, $2, $3, $4, 'standard', $5, $6::jsonb)
+       ON CONFLICT (order_id) DO UPDATE
+       SET package_code = COALESCE(logistics_requests.package_code, EXCLUDED.package_code),
+           status = CASE
+             WHEN logistics_requests.status IN ('pending', 'awaiting_seller_choice', 'payment_pending') THEN EXCLUDED.status
+             ELSE logistics_requests.status
+           END,
+           deadline_at = COALESCE(logistics_requests.deadline_at, EXCLUDED.deadline_at),
+           metadata = logistics_requests.metadata || EXCLUDED.metadata,
+           updated_at = NOW()
+       RETURNING *`,
+      [
+        order.id,
+        partner.id,
+        packageCode,
+        status,
+        deadlineAt,
+        JSON.stringify(requestMetadata)
+      ]
+    );
+
+    return rows[0];
+  }
+
+  static async _emitOrderUpdate(orderId, oldStatus, newStatus, notes, source) {
+    try {
+      const details = await OrderReadService.getStatusNotificationDetails(orderId);
+      if (!details) return;
+
+      const { fullOrder, items } = details;
+      const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
+
+      await eventBus.enqueueAndDispatch(AppEvents.ORDER.UPDATED, {
+        eventId: `order.updated:${orderId}:${newStatus}:${source}`,
+        payload: {
+          id: normalizedOrder.id || orderId,
+          order_id: orderId,
+          buyer: normalizedOrder.buyer,
+          seller: normalizedOrder.seller,
+          order: normalizedOrder,
+          location: normalizedOrder.location,
+          oldStatus,
+          newStatus,
+          notes
+        }
+      }, source);
+    } catch (error) {
+      logger.error(`[OrderService] Failed to send ${source} notification:`, error);
+    }
+  }
+
+  static async selectHubDropoff(orderId, sellerId) {
+    const client = await pool.connect();
+    let oldStatus = null;
+    let newStatus = OrderStatus.FULFILLING;
+
+    try {
+      await client.query('BEGIN');
+
+      const { rows } = await client.query(
+        `SELECT o.*,
+                lr.id AS logistics_request_id,
+                pl.id AS pickup_leg_id,
+                pl.status AS pickup_leg_status
+         FROM product_orders o
+         LEFT JOIN logistics_requests lr ON lr.order_id = o.id
+         LEFT JOIN logistics_legs pl ON pl.logistics_request_id = lr.id
+                                  AND pl.leg_type = 'pickup'
+         WHERE o.id = $1
+           AND o.seller_id = $2
+         FOR UPDATE OF o`,
+        [orderId, sellerId]
+      );
+      const order = rows[0];
+
+      if (!order) {
+        throw new Error('Order not found or unauthorized');
+      }
+      if (!this._isPaidOrder(order)) {
+        throw new Error('Seller handoff can only be selected after buyer payment succeeds');
+      }
+      if (!this._isPhysicalOnlineOrder(order)) {
+        throw new Error('Hub drop-off is only available for paid physical orders from online shops');
+      }
+      if (this._hasActivePickup(order)) {
+        throw new Error('Hub drop-off cannot be selected while Mzigo pickup is active or payment is pending');
+      }
+
+      oldStatus = order.status;
+      const metadata = this._parseMetadata(order.metadata);
+      const existingHandoff = metadata.seller_handoff || {};
+      const deadlineAt = existingHandoff.deadline_at
+        ? new Date(existingHandoff.deadline_at)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const request = await this._ensureSellerDropoffRequest(client, order, deadlineAt, 'active');
+
+      const handoff = {
+        method: 'seller_dropoff',
+        status: 'dropoff_selected',
+        deadline_at: deadlineAt.toISOString(),
+        selected_at: existingHandoff.selected_at || new Date().toISOString(),
+        logistics_request_id: request.id
+      };
+
+      const { rows: updatedRows } = await client.query(
+        `UPDATE product_orders
+         SET status = $2,
+             metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [
+          order.id,
+          newStatus,
+          JSON.stringify({ seller_handoff: handoff })
+        ]
+      );
+
+      await client.query(
+        `INSERT INTO logistics_tracking_events
+            (logistics_request_id, event_key, event_type, status, message, source, actor_user_id, metadata)
+         VALUES ($1, $2, 'seller_handoff.dropoff_selected', 'dropoff_selected', $3, 'seller', $4, $5::jsonb)
+         ON CONFLICT (event_key) DO NOTHING`,
+        [
+          request.id,
+          `logistics.seller_dropoff.selected:${order.id}`,
+          'Seller selected hub drop-off. Package must be dropped at the hub within 24 hours.',
+          null,
+          JSON.stringify({ order_id: order.id, seller_id: sellerId, deadline_at: deadlineAt.toISOString() })
+        ]
+      );
+
+      await client.query('COMMIT');
+      await this._emitOrderUpdate(order.id, oldStatus, newStatus, 'Seller selected hub drop-off. Hub deadline is 24 hours.', 'OrderService.selectHubDropoff');
+      return updatedRows[0];
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async markDroppedAtHub(orderId, sellerId) {
+    const client = await pool.connect();
+    let oldStatus = null;
+    let newStatus = OrderStatus.READY_FOR_BUYER;
+
+    try {
+      await client.query('BEGIN');
+
+      const { rows } = await client.query(
+        `SELECT o.*,
+                lr.id AS logistics_request_id,
+                lr.status AS logistics_request_status,
+                dl.id AS delivery_leg_id,
+                dl.status AS delivery_leg_status,
+                pl.id AS pickup_leg_id,
+                pl.status AS pickup_leg_status
+         FROM product_orders o
+         LEFT JOIN logistics_requests lr ON lr.order_id = o.id
+         LEFT JOIN logistics_legs dl ON dl.logistics_request_id = lr.id
+                                  AND dl.leg_type = 'delivery'
+         LEFT JOIN logistics_legs pl ON pl.logistics_request_id = lr.id
+                                  AND pl.leg_type = 'pickup'
+         WHERE o.id = $1
+           AND o.seller_id = $2
+         FOR UPDATE OF o`,
+        [orderId, sellerId]
+      );
+      const order = rows[0];
+
+      if (!order) {
+        throw new Error('Order not found or unauthorized');
+      }
+      if (!this._isPaidOrder(order)) {
+        throw new Error('Package can only be marked dropped at hub after buyer payment succeeds');
+      }
+      if (!this._isPhysicalOnlineOrder(order)) {
+        throw new Error('Hub drop-off is only available for paid physical orders from online shops');
+      }
+      if (this._hasActivePickup(order)) {
+        throw new Error('Package cannot be marked as seller dropped off while Mzigo pickup is active');
+      }
+
+      oldStatus = order.status;
+      const metadata = this._parseMetadata(order.metadata);
+      const existingHandoff = metadata.seller_handoff || {};
+      const deadlineAt = existingHandoff.deadline_at
+        ? new Date(existingHandoff.deadline_at)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const request = order.logistics_request_id
+        ? { id: order.logistics_request_id }
+        : await this._ensureSellerDropoffRequest(client, order, deadlineAt, 'active');
+
+      const hasDoorDelivery = this._hasBuyerDoorDelivery(order) || !!order.delivery_leg_id;
+      newStatus = hasDoorDelivery ? OrderStatus.FULFILLING : OrderStatus.READY_FOR_BUYER;
+      const handoff = {
+        method: 'seller_dropoff',
+        status: 'dropped_at_hub',
+        deadline_at: deadlineAt.toISOString(),
+        selected_at: existingHandoff.selected_at || new Date().toISOString(),
+        dropped_at_hub_at: new Date().toISOString(),
+        logistics_request_id: request.id
+      };
+
+      const { rows: updatedRows } = await client.query(
+        `UPDATE product_orders
+         SET status = $2,
+             metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [
+          order.id,
+          newStatus,
+          JSON.stringify({ seller_handoff: handoff })
+        ]
+      );
+
+      await client.query(
+        `UPDATE logistics_requests
+         SET status = CASE
+               WHEN status IN ('pending', 'awaiting_seller_choice', 'payment_pending') THEN 'active'
+               ELSE status
+             END,
+             metadata = metadata || $2::jsonb,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [
+          request.id,
+          JSON.stringify({
+            seller_handoff_method: 'seller_dropoff',
+            seller_handoff_status: 'dropped_at_hub',
+            seller_dropped_at_hub_at: handoff.dropped_at_hub_at
+          })
+        ]
+      );
+
+      await client.query(
+        `INSERT INTO logistics_tracking_events
+            (logistics_request_id, event_key, event_type, status, message, source, actor_user_id, metadata)
+         VALUES ($1, $2, 'seller_handoff.dropped_at_hub', 'dropped_at_hub', $3, 'seller', $4, $5::jsonb)
+         ON CONFLICT (event_key) DO NOTHING`,
+        [
+          request.id,
+          `logistics.seller_dropoff.dropped_at_hub:${order.id}`,
+          hasDoorDelivery
+            ? 'Seller dropped the package at the hub. Door delivery can proceed.'
+            : 'Seller dropped the package at the hub. Buyer can collect from the hub.',
+          null,
+          JSON.stringify({ order_id: order.id, seller_id: sellerId, has_door_delivery: hasDoorDelivery })
+        ]
+      );
+
+      await client.query('COMMIT');
+      await this._emitOrderUpdate(
+        order.id,
+        oldStatus,
+        newStatus,
+        hasDoorDelivery ? 'Package dropped at hub. Door delivery will proceed.' : 'Package dropped at hub. Buyer can collect from the hub.',
+        'OrderService.markDroppedAtHub'
+      );
+      return updatedRows[0];
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async confirmBooking(orderId, sellerId) {
+    const client = await pool.connect();
+    let oldStatus = null;
+    const newStatus = OrderStatus.FULFILLING;
+
+    try {
+      await client.query('BEGIN');
+
+      const { rows } = await client.query(
+        `SELECT *
+         FROM product_orders
+         WHERE id = $1
+           AND seller_id = $2
+         FOR UPDATE`,
+        [orderId, sellerId]
+      );
+      const order = rows[0];
+
+      if (!order) {
+        throw new Error('Order not found or unauthorized');
+      }
+      if (!this._isPaidOrder(order)) {
+        throw new Error('Booking can only be confirmed after buyer payment succeeds');
+      }
+      if (String(order.order_type || '').toUpperCase() !== OrderType.SERVICE) {
+        throw new Error('Confirm Booking is only available for service orders');
+      }
+
+      oldStatus = order.status;
+      if (![OrderStatus.AWAITING_SELLER_ACTION, OrderStatus.SERVICE_PENDING, OrderStatus.BOOKED, OrderStatus.CONFIRMED, OrderStatus.PAID].includes(order.status)) {
+        throw new Error(`Cannot confirm booking for order in ${order.status} status`);
+      }
+
+      const { rows: updatedRows } = await client.query(
+        `UPDATE product_orders
+         SET status = $2,
+             metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [
+          order.id,
+          newStatus,
+          JSON.stringify({
+            service_confirmation: {
+              status: 'confirmed',
+              confirmed_at: new Date().toISOString()
+            }
+          })
+        ]
+      );
+
+      await client.query('COMMIT');
+      await this._emitOrderUpdate(order.id, oldStatus, newStatus, 'Seller confirmed the service booking.', 'OrderService.confirmBooking');
+      return updatedRows[0];
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
       throw error;
     } finally {
       client.release();
@@ -739,7 +1129,9 @@ class OrderService {
         OrderStatus.DELIVERY_COMPLETE,
         OrderStatus.CONFIRMED,
         OrderStatus.SERVICE_PENDING,
-        OrderStatus.COLLECTION_PENDING
+        OrderStatus.COLLECTION_PENDING,
+        OrderStatus.FULFILLING,
+        OrderStatus.READY_FOR_BUYER
       ];
       if (!allowedStatuses.includes(order.status)) {
         throw new Error(`Cannot confirm receipt for order in ${order.status} status`);
