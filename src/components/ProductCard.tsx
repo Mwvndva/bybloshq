@@ -49,7 +49,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
-  const { isDigital, isService, isHybrid, isOutOfStock, isSold } = getProductFlags(product);
+  const { isDigital, isService, isPhysical, isHybrid, isOutOfStock, isSold } = getProductFlags(product);
 
   const [paymentModalData, setPaymentModalData] = useState<{
     isOpen: boolean;
@@ -111,8 +111,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handleBuyClick = async (e: MouseEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-
-    const isService = product.product_type === 'service' || (product as any).productType === 'service';
 
     // 1. Service Product + Not Authenticated? -> Verification First Flow
     if (isService && !isAuthenticated) {
@@ -176,7 +174,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handlePhoneSubmit = async (phone: string, delivery?: DoorDeliverySelection) => {
     setIsCheckingPhone(true);
     try {
-      doorDeliverySelectionRef.current = delivery?.doorDelivery ? delivery : null;
+      doorDeliverySelectionRef.current = isPhysical && delivery?.doorDelivery ? delivery : null;
       // FIX (Task 21): Normalize phone number before checking status
       const normalizedPhone = normalizePhone(phone);
       const result = await buyerApi.checkBuyerByPhone(normalizedPhone);
@@ -319,7 +317,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     bookingDetails: any = null,
     buyerId?: string | number
   ) => {
-    const activeDoorDeliverySelection = doorDeliverySelectionRef.current;
+    const activeDoorDeliverySelection = isPhysical ? doorDeliverySelectionRef.current : null;
     const estimatedPayableAmount = product.price + (activeDoorDeliverySelection?.doorDelivery ? Number(activeDoorDeliverySelection?.quote?.feeAmount || 0) : 0);
 
     // 0. Minimum Amount Validation (payment provider requirement)
@@ -336,7 +334,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setIsProcessingPurchase(true);
     try {
       const activeBooking = bookingDetails || bookingData;
-      const doorDeliverySelection = doorDeliverySelectionRef.current;
+      const doorDeliverySelection = isPhysical ? doorDeliverySelectionRef.current : null;
       console.log('[PAYLOAD-DEBUG] Outgoing Payment Payload:', {
         buyerDetails,
         bookingDetails,
@@ -345,8 +343,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         doorDeliverySelection,
         buyerLocation: activeBooking?.buyerLocation
       });
-      const isService = product.product_type === 'service' || (product as any).productType === 'service';
-      const wantsDoorDelivery = !isService && !isDigital && doorDeliverySelection?.doorDelivery === true;
+      const wantsDoorDelivery = isPhysical && doorDeliverySelection?.doorDelivery === true;
       const paymentEstimate = product.price + (wantsDoorDelivery ? Number(doorDeliverySelection?.quote?.feeAmount || 0) : 0);
       const checkoutToken = getCheckoutAttemptToken();
       const payload = {
@@ -582,6 +579,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         initialBuyerLocation={initialBuyerLocation}
         shouldSkipSave={shouldSkipSave}
         paymentModalData={paymentModalData}
+        isPhysicalProduct={isPhysical}
         onPhoneCheckClose={() => setIsPhoneCheckModalOpen(false)}
         onBuyerModalClose={() => setIsBuyerModalOpen(false)}
         onBookingModalClose={() => setIsBookingModalOpen(false)}

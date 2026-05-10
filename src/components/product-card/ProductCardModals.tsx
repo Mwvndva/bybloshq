@@ -18,6 +18,7 @@ interface ProductCardModalsProps {
   initialBuyerData?: { fullName?: string; email?: string; city?: string; location?: string };
   initialBuyerLocation: { lat: number; lng: number; address: string } | null;
   shouldSkipSave: boolean;
+  isPhysicalProduct: boolean;
   paymentModalData: {
     isOpen: boolean;
     orderNumber: string | null;
@@ -53,6 +54,7 @@ export function ProductCardModals({
   initialBuyerData,
   initialBuyerLocation,
   shouldSkipSave,
+  isPhysicalProduct,
   paymentModalData,
   onPhoneCheckClose,
   onBuyerModalClose,
@@ -69,7 +71,7 @@ export function ProductCardModals({
         onClose={onPhoneCheckClose}
         onPhoneSubmit={onPhoneSubmit}
         isLoading={isCheckingPhone}
-        isPhysicalProduct={product.product_type === 'physical' || product.productType === 'physical' || (!product.is_digital && product.product_type !== 'service' && product.productType !== 'service')}
+        isPhysicalProduct={isPhysicalProduct}
         purchaseDetails={{
           shopName: displaySellerName,
           productName: product.name,

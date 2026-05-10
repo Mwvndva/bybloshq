@@ -31,14 +31,17 @@ export const normalizePhone = (phone: string): string => {
 };
 
 export const getProductFlags = (product: Product) => {
-  const isDigital = product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital;
-  const isService = product.product_type === 'service' || (product as any).productType === 'service';
+  const productType = String(product.product_type || (product as any).productType || '').toLowerCase();
+  const isDigital = productType === 'digital' || product.is_digital || (product as any).isDigital;
+  const isService = productType === 'service';
+  const isPhysical = productType === 'physical' && !isDigital && !isService;
   const isHybrid = isService && (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid');
   const isOutOfStock = (product as any).track_inventory === true && ((product as any).quantity === 0 || (product as any).quantity === null);
 
   return {
     isDigital,
     isService,
+    isPhysical,
     isHybrid,
     isOutOfStock,
     isSold: product.status === 'sold' || product.isSold || isOutOfStock
