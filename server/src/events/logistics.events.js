@@ -85,9 +85,9 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
              AND ($2::bigint IS NULL OR ll.id = $2::bigint)
          LEFT JOIN LATERAL (
              SELECT json_agg(json_build_object(
-                 'name', oi.name,
+                 'name', oi.product_name,
                  'quantity', oi.quantity,
-                 'price', oi.price
+                 'price', oi.product_price
              ) ORDER BY oi.id) AS items
              FROM order_items oi
              WHERE oi.order_id = po.id
