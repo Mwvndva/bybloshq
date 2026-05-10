@@ -241,7 +241,7 @@ class LogisticsRequestService {
                     metadata
                 )
              VALUES ($1, $2, $3, 'delivery.payment_pending', 'payment_pending', $4, 'system', $5::jsonb)
-             ON CONFLICT (event_key) DO NOTHING`,
+             ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
             [
                 request.id,
                 deliveryLeg.id,
@@ -406,7 +406,7 @@ class LogisticsRequestService {
                     metadata
                 )
              VALUES ($1, $2, $3, 'pickup.payment_pending', 'payment_pending', $4, 'seller', $5::jsonb)
-             ON CONFLICT (event_key) DO NOTHING`,
+             ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
             [
                 request.id,
                 pickupLeg.id,
@@ -492,7 +492,7 @@ class LogisticsRequestService {
                         metadata
                     )
                  VALUES ($1, $2, $3, $4, 'cancelled', $5, 'system', $6::jsonb)
-                 ON CONFLICT (event_key) DO NOTHING`,
+                 ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
                 [
                     leg.logistics_request_id,
                     leg.id,
@@ -633,7 +633,7 @@ class LogisticsRequestService {
                         metadata
                     )
                  VALUES ($1, $2, 'seller_handoff.awaiting_choice', 'awaiting_seller_choice', $3, 'system', $4::jsonb)
-                 ON CONFLICT (event_key) DO NOTHING`,
+                 ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
                 [
                     request.id,
                     `logistics.seller_handoff.awaiting_choice:${lockedOrder.id}:${lockedPayment.id}`,
@@ -796,7 +796,7 @@ class LogisticsRequestService {
                         metadata
                     )
                  VALUES ($1, $2, $3, 'delivery.buyer_paid', 'delivery_pending', $4, 'system', $5::jsonb)
-                 ON CONFLICT (event_key) DO NOTHING`,
+                 ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
                 [
                     logistics.request_id,
                     logistics.delivery_leg_id,
@@ -973,7 +973,7 @@ class LogisticsRequestService {
                         metadata
                     )
                  VALUES ($1, $2, $3, 'pickup.seller_paid', 'pending', $4, 'seller', $5::jsonb)
-                 ON CONFLICT (event_key) DO NOTHING`,
+                 ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
                 [
                     logistics.request_id,
                     logistics.pickup_leg_id,

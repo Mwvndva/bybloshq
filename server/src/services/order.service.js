@@ -627,7 +627,7 @@ class OrderService {
         `INSERT INTO logistics_tracking_events
             (logistics_request_id, event_key, event_type, status, message, source, actor_user_id, metadata)
          VALUES ($1, $2, 'seller_handoff.dropoff_selected', 'dropoff_selected', $3, 'seller', $4, $5::jsonb)
-         ON CONFLICT (event_key) DO NOTHING`,
+         ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
         [
           request.id,
           `logistics.seller_dropoff.selected:${order.id}`,
@@ -748,7 +748,7 @@ class OrderService {
         `INSERT INTO logistics_tracking_events
             (logistics_request_id, event_key, event_type, status, message, source, actor_user_id, metadata)
          VALUES ($1, $2, 'seller_handoff.dropped_at_hub', 'dropped_at_hub', $3, 'seller', $4, $5::jsonb)
-         ON CONFLICT (event_key) DO NOTHING`,
+         ON CONFLICT (event_key) WHERE event_key IS NOT NULL DO NOTHING`,
         [
           request.id,
           `logistics.seller_dropoff.dropped_at_hub:${order.id}`,
