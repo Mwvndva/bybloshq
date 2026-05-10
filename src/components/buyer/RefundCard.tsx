@@ -11,6 +11,7 @@ import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 interface RefundCardProps {
   refundAmount: number;
+  compact?: boolean;
   onRefundRequested?: () => void;
 }
 
@@ -21,7 +22,7 @@ interface PendingRequest {
   requested_at: string;
 }
 
-export default function RefundCard({ refundAmount, onRefundRequested }: RefundCardProps) {
+export default function RefundCard({ refundAmount, compact = false, onRefundRequested }: RefundCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   // FIX (Task 16): Prevent duplicate refund submissions via synchronous lock
   const { runWithLock, isLocked: isSubmitting } = useAsyncLock();
@@ -86,6 +87,142 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
       }
     });
   };
+
+  const hasPendingRequest = pendingRequests.length > 0;
+
+  const refundDialog = (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent className="border-white/15 bg-black text-white sm:max-w-[500px]">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-2xl text-white">Confirm Refund Withdrawal</DialogTitle>
+          <p className="text-sm text-white/70">Review the details before confirming your withdrawal request</p>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="rounded-xl border border-green-400/25 bg-green-500/10 p-6 text-center">
+            <p className="mb-2 text-sm font-semibold text-white/70">Amount to withdraw</p>
+            <p className="text-4xl font-black text-green-300">
+              {formatCurrency(refundAmount)}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-blue-400/25 bg-blue-500/10 p-4">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-300" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-blue-100">
+                  How you'll receive your refund
+                </p>
+                <p className="text-sm text-blue-100/80">
+                  Your refund will be sent to your registered phone number and email address on file.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-amber-400/25 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-300" />
+              <div>
+                <p className="mb-1 text-xs font-semibold text-amber-100">Processing time</p>
+                <p className="text-xs text-amber-100/80">
+                  Once submitted, your request will be reviewed by our admin team.
+                  The refund will be processed within 1-3 business days.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsDialogOpen(false)}
+            disabled={isSubmitting}
+            className="border-white/15 bg-white/10 px-6 text-white hover:bg-white/15"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmWithdraw}
+            disabled={isSubmitting}
+            className="bg-green-600 px-6 text-white hover:bg-green-700"
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Confirm Withdrawal
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (compact) {
+    return (
+      <>
+        <Card className="overflow-hidden rounded-2xl border border-white/15 bg-[#080808] text-white shadow-none">
+          <CardContent className="space-y-4 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#F5C518]/30 bg-[#F5C518]/15">
+                  <Wallet className="h-5 w-5 text-[#F5C518]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Refund balance</p>
+                  <p className="mt-1 text-xl font-black leading-none text-white">{formatCurrency(refundAmount)}</p>
+                </div>
+              </div>
+              <Badge className="shrink-0 border-white/10 bg-white/10 text-[10px] font-semibold text-white hover:bg-white/10">
+                {isLoadingPending ? 'Checking' : hasPendingRequest ? 'Pending' : refundAmount > 0 ? 'Available' : 'Empty'}
+              </Badge>
+            </div>
+
+            {!isLoadingPending && hasPendingRequest ? (
+              <div className="space-y-2 rounded-xl border border-amber-400/25 bg-amber-500/10 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-100">
+                  <Clock className="h-4 w-4" />
+                  Awaiting Admin Approval
+                </div>
+                {pendingRequests.map((request) => (
+                  <div key={request.id} className="flex items-center justify-between gap-3 text-xs text-amber-100/80">
+                    <span>{formatCurrency(parseFloat(request.amount.toString()))}</span>
+                    <span className="text-right">{format(new Date(request.requested_at), 'MMM d, yyyy')}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs leading-5 text-white/60">
+                {refundAmount > 0 ? 'Available for withdrawal.' : 'No refunds available right now.'}
+              </p>
+            )}
+
+            <Button
+              onClick={handleWithdrawClick}
+              disabled={hasPendingRequest || isLoadingPending || refundAmount <= 0}
+              className="h-9 w-full bg-[#F5C518] text-xs font-bold text-black hover:bg-[#e4b70f] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {hasPendingRequest ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Withdrawal Pending
+                </>
+              ) : refundAmount > 0 ? (
+                <>
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Request Withdrawal
+                </>
+              ) : (
+                'No Refunds Available'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {refundDialog}
+      </>
+    );
+  }
 
   return (
     <>
