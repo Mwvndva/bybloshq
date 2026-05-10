@@ -1,6 +1,8 @@
 import eventBus, { AppEvents } from './eventBus.js';
 import whatsappService from '../services/whatsapp.service.js';
 import logger from '../shared/utils/logger.js';
+import OrderReadService from '../services/orderRead.service.js';
+import OrderNotificationPayloadService from '../services/orderNotificationPayload.service.js';
 
 async function deliverAll(context, eventId, deliveries) {
     const activeDeliveries = deliveries.filter(Boolean);
@@ -18,14 +20,38 @@ async function deliverAll(context, eventId, deliveries) {
     }
 }
 
+async function loadNormalizedOrder(order, fallbackItems = []) {
+    if (!order?.id) return { order, items: fallbackItems };
+
+    try {
+        const details = await OrderReadService.getStatusNotificationDetails(order.id);
+        if (!details?.fullOrder) return { order, items: fallbackItems };
+
+        const fullOrder = OrderNotificationPayloadService.extractFromLegacy(details.fullOrder);
+        const items = details.items?.length ? details.items : fallbackItems;
+        return {
+            order: OrderNotificationPayloadService.prepareNormalizedNotificationPayload(fullOrder, items),
+            items
+        };
+    } catch (error) {
+        logger.warn('[Event:OrderNotification] Failed to normalize order payload; using event payload', {
+            orderId: order.id,
+            error: error.message
+        });
+        return { order, items: fallbackItems };
+    }
+}
+
 /**
  * Handle ORDER.CREATED event
  */
 eventBus.on(AppEvents.ORDER.CREATED, async ({ eventId, order, items, seller, buyer }) => {
-    logger.info(`[Event:OrderCreated] Processing for Order #${order.order_number}`);
+    const normalized = await loadNormalizedOrder(order, items);
+    const notificationOrder = normalized.order;
+    logger.info(`[Event:OrderCreated] Processing for Order #${notificationOrder.orderNumber || order.order_number}`);
     await deliverAll('Event:OrderCreated', eventId, [
-        { key: `order:${order.id}:seller:new`, run: () => whatsappService.notifySellerNewOrder(order) },
-        { key: `order:${order.id}:buyer:confirmation`, run: () => whatsappService.notifyBuyerOrderConfirmation(order) }
+        { key: `order:${order.id}:seller:new`, run: () => whatsappService.notifySellerNewOrder(notificationOrder) },
+        { key: `order:${order.id}:buyer:confirmation`, run: () => whatsappService.notifyBuyerOrderConfirmation(notificationOrder) }
     ]);
 });
 
@@ -55,11 +81,14 @@ eventBus.on(AppEvents.ORDER.UPDATED, async ({ eventId, payload }) => {
 eventBus.on(AppEvents.ORDER.FULFILLED, async ({ eventId, order, items = [] }) => {
     logger.info(`[Event:OrderFulfilled] Processing for Order #${order.id}`);
 
-    const hasDigital = items.some(item => item.is_digital || String(item.product_type || '').toUpperCase() === 'DIGITAL');
+    const normalized = await loadNormalizedOrder(order, items);
+    const notificationOrder = normalized.order;
+    const notificationItems = normalized.items;
+    const hasDigital = notificationItems.some(item => item.is_digital || String(item.product_type || '').toUpperCase() === 'DIGITAL');
     await deliverAll('Event:OrderFulfilled', eventId, [
-        hasDigital ? { key: `order:${order.id}:buyer:digital`, run: () => whatsappService.notifyBuyerDigitalDelivery({ order, items }) } : null,
-        { key: `order:${order.id}:buyer:payment_success`, run: () => whatsappService.notifyBuyerPaymentSuccess({ order, items }) },
-        order.fulfillment_type === 'COURIER' ? { key: `order:${order.id}:courier:new`, run: () => whatsappService.notifyCourierNewOrder({ order, items }) } : null
+        hasDigital ? { key: `order:${order.id}:buyer:digital`, run: () => whatsappService.notifyBuyerDigitalDelivery({ order: notificationOrder, items: notificationItems }) } : null,
+        { key: `order:${order.id}:buyer:payment_success`, run: () => whatsappService.notifyBuyerPaymentSuccess({ order: notificationOrder, items: notificationItems }) },
+        notificationOrder.fulfillmentType === 'COURIER' ? { key: `order:${order.id}:courier:new`, run: () => whatsappService.notifyCourierNewOrder({ order: notificationOrder, items: notificationItems }) } : null
     ]);
 });
 

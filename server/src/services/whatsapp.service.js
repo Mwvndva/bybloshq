@@ -585,6 +585,59 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
         }
     }
 
+    async notifyBuyerPaymentSuccess({ order, items = [] }) {
+        const buyerWhatsApp = order.buyer?.whatsapp_number || order.buyer?.phone;
+        if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
+
+        const orderNumber = order.orderNumber || order.order_number || order.id;
+        const total = Number.parseFloat(order.totalAmount || order.total_amount || 0);
+        const itemsList = items.length > 0
+            ? items.map(item => `- ${item.product_name || item.name || item.title || 'Item'} (x${item.quantity || 1})`).join('\n')
+            : (order.items || []).map(item => `- ${item.title || item.name || 'Item'} (x${item.quantity || 1})`).join('\n');
+
+        const message = `
+✅ *Payment Confirmed: #${orderNumber}*
+Amount: *KSh ${total.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*
+
+*Items:*
+${itemsList || '- Order item'}
+
+_Your Byblos dashboard remains the source of truth for order status._
+`.trim();
+
+        return this.sendMessage(buyerWhatsApp, message);
+    }
+
+    async notifyBuyerDigitalDelivery({ order, items = [] }) {
+        const buyerWhatsApp = order.buyer?.whatsapp_number || order.buyer?.phone;
+        if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
+
+        const orderNumber = order.orderNumber || order.order_number || order.id;
+        const downloads = order.downloadUrls?.length
+            ? order.downloadUrls.map(download => `- ${download.name || 'Download'}: ${download.url}`).join('\n')
+            : (order.downloadUrl ? `- Download: ${order.downloadUrl}` : 'Open your buyer dashboard to access your files.');
+
+        const message = `
+📥 *Digital Order Ready: #${orderNumber}*
+
+${downloads}
+
+_Keep this message private. Your buyer dashboard also has your downloads._
+`.trim();
+
+        return this.sendMessage(buyerWhatsApp, message);
+    }
+
+    async notifyCourierNewOrder({ order, items = [] }) {
+        return this.sendLogisticsNotification({
+            ...order,
+            items: (items.length > 0 ? items : order.items || []).map(item => ({
+                ...item,
+                title: item.title || item.product_name || item.name || 'Item'
+            }))
+        });
+    }
+
     async notifyBuyerStatusUpdate(updateData) {
         const { buyer, seller, order, location: loc, newStatus } = updateData;
         const buyerWhatsApp = buyer?.whatsapp_number || buyer?.phone;

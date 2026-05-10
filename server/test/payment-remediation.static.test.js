@@ -691,6 +691,22 @@ test('successful product payments send buyer order confirmation and unique recei
   assert.match(receiptTemplate, /Receipt ID/);
 });
 
+test('email templates resolve from docker root and order WhatsApp events use normalized contacts', () => {
+  const emailUtils = read('src/shared/utils/email.js');
+  const orderEvents = read('src/events/order.events.js');
+  const whatsappService = read('src/services/whatsapp.service.js');
+
+  assert.match(emailUtils, /\.\.\/\.\.\/\.\.\/email-templates/);
+  assert.match(emailUtils, /Email template not found/);
+  assert.match(orderEvents, /OrderReadService\.getStatusNotificationDetails/);
+  assert.match(orderEvents, /OrderNotificationPayloadService\.prepareNormalizedNotificationPayload/);
+  assert.match(orderEvents, /notifySellerNewOrder\(notificationOrder\)/);
+  assert.match(orderEvents, /notifyBuyerOrderConfirmation\(notificationOrder\)/);
+  assert.match(whatsappService, /async notifyBuyerPaymentSuccess/);
+  assert.match(whatsappService, /async notifyBuyerDigitalDelivery/);
+  assert.match(whatsappService, /async notifyCourierNewOrder/);
+});
+
 test('EventBus defers side effects when outbox claim DB is unavailable', () => {
   const eventBus = read('src/events/eventBus.js');
   const outboxRepository = read('src/events/outboxRepository.js');

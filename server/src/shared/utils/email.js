@@ -67,7 +67,14 @@ let transporter;
 
 // Read email templates
 const readTemplate = async (templateName, data) => {
-  const templatePath = join(__dirname, `../../email-templates/${templateName}.ejs`);
+  const candidatePaths = [
+    join(__dirname, `../../email-templates/${templateName}.ejs`),
+    join(__dirname, `../../../email-templates/${templateName}.ejs`)
+  ];
+  const templatePath = candidatePaths.find(path => fs.existsSync(path));
+  if (!templatePath) {
+    throw new Error(`Email template not found: ${templateName}`);
+  }
   const template = fs.readFileSync(templatePath, 'utf-8');
   return ejs.render(template, data);
 };
