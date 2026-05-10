@@ -411,11 +411,11 @@ class WhatsAppService {
         if (status === 'FULFILLING') {
             if (isBuyer) {
                 if (isDigital) return '*Notice:* Your digital item is being prepared for access.';
-                if (isService) return '*Notice:* Your booking is confirmed and the seller is scheduled to deliver the service.';
+                if (isService) return '*Notice:* Your booking is confirmed. After the service is complete, mark it completed in your buyer dashboard to release funds.';
                 if (isSystemDelivery) return '*Notice:* Package movement is in progress. Your dashboard has the latest logistics updates.';
                 return '*Notice:* The seller is preparing your pickup.';
             }
-            if (isService) return '*Next Step:* Complete the service, then mark it completed.';
+            if (isService) return '*Next Step:* Deliver the service as scheduled. The buyer will mark it completed to release funds.';
             if (isSystemDelivery) return '*Next Step:* Complete your selected handoff. If dropping off, mark the package dropped at hub after delivery.';
             return '*Next Step:* Prepare the order for buyer pickup.';
         }
@@ -423,9 +423,11 @@ class WhatsAppService {
         if (status === 'READY_FOR_BUYER') {
             if (isBuyer) {
                 if (isSystemDelivery) return `*Next Step:* Your order is ready for collection at ${this.DROPOFF_LOCATION}.`;
-                if (isShopPickup || isShopService) return '*Next Step:* Your order is ready at the shop. Please collect it and confirm receipt.';
+                if (isShopService) return '*Next Step:* If the service has been completed, mark it completed in your buyer dashboard to release funds.';
+                if (isShopPickup) return '*Next Step:* Your order is ready at the shop. Please collect it and confirm receipt.';
             }
-            return '*Status:* Buyer has been notified. Hand over the package/service and ask them to confirm receipt.';
+            if (isService) return '*Status:* Buyer has been notified. The buyer must mark the service completed to release funds.';
+            return '*Status:* Buyer has been notified. Hand over the package and ask them to confirm receipt.';
         }
 
         // 1. INITIAL STATES (PENDING/PAID/CONFIRMED/RESERVED)
@@ -434,20 +436,20 @@ class WhatsAppService {
                 if (isDigital) return "👉 *Next Step:* Click the download link below to access your product.";
                 if (isSystemDelivery) return "⏳ *Next Step:* The seller has been notified to drop off your item at our hub. We'll alert you when it arrives!";
                 if (isShopPickup) return "⏳ *Next Step:* The seller is preparing your items. You'll receive a notification the moment they are ready for collection at the shop.";
-                if (isMobileService) return "⏳ *Next Step:* Appointment confirmed! The professional will visit your location at the scheduled time.";
-                if (isShopService) return "⏳ *Next Step:* Appointment confirmed! Please visit the shop at the scheduled time for your service.";
+                if (isMobileService) return "Appointment confirmed. After the service is complete, mark it completed in your buyer dashboard to release funds.";
+                if (isShopService) return "Appointment confirmed. Please visit the shop at the scheduled time. After the service is complete, mark it completed in your buyer dashboard to release funds.";
             } else {
                 if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 24 hours to initiate delivery.`;
                 if (isShopPickup) return "👉 *Next Step:* Prepare the items. Once ready, update status to 'Ready for Collection' in your dashboard.";
-                if (isMobileService) return "👉 *Next Step:* Please proceed to the buyer's location at the scheduled time to provide the service.";
-                if (isShopService) return "👉 *Next Step:* Prepare for the buyer's arrival at your shop at the scheduled time.";
+                if (isMobileService) return "Next Step: Proceed to the buyer's location at the scheduled time to provide the service. The buyer confirms completion.";
+                if (isShopService) return "Next Step: Prepare for the buyer's arrival at your shop at the scheduled time. The buyer confirms completion.";
             }
         }
 
         // 2. PROCESSING
         if (status === 'PROCESSING') {
             if (isBuyer) {
-                return isService ? "⏳ *Next Step:* The professional is now preparing for your service appointment." : "⏳ *Next Step:* The seller is currently packing your items. Dispatch notification coming soon!";
+                return isService ? "Next Step: The seller is preparing for your service appointment. After the service is complete, mark it completed in your buyer dashboard." : "⏳ *Next Step:* The seller is currently packing your items. Dispatch notification coming soon!";
             }
             return "👉 *Next Step:* Finalize preparation and update status to 'Ready for Collection' or 'Delivery Pending'.";
         }
@@ -464,10 +466,13 @@ class WhatsAppService {
         // 4. COLLECTION (READY)
         if (status === 'COLLECTION_PENDING' || status === 'READY_FOR_COLLECTION' || status === 'READY_FOR_BUYER') {
             if (isBuyer) {
-                if (isShopPickup || isShopService) return "📍 *Next Step:* YOUR ORDER IS READY! Please visit the shop now to collect/receive service.";
+                if (isShopService) return "Next Step: If the service has been completed, mark it completed in your buyer dashboard to release funds.";
+                if (isShopPickup) return "📍 *Next Step:* YOUR ORDER IS READY! Please visit the shop now to collect your order.";
                 if (isSystemDelivery) return `📍 *Next Step:* ARRIVED AT HUB! Your order is ready for pickup at ${this.DROPOFF_LOCATION}.`;
             }
-            return "👉 *Next Step:* Buyer has been notified. Hand over the items/service and ensure they mark the order as 'Completed'.";
+            return isService
+                ? "Status: Buyer has been notified. The buyer must mark the service completed to release funds."
+                : "Next Step: Buyer has been notified. Hand over the items and ask them to confirm receipt.";
         }
 
         // 5. SERVICE EN ROUTE / PENDING CONFIRMATION
