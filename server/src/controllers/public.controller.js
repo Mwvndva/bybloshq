@@ -1,7 +1,142 @@
 import { pool } from '../shared/db/database.js';
 
 import cacheService from '../services/cache.service.js';
+import paymentService from '../services/payment.service.js';
 import { sanitizePublicProduct, sanitizePublicSeller } from '../shared/utils/sanitize.js';
+
+const PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS = 15000;
+const PAYMENT_SUCCESS_STATUSES = new Set(['completed', 'success', 'paid']);
+const PAYMENT_FAILURE_STATUSES = new Set([
+  'failed',
+  'cancelled',
+  'manual_review_required',
+  'payment_mapping_failed',
+  'compensation_required'
+]);
+
+const ORDER_STATUS_QUERY = `
+  SELECT po.id,
+         po.order_number,
+         po.status,
+         po.payment_status,
+         po.buyer_id,
+         po.buyer_email,
+         po.metadata AS order_metadata,
+         p.id AS payment_id,
+         p.status AS payment_record_status,
+         p.provider_reference,
+         p.api_ref,
+         p.metadata AS payment_metadata
+  FROM product_orders po
+  LEFT JOIN LATERAL (
+    SELECT *
+    FROM payments p
+    WHERE p.metadata->>'order_id' = po.id::text
+       OR p.invoice_id = po.id::text
+    ORDER BY p.created_at DESC, p.id DESC
+    LIMIT 1
+  ) p ON true
+  WHERE po.order_number = $1
+     OR po.id::text = $1
+  LIMIT 1
+`;
+
+function parseJson(value, fallback = {}) {
+  if (!value) return fallback;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function extractPublicPaymentFailureReason(row) {
+  const paymentMetadata = parseJson(row.payment_metadata);
+  const orderMetadata = parseJson(row.order_metadata);
+  return paymentMetadata.failure_reason
+    || paymentMetadata.provider_payload?.gateway_response
+    || paymentMetadata.provider_payload?.message
+    || paymentMetadata.provider_payload?.display_text
+    || paymentMetadata.completion_blocked?.provider_payload?.gateway_response
+    || orderMetadata.payment_failure?.provider_status
+    || orderMetadata.payment_failure?.source
+    || null;
+}
+
+async function loadOrderStatusRow(identifier) {
+  const { rows } = await pool.query(ORDER_STATUS_QUERY, [String(identifier)]);
+  return rows[0] || null;
+}
+
+async function syncPendingPaymentFromProvider(row) {
+  const paymentStatus = String(row.payment_record_status || row.payment_status || '').toLowerCase();
+  if (!row.payment_id || paymentStatus !== 'pending') {
+    return row;
+  }
+
+  const paymentMetadata = parseJson(row.payment_metadata);
+  const lastCheckedAt = Date.parse(paymentMetadata.public_status_checked_at || '');
+  if (Number.isFinite(lastCheckedAt) && Date.now() - lastCheckedAt < PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS) {
+    return row;
+  }
+
+  const reference = row.provider_reference || row.api_ref;
+  if (!reference) {
+    return row;
+  }
+
+  await pool.query(
+    `UPDATE payments
+     SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [
+      row.payment_id,
+      JSON.stringify({ public_status_checked_at: new Date().toISOString() })
+    ]
+  );
+
+  try {
+    const providerStatus = await paymentService.checkTransactionStatus(reference);
+    const normalizedStatus = String(providerStatus.status || '').toLowerCase();
+
+    if (PAYMENT_SUCCESS_STATUSES.has(normalizedStatus) || PAYMENT_FAILURE_STATUSES.has(normalizedStatus)) {
+      const { default: CorePaymentService } = await import('../core/CorePaymentService.js');
+      await CorePaymentService.completeVerifiedPayment({
+        paymentId: row.payment_id,
+        reference,
+        providerPayload: {
+          ...providerStatus,
+          status: normalizedStatus
+        },
+        source: 'public_order_status_poll'
+      });
+
+      return await loadOrderStatusRow(row.order_number) || row;
+    }
+
+    await pool.query(
+      `UPDATE payments
+       SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [
+        row.payment_id,
+        JSON.stringify({
+          public_status_provider_snapshot: {
+            status: normalizedStatus || null,
+            checked_at: new Date().toISOString()
+          }
+        })
+      ]
+    );
+  } catch (error) {
+    console.warn('[PublicOrderStatus] Provider status sync failed:', error.message);
+  }
+
+  return await loadOrderStatusRow(row.order_number) || row;
+}
 
 // Get all products (public)
 export const getProducts = async (req, res) => {
@@ -440,28 +575,25 @@ export const getOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `SELECT id, order_number, status, payment_status, buyer_id, buyer_email
-       FROM product_orders 
-       WHERE order_number = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
+    let order = await loadOrderStatusRow(id);
+    if (!order) {
       return res.status(404).json({
         status: 'error',
         message: 'Order not found'
       });
     }
 
-    const order = result.rows[0];
+    order = await syncPendingPaymentFromProvider(order);
+
     res.status(200).json({
       status: 'success',
       data: {
         id: order.id,
         orderNumber: order.order_number,
         status: order.status,
-        paymentStatus: order.payment_status
+        paymentStatus: order.payment_status,
+        paymentRecordStatus: order.payment_record_status || null,
+        failureReason: extractPublicPaymentFailureReason(order)
       }
     });
   } catch (error) {
