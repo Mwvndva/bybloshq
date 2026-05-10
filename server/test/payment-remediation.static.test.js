@@ -1264,7 +1264,7 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   assert.match(paymentService, /LogisticsQuoteService\.quoteSellerPickup\(pickup\)/);
   assert.match(logisticsRequestService, /ON CONFLICT \(order_id\) DO UPDATE/);
   assert.match(logisticsRequestService, /ON CONFLICT \(logistics_request_id, leg_type\) DO UPDATE/);
-  assert.match(logisticsRequestService, /ON CONFLICT \(event_key\) DO NOTHING/);
+  assert.match(logisticsRequestService, /ON CONFLICT \(event_key\) WHERE event_key IS NOT NULL DO NOTHING/);
   assert.match(logisticsMigration, /CONSTRAINT logistics_requests_order_id_unique UNIQUE \(order_id\)/);
   assert.match(logisticsMigration, /CONSTRAINT logistics_legs_request_leg_type_unique UNIQUE \(logistics_request_id, leg_type\)/);
   assert.match(logisticsDashboardService, /pickupDelivery/);
