@@ -8,13 +8,16 @@ import Buyer from '../models/buyer.model.js';
 import escrowManager from './EscrowManager.js';
 import { sellerHasPhysicalShop } from '../shared/utils/sellerUtils.js';
 import ReferralService from './referral.service.js';
-import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../shared/utils/email.js';
+import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail } from '../shared/utils/email.js';
 import cacheService from './cache.service.js';
 import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../shared/utils/fulfillment.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
 import InventoryReservationService from './inventoryReservation.service.js';
 import OrderFulfillmentTransitionService from './orderFulfillmentTransition.service.js';
+import OrderCancellationService from './orderCancellation.service.js';
+import OrderReadService from './orderRead.service.js';
+import OrderNotificationPayloadService from './orderNotificationPayload.service.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -154,6 +157,34 @@ class OrderService {
           // COURIER: online seller, physical product. No specific coords needed here.
           // Delivery address is stored in buyer_mobile_payment / shipping metadata.
           logger.info(`[ORDER] Fulfillment: COURIER. Platform logistics handles delivery.`);
+        }
+
+        if (metadata.delivery?.door_delivery === true || metadata.delivery?.doorDelivery === true) {
+          const buyerDeliveryLocation = metadata.delivery?.quote?.destination
+            || metadata.delivery?.buyerDeliveryLocation
+            || metadata.delivery?.buyer_delivery_location
+            || metadata.delivery?.buyerLocation
+            || metadata.delivery?.buyer_location
+            || metadata.delivery?.location
+            || location;
+
+          finalLocationAddress = buyerDeliveryLocation.address
+            || buyerDeliveryLocation.fullAddress
+            || buyerDeliveryLocation.full_address
+            || location.address
+            || finalLocationAddress;
+          finalLat = buyerDeliveryLocation.latitude ?? buyerDeliveryLocation.lat ?? location.lat ?? finalLat;
+          finalLng = buyerDeliveryLocation.longitude ?? buyerDeliveryLocation.lng ?? location.lng ?? finalLng;
+
+          if (buyer.id && finalLat && finalLng) {
+            Buyer.updateLocation(buyer.id, {
+              latitude: finalLat,
+              longitude: finalLng,
+              fullAddress: finalLocationAddress,
+            }).catch(err =>
+              logger.warn('[ORDER] Non-fatal: could not persist door delivery location to buyer profile:', err.message)
+            );
+          }
         }
 
         // VALIDATION: Fail fast if coordinates are required but missing
@@ -384,39 +415,11 @@ class OrderService {
 
       // 7. Send Notification
       try {
-        const fullOrderResult = await pool.query(
-          `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, 
-                  b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  b.latitude AS buyer_latitude, b.longitude AS buyer_longitude,
-                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
-                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
-                  s.whatsapp_number as seller_whatsapp, 
-                  COALESCE(s.email, u.email) as seller_email, 
-                  s.physical_address as seller_address, s.shop_name,
-                  s.latitude as seller_latitude, s.longitude as seller_longitude,
-                  s.instagram_link, s.tiktok_link, s.facebook_link
-           FROM product_orders o
-           LEFT JOIN buyers b ON o.buyer_id = b.id
-           LEFT JOIN sellers s ON o.seller_id = s.id
-           LEFT JOIN users u ON s.user_id = u.id
-           WHERE o.id = $1`,
-          [orderId]
-        );
+        const details = await OrderReadService.getStatusNotificationDetails(orderId);
 
-        if (fullOrderResult.rows.length > 0) {
-          const fullOrder = fullOrderResult.rows[0];
-
-          // Re-fetch items for complete details
-          const itemsResult = await pool.query(
-            `SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.name as product_name
-             FROM order_items oi
-             LEFT JOIN products p ON oi.product_id = p.id
-             WHERE oi.order_id = $1`,
-            [orderId]
-          );
-
-          const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, itemsResult.rows);
+        if (details) {
+          const { fullOrder, items } = details;
+          const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
           const notificationPayload = {
             buyer: normalizedOrder.buyer,
@@ -451,213 +454,11 @@ class OrderService {
    * Cancel an order and handle inventory restoration and buyer refund tracking
    */
   static async cancelOrder(orderId, reason = null) {
-    const client = await pool.connect();
-    let cancelledEventId = null;
-    try {
-      await client.query('BEGIN');
-
-      // 1. Fetch Order
-      const orderQuery = 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE';
-      const orderResult = await client.query(orderQuery, [orderId]);
-
-      if (orderResult.rows.length === 0) throw new Error('Order not found');
-      const order = orderResult.rows[0];
-
-      // 2. Validate Status
-      if (order.status === OrderStatus.COMPLETED) throw new Error('Cannot cancel a completed order');
-      if (order.status === OrderStatus.CANCELLED) throw new Error('Order is already cancelled');
-
-      // 3. Update Status
-      const updatedOrder = await Order.updateStatusWithReason(client, orderId, OrderStatus.CANCELLED, reason);
-
-      if (updatedOrder) {
-        // 4. Update Buyer Refunds (XP-02: Only if payment was actually collected)
-        if (order.payment_status === 'completed') {
-          const refundAmount = Number.parseFloat(order.total_amount);
-          await client.query(
-            `UPDATE buyers 
-             SET refunds = COALESCE(refunds, 0) + $1,
-                 updated_at = NOW()
-             WHERE id = $2`,
-            [refundAmount, order.buyer_id]
-          );
-        }
-
-        // 5. Release Service Slot (SP-01)
-        if (order.order_type === OrderType.SERVICE) {
-          await client.query(
-            `UPDATE service_slots 
-             SET status = 'AVAILABLE', reserved_by_order_id = NULL, expires_at = NULL, updated_at = NOW()
-             WHERE reserved_by_order_id = $1`,
-            [orderId]
-          );
-          logger.info(`[SLOT-RELEASE] Released slot for cancelled Order ${orderId}`);
-        }
-
-        // 6. Release Physical Inventory only before reserved stock has been committed.
-        const statusForRelease = String(order.status || '').toUpperCase();
-        const canReleaseInventory = ['CREATED', 'RESERVED', 'HELD', 'PAYMENT_PENDING', 'FAILED', 'EXPIRED'].includes(statusForRelease);
-        if (order.order_type === OrderType.PHYSICAL && canReleaseInventory) {
-          await InventoryReservationService.releaseOrderInventory(client, orderId);
-        } else if (order.order_type === OrderType.PHYSICAL) {
-          logger.warn(`[RESERVATION-RELEASE] Skipped inventory release for Order ${orderId} in status ${order.status}`);
-        }
-
-        const cancelledEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.CANCELLED, {
-          eventId: `order.cancelled:${orderId}`,
-          order: updatedOrder,
-          cancelledBy: reason || 'system',
-          reason
-        });
-        cancelledEventId = cancelledEvent.eventId;
-      }
-
-      await client.query('COMMIT');
-      eventBus.dispatchAfterCommit(cancelledEventId, 'OrderService.cancelOrder');
-
-      // 6. Send Notification
-      try {
-        const fullOrderResult = await pool.query(
-          `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.whatsapp_number as seller_whatsapp, s.email as seller_email, s.physical_address as seller_address
-           FROM product_orders o
-           LEFT JOIN buyers b ON o.buyer_id = b.id
-           LEFT JOIN sellers s ON o.seller_id = s.id
-           WHERE o.id = $1`,
-          [orderId]
-        );
-
-        if (fullOrderResult.rows.length > 0) {
-          const fullOrder = fullOrderResult.rows[0];
-
-          // Prepare minimal data for notification helper
-          const orderData = {
-            id: fullOrder.id,
-            order_id: fullOrder.order_number || fullOrder.id, // match helper expectation
-            total_amount: fullOrder.total_amount,
-            amount: fullOrder.total_amount,
-            buyer_mobile_payment: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
-            buyer_whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-            phone: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-            // We might need items for detailed notification?
-            // Helper likely expects items. But we don't have them in 'fullOrder' unless we join.
-            // Let's rely on basic info for now or fetch items.
-            // fetching items is better.
-          };
-
-          // Fetch items      // 3. WhatsApp Notifications
-          const { rows: items } = await pool.query(
-            `SELECT oi.*, p.product_type 
-             FROM order_items oi
-             JOIN products p ON oi.product_id = p.id
-             WHERE oi.order_id = $1`,
-            [orderId]
-          );
-          orderData.items = items.map(i => ({
-            product_name: i.product_name,
-            quantity: i.quantity,
-            product_price: i.product_price
-          }));
-
-          const buyer = {
-            full_name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual, // Use normalized if possible
-            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
-          };
-
-          const seller = {
-            id: fullOrder.seller_id,
-            full_name: fullOrder.seller_name,
-            phone: fullOrder.seller_phone,
-            shop_name: fullOrder.seller_name // fallback
-          };
-
-          // P1-2 FIX: Direct WhatsApp calls REMOVED from here.
-          // The durable ORDER.CANCELLED outbox event handles buyer and seller
-          // notifications after commit to prevent duplicate messages.
-
-          // Keep logistics notification ONLY — it is NOT handled by the EventBus.
-          // Removing it would silently break courier notifications.
-          const cancelledProductType = fullOrder.metadata?.product_type;
-          const wasDeliveryOrder = cancelledProductType !== 'service' &&
-            cancelledProductType !== 'digital' &&
-            !fullOrder.seller_address;
-
-          if (wasDeliveryOrder) {
-            logger.info(`[OrderService] Deferred logistics cancellation notification for order ${orderId}`);
-          }
-        }
-      } catch (e) {
-        logger.error('Critical error in cancellation notification block:', e);
-      }
-
-      return updatedOrder;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    return OrderCancellationService.cancelOrder(orderId, reason);
   }
 
   static async _getSellerDetails(client, sellerId) {
-    try {
-      let sellerCheck;
-      try {
-        sellerCheck = await client.query(
-          'SELECT id, user_id, physical_address, latitude, longitude, city, location, status FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
-          [sellerId, 'active']
-        );
-      } catch (schemaError) {
-        logger.warn('Seller schema issue, trying minimal query:', schemaError);
-        sellerCheck = await client.query(
-          'SELECT id, user_id, latitude, longitude FROM sellers WHERE id = $1 FOR UPDATE',
-          [sellerId]
-        );
-      }
-
-      if (sellerCheck.rows.length === 0) {
-        throw new Error(`Seller with ID ${sellerId} not found or inactive`);
-      }
-
-      const sellerInfo = sellerCheck.rows[0];
-
-      if (sellerInfo.user_id) {
-        const userCheck = await client.query(
-          'SELECT id, email, role FROM users WHERE id = $1',
-          [sellerInfo.user_id]
-        );
-
-        if (userCheck.rows.length > 0) {
-          const userInfo = userCheck.rows[0];
-          sellerInfo.full_name = userInfo.role === 'seller' ? 'Seller' : userInfo.email;
-          sellerInfo.email = userInfo.email;
-          sellerInfo.whatsapp_number = null;
-
-          try {
-            const buyerContactCheck = await client.query(
-              'SELECT full_name, whatsapp_number FROM buyers WHERE user_id = $1 LIMIT 1',
-              [sellerInfo.user_id]
-            );
-
-            if (buyerContactCheck.rows.length > 0) {
-              const buyerInfo = buyerContactCheck.rows[0];
-              sellerInfo.full_name = sellerInfo.full_name || buyerInfo.full_name;
-              sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || buyerInfo.whatsapp_number;
-            }
-          } catch (buyerError) {
-            logger.debug('Could not fetch buyer contact info:', buyerError);
-          }
-        }
-      }
-
-      sellerInfo.name = sellerInfo.full_name || 'Unknown Seller';
-      return sellerInfo;
-    } catch (err) {
-      logger.error(`Error fetching seller info for ID ${sellerId}:`, err);
-      throw err;
-    }
+    return OrderReadService.getSellerDetails(client, sellerId);
   }
 
   /**
@@ -841,7 +642,11 @@ class OrderService {
   }
 
   static async _processSellerPayout(client, order) {
-    return await escrowManager.releaseFunds(client, order, 'OrderService');
+    const releaseResult = await escrowManager.releaseFunds(client, order, 'OrderService');
+    if (!releaseResult.success && !releaseResult.alreadyReleased) {
+      throw new Error(`Escrow release blocked: ${releaseResult.reason || 'unknown_reason'}`);
+    }
+    return releaseResult;
   }
 
   /**
@@ -878,43 +683,10 @@ class OrderService {
 
       // 5. Send Notification
       try {
-        // Re-fetch order details or reuse
-        const fullOrderResult = await pool.query(
-          `SELECT o.*, 
-                  b.full_name          AS buyer_name_actual,
-                  b.mobile_payment     AS buyer_phone_actual,
-                  b.whatsapp_number    AS buyer_whatsapp_actual,
-                  b.email              AS buyer_email_actual,
-                  b.city               AS buyer_city,
-                  b.location           AS buyer_location_text,
-                  b.latitude           AS buyer_latitude,
-                  b.longitude          AS buyer_longitude,
-                  b.full_address       AS buyer_full_address,
-                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
-                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
-                  COALESCE(s.email, u.email)                       AS seller_email, 
-                  s.physical_address   AS seller_address, s.latitude AS seller_latitude, s.longitude AS seller_longitude
-           FROM product_orders o
-           LEFT JOIN buyers b ON o.buyer_id = b.id
-           LEFT JOIN sellers s ON o.seller_id = s.id
-           LEFT JOIN users u ON s.user_id = u.id
-           WHERE o.id = $1`,
-          [orderId]
-        );
+        const details = await OrderReadService.getStatusNotificationDetails(orderId);
 
-        if (fullOrderResult.rows.length > 0) {
-          const fullOrder = fullOrderResult.rows[0];
-
-          // Re-fetch items for complete details
-          const itemsResult = await pool.query(
-            `SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.name as product_name
-             FROM order_items oi
-             LEFT JOIN products p ON oi.product_id = p.id
-             WHERE oi.order_id = $1`,
-            [orderId]
-          );
-          const items = itemsResult.rows;
-
+        if (details) {
+          const { fullOrder, items } = details;
           const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
           await eventBus.enqueueAndDispatch(AppEvents.ORDER.UPDATED, {
@@ -980,31 +752,9 @@ class OrderService {
 
       // 6. Send Notifications
       try {
-        const fullOrderResult = await pool.query(
-          `SELECT o.*, 
-                  b.full_name          AS buyer_name_actual,
-                  b.mobile_payment     AS buyer_phone_actual,
-                  b.whatsapp_number    AS buyer_whatsapp_actual,
-                  b.email              AS buyer_email_actual,
-                  b.city               AS buyer_city,
-                  b.location           AS buyer_location_text,
-                  b.latitude           AS buyer_latitude,
-                  b.longitude          AS buyer_longitude,
-                  b.full_address       AS buyer_full_address,
-                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
-                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
-                  COALESCE(s.email, u.email)                       AS seller_email, 
-                  s.physical_address   AS seller_address, s.latitude AS seller_latitude, s.longitude AS seller_longitude
-           FROM product_orders o
-           LEFT JOIN buyers b ON o.buyer_id = b.id
-           LEFT JOIN sellers s ON o.seller_id = s.id
-           LEFT JOIN users u ON s.user_id = u.id
-           WHERE o.id = $1`,
-          [orderId]
-        );
+        const fullOrder = await OrderReadService.getReceiptNotificationDetails(orderId);
 
-        if (fullOrderResult.rows.length > 0) {
-          const fullOrder = fullOrderResult.rows[0];
+        if (fullOrder) {
           const buyerData = this._buildBuyerNotificationData(fullOrder);
           const sellerData = {
             name: fullOrder.seller_name,
@@ -1202,16 +952,7 @@ class OrderService {
   }
 
   static _buildBuyerNotificationData(fullOrder) {
-    // Legacy mapping preserved for non-WhatsApp flows if needed, but simplified
-    return {
-      name: fullOrder.buyer_name || 'Customer',
-      phone: fullOrder.buyer_mobile_payment || 'N/A',
-      whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp || fullOrder.buyer_mobile_payment,
-      email: fullOrder.buyer_email || null,
-      location: fullOrder.location_address || 'Not specified',
-      latitude: fullOrder.location_lat,
-      longitude: fullOrder.location_lng
-    };
+    return OrderNotificationPayloadService.buildBuyerNotificationData(fullOrder);
   }
   static async _handleOrderCompletionSideEffects(order, items, payment) {
     const orderId = order.id;
@@ -1231,26 +972,8 @@ class OrderService {
 
     // 3. Notifications (FIX 7: Explicit Column Aliases & Robust Fetch)
     try {
-      const fullOrderResult = await pool.query(
-        `SELECT o.id, o.order_number, o.total_amount, o.status, o.order_type, o.fulfillment_type, 
-                o.metadata, o.buyer_id, o.seller_id, o.location_address, o.location_lat, o.location_lng,
-                o.service_title, o.service_requirements, o.payment_status, o.payment_method, o.payment_reference,
-                o.notification_sent, o.total_quantity,
-                b.full_name AS buyer_name, b.mobile_payment AS buyer_mobile_payment,
-                b.email AS buyer_email,
-                s.full_name AS seller_name, s.shop_name, s.whatsapp_number AS seller_phone, 
-                s.email AS seller_email, s.physical_address AS seller_address,
-                s.latitude AS seller_latitude, s.longitude AS seller_longitude,
-                s.instagram_link, s.tiktok_link, s.facebook_link
-         FROM product_orders o
-         LEFT JOIN buyers b ON o.buyer_id = b.id
-         LEFT JOIN sellers s ON o.seller_id = s.id
-         WHERE o.id = $1`,
-        [orderId]
-      );
-
-      if (fullOrderResult.rows.length === 0) return;
-      let fullOrder = fullOrderResult.rows[0];
+      let fullOrder = await OrderReadService.getFulfillmentNotificationDetails(orderId);
+      if (!fullOrder) return;
 
       // 1. Idempotency Guard (Payment Status)
       // If the webhook is a retry and we already processed this, skip.
@@ -1372,66 +1095,7 @@ class OrderService {
    * This is M-R-1 / M-R-4 pattern from User Request
    */
   static _prepareNormalizedNotificationPayload(fullOrder, items) {
-    const metadata = typeof fullOrder.metadata === 'string' ? JSON.parse(fullOrder.metadata) : (fullOrder.metadata || {});
-
-    return {
-      id: fullOrder.id,
-      orderNumber: fullOrder.order_number,
-      totalAmount: Number.parseFloat(fullOrder.total_amount || 0),
-      status: fullOrder.status,
-      type: fullOrder.order_type,
-      fulfillmentType: fullOrder.fulfillment_type,
-      downloadUrl: metadata.download_url || metadata.downloadUrl || null,
-      downloadUrls: metadata.download_urls || metadata.downloadUrls || [],
-      buyer: {
-        name: fullOrder.buyer_name || 'Customer',
-        phone: fullOrder.buyer_mobile_payment || 'N/A',
-        email: fullOrder.buyer_email || null,
-      },
-      seller: {
-        name: fullOrder.seller_name || 'Seller',
-        shopName: fullOrder.shop_name || 'Shop',
-        phone: fullOrder.seller_phone || 'N/A',
-        whatsapp_number: fullOrder.seller_phone || null,
-        email: fullOrder.seller_email || null,
-        address: fullOrder.seller_address || fullOrder.physical_address || null,
-        physicalAddress: fullOrder.seller_address || fullOrder.physical_address || null,
-        latitude: fullOrder.seller_latitude || null,
-        longitude: fullOrder.seller_longitude || null,
-        social: {
-          instagram: fullOrder.instagram_link,
-          tiktok: fullOrder.tiktok_link,
-          facebook: fullOrder.facebook_link
-        }
-      },
-      service: {
-        id: fullOrder.metadata?.product_id || (items?.[0]?.product_id || items?.[0]?.id),
-        title: fullOrder.service_title || 'Service',
-        price: Number.parseFloat(fullOrder.total_amount || 0) / Number.parseInt(fullOrder.total_quantity || 1),
-        quantity: Number.parseInt(fullOrder.total_quantity || 1),
-        total: Number.parseFloat(fullOrder.total_amount || 0)
-      },
-      location: {
-        address: fullOrder.location_address || fullOrder.shipping_address || 'Not specified',
-        lat: Number.parseFloat(fullOrder.location_lat || 0),
-        lng: Number.parseFloat(fullOrder.location_lng || 0),
-      },
-      booking: {
-        date: metadata.booking_date || metadata.bookingDate || null,
-        time: metadata.booking_time || metadata.bookingTime || null,
-        requirements: fullOrder.service_requirements || metadata.service_requirements || metadata.requirements || null,
-      },
-      payment: {
-        status: fullOrder.payment_status || 'pending',
-        method: fullOrder.payment_method || 'payd',
-        reference: fullOrder.payment_reference || null
-      },
-      items: items.map(i => ({
-        title: i.product_name || i.name || 'Item',
-        price: Number.parseFloat(i.product_price || i.price || 0),
-        quantity: Number.parseInt(i.quantity || 1, 10)
-      }))
-    };
+    return OrderNotificationPayloadService.prepareNormalizedNotificationPayload(fullOrder, items);
   }
 
   /**
@@ -1439,18 +1103,7 @@ class OrderService {
    * This ensures backward compatibility for reads only.
    */
   static extractFromLegacy(order) {
-    if (order.location_address) return order;
-
-    const metadata = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
-    const buyerLocation = metadata.buyer_location || {};
-
-    return {
-      ...order,
-      location_address: order.buyer_full_address || buyerLocation.fullAddress || order.buyer_location_text || 'Not specified',
-      location_lat: order.buyer_latitude || buyerLocation.latitude || buyerLocation.lat || 0,
-      location_lng: order.buyer_longitude || buyerLocation.longitude || buyerLocation.lng || 0,
-      service_title: order.service_title || metadata.product_name || (order.items?.[0]?.product_name) || 'Service'
-    };
+    return OrderNotificationPayloadService.extractFromLegacy(order);
   }
 }
 

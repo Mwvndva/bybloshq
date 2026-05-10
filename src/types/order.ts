@@ -35,6 +35,45 @@ export interface OrderSeller {
   isClient?: boolean;
 }
 
+export interface OrderLogisticsEvent {
+  id: string | number;
+  type: string | null;
+  status: string | null;
+  message: string | null;
+  source: string | null;
+  createdAt: string | null;
+}
+
+export interface OrderLogisticsDeliveryLeg {
+  id: string | number;
+  status: string | null;
+  feeAmount: number;
+  feeCurrency: string;
+  distanceKm: number | null;
+  originLabel?: string | null;
+  originAddress?: string | null;
+  originLat?: number | string | null;
+  originLng?: number | string | null;
+  destinationLabel?: string | null;
+  destinationAddress?: string | null;
+  destinationLat?: number | string | null;
+  destinationLng?: number | string | null;
+  deadlineAt?: string | null;
+  completedAt?: string | null;
+}
+
+export interface OrderLogisticsTracking {
+  requestId: string | number | null;
+  packageCode: string | null;
+  status: string | null;
+  serviceLevel?: string | null;
+  deadlineAt?: string | null;
+  completedAt?: string | null;
+  deliveryLeg?: OrderLogisticsDeliveryLeg | null;
+  pickupLeg?: OrderLogisticsDeliveryLeg | null;
+  events: OrderLogisticsEvent[];
+}
+
 export interface ShippingAddress {
   address: string;
   city: string;
@@ -66,4 +105,5 @@ export interface Order {
   location_address?: string;
   location_lat?: number;
   location_lng?: number;
+  logistics?: OrderLogisticsTracking | null;
 }

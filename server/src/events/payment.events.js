@@ -1,21 +1,62 @@
 import eventBus, { AppEvents } from './eventBus.js';
 import logger from '../shared/utils/logger.js';
 import whatsappService from '../services/whatsapp.service.js';
+import LogisticsRequestService from '../services/logisticsRequest.service.js';
 
 /**
  * Handle PAYMENT.COMPLETED event
  * Side effects that must NOT block the core payment transaction.
  */
-eventBus.on(AppEvents.PAYMENT.COMPLETED, async ({ payment, order }) => {
+eventBus.on(AppEvents.PAYMENT.COMPLETED, async ({ eventId, payment, order }) => {
     logger.info(`[Event:PaymentCompleted] Payment ${payment.id} for Order ${order?.id}`);
-    // Further side effects (analytics, email receipts) go here.
+    const deliveryResult = await LogisticsRequestService.activateDoorDeliveryAfterPayment({
+        payment,
+        order,
+        eventId: eventId || `payment.completed:${payment.id}`
+    });
+
+    if (deliveryResult.activated) {
+        logger.info('[Event:PaymentCompleted] Door delivery activated', {
+            paymentId: payment.id,
+            orderId: order?.id,
+            requestId: deliveryResult.requestId,
+            deliveryLegId: deliveryResult.deliveryLegId
+        });
+    }
+
+    const pickupResult = await LogisticsRequestService.activateSellerPickupAfterPayment({
+        payment,
+        order,
+        eventId: eventId || `payment.completed:${payment.id}`
+    });
+
+    if (pickupResult.activated) {
+        logger.info('[Event:PaymentCompleted] Seller pickup activated', {
+            paymentId: payment.id,
+            orderId: order?.id,
+            requestId: pickupResult.requestId,
+            pickupLegId: pickupResult.pickupLegId
+        });
+    }
 });
 
 /**
  * Handle PAYMENT.FAILED event
  */
-eventBus.on(AppEvents.PAYMENT.FAILED, async ({ payment, reason }) => {
+eventBus.on(AppEvents.PAYMENT.FAILED, async ({ payment, order, reason }) => {
     logger.warn(`[Event:PaymentFailed] Payment ${payment.id} failed: ${reason}`);
+    const result = await LogisticsRequestService.cancelPaymentPendingLegsAfterPaymentFailure({
+        payment,
+        order,
+        reason
+    });
+    if (result.cancelled > 0) {
+        logger.warn('[Event:PaymentFailed] Cancelled pending logistics legs for failed payment', {
+            paymentId: payment.id,
+            orderId: order?.id,
+            cancelled: result.cancelled
+        });
+    }
 });
 
 /**

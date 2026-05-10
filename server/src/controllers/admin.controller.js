@@ -8,6 +8,7 @@ import payoutService from '../services/payout.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import LogisticsDashboardService from '../services/logisticsDashboard.service.js';
 
 const paymentService = new PaymentService();
 
@@ -530,6 +531,64 @@ const getAllWithdrawalRequests = async (req, res, next) => {
   }
 };
 
+const getAdminLogisticsRequests = async (req, res, next) => {
+  try {
+    const data = await LogisticsDashboardService.getAdminRequests({
+      status: req.query.status,
+      sort: req.query.sort,
+      limit: req.query.limit,
+      offset: req.query.offset
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data
+    });
+  } catch (error) {
+    logger.error('getAdminLogisticsRequests error:', error);
+    next(new AppError('Failed to fetch logistics requests', 500));
+  }
+};
+
+const adminUpdateLogisticsLegStatus = async (req, res, next) => {
+  try {
+    const result = await LogisticsDashboardService.adminUpdateLegStatus({
+      admin: req.user,
+      requestId: req.params.requestId,
+      legType: req.params.legType,
+      status: req.body.status,
+      reason: req.body.reason
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    logger.error('adminUpdateLogisticsLegStatus error:', error);
+    next(error);
+  }
+};
+
+const adminResolveLogisticsDispute = async (req, res, next) => {
+  try {
+    const result = await LogisticsDashboardService.adminResolveDispute({
+      admin: req.user,
+      requestId: req.params.requestId,
+      resolution: req.body.resolution,
+      note: req.body.note
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    logger.error('adminResolveLogisticsDispute error:', error);
+    next(error);
+  }
+};
+
 // PATCH /api/admin/withdrawal-requests/:id/status
 // Admin can only override to 'completed' or 'failed' — Payd handles real processing
 const updateWithdrawalRequestStatus = async (req, res, next) => {
@@ -821,6 +880,9 @@ export {
   getAnalytics,
   getAllClients,
   deleteUser,
+  getAdminLogisticsRequests,
+  adminUpdateLogisticsLegStatus,
+  adminResolveLogisticsDispute,
   getMe
 };
 

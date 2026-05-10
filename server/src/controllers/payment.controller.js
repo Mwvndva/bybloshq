@@ -8,6 +8,7 @@ import CorePaymentService from '../core/CorePaymentService.js';
 import logger from '../shared/utils/logger.js';
 import { normalizeOrderInput } from '../shared/utils/order.utils.js';
 import paymentService from '../services/payment.service.js';
+import LogisticsQuoteService from '../services/logisticsQuote.service.js';
 
 class PaymentController {
   /**
@@ -100,13 +101,34 @@ class PaymentController {
     }
   }
 
+  async quoteLogistics(req, res) {
+    try {
+      const { legType = 'delivery', location } = req.body;
+      const quote = legType === 'pickup'
+        ? LogisticsQuoteService.quoteSellerPickup(location)
+        : LogisticsQuoteService.quoteBuyerDoorDelivery(location);
+
+      res.status(200).json({
+        status: 'success',
+        data: quote
+      });
+    } catch (error) {
+      logger.error('[PaymentController] Logistics quote failed:', error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Could not calculate logistics quote',
+        error: error.message
+      });
+    }
+  }
+
   /**
    * Check payment status.
    */
   async checkStatus(req, res) {
     try {
       const { paymentId } = req.params;
-      const result = await CorePaymentService.checkPaymentStatus(paymentId);
+      const result = await paymentService.checkPaymentStatus(paymentId);
       res.status(200).json({
         status: 'success',
         message: 'Payment status retrieved successfully',

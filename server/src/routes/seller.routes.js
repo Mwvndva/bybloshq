@@ -1,4 +1,5 @@
 import express from 'express';
+import { z } from 'zod';
 import logger from '../shared/utils/logger.js';
 import * as sellerController from '../controllers/seller.controller.js';
 import * as productController from '../controllers/product.controller.js';
@@ -13,8 +14,40 @@ import { authLimiter } from '../middleware/authRateLimiter.js';
 import { uploadRateLimiter } from '../middleware/rateLimiting.js';
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
 import digitalUpload from '../middleware/digitalUpload.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
+
+const sellerPickupRequestSchema = z.object({
+  mobilePayment: z.string().min(1, 'Mobile payment number is required').optional(),
+  phone: z.string().min(1, 'Mobile payment number is required').optional(),
+  pickupLocation: z.object({
+    address: z.string().optional().nullable(),
+    fullAddress: z.string().optional().nullable(),
+    full_address: z.string().optional().nullable(),
+    latitude: z.coerce.number().optional(),
+    longitude: z.coerce.number().optional(),
+    lat: z.coerce.number().optional(),
+    lng: z.coerce.number().optional(),
+  }).passthrough().optional(),
+  location: z.object({
+    address: z.string().optional().nullable(),
+    fullAddress: z.string().optional().nullable(),
+    full_address: z.string().optional().nullable(),
+    latitude: z.coerce.number().optional(),
+    longitude: z.coerce.number().optional(),
+    lat: z.coerce.number().optional(),
+    lng: z.coerce.number().optional(),
+  }).passthrough().optional(),
+  idempotencyKey: z.string().optional().nullable(),
+  checkout_token: z.string().optional().nullable(),
+}).refine((data) => data.mobilePayment || data.phone, {
+  message: 'Mobile payment number is required',
+  path: ['mobilePayment']
+}).refine((data) => data.pickupLocation || data.location, {
+  message: 'Pickup location is required',
+  path: ['pickupLocation']
+});
 
 // Public routes
 router.post('/register', authLimiter, validateSellerRegistration, sellerController.register);
@@ -55,6 +88,12 @@ router.route('/orders')
 router.route('/orders/:id')
   .get(orderController.getOrderById)     // Get a specific order
   .patch(orderController.updateOrderStatus); // Update order status
+
+router.post(
+  '/orders/:id/request-pickup',
+  validate(sellerPickupRequestSchema),
+  orderController.requestSellerPickup
+);
 
 // Get seller by ID (protected)
 // This must come after other specific routes to avoid conflicts

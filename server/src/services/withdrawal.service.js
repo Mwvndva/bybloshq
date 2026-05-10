@@ -1,5 +1,4 @@
 import { pool } from '../shared/db/database.js';
-import crypto from 'node:crypto';
 import logger from '../shared/utils/logger.js';
 import payoutService from './payout.service.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
@@ -8,6 +7,7 @@ import PayoutCallbackStateMachineService, {
     providerPayloadIndicatesSuccess,
     providerPayloadIndicatesFailure
 } from './payoutCallbackStateMachine.service.js';
+import WithdrawalRetryWorkerService from './withdrawalRetryWorker.service.js';
 
 const AMBIGUOUS_PAYOUT_ERROR_CODES = new Set([
     PaydErrorCodes.CONNECTION_FAILED,
@@ -578,95 +578,8 @@ class WithdrawalService {
      * Called on server startup.
      */
     async retryPendingApiCalls() {
-        try {
-            logger.info('[WithdrawalService] Checking for pending API calls to retry...');
-            const workerId = `withdrawal-retry-${process.pid}-${Date.now()}-${crypto.randomUUID()}`;
-            const claimClient = await pool.connect();
-            let pending = [];
-            try {
-                await claimClient.query('BEGIN');
-                const { rows } = await claimClient.query(
-                    `WITH claimed AS (
-                       SELECT wr.id
-                       FROM withdrawal_requests wr
-                       WHERE wr.status = 'processing'
-                         AND wr.api_call_pending = TRUE
-                         AND wr.created_at > NOW() - INTERVAL '7 days'
-                         AND (
-                           wr.retry_started_at IS NULL
-                           OR wr.retry_started_at < NOW() - INTERVAL '10 minutes'
-                         )
-                       ORDER BY wr.created_at ASC
-                       LIMIT 25
-                       FOR UPDATE SKIP LOCKED
-                     )
-                     UPDATE withdrawal_requests wr
-                     SET retry_started_at = NOW(),
-                         retry_worker_id = $1,
-                         updated_at = NOW()
-                     FROM claimed
-                     WHERE wr.id = claimed.id
-                     RETURNING wr.*`,
-                    [workerId]
-                );
-                if (rows.length) {
-                    const ids = rows.map(row => row.id);
-                    const joined = await claimClient.query(
-                        `SELECT wr.*, s.full_name, s.whatsapp_number
-                         FROM withdrawal_requests wr
-                         JOIN sellers s ON wr.seller_id = s.id
-                         WHERE wr.id = ANY($1::int[])`,
-                        [ids]
-                    );
-                    pending = joined.rows;
-                }
-                await claimClient.query('COMMIT');
-            } catch (claimErr) {
-                await claimClient.query('ROLLBACK').catch(() => {});
-                throw claimErr;
-            } finally {
-                claimClient.release();
-            }
-
-            if (pending.length === 0) {
-                logger.info('[WithdrawalService] No pending API calls found.');
-                return;
-            }
-
-            logger.info(`[WithdrawalService] Found ${pending.length} pending requests to retry.`);
-
-            // FIXED BUG-WD-04: Batching avoids overwhelming Payd API (Max 3 concurrent)
-            for (let i = 0; i < pending.length; i++) {
-                const request = pending[i];
-                const entity = {
-                    id: request.seller_id,
-                    full_name: request.full_name,
-                    whatsapp_number: request.whatsapp_number
-                };
-
-                // Sequential but could be concurrent-in-batches if i % 3 == 0
-                await this._callPaydAndUpdate(request, entity, Number.parseFloat(request.amount), request.mpesa_number)
-                    .catch(err => logger.error(`[WithdrawalService] Retry failed for request ${request.id}:`, err));
-
-                await pool.query(
-                    `UPDATE withdrawal_requests
-                     SET retry_started_at = NULL,
-                         retry_worker_id = NULL,
-                         updated_at = NOW()
-                     WHERE id = $1
-                       AND retry_worker_id = $2
-                       AND api_call_pending = TRUE`,
-                    [request.id, workerId]
-                );
-
-                // Delay between every 3rd request to stay within rate limits
-                if ((i + 1) % 3 === 0 && (i + 1) < pending.length) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-        } catch (error) {
-            logger.error('[WithdrawalService] Error during pending API call retry:', error);
-        }
+        // WithdrawalRetryWorkerService owns retry_started_at/retry_worker_id leases with FOR UPDATE SKIP LOCKED.
+        return WithdrawalRetryWorkerService.retryPendingApiCalls(this);
     }
 
     /**

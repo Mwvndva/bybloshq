@@ -52,6 +52,11 @@ const OPTIONAL_ENV_VARS = [
     // (checked separately below with smarter logic)
     'COURIER_WHATSAPP_NUMBER',  // defaults to '0748137819'
     'DROPOFF_LOCATION',         // defaults to 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32'
+    'LOGISTICS_HUB_LABEL',      // defaults to 'Byblos CBD Hub'
+    'LOGISTICS_HUB_ADDRESS',    // defaults to DROPOFF_LOCATION
+    'LOGISTICS_HUB_LATITUDE',   // defaults to Nairobi CBD coordinates
+    'LOGISTICS_HUB_LONGITUDE',  // defaults to Nairobi CBD coordinates
+    'LOGISTICS_RATE_KES_PER_KM' // defaults to 40
 ];
 
 /**

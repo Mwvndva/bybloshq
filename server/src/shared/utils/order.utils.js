@@ -35,12 +35,17 @@ export async function normalizeOrderInput(req) {
         productId,
         productName,
         buyerLocation: rawBuyerLocation,
+        delivery: rawDelivery = {},
         metadata: rawMetadata = {},
         overrideContact = false
     } = body;
-    logger.info('[RAW-LOCATION-DEBUG] Extracted Data: ' + JSON.stringify({ rawBuyerLocation, metadata: rawMetadata }));
+    logger.info('[RAW-LOCATION-DEBUG] Extracted Data: ' + JSON.stringify({ rawBuyerLocation, delivery: rawDelivery, metadata: rawMetadata }));
 
     const metadata = safeJson(rawMetadata);
+    const rawDeliveryInput = rawDelivery && Object.keys(safeJson(rawDelivery)).length > 0
+        ? rawDelivery
+        : metadata.delivery;
+    const delivery = safeJson(rawDeliveryInput || {});
     const checkoutToken = req.headers['idempotency-key']
         || req.headers['x-checkout-token']
         || body.checkout_token
@@ -134,11 +139,20 @@ export async function normalizeOrderInput(req) {
         const candidates = [
             body.buyerLocation,
             body.buyer_location,
+            body.delivery?.buyerLocation,
+            body.delivery?.buyer_location,
+            body.delivery?.location,
             body.bookingDetails?.buyerLocation,
             body.metadata?.buyer_location,
             body.metadata?.buyerLocation,
+            body.metadata?.delivery?.buyerLocation,
+            body.metadata?.delivery?.buyer_location,
+            body.metadata?.delivery?.location,
             metadata.buyer_location,
             metadata.buyerLocation,
+            metadata.delivery?.buyerLocation,
+            metadata.delivery?.buyer_location,
+            metadata.delivery?.location,
             body.locationData, // Sometimes used by specific payment gateways
             body.customFields?.location
         ];
@@ -146,11 +160,20 @@ export async function normalizeOrderInput(req) {
         const sources = [
             'body.buyerLocation',
             'body.buyer_location',
+            'body.delivery.buyerLocation',
+            'body.delivery.buyer_location',
+            'body.delivery.location',
             'body.bookingDetails.buyerLocation',
             'body.metadata.buyer_location',
             'body.metadata.buyerLocation',
+            'body.metadata.delivery.buyerLocation',
+            'body.metadata.delivery.buyer_location',
+            'body.metadata.delivery.location',
             'metadata.buyer_location',
             'metadata.buyerLocation',
+            'metadata.delivery.buyerLocation',
+            'metadata.delivery.buyer_location',
+            'metadata.delivery.location',
             'body.locationData',
             'body.customFields.location'
         ];
@@ -266,6 +289,7 @@ export async function normalizeOrderInput(req) {
         },
         metadata: {
             ...metadata,
+            delivery,
             client_checkout_token: checkoutToken ? String(checkoutToken).trim().slice(0, 160) : null,
             product_id: service.id,
             product_name: service.title,

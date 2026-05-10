@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { format, isValid, parseISO } from 'date-fns';
 import { Order, OrderStatus } from '@/types/order';
 
@@ -20,7 +21,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
     if (value === undefined || isNaN(value)) return `${currency} 0.00`;
     return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
-import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download } from 'lucide-react';
+import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download, MapPin, CreditCard } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
@@ -28,6 +29,8 @@ import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 import { useSellerOrders } from './dashboard/hooks/useSellerOrders';
 import { sellerDashboardQueryKeys } from './dashboard/queryKeys';
+import LocationPicker from '../common/LocationPicker';
+import { OrderLogisticsTracking } from '../orders/OrderLogisticsTracking';
 
 export default function SellerOrdersSection() {
     const queryClient = useQueryClient();
@@ -42,6 +45,23 @@ export default function SellerOrdersSection() {
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [pickupOrder, setPickupOrder] = useState<Order | null>(null);
+    const [pickupPhone, setPickupPhone] = useState('');
+    const [pickupLocation, setPickupLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
+        address: '',
+        lat: null,
+        lng: null
+    });
+    const [pickupQuote, setPickupQuote] = useState<{
+        feeAmount: number;
+        distanceKm: number;
+        chargeableDistanceKm: number;
+        rateKesPerKm: number;
+        currency: string;
+    } | null>(null);
+    const [pickupQuoteError, setPickupQuoteError] = useState('');
+    const [isPickupQuoteLoading, setIsPickupQuoteLoading] = useState(false);
+    const [isRequestingPickup, setIsRequestingPickup] = useState(false);
 
     const { toast } = useToast();
 
@@ -51,6 +71,47 @@ export default function SellerOrdersSection() {
             queryClient.invalidateQueries({ queryKey: sellerDashboardQueryKeys.analytics })
         ]);
     }, [queryClient]);
+
+    useEffect(() => {
+        if (!pickupOrder) {
+            setPickupQuote(null);
+            setPickupQuoteError('');
+            setIsPickupQuoteLoading(false);
+            return;
+        }
+
+        if (pickupLocation.lat === null || pickupLocation.lng === null) {
+            setPickupQuote(null);
+            setPickupQuoteError('');
+            return;
+        }
+
+        const timer = window.setTimeout(async () => {
+            setIsPickupQuoteLoading(true);
+            setPickupQuoteError('');
+            try {
+                const quote = await sellerApi.quotePickup({
+                    address: pickupLocation.address,
+                    latitude: pickupLocation.lat as number,
+                    longitude: pickupLocation.lng as number
+                });
+                setPickupQuote({
+                    feeAmount: Number(quote.feeAmount || 0),
+                    distanceKm: Number(quote.distanceKm || 0),
+                    chargeableDistanceKm: Number(quote.chargeableDistanceKm || 0),
+                    rateKesPerKm: Number(quote.rateKesPerKm || 40),
+                    currency: quote.currency || 'KES'
+                });
+            } catch (error: any) {
+                setPickupQuote(null);
+                setPickupQuoteError(error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Could not calculate pickup fee');
+            } finally {
+                setIsPickupQuoteLoading(false);
+            }
+        }, 400);
+
+        return () => window.clearTimeout(timer);
+    }, [pickupOrder, pickupLocation.address, pickupLocation.lat, pickupLocation.lng]);
 
     // Filter orders based on search query
     const filteredOrders = useMemo(() => {
@@ -68,6 +129,81 @@ export default function SellerOrdersSection() {
     const handleReadyForPickupClick = (orderId: string) => {
         setSelectedOrderId(orderId);
         setShowPickupDialog(true);
+    };
+
+    const openRequestPickupDialog = (order: Order) => {
+        setPickupOrder(order);
+        setPickupPhone('');
+        setPickupLocation({ address: '', lat: null, lng: null });
+        setPickupQuote(null);
+        setPickupQuoteError('');
+    };
+
+    const closeRequestPickupDialog = () => {
+        if (isRequestingPickup) return;
+        setPickupOrder(null);
+        setPickupPhone('');
+        setPickupLocation({ address: '', lat: null, lng: null });
+        setPickupQuote(null);
+        setPickupQuoteError('');
+    };
+
+    const requestPickup = async (event: FormEvent) => {
+        event.preventDefault();
+        if (!pickupOrder) return;
+
+        const phonePattern = /^(\+?254|0)[17]\d{8}$/;
+        if (!phonePattern.test(pickupPhone.trim())) {
+            setPickupQuoteError('Enter a valid M-Pesa number, for example 0712345678.');
+            return;
+        }
+
+        if (!pickupLocation.address.trim() || pickupLocation.lat === null || pickupLocation.lng === null) {
+            setPickupQuoteError('Pin the pickup location and enter the full pickup address.');
+            return;
+        }
+
+        if (isPickupQuoteLoading) {
+            setPickupQuoteError('Please wait while the pickup fee is calculated.');
+            return;
+        }
+
+        if (!pickupQuote) {
+            setPickupQuoteError(pickupQuoteError || 'Pickup fee could not be calculated.');
+            return;
+        }
+
+        await runWithLock(async () => {
+            try {
+                setIsRequestingPickup(true);
+                const idempotencyKey = `seller-pickup:${pickupOrder.id}:${Date.now()}`;
+                await sellerApi.requestPickup(pickupOrder.id, {
+                    mobilePayment: pickupPhone.trim(),
+                    pickupLocation: {
+                        address: pickupLocation.address.trim(),
+                        latitude: pickupLocation.lat as number,
+                        longitude: pickupLocation.lng as number
+                    },
+                    idempotencyKey
+                });
+                await refreshOrders();
+                toast({
+                    title: 'Pickup payment sent',
+                    description: 'Check your phone to pay the pickup fee. Pickup activates after payment succeeds.'
+                });
+                setIsRequestingPickup(false);
+                closeRequestPickupDialog();
+            } catch (error: any) {
+                setPickupQuoteError(error?.response?.data?.message || error?.message || 'Failed to request pickup');
+                toast({
+                    title: 'Pickup request failed',
+                    description: error?.response?.data?.message || error?.message || 'Please try again.',
+                    variant: 'destructive'
+                });
+            } finally {
+                setIsRequestingPickup(false);
+            }
+        });
     };
 
     const markAsReadyForPickup = async () => {
@@ -320,6 +456,11 @@ export default function SellerOrdersSection() {
                         filteredOrders.map((order) => {
                             const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                             const isDigital = order.items?.some(i => i.productType === 'digital');
+                            const pickupTracking = order.logistics?.pickupLeg;
+                            const canRequestPickup = !isService
+                                && !isDigital
+                                && ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')
+                                && !pickupTracking;
 
                             let cardClasses = "transition-all duration-300 bg-black border shadow-[0_12px_32px_rgba(0,0,0,0.35)] hover:border-yellow-400/40 ";
                             let itemClasses = "text-xs sm:text-sm text-white rounded-lg px-3 py-2 border ";
@@ -413,6 +554,13 @@ export default function SellerOrdersSection() {
                                                     );
                                                 })()}
 
+                                                <OrderLogisticsTracking
+                                                    order={order}
+                                                    view="seller"
+                                                    isPhysical={!isService && !isDigital}
+                                                    formatCurrency={(value, currency) => formatCurrency(value, currency || order.currency || 'KSH')}
+                                                />
+
                                                 {/* Products Section */}
                                                 <div>
                                                     <h4 className="text-sm sm:text-base font-semibold text-white mb-3">Products</h4>
@@ -495,6 +643,27 @@ export default function SellerOrdersSection() {
 
                                                 {/* Action Buttons */}
                                                 <div className="w-full">
+                                                    {canRequestPickup && (
+                                                        <div className="mb-2 space-y-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                className="w-full justify-center bg-yellow-400 text-black hover:bg-yellow-300 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                                onClick={() => openRequestPickupDialog(order)}
+                                                                disabled={isUpdating || isRequestingPickup}
+                                                            >
+                                                                <Truck className="h-3 w-3 mr-1.5" />
+                                                                Request pickup
+                                                            </Button>
+                                                            <p className="text-[10px] leading-relaxed text-white/60">
+                                                                Optional. Without pickup, drop the package at the hub within 24 hours.
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    {pickupTracking?.status === 'payment_pending' && (
+                                                        <div className="mb-2 rounded-lg border border-yellow-400/25 bg-yellow-400/10 px-3 py-2 text-[10px] font-semibold text-yellow-100">
+                                                            Pickup payment pending. Check your phone to complete it.
+                                                        </div>
+                                                    )}
                                                     {order.status === 'PENDING' && (
                                                         <div className="space-y-1.5">
                                                             <Button
@@ -576,6 +745,126 @@ export default function SellerOrdersSection() {
                 </div>
 
             </div >
+
+            {/* Seller Pickup Payment Dialog */}
+            <Dialog open={!!pickupOrder} onOpenChange={(open) => !open && closeRequestPickupDialog()}>
+                <DialogContent className="flex max-h-[88dvh] flex-col overflow-hidden sm:max-w-2xl bg-black border border-white/15 text-white">
+                    <DialogHeader className="shrink-0">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
+                            <div className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center">
+                                <Truck className="h-4 w-4" />
+                            </div>
+                            Request Mzigo Ego pickup
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-white/75">
+                            Pickup is optional. If you do not request pickup, drop the package at the hub within 24 hours.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={requestPickup} className="min-h-0 flex-1 overflow-y-auto pr-1">
+                        <div className="space-y-4 py-2">
+                            {pickupOrder && (
+                                <div className="grid grid-cols-1 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs sm:grid-cols-3">
+                                    <div>
+                                        <p className="text-white/60">Order</p>
+                                        <p className="font-semibold text-white">#{pickupOrder.orderNumber}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-white/60">Package</p>
+                                        <p className="font-semibold text-white">{pickupOrder.items?.[0]?.name || 'Physical product'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-white/60">Pickup fee</p>
+                                        <p className="font-semibold text-yellow-200">
+                                            {isPickupQuoteLoading ? 'Calculating...' : formatCurrency(pickupQuote?.feeAmount || 0, pickupQuote?.currency || 'KSH')}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                                <LocationPicker
+                                    label="Pickup Location"
+                                    detailedLabel="Full Pickup Address"
+                                    placeholder="Search pickup location..."
+                                    autoPopulate
+                                    onLocationChange={(address, coordinates) => {
+                                        setPickupLocation({
+                                            address,
+                                            lat: coordinates?.lat ?? null,
+                                            lng: coordinates?.lng ?? null
+                                        });
+                                    }}
+                                    className="[&_label]:!text-white [&_p]:!text-white/70"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_220px]">
+                                <div className="space-y-2">
+                                    <Label htmlFor="pickup-phone" className="text-xs font-semibold text-white">M-Pesa number for pickup fee</Label>
+                                    <Input
+                                        id="pickup-phone"
+                                        type="tel"
+                                        value={pickupPhone}
+                                        onChange={(event) => setPickupPhone(event.target.value)}
+                                        placeholder="0712345678"
+                                        className="bg-white text-slate-950 placeholder:text-slate-400"
+                                        disabled={isRequestingPickup}
+                                    />
+                                </div>
+                                <div className="rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-3 text-xs">
+                                    <div className="flex items-center gap-2 text-yellow-100">
+                                        <CreditCard className="h-4 w-4" />
+                                        <span className="font-semibold">Seller pays pickup from CBD hub.</span>
+                                    </div>
+                                    {pickupQuote && (
+                                        <p className="mt-2 text-white/75">
+                                            {pickupQuote.chargeableDistanceKm} km billed at KSh {pickupQuote.rateKesPerKm}/km.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/75">
+                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-yellow-300" />
+                                <span>After the pickup fee is paid, the pickup leg becomes visible to Mzigo Ego. If the buyer also paid for door delivery, both legs stay grouped under the same package.</span>
+                            </div>
+
+                            {pickupQuoteError && (
+                                <p className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-100">
+                                    {pickupQuoteError}
+                                </p>
+                            )}
+                        </div>
+
+                        <DialogFooter className="sticky bottom-0 mt-3 gap-2 border-t border-white/10 bg-black py-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={closeRequestPickupDialog}
+                                disabled={isRequestingPickup}
+                                className="bg-transparent border-white/20 text-white hover:bg-white/10"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isRequestingPickup || isPickupQuoteLoading}
+                                className="bg-yellow-400 text-black hover:bg-yellow-300 font-semibold"
+                            >
+                                {isRequestingPickup ? (
+                                    <>
+                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                        Sending STK...
+                                    </>
+                                ) : (
+                                    'Pay pickup fee'
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Ready for Pickup Confirmation Dialog */}
             < Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog} >

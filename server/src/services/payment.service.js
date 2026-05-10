@@ -1,100 +1,108 @@
-import axios from 'axios';
-import https from 'https';
-import fs from 'node:fs';
 import crypto from 'node:crypto';
-import dns from 'node:dns';
 import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
 import { PaymentStatus } from '../shared/constants/enums.js';
 import OrderService from './order.service.js';
-import { PaydError, PaydErrorCodes } from '../shared/utils/PaydError.js';
-import Buyer from '../models/buyer.model.js';
-import cacheService from './cache.service.js';
-import FulfillmentQueueService from './fulfillmentQueue.service.js';
+import { PaydErrorCodes } from '../shared/utils/PaydError.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
-import Order from '../models/order.model.js';
-import { normalizeProviderReference } from '../shared/utils/providerReference.js';
+import { normalizeProviderPaymentStatus } from '../shared/utils/paymentStatusNormalizer.js';
 import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import PaydProviderClient from '../providers/PaydProviderClient.js';
+import LogisticsQuoteService from './logisticsQuote.service.js';
+import LogisticsRequestService from './logisticsRequest.service.js';
+
+const roundMoney = (amount) => Math.round(Number(amount) * 100) / 100;
+
+const isDoorDeliveryRequested = (delivery = {}, metadata = {}) => {
+    return delivery.doorDelivery === true
+        || delivery.door_delivery === true
+        || metadata.doorDelivery === true
+        || metadata.door_delivery === true
+        || metadata.delivery_mode === 'DOOR_DELIVERY'
+        || delivery.deliveryMode === 'DOOR_DELIVERY'
+        || delivery.delivery_mode === 'DOOR_DELIVERY';
+};
+
+const extractDeliveryLocation = (delivery = {}, fallbackLocation = {}) => {
+    const nested = delivery.buyerDeliveryLocation
+        || delivery.buyer_delivery_location
+        || delivery.buyerLocation
+        || delivery.buyer_location
+        || delivery.location
+        || {};
+
+    return {
+        address: nested.address
+            || nested.fullAddress
+            || nested.full_address
+            || delivery.address
+            || delivery.fullAddress
+            || delivery.full_address
+            || fallbackLocation.address
+            || null,
+        latitude: nested.latitude
+            ?? nested.lat
+            ?? delivery.latitude
+            ?? delivery.lat
+            ?? fallbackLocation.lat
+            ?? fallbackLocation.latitude
+            ?? null,
+        longitude: nested.longitude
+            ?? nested.lng
+            ?? delivery.longitude
+            ?? delivery.lng
+            ?? fallbackLocation.lng
+            ?? fallbackLocation.longitude
+            ?? null
+    };
+};
+
+const assertDoorDeliveryLocation = (location = {}) => {
+    if (typeof location.address !== 'string' || !location.address.trim()) {
+        throw new Error('Door delivery address is required.');
+    }
+
+    if (location.latitude === null || location.latitude === undefined || location.longitude === null || location.longitude === undefined) {
+        throw new Error('Door delivery coordinates are required.');
+    }
+};
+
+const isSellerPickupFeePayment = (metadata = {}) => {
+    return metadata.payment_purpose === 'seller_pickup_fee'
+        || metadata.logistics_payment_type === 'seller_pickup_fee';
+};
+
+const extractPickupLocation = (location = {}) => ({
+    address: location.address || location.fullAddress || location.full_address || null,
+    latitude: location.latitude ?? location.lat ?? null,
+    longitude: location.longitude ?? location.lng ?? null
+});
+
+const assertPickupLocation = (location = {}) => {
+    if (typeof location.address !== 'string' || !location.address.trim()) {
+        throw new Error('Pickup address is required.');
+    }
+
+    if (location.latitude === null || location.latitude === undefined || location.longitude === null || location.longitude === undefined) {
+        throw new Error('Pickup coordinates are required.');
+    }
+};
+
+const COMPLETED_PAYMENT_STATUSES = new Set(['completed', 'success', 'paid']);
+const ACTIVE_PICKUP_STATUSES = new Set(['pending', 'assigned', 'started', 'picked_up', 'dropped_at_hub', 'out_for_delivery', 'delivered']);
 
 export class PaymentService {
     constructor() {
-        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.payd.money/api/v2';
-        this.username = process.env.PAYD_USERNAME;
-        this.password = process.env.PAYD_PASSWORD;
+        this.paydProviderClient = new PaydProviderClient();
+        this.baseUrl = this.paydProviderClient.baseUrl;
+        this.username = this.paydProviderClient.username;
+        this.password = this.paydProviderClient.password;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
         this.channelId = process.env.PAYD_CHANNEL_ID;
-        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx';
-
-        // Validate required configs
-        if (!this.username || !this.password) {
-            logger.error('[PAYD-INIT] ERROR: PAYD_USERNAME and PAYD_PASSWORD must be set');
-        }
-
-        if (!this.baseUrl.startsWith('https://')) {
-            logger.error('[PAYD-INIT] ERROR: PAYD_BASE_URL must use HTTPS');
-        }
-
-        // Set DNS cache for reliability in environments with flaky local DNS
-        try {
-            dns.setDefaultResultOrder('ipv4first');
-            // Using configurable DNS servers (SonarQube compliance)
-            const dnsServers = process.env.DNS_SERVERS ? process.env.DNS_SERVERS.split(',') : ['8.8.8.8', '8.8.4.4', '1.1.1.1'];
-            dns.setServers(dnsServers);
-        } catch (e) {
-            logger.warn('[PAYD-INIT] DNS cache setup failed:', e.message);
-        }
-
-        logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl}`);
-
-        // ✅ FIX 1: Create persistent HTTPS agent with connection pooling
-        this.httpsAgent = new https.Agent({
-            keepAlive: true,              // ✅ Reuse connections
-            keepAliveMsecs: 30000,        // ✅ Keep alive for 30s
-            maxSockets: 50,               // ✅ Max concurrent connections
-            maxFreeSockets: 10,           // ✅ Keep 10 idle sockets ready
-            timeout: 25000,               // ✅ MUST be less than axios timeout (30s)
-            scheduling: 'lifo',           // ✅ Reuse most recent socket
-            rejectUnauthorized: true,      // ✅ Enforce SSL verification
-            ca: process.env.PAYD_CA_CERT_PATH ? fs.readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
-        });
-
-        // ✅ FIX 3a: Destroy sockets that have been idle for too long (prevent stale connection reuse)
-        this.httpsAgent.on('free', (socket) => {
-            if (socket.destroyed) return;
-            const age = Date.now() - (socket._creationTime || Date.now());
-            if (age > 60000) {
-                logger.debug('[HTTPS-AGENT] Destroying stale socket (age > 60s)');
-                socket.destroy();
-            }
-        });
-
-        // ✅ FIX 3b: Tag each socket with its creation time
-        this.httpsAgent.on('connect', (socket) => {
-            socket._creationTime = Date.now();
-        });
-
-        // Monitor agent health
-        this.httpsAgent.on('error', (err) => {
-            logger.error('[HTTPS-AGENT] Agent error:', err);
-        });
-
-        logger.info('[HTTPS-AGENT] Configured with connection pooling', {
-            keepAlive: true,
-            maxSockets: 50,
-            timeout: 25000
-        });
-
-        // Create axios instance with optimized config (for legacy methods or GET calls)
-        this.client = axios.create({
-            baseURL: this.baseUrl,
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'Byblos/1.1 (Axios)',
-            },
-            timeout: 30000,               // ✅ Reduced from 60000 to improve UX
-            httpsAgent: this.httpsAgent
-        });
+        this.payloadUsername = this.paydProviderClient.payloadUsername;
+        this.httpsAgent = this.paydProviderClient.httpsAgent;
+        this.client = this.paydProviderClient.client;
     }
 
     async createPaymentProviderAttempt(client, {
@@ -313,12 +321,18 @@ export class PaymentService {
             }
 
             const releaseResult = await releaseOrderReservations(client, orderId);
+            const cancelledLogisticsLegs = await LogisticsRequestService.cancelPaymentPendingLegsForPaymentFailure(client, {
+                orderId,
+                paymentId,
+                reason
+            });
             const failureMetadata = {
                 payment_initiation_failure: {
                     reason,
                     providerPayload,
                     released_inventory: releaseResult.releasedInventory,
                     released_slots: releaseResult.releasedSlots,
+                    cancelled_logistics_legs: cancelledLogisticsLegs,
                     failed_at: new Date().toISOString()
                 }
             };
@@ -373,105 +387,22 @@ export class PaymentService {
      * Helper to retry requests with exponential backoff
      */
     async _retryRequest(fn, retries = 3, delay = 1000) {
-        let lastError;
-
-        for (let attempt = 1; attempt <= retries + 1; attempt++) {
-            try {
-                if (attempt > 1) {
-                    logger.info(`[RETRY] Attempt ${attempt}/${retries + 1}`);
-                }
-                const result = await fn();
-
-                if (attempt > 1) {
-                    logger.info(`[RETRY] Succeeded on attempt ${attempt}`);
-                }
-
-                return result;
-            } catch (error) {
-                lastError = error;
-
-                // Determine if we should retry
-                const shouldRetry = this._shouldRetry(error, attempt, retries);
-
-                if (!shouldRetry) {
-                    logger.error(`[RETRY] Not retrying (attempt ${attempt}/${retries + 1})`, {
-                        reason: this._getRetryReason(error)
-                    });
-                    throw error;
-                }
-
-                if (attempt <= retries) {
-                    const backoffDelay = delay * Math.pow(2, attempt - 1);
-                    logger.warn(`[RETRY] Attempt ${attempt} failed. Retrying in ${backoffDelay}ms...`, {
-                        error: error.code || error.message,
-                        remainingAttempts: retries - attempt + 1
-                    });
-
-                    await new Promise(resolve => setTimeout(resolve, backoffDelay));
-                }
-            }
-        }
-
-        throw lastError;
+        return this.paydProviderClient._retryRequest(fn, retries, delay);
     }
 
     _shouldRetry(error, attempt, maxRetries) {
-        if (attempt > maxRetries) {
-            return false;
-        }
-
-        // Retry on network errors
-        const networkErrors = [
-            'ECONNRESET',
-            'ECONNREFUSED',
-            'ETIMEDOUT',
-            'ENOTFOUND',
-            'EAI_AGAIN',
-            'EPIPE',
-            'ECONNABORTED',
-            'socket hang up',
-            'Connection timeout',
-            'Response timeout',
-            'Socket timeout',
-            'Socket closed with error'
-        ];
-
-        if (networkErrors.some(err =>
-            error.code === err ||
-            (error.message && error.message.includes(err))
-        )) {
-            return true;
-        }
-
-        // Retry on 5xx server errors
-        if (error.response && error.response.status >= 500) {
-            return true;
-        }
-
-        // Don't retry on client errors (4xx)
-        if (error.response && error.response.status >= 400 && error.response.status < 500) {
-            return false;
-        }
-
-        return false;
+        return this.paydProviderClient._shouldRetry(error, attempt, maxRetries);
     }
 
     _getRetryReason(error) {
-        if (error.response && error.response.status >= 400 && error.response.status < 500) {
-            return 'Client error (4xx) - not retryable';
-        }
-        return 'Unknown or terminal error type';
+        return this.paydProviderClient._getRetryReason(error);
     }
 
     /**
      * Get Authorization Header for Basic Auth
      */
     getAuthHeader() {
-        if (!this.username || !this.password) {
-            throw new Error('Payd credentials not configured');
-        }
-        const authString = `${this.username}:${this.password}`;
-        return `Basic ${Buffer.from(authString).toString('base64')}`;
+        return this.paydProviderClient.getAuthHeader();
     }
 
     /**
@@ -492,181 +423,17 @@ export class PaymentService {
      * @returns {Promise<Object>}
      */
     async initiatePayment(paymentData) {
-        const startTime = Date.now();
-
-        try {
-            const {
-                email,
-                amount,
-                invoice_id,
-                phone,
-                narration,
-                narrative,
-                first_name,
-                last_name,
-                api_ref,
-                callback_url
-            } = paymentData;
-            const orderId = paymentData.metadata?.order_id || paymentData.order_id;
-
-            // 0a. Transition Order to PAYMENT_PENDING
-            if (orderId) {
-                const { rows: orders } = await pool.query('SELECT status FROM product_orders WHERE id = $1', [orderId]);
-                if (orders.length > 0) {
-                    assertValidTransition(orders[0].status, 'PAYMENT_PENDING', orderId);
-                    await pool.query('UPDATE product_orders SET status = $1, updated_at = NOW() WHERE id = $2', ['PAYMENT_PENDING', orderId]);
-                    logger.info(`[PAYMENT-INIT] Order ${orderId} transitioned to PAYMENT_PENDING`);
-                }
+        const orderId = paymentData.metadata?.order_id || paymentData.order_id;
+        if (orderId && !isSellerPickupFeePayment(paymentData.metadata || {})) {
+            const { rows: orders } = await pool.query('SELECT status FROM product_orders WHERE id = $1', [orderId]);
+            if (orders.length > 0) {
+                assertValidTransition(orders[0].status, 'PAYMENT_PENDING', orderId);
+                await pool.query('UPDATE product_orders SET status = $1, updated_at = NOW() WHERE id = $2', ['PAYMENT_PENDING', orderId]);
+                logger.info('[PAYMENT-INIT] Order ' + orderId + ' transitioned to PAYMENT_PENDING');
             }
-
-            // ============================================================
-            // STEP 0: VALIDATE AMOUNT (Minimum 10 KES per documentation)
-            // ============================================================
-            const numericAmount = Number.parseFloat(amount);
-            if (numericAmount < 10) {
-                throw new PaydError(
-                    `Minimum transaction amount is 10 KES. Requested: ${numericAmount} KES.`,
-                    PaydErrorCodes.INVALID_AMOUNT,
-                    400
-                );
-            }
-
-            // Validate credentials
-            if (!this.username || !this.password) {
-                throw new PaydError('Payd credentials not configured', PaydErrorCodes.CONFIG_ERROR);
-            }
-
-            // ============================================================
-            // STEP 1: CHECK PLATFORM BALANCE (Optional, non-blocking)
-            // checkBalance() already returns null on failure — never throws.
-            // ============================================================
-            const balance = await this.checkBalance();
-            if (balance) {
-                logger.info('[PAYD-PAYIN] Platform balance check', {
-                    available: balance.available_balance,
-                    required: amount
-                });
-                if (Number.parseFloat(balance.available_balance) < Number.parseFloat(amount) * 1.1) {
-                    logger.warn('[PAYD-PAYIN] Low platform balance', {
-                        available: balance.available_balance,
-                        required: amount
-                    });
-                }
-            }
-
-            // ============================================================
-            // STEP 2: NORMALIZE PHONE NUMBER
-            // ============================================================
-            const normalizedPhone = this.normalizePhoneForPayment(phone);
-
-            // ============================================================
-            // STEP 3: BUILD PAYMENT REQUEST
-            // ============================================================
-            const callbackUrl = callback_url || process.env.PAYD_CALLBACK_URL ||
-                (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` :
-                    "https://bybloshq.space/api/payments/webhook/payd");
-
-            const payload = {
-                username: this.payloadUsername, // PIN-DOC-01: Must use the account username (e.g., mwxndx)
-                channel: "MPESA",
-                amount: Number.parseFloat(amount),
-                phone_number: normalizedPhone,
-                narration: narration || narrative || `Payment for ${invoice_id}`,
-                currency: "KES",
-                api_ref,
-                callback_url: callbackUrl,
-            };
-
-            logger.info('[PAYD-PAYIN] Initiating payment', {
-                invoice_id,
-                amount: payload.amount,
-                phone: normalizedPhone,
-                endpoint: `${this.baseUrl}/payments`
-            });
-
-            // ============================================================
-            // STEP 4: MAKE API REQUEST
-            // ============================================================
-            // C-1b: Wrap external API call in try/catch to prevent pool leaks
-            let response;
-            try {
-                response = await this._retryRequest(async () => {
-                    return await this.client.post('/payments', payload, {
-                        headers: {
-                            'Authorization': this.getAuthHeader(),
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'Connection': 'keep-alive',
-                        },
-                        timeout: 30000, // Explicitly set for initiation
-                    });
-                }, 1, 2000); // ✅ Reduced from 3 retries to prevent double STK push
-            } catch (error) {
-                logger.error('[PAYD-PAYIN] API Request Failed', {
-                    error: error.message,
-                    code: error.response?.status,
-                    data: error.response?.data
-                });
-                throw error;
-            }
-
-            const duration = Date.now() - startTime;
-
-            // ============================================================
-            // STEP 5: PARSE RESPONSE
-            // ============================================================
-            // Payd v2 returns reference at root level, not nested
-            const resData = response.data
-            const reference = resData.transaction_reference
-
-            if (!reference) {
-                logger.error('[PAYD-PAYIN] No transaction_reference in response', { invoice_id, raw: resData })
-                throw new PaydError(
-                    'Payd did not return a transaction_reference. Payment request may still be processing — check webhook.',
-                    PaydErrorCodes.TRANSACTION_FAILED,
-                    500
-                )
-            }
-
-            logger.info('[PAYD-PAYIN] Payment initiated successfully', {
-                duration: `${duration}ms`,
-                reference,
-                status: response.status,
-                invoice_id
-            });
-
-            return {
-                success: true,
-                reference,
-                transaction_id: reference,
-                status: 'pending',
-                message: 'STK push sent to customer phone',
-                original_response: response.data
-            };
-
-        } catch (error) {
-            const duration = Date.now() - startTime;
-
-            // ✅ FIX 4: Detailed diagnostic logging for payment orientation
-            const errorDetail = {
-                duration: `${duration}ms`,
-                invoice_id: paymentData.invoice_id,
-                errorCode: error.code,
-                errorMessage: error.message,
-                isAxiosError: !!error.isAxiosError,
-                hasResponse: !!error.response,
-                responseStatus: error.response?.status,
-                responseData: error.response?.data ? JSON.stringify(error.response.data) : null,
-                isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
-                isConnRefused: error.code === 'ECONNREFUSED',
-                isConnReset: error.code === 'ECONNRESET',
-                isDNSFail: error.code === 'ENOTFOUND',
-            };
-
-            logger.error('[PAYD-PAYIN] Payment initiation failed — detailed diagnostics:', errorDetail);
-
-            throw this._handlePaydError(error);
         }
+
+        return this.paydProviderClient.initiatePayment(paymentData);
     }
 
     /**
@@ -677,80 +444,21 @@ export class PaymentService {
      * @returns {string} e.g., "254712345678" or "0712345678"
      */
     normalizePhoneForPayment(phone) {
-        if (!phone) throw new PaydError('Phone number is required', PaydErrorCodes.INVALID_PHONE, 400)
-        let digits = phone.toString().replace(/\D/g, '')
-
-        // Handle +254XXXXXXXXX or 254XXXXXXXXX → 0XXXXXXXXX
-        if (digits.startsWith('254') && digits.length === 12) {
-            digits = '0' + digits.substring(3)
-        }
-        // Handle 9-digit bare number → 0XXXXXXXXX
-        else if (digits.length === 9) {
-            digits = '0' + digits
-        }
-        // Handle 0XXXXXXXXX — already correct
-        else if (digits.startsWith('0') && digits.length === 10) {
-            // good
-        }
-        else {
-            throw new PaydError(
-                `Invalid phone number: "${phone}". Must be a valid Kenyan number (e.g. 0712345678)`,
-                PaydErrorCodes.INVALID_PHONE,
-                400
-            )
-        }
-
-        // Phone number must be exactly 10 digits starting with 0 (e.g. 07XXXXXXXX)
-        if (!/^0\d{9}$/.test(digits)) {
-            throw new PaydError(
-                `Invalid phone number format: "${phone}". Must be 10 digits starting with 0 (e.g. 0712345678)`,
-                PaydErrorCodes.INVALID_PHONE,
-                400
-            )
-        }
-
-        return digits
+        return this.paydProviderClient.normalizePhoneForPayment(phone);
     }
 
     /**
      * Monitor HTTPS agent health
      */
     getAgentStatus() {
-        return {
-            maxSockets: this.httpsAgent.maxSockets,
-            maxFreeSockets: this.httpsAgent.maxFreeSockets,
-            sockets: Object.keys(this.httpsAgent.sockets || {}).length,
-            freeSockets: Object.keys(this.httpsAgent.freeSockets || {}).length,
-            requests: Object.keys(this.httpsAgent.requests || {}).length
-        };
+        return this.paydProviderClient.getAgentStatus();
     }
 
     /**
      * Reset HTTPS agent (use if connections are stale)
      */
     resetAgent() {
-        logger.warn('[HTTPS-AGENT] Resetting agent due to connection issues');
-
-        // Destroy all sockets
-        this.httpsAgent.destroy();
-
-        // Create new agent with same stable settings
-        this.httpsAgent = new https.Agent({
-            keepAlive: true,
-            keepAliveMsecs: 30000,
-            maxSockets: 50,
-            maxFreeSockets: 10,
-            timeout: 90000,
-            scheduling: 'lifo',
-            family: 4,        // ✅ FORCE IPv4
-            rejectUnauthorized: true,
-            ca: process.env.PAYD_CA_CERT_PATH ? fs.readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
-        });
-
-        // Re-mount to axios client too
-        this.client.defaults.httpsAgent = this.httpsAgent;
-
-        logger.info('[HTTPS-AGENT] Agent reset complete');
+        return this.paydProviderClient.resetAgent();
     }
 
     /**
@@ -804,14 +512,7 @@ export class PaymentService {
      * @private
      */
     _mapPaydStatus(providerData) {
-        const resultCode = Number(providerData.result_code);
-        if (providerData.status === 'SUCCESS' || resultCode === 200 || resultCode === 0) {
-            return 'success';
-        }
-        if (providerData.status === 'FAILED' || providerData.status === 'ERROR') {
-            return 'failed';
-        }
-        return 'pending';
+        return normalizeProviderPaymentStatus(providerData);
     }
 
     async _handleDownstreamOrderAction() {
@@ -908,52 +609,7 @@ export class PaymentService {
      * @returns {Promise<Object>}
      */
     async checkTransactionStatus(transactionId) {
-        try {
-            logger.info('[PAYD-STATUS] Checking transaction status', { transaction_id: transactionId });
-
-            // Using v2 payments endpoint (consistent with cron)
-            const response = await this.client.get(`/payments/${transactionId}`, {
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Accept': 'application/json'
-                }
-            });
-
-            const data = response.data;
-            // Payd v2 sometimes nests details, sometimes returns at root
-            const details = data.data || data;
-
-            logger.info('[PAYD-STATUS] Status retrieved', {
-                transaction_id: transactionId,
-                status: details.status || data.status,
-                amount: details.amount || data.amount
-            });
-
-            let status = (details.status || data.status || 'pending').toLowerCase();
-
-            // Normalize status strings from Payd
-            if (status === 'processed' || status === 'paid') status = 'completed';
-            if (status === 'fail') status = 'failed';
-
-            return {
-                success: true,
-                transaction_id: transactionId,
-                status,
-                amount: Number.parseFloat(data.amount || 0),
-                phone_number: details.payer || details.recipient,
-                narration: details.reason,
-                created_at: data.created_at,
-                raw_response: data
-            };
-
-        } catch (error) {
-            logger.error('[PAYD-STATUS] Status check failed', {
-                transaction_id: transactionId,
-                error: this._extractErrorDetails(error)
-            });
-
-            throw this._handlePaydError(error);
-        }
+        return this.paydProviderClient.checkTransactionStatus(transactionId);
     }
 
     /**
@@ -967,72 +623,7 @@ export class PaymentService {
      * @returns {Promise<Object>}
      */
     async pollTransactionStatus(transactionId, options = {}) {
-        const {
-            maxAttempts = 60, // 5 minutes max (60 * 5s)
-            intervalMs = 5000,
-            finalStatuses = ['success', 'failed', 'cancelled', 'expired']
-        } = options;
-
-        logger.info('[PAYD-POLL] Starting transaction status polling', {
-            transaction_id: transactionId,
-            maxAttempts,
-            intervalMs
-        });
-
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                const status = await this.checkTransactionStatus(transactionId);
-
-                logger.info('[PAYD-POLL] Poll attempt', {
-                    attempt,
-                    status: status.status,
-                    transaction_id: transactionId
-                });
-
-                // Check if status is final
-                if (finalStatuses.includes(status.status.toLowerCase())) {
-                    logger.info('[PAYD-POLL] Final status reached', {
-                        status: status.status,
-                        attempts: attempt
-                    });
-                    return status;
-                }
-
-                // Wait before next poll
-                if (attempt < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, intervalMs));
-                }
-
-            } catch (error) {
-                logger.error('[PAYD-POLL] Poll attempt failed', {
-                    attempt,
-                    transaction_id: transactionId,
-                    error: error.message
-                });
-
-                // Don't retry if it's a 404 (transaction not found)
-                if (error.statusCode === 404) {
-                    throw error;
-                }
-
-                // Continue polling for other errors
-                if (attempt < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, intervalMs));
-                }
-            }
-        }
-
-        // Timeout reached
-        logger.warn('[PAYD-POLL] Polling timeout', {
-            transaction_id: transactionId,
-            attempts: maxAttempts
-        });
-
-        return {
-            success: false,
-            status: 'timeout',
-            message: `Transaction status polling timed out after ${maxAttempts} attempts`
-        };
+        return this.paydProviderClient.pollTransactionStatus(transactionId, options);
     }
 
     /**
@@ -1045,44 +636,7 @@ export class PaymentService {
      * @returns {Promise<Object>}
      */
     async checkBalance() {
-        try {
-            logger.info('[PAYD-BALANCE] Checking platform balance');
-
-            // Use a short 5-second timeout so a slow balance API never blocks payment initiation.
-            const response = await this.client.get(`/accounts/${this.username}/all_balances`, {
-                baseURL: 'https://api.payd.money/api/v1',
-                timeout: 5000,
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Accept': 'application/json'
-                }
-            });
-
-            const data = response.data;
-            const fiat = data.fiat_balance || {};
-
-            logger.info('[PAYD-BALANCE] Balance retrieved', {
-                available: fiat.balance,
-                currency: fiat.currency
-            });
-
-            return {
-                success: true,
-                available_balance: fiat.balance,
-                ledger_balance: fiat.balance, // Unified in v1
-                currency: fiat.currency || 'KES',
-                last_updated: new Date().toISOString(),
-                raw_response: data
-            };
-
-        } catch (error) {
-            // Balance check is non-critical — log the error but return null instead of
-            // rethrowing so callers (initiatePayment) can safely skip the check.
-            logger.warn('[PAYD-BALANCE] Balance check failed (non-critical, skipping)', {
-                error: error.message || error.code
-            });
-            return null;
-        }
+        return this.paydProviderClient.checkBalance();
     }
 
     /**
@@ -1093,16 +647,7 @@ export class PaymentService {
      * @returns {Promise<{sufficient: boolean, available: number, required: number}>}
      */
     async hasSufficientBalance(requiredAmount, bufferPercent = 10) {
-        const balance = await this.checkBalance();
-        const available = Number.parseFloat(balance.available_balance);
-        const requiredWithBuffer = Number.parseFloat(requiredAmount) * (1 + bufferPercent / 100);
-
-        return {
-            sufficient: available >= requiredWithBuffer,
-            available,
-            required: requiredWithBuffer,
-            buffer: bufferPercent
-        };
+        return this.paydProviderClient.hasSufficientBalance(requiredAmount, bufferPercent);
     }
 
     /**
@@ -1113,30 +658,7 @@ export class PaymentService {
      * @returns {Object}
      */
     _extractErrorDetails(error) {
-        if (error.response) {
-            // HTTP error response from Payd
-            return {
-                type: 'http_error',
-                status: error.response.status,
-                statusText: error.response.statusText,
-                data: error.response.data,
-                headers: error.response.headers
-            };
-        } else if (error.request) {
-            // Request made but no response received
-            return {
-                type: 'no_response',
-                message: error.message,
-                code: error.code,
-                timeout: error.code === 'ECONNABORTED'
-            };
-        } else {
-            // Error in request setup
-            return {
-                type: 'request_setup',
-                message: error.message
-            };
-        }
+        return this.paydProviderClient._extractErrorDetails(error);
     }
 
     /**
@@ -1144,46 +666,7 @@ export class PaymentService {
      * @returns {Promise<Object>}
      */
     async getNetworkStatus() {
-        const targets = [
-            { name: 'google', host: 'google.com', url: 'https://google.com' },
-            { name: 'payd', host: 'api.payd.money', url: `${this.baseUrl}/payments` }
-        ];
-
-        const results = {};
-
-        for (const target of targets) {
-            const result = { dns: 'unknown', https: 'unknown' };
-
-            // DNS Check
-            try {
-                const lookup = await new Promise((resolve, reject) => {
-                    dns.lookup(target.host, (err, address) => {
-                        if (err) reject(err);
-                        else resolve(address);
-                    });
-                });
-                result.dns = `ok (${lookup})`;
-            } catch (err) {
-                result.dns = `failed (${err.code || err.message})`;
-            }
-
-            // HTTPS Check (GET request)
-            try {
-                const startTime = Date.now();
-                // Use default axios client for simple head check
-                await axios.get(target.url, {
-                    timeout: 5000,
-                    validateStatus: () => true // Accept any status
-                });
-                result.https = `ok (${Date.now() - startTime}ms)`;
-            } catch (err) {
-                result.https = `failed (${err.code || err.message})`;
-            }
-
-            results[target.name] = result;
-        }
-
-        return results;
+        return this.paydProviderClient.getNetworkStatus();
     }
 
     /**
@@ -1194,88 +677,7 @@ export class PaymentService {
      * @returns {PaydError}
      */
     _handlePaydError(error) {
-        // Already a PaydError
-        if (error instanceof PaydError) {
-            return error;
-        }
-
-        // HTTP response errors
-        if (error.response) {
-            const status = error.response.status;
-            const data = error.response.data;
-
-            if (status === 401 || status === 403) {
-                return new PaydError(
-                    'Authentication failed. Please check Payd credentials.',
-                    PaydErrorCodes.AUTHENTICATION_FAILED,
-                    401,
-                    { original: data }
-                );
-            }
-
-            if (status === 404) {
-                return new PaydError(
-                    'Transaction not found',
-                    PaydErrorCodes.TRANSACTION_NOT_FOUND,
-                    404,
-                    { original: data }
-                );
-            }
-
-            if (status === 409) {
-                return new PaydError(
-                    'Duplicate transaction detected',
-                    PaydErrorCodes.DUPLICATE_TRANSACTION,
-                    409,
-                    { original: data }
-                );
-            }
-
-            if (status >= 400 && status < 500) {
-                return new PaydError(
-                    data.message || 'Bad request to Payd API',
-                    PaydErrorCodes.TRANSACTION_FAILED,
-                    status,
-                    { original: data }
-                );
-            }
-
-            if (status >= 500) {
-                return new PaydError(
-                    'Payd service temporarily unavailable',
-                    PaydErrorCodes.CONNECTION_FAILED,
-                    503,
-                    { original: data }
-                );
-            }
-        }
-
-        // Network/timeout errors
-        if (error.code === 'ECONNRESET' || error.message === 'socket hang up') {
-            return new PaydError(
-                'Connection to Payd failed. Please try again.',
-                PaydErrorCodes.CONNECTION_FAILED,
-                503,
-                { code: error.code }
-            );
-        }
-
-        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            return new PaydError(
-                'Request to Payd timed out. Please try again.',
-                PaydErrorCodes.TIMEOUT,
-                504,
-                { code: error.code }
-            );
-        }
-
-        // Unknown error
-        return new PaydError(
-            error.message || 'Unknown Payd error occurred',
-            PaydErrorCodes.UNKNOWN_ERROR,
-            500,
-            { original: error }
-        );
+        return this.paydProviderClient._handlePaydError(error);
     }
 
     /**
@@ -1358,11 +760,8 @@ export class PaymentService {
                     let is404Error = false;
 
                     try {
-                        const response = await this.client.get(`/payments/${statusReference}`, {
-                            headers: { Authorization: this.getAuthHeader() }
-                        });
-                        providerData = response.data;
-                        providerStatus = this._mapPaydStatus(providerData);
+                        providerData = await this.checkTransactionStatus(statusReference);
+                        providerStatus = providerData.status;
                     } catch (netErr) {
                         // Check if it's a 404 error
                         if (netErr.response?.status === 404) {
@@ -1444,6 +843,497 @@ export class PaymentService {
         return results;
     }
 
+    async markLogisticsPaymentInitiationAmbiguous({ orderId, paymentId, reason, providerPayload = {} }) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(
+                `UPDATE payments
+                 SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                     updated_at = NOW()
+                 WHERE id = $1`,
+                [
+                    paymentId,
+                    JSON.stringify({
+                        needs_manual_review: true,
+                        logistics_payment_ambiguous: true,
+                        ambiguous_provider_result: {
+                            reason,
+                            providerPayload,
+                            recorded_at: new Date().toISOString()
+                        }
+                    })
+                ]
+            );
+            await client.query(
+                `UPDATE logistics_legs ll
+                 SET metadata = ll.metadata || $3::jsonb,
+                     updated_at = NOW()
+                 FROM logistics_requests lr
+                 WHERE ll.logistics_request_id = lr.id
+                   AND lr.order_id = $1
+                   AND ll.payment_id = $2
+                   AND ll.status = 'payment_pending'`,
+                [
+                    orderId,
+                    paymentId,
+                    JSON.stringify({
+                        logistics_payment_ambiguous: true,
+                        reason,
+                        recorded_at: new Date().toISOString()
+                    })
+                ]
+            );
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK').catch(() => {});
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    async markLogisticsPaymentInitiationFailed({ orderId, paymentId, reason, providerPayload = {} }) {
+        const client = await pool.connect();
+        let failedPayment = null;
+        let order = null;
+        try {
+            await client.query('BEGIN');
+
+            const { rows: paymentRows } = await client.query(
+                `SELECT * FROM payments WHERE id = $1 FOR UPDATE`,
+                [paymentId]
+            );
+            failedPayment = paymentRows[0];
+
+            const { rows: orderRows } = await client.query(
+                `SELECT * FROM product_orders WHERE id = $1 FOR UPDATE`,
+                [orderId]
+            );
+            order = orderRows[0] || null;
+
+            if (!failedPayment) {
+                throw new Error(`Cannot mark logistics payment initiation failed: missing payment ${paymentId}`);
+            }
+
+            const paymentStatus = String(failedPayment.status || '').toLowerCase();
+            if (['completed', 'success', 'failed'].includes(paymentStatus)) {
+                await client.query('COMMIT');
+                return { payment: failedPayment, order, skipped: true };
+            }
+
+            const cancelledLogisticsLegs = await LogisticsRequestService.cancelPaymentPendingLegsForPaymentFailure(client, {
+                orderId,
+                paymentId,
+                reason
+            });
+            const failureMetadata = {
+                logistics_payment_initiation_failure: {
+                    reason,
+                    providerPayload,
+                    cancelled_logistics_legs: cancelledLogisticsLegs,
+                    failed_at: new Date().toISOString()
+                }
+            };
+
+            const { rows: updatedPayments } = await client.query(
+                `UPDATE payments
+                 SET status = 'failed',
+                     metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                     updated_at = NOW()
+                 WHERE id = $1
+                 RETURNING *`,
+                [paymentId, JSON.stringify(failureMetadata)]
+            );
+            failedPayment = updatedPayments[0];
+
+            const durableEvent = await eventBus.enqueueInTransaction(client, AppEvents.PAYMENT.FAILED, {
+                eventId: `payment.failed:${paymentId}:logistics-initiation`,
+                payment: failedPayment,
+                order,
+                reason
+            });
+
+            await client.query('COMMIT');
+
+            eventBus.dispatchAfterCommit(durableEvent.eventId, 'PaymentService.markLogisticsInitiationFailed');
+
+            return { payment: failedPayment, order, skipped: false };
+        } catch (error) {
+            await client.query('ROLLBACK').catch(rollbackError =>
+                logger.error('[PAYMENT-INITIATE] Failed rollback while marking logistics initiation failure:', rollbackError)
+            );
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    async initiateSellerPickupPayment({
+        orderId,
+        sellerId,
+        pickupLocation,
+        mobilePayment,
+        idempotencyKey = null
+    }) {
+        const normalizedOrderId = Number.parseInt(orderId, 10);
+        const normalizedSellerId = Number.parseInt(sellerId, 10);
+
+        if (!Number.isSafeInteger(normalizedOrderId) || normalizedOrderId <= 0) {
+            throw new Error('Valid order id is required');
+        }
+        if (!Number.isSafeInteger(normalizedSellerId) || normalizedSellerId <= 0) {
+            throw new Error('Valid seller id is required');
+        }
+        if (!mobilePayment || typeof mobilePayment !== 'string') {
+            throw new Error('Seller mobile payment number is required');
+        }
+
+        const pickup = extractPickupLocation(pickupLocation || {});
+        assertPickupLocation(pickup);
+
+        const quote = LogisticsQuoteService.quoteSellerPickup(pickup);
+        if (quote.feeAmount <= 0) {
+            throw new Error('Pickup fee must be greater than zero. Sellers at the hub should drop the package directly.');
+        }
+
+        const client = await pool.connect();
+        let gwPayload = null;
+        let payment = null;
+        let order = null;
+        let logisticsSummary = null;
+        let transactionCommitted = false;
+
+        try {
+            await client.query('BEGIN');
+
+            const { rows: orderRows } = await client.query(
+                `SELECT o.*,
+                        s.full_name AS seller_name,
+                        s.shop_name,
+                        s.email AS seller_email,
+                        s.whatsapp_number AS seller_whatsapp_number
+                 FROM product_orders o
+                 JOIN sellers s ON s.id = o.seller_id
+                 WHERE o.id = $1
+                   AND o.seller_id = $2
+                 FOR UPDATE OF o`,
+                [normalizedOrderId, normalizedSellerId]
+            );
+            order = orderRows[0];
+
+            if (!order) {
+                throw new Error('Order not found for this seller');
+            }
+
+            if (!COMPLETED_PAYMENT_STATUSES.has(String(order.payment_status || '').toLowerCase())) {
+                throw new Error('Pickup can only be requested after the buyer payment is completed');
+            }
+
+            const { rows: itemRows } = await client.query(
+                `SELECT oi.id,
+                        oi.product_name,
+                        oi.quantity,
+                        COALESCE(oi.metadata->>'productType', p.product_type, 'physical') AS product_type,
+                        COALESCE(p.is_digital, false) AS is_digital
+                 FROM order_items oi
+                 LEFT JOIN products p ON p.id = oi.product_id
+                 WHERE oi.order_id = $1
+                 ORDER BY oi.id ASC`,
+                [normalizedOrderId]
+            );
+
+            const orderMetadata = typeof order.metadata === 'object' ? order.metadata : {};
+            const hasPhysicalItem = itemRows.length
+                ? itemRows.some(item => {
+                    const type = String(item.product_type || '').toLowerCase();
+                    return type !== 'digital' && type !== 'service' && item.is_digital !== true;
+                })
+                : String(orderMetadata.product_type || 'physical').toLowerCase() === 'physical';
+
+            if (!hasPhysicalItem) {
+                throw new Error('Pickup is only available for physical product orders');
+            }
+
+            const { rows: existingPickupRows } = await client.query(
+                `SELECT ll.*, p.status AS payment_status, p.provider_reference
+                 FROM logistics_requests lr
+                 JOIN logistics_legs ll ON ll.logistics_request_id = lr.id
+                                      AND ll.leg_type = 'pickup'
+                 LEFT JOIN payments p ON p.id = ll.payment_id
+                 WHERE lr.order_id = $1
+                 FOR UPDATE OF ll`,
+                [normalizedOrderId]
+            );
+            const existingPickup = existingPickupRows[0];
+
+            if (existingPickup) {
+                const pickupStatus = String(existingPickup.status || '').toLowerCase();
+                const paymentStatus = String(existingPickup.payment_status || '').toLowerCase();
+
+                if (ACTIVE_PICKUP_STATUSES.has(pickupStatus)) {
+                    throw new Error('Pickup is already active for this order');
+                }
+
+                if (pickupStatus === 'payment_pending' && paymentStatus === 'pending') {
+                    await client.query('COMMIT');
+                    transactionCommitted = true;
+                    return {
+                        success: true,
+                        pending: true,
+                        alreadyPending: true,
+                        orderId: order.id,
+                        paymentId: existingPickup.payment_id,
+                        logistics: {
+                            request_id: existingPickup.logistics_request_id,
+                            pickup_leg_id: existingPickup.id,
+                            package_code: `BYB-LOG-${order.id}`,
+                            status: 'payment_pending',
+                            pickup_leg_status: 'payment_pending'
+                        },
+                        paymentResult: {
+                            reference: existingPickup.provider_reference,
+                            status: paymentStatus,
+                            message: 'Pickup payment is already pending confirmation.'
+                        }
+                    };
+                }
+            }
+
+            const apiRef = `BYB-PU-${order.id}-${Date.now()}`;
+            const invoiceId = `PICKUP-${order.id}-${Date.now()}`;
+            const paymentMetadata = {
+                payment_purpose: 'seller_pickup_fee',
+                logistics_payment_type: 'seller_pickup_fee',
+                order_id: order.id,
+                seller_id: normalizedSellerId,
+                api_ref: apiRef,
+                pickup: {
+                    address: pickup.address,
+                    latitude: pickup.latitude,
+                    longitude: pickup.longitude,
+                    quote: {
+                        leg_type: quote.legType,
+                        payer: quote.payer,
+                        currency: quote.currency,
+                        rate_kes_per_km: quote.rateKesPerKm,
+                        distance_km: quote.distanceKm,
+                        chargeable_distance_km: quote.chargeableDistanceKm,
+                        fee_amount: quote.feeAmount,
+                        origin: quote.origin,
+                        destination: quote.destination
+                    }
+                },
+                narration: `Pickup fee for order ${order.order_number || order.id}`
+            };
+
+            const insertRes = await client.query(
+                `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, api_ref, metadata)
+                  VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6, $7::jsonb)
+                  RETURNING *`,
+                [
+                    invoiceId,
+                    order.seller_email || null,
+                    mobilePayment,
+                    order.seller_whatsapp_number || mobilePayment,
+                    quote.feeAmount,
+                    apiRef,
+                    JSON.stringify(paymentMetadata)
+                ]
+            );
+            payment = insertRes.rows[0];
+
+            const logisticsRecords = await LogisticsRequestService.createSellerPickupPaymentPending(client, {
+                order,
+                payment,
+                quote,
+                seller: {
+                    id: normalizedSellerId,
+                    full_name: order.seller_name,
+                    shop_name: order.shop_name,
+                    email: order.seller_email,
+                    whatsapp_number: order.seller_whatsapp_number
+                },
+                pickupLocation: pickup,
+                idempotencyKey
+            });
+
+            logisticsSummary = {
+                request_id: logisticsRecords.request.id,
+                pickup_leg_id: logisticsRecords.pickupLeg.id,
+                partner_id: logisticsRecords.partner.id,
+                package_code: logisticsRecords.request.package_code,
+                status: logisticsRecords.request.status,
+                pickup_leg_status: logisticsRecords.pickupLeg.status
+            };
+
+            paymentMetadata.pickup.logistics = logisticsSummary;
+            await client.query(
+                `UPDATE payments
+                 SET metadata = $2::jsonb,
+                     updated_at = NOW()
+                 WHERE id = $1`,
+                [payment.id, JSON.stringify(paymentMetadata)]
+            );
+
+            await client.query(
+                `UPDATE product_orders
+                 SET metadata = jsonb_set(
+                        COALESCE(metadata, '{}'::jsonb),
+                        '{delivery,logistics}',
+                        COALESCE(metadata->'delivery'->'logistics', '{}'::jsonb) || $2::jsonb,
+                        true
+                     ),
+                     updated_at = NOW()
+                 WHERE id = $1`,
+                [order.id, JSON.stringify(logisticsSummary)]
+            );
+
+            gwPayload = {
+                invoice_id: invoiceId,
+                api_ref: apiRef,
+                amount: quote.feeAmount,
+                currency: 'KES',
+                status: PaymentStatus.PENDING,
+                payment_method: 'payd',
+                phone_number: mobilePayment,
+                phone: mobilePayment,
+                email: order.seller_email || undefined,
+                firstName: order.seller_name?.split(' ')[0],
+                narration: `Pickup fee for order ${order.order_number || order.id}`,
+                metadata: paymentMetadata
+            };
+
+            await this.createPaymentProviderAttempt(client, {
+                paymentId: payment.id,
+                orderId: order.id,
+                apiRef,
+                idempotencyKey,
+                requestPayload: gwPayload
+            });
+
+            await client.query('COMMIT');
+            transactionCommitted = true;
+
+            try {
+                await this.markPaymentProviderAttemptStarted(payment.id);
+                const result = await this.initiatePayment(gwPayload);
+
+                try {
+                    await this.markPaymentProviderAttemptAccepted({
+                        paymentId: payment.id,
+                        providerReference: result.reference,
+                        responsePayload: result
+                    });
+                } catch (persistError) {
+                    logger.error('[PICKUP-PAYMENT] Provider accepted pickup payment but local reference persistence failed', {
+                        paymentId: payment.id,
+                        orderId: order.id,
+                        apiRef,
+                        providerReference: result.reference,
+                        error: persistError.message
+                    });
+
+                    await this.markLogisticsPaymentInitiationAmbiguous({
+                        orderId: order.id,
+                        paymentId: payment.id,
+                        reason: 'provider_reference_persistence_failed',
+                        providerPayload: {
+                            provider_reference: result.reference,
+                            api_ref: apiRef,
+                            persistence_error: persistError.message,
+                            response: result
+                        }
+                    }).catch(error => logger.error('[PICKUP-PAYMENT] Failed to persist ambiguous pickup payment state:', error.message));
+
+                    return {
+                        success: true,
+                        pending: true,
+                        ambiguous: true,
+                        orderId: order.id,
+                        paymentId: payment.id,
+                        logistics: logisticsSummary,
+                        paymentResult: {
+                            reference: result.reference || apiRef,
+                            status: 'pending',
+                            message: 'Pickup payment request was accepted and is pending confirmation.'
+                        }
+                    };
+                }
+
+                return {
+                    success: true,
+                    orderId: order.id,
+                    paymentId: payment.id,
+                    logistics: logisticsSummary,
+                    quote,
+                    paymentResult: result
+                };
+            } catch (gwError) {
+                logger.error('[PICKUP-PAYMENT] Gateway initiation failed:', gwError);
+                const errorPayload = {
+                    message: gwError.message,
+                    code: gwError.code,
+                    status: gwError.statusCode || gwError.response?.status,
+                    data: gwError.details || gwError.response?.data
+                };
+
+                if (this.isAmbiguousPaymentProviderError(gwError)) {
+                    await this.markPaymentProviderAttemptAmbiguous({
+                        paymentId: payment.id,
+                        errorPayload
+                    }).catch(error => logger.error('[PICKUP-PAYMENT] Failed to persist ambiguous provider attempt:', error.message));
+
+                    await this.markLogisticsPaymentInitiationAmbiguous({
+                        orderId: order.id,
+                        paymentId: payment.id,
+                        reason: gwError.message || 'gateway_result_ambiguous',
+                        providerPayload: errorPayload
+                    });
+
+                    return {
+                        success: true,
+                        pending: true,
+                        ambiguous: true,
+                        orderId: order.id,
+                        paymentId: payment.id,
+                        logistics: logisticsSummary,
+                        paymentResult: {
+                            reference: apiRef,
+                            status: 'pending',
+                            message: 'Pickup payment request is pending provider confirmation.'
+                        }
+                    };
+                }
+
+                await this.markPaymentProviderAttemptFailed({
+                    paymentId: payment.id,
+                    errorPayload
+                }).catch(error => logger.error('[PICKUP-PAYMENT] Failed to persist provider attempt failure:', error.message));
+
+                await this.markLogisticsPaymentInitiationFailed({
+                    orderId: order.id,
+                    paymentId: payment.id,
+                    reason: gwError.message || 'gateway_initiation_failed',
+                    providerPayload: errorPayload
+                });
+
+                const failure = new Error('Pickup payment initiation failed before STK push. No payment was triggered; please try again.');
+                failure.orderId = order.id;
+                failure.paymentId = payment.id;
+                throw failure;
+            }
+        } catch (error) {
+            if (!transactionCommitted) {
+                await client.query('ROLLBACK').catch(() => {});
+            }
+            logger.error('[PICKUP-PAYMENT] Transaction failed:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
 
     async initiateProductPayment(normalizedOrder) {
         const { buyer, service, location, metadata, idempotencyKey } = normalizedOrder;
@@ -1455,7 +1345,18 @@ export class PaymentService {
 
         // 1. Resolve & Validate Product/Seller
         const productResult = await pool.query(
-            `SELECT p.*, s.status as seller_status, s.full_name as seller_name, s.shop_name 
+            `SELECT p.*,
+                    s.id as seller_id_from_seller,
+                    s.status as seller_status,
+                    s.full_name as seller_name,
+                    s.shop_name,
+                    s.email as seller_email,
+                    s.whatsapp_number as seller_whatsapp_number,
+                    s.city as seller_city,
+                    s.location as seller_location,
+                    s.physical_address as seller_physical_address,
+                    s.latitude as seller_latitude,
+                    s.longitude as seller_longitude
              FROM products p
              JOIN sellers s ON p.seller_id = s.id
              WHERE p.id = $1`,
@@ -1468,12 +1369,33 @@ export class PaymentService {
         if (product.seller_status !== 'active') throw new Error('Seller is not accepting orders');
         if (product.status !== 'available') throw new Error('Product not available');
 
-        // 2. Security: Calculate Secure Total
+        // 2. Security: Calculate secure product total and backend-owned logistics fee.
         const dbPrice = Number.parseFloat(product.price || 0);
         const quantity = Number.parseInt(service.quantity || 1);
-        const finalTotal = dbPrice * quantity;
+        const productSubtotal = roundMoney(dbPrice * quantity);
+        const productType = String(product.product_type || '').toLowerCase();
+        const isDigitalProduct = product.is_digital === true || productType === 'digital';
+        const isServiceProduct = productType === 'service';
+        const isPhysicalProduct = !isDigitalProduct && !isServiceProduct;
+        const deliveryRequest = metadata.delivery || {};
+        const wantsDoorDelivery = isDoorDeliveryRequested(deliveryRequest, metadata);
+        let deliveryQuote = null;
+        let buyerDeliveryFee = 0;
+        let payableTotal = productSubtotal;
 
-        if (finalTotal <= 0) throw new Error('Invalid order amount after secure calculation');
+        if (wantsDoorDelivery) {
+            if (!isPhysicalProduct) {
+                throw new Error('Door delivery is only available for physical products.');
+            }
+
+            const buyerDeliveryLocation = extractDeliveryLocation(deliveryRequest, location);
+            assertDoorDeliveryLocation(buyerDeliveryLocation);
+            deliveryQuote = LogisticsQuoteService.quoteBuyerDoorDelivery(buyerDeliveryLocation);
+            buyerDeliveryFee = deliveryQuote.feeAmount;
+            payableTotal = roundMoney(productSubtotal + buyerDeliveryFee);
+        }
+
+        if (payableTotal <= 0) throw new Error('Invalid order amount after secure calculation');
 
         if (idempotencyKey) {
             const { rows: existing } = await pool.query(
@@ -1517,7 +1439,7 @@ export class PaymentService {
                 ...service,
                 price: dbPrice,
                 quantity: quantity,
-                total: finalTotal,
+                total: payableTotal,
                 title: product.name
             },
             metadata: {
@@ -1527,12 +1449,41 @@ export class PaymentService {
                 is_digital: product.is_digital,
                 product_id: service.id,
                 product_name: product.name,
+                pricing: {
+                    ...(metadata.pricing || {}),
+                    product_subtotal: productSubtotal,
+                    buyer_delivery_fee: buyerDeliveryFee,
+                    payable_total: payableTotal,
+                    seller_payout_base: productSubtotal,
+                    seller_payout_excludes_delivery_fee: true
+                },
+                delivery: {
+                    ...deliveryRequest,
+                    doorDelivery: wantsDoorDelivery,
+                    door_delivery: wantsDoorDelivery,
+                    delivery_mode: wantsDoorDelivery
+                        ? 'DOOR_DELIVERY'
+                        : (deliveryRequest.delivery_mode || deliveryRequest.deliveryMode || null),
+                    buyer_pays_delivery_fee: wantsDoorDelivery,
+                    seller_payout_excludes_delivery_fee: true,
+                    quote: deliveryQuote ? {
+                        leg_type: deliveryQuote.legType,
+                        payer: deliveryQuote.payer,
+                        currency: deliveryQuote.currency,
+                        rate_kes_per_km: deliveryQuote.rateKesPerKm,
+                        distance_km: deliveryQuote.distanceKm,
+                        chargeable_distance_km: deliveryQuote.chargeableDistanceKm,
+                        fee_amount: deliveryQuote.feeAmount,
+                        origin: deliveryQuote.origin,
+                        destination: deliveryQuote.destination
+                    } : null
+                },
                 items: [{
                     productId: service.id,
                     name: product.name,
                     price: dbPrice,
                     quantity: quantity,
-                    subtotal: finalTotal,
+                    subtotal: productSubtotal,
                     productType: product.product_type,
                     isDigital: product.is_digital,
                     serviceLocations: product.service_locations
@@ -1542,6 +1493,9 @@ export class PaymentService {
 
         const client = await pool.connect();
         let gwPayload = null;
+        let transactionCommitted = false;
+        let logisticsRecords = null;
+        let logisticsSummary = null;
         try {
             await client.query('BEGIN');
 
@@ -1551,7 +1505,7 @@ export class PaymentService {
             const paymentData = {
                 invoice_id: String(order.id),
                 api_ref: apiRef,
-                amount: finalTotal,
+                amount: payableTotal,
                 currency: 'KES',
                 status: PaymentStatus.PENDING,
                 payment_method: 'payd',
@@ -1564,6 +1518,10 @@ export class PaymentService {
                     product_id: service.id,
                     seller_id: product.seller_id,
                     product_type: product.product_type,
+                    product_subtotal: productSubtotal,
+                    buyer_delivery_fee: buyerDeliveryFee,
+                    payable_total: payableTotal,
+                    delivery: orderData.metadata.delivery,
                     buyer_id: buyerId,
                     narration: metadata.narration || `Payment for ${product.name}`
                 }
@@ -1572,9 +1530,66 @@ export class PaymentService {
             const insertRes = await client.query(
                 `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, api_ref, metadata)
                   VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6, $7) RETURNING *`,
-                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, finalTotal, apiRef, JSON.stringify(paymentData.metadata)]
+                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, payableTotal, apiRef, JSON.stringify(paymentData.metadata)]
             );
             const payment = insertRes.rows[0];
+
+            if (wantsDoorDelivery && deliveryQuote) {
+                logisticsRecords = await LogisticsRequestService.createDoorDeliveryPaymentPending(client, {
+                    order,
+                    payment,
+                    quote: deliveryQuote,
+                    buyer,
+                    product,
+                    seller: {
+                        id: product.seller_id,
+                        full_name: product.seller_name,
+                        shop_name: product.shop_name,
+                        email: product.seller_email,
+                        whatsapp_number: product.seller_whatsapp_number,
+                        city: product.seller_city,
+                        location: product.seller_location,
+                        physical_address: product.seller_physical_address,
+                        latitude: product.seller_latitude,
+                        longitude: product.seller_longitude
+                    },
+                    idempotencyKey
+                });
+
+                logisticsSummary = {
+                    request_id: logisticsRecords.request.id,
+                    delivery_leg_id: logisticsRecords.deliveryLeg.id,
+                    partner_id: logisticsRecords.partner.id,
+                    package_code: logisticsRecords.request.package_code,
+                    status: 'payment_pending'
+                };
+
+                paymentData.metadata.delivery = {
+                    ...paymentData.metadata.delivery,
+                    logistics: logisticsSummary
+                };
+
+                await client.query(
+                    `UPDATE payments
+                     SET metadata = $2::jsonb,
+                         updated_at = NOW()
+                     WHERE id = $1`,
+                    [payment.id, JSON.stringify(paymentData.metadata)]
+                );
+
+                await client.query(
+                    `UPDATE product_orders
+                     SET metadata = jsonb_set(
+                            COALESCE(metadata, '{}'::jsonb),
+                            '{delivery,logistics}',
+                            $2::jsonb,
+                            true
+                         ),
+                         updated_at = NOW()
+                     WHERE id = $1`,
+                    [order.id, JSON.stringify(logisticsSummary)]
+                );
+            }
 
             gwPayload = {
                 ...paymentData,
@@ -1592,6 +1607,7 @@ export class PaymentService {
             });
 
             await client.query('COMMIT');
+            transactionCommitted = true;
 
             // 5. Initiate Gateway
             try {
@@ -1632,6 +1648,7 @@ export class PaymentService {
                         orderId: order.id,
                         orderNumber: order.order_number,
                         paymentId: payment.id,
+                        logistics: logisticsSummary,
                         paymentResult: {
                             reference: result.reference || apiRef,
                             status: 'pending',
@@ -1645,6 +1662,7 @@ export class PaymentService {
                     orderId: order.id,
                     orderNumber: order.order_number,
                     paymentId: payment.id,
+                    logistics: logisticsSummary,
                     paymentResult: result
                 };
             } catch (gwError) {
@@ -1684,6 +1702,7 @@ export class PaymentService {
                         orderId: order.id,
                         orderNumber: order.order_number,
                         paymentId: payment.id,
+                        logistics: logisticsSummary,
                         paymentResult: {
                             reference: apiRef,
                             status: 'pending',
@@ -1709,7 +1728,9 @@ export class PaymentService {
                 throw failure;
             }
         } catch (error) {
-            await client.query('ROLLBACK');
+            if (!transactionCommitted) {
+                await client.query('ROLLBACK');
+            }
             if (idempotencyKey && error.code === '23505') {
                 const { rows: existing } = await pool.query(
                     `SELECT po.id AS order_id,

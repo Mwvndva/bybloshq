@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { getFreshCsrfToken, getCachedCsrfToken, setCachedCsrfToken } from '@/lib/apiClient';
+import { transformProduct, type Product } from './public/productTransforms';
+import { transformSeller, type Seller } from './public/sellerTransforms';
 
 type AxiosInstance = any;
 type AxiosRequestConfig = any;
@@ -114,36 +116,6 @@ class CustomAxios {
 // Create a single instance of our custom axios
 export const publicApi = new CustomAxios();
 
-interface ApiResponse<T> {
-  data?: T;
-  products?: T[];
-  error?: string;
-  status: number;
-  statusText: string;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  image_url: string;
-  imageUrl?: string;
-  aesthetic: string;
-  sellerId: string;
-  seller_id?: string;
-  isSold: boolean;
-  is_sold?: boolean;
-  status: 'available' | 'sold';
-  soldAt?: string | null;
-  sold_at?: string | null;
-  createdAt: string;
-  created_at?: string;
-  updatedAt?: string;
-  updated_at?: string;
-  seller?: Seller;
-}
-
 export interface PaginationMeta {
   total: number;
   page: number;
@@ -161,120 +133,8 @@ export interface SellerListResponse {
   pagination: PaginationMeta;
 }
 
-export interface Seller {
-  id: string;
-  fullName: string;
-  full_name?: string;
-  email: string;
-  phone: string;
-  bio?: string;
-  avatarUrl?: string;
-  bannerUrl?: string;  // Add bannerUrl to the interface
-  banner_url?: string; // Also support the snake_case version
-  theme?: string;
-  location?: string;
-  city?: string;
-  website?: string;
-  socialMedia?: Record<string, string>;
-  shopName?: string;   // Add shopName to match the transform function
-  shop_name?: string;  // Also support the snake_case version
-  createdAt: string;
-  created_at?: string;
-  updatedAt?: string;
-  updated_at?: string;
-  // Physical shop fields
-  hasPhysicalShop?: boolean;
-  has_physical_shop?: boolean;
-  physicalAddress?: string;
-  physical_address?: string;
-  latitude?: number;
-  longitude?: number;
-  totalWishlistCount?: number;
-  wishlistCount?: number;
-  clientCount?: number;
-  client_count?: number;
-  knockCount?: number;
-  knock_count?: number;
-}
-
-// Helper function to transform product data from API
-const transformProduct = (product: any): Product => {
-  // Safely convert price to number
-  let price = 0;
-  if (product.price !== null && product.price !== undefined) {
-    if (typeof product.price === 'number') {
-      price = product.price;
-    } else if (typeof product.price === 'string') {
-      const parsed = Number.parseFloat(product.price);
-      price = Number.isNaN(parsed) ? 0 : parsed;
-    } else if (typeof product.price === 'object') {
-      // Handle price objects (e.g., { value: 100, currency: 'KES' })
-      const numericValue = product.price.value || product.price.amount || product.price.price || 0;
-      price = typeof numericValue === 'number' ? numericValue : 0;
-    }
-  }
-
-  const transformedProduct: any = {
-    ...product,
-    price: price, // Ensure price is always a number
-    image_url: product.image_url || product.imageUrl,
-    sellerId: product.sellerId || product.seller_id,
-    isSold: product.isSold || product.is_sold || product.status === 'sold',
-    status: product.status || (product.isSold || product.is_sold ? 'sold' : 'available'),
-    createdAt: product.createdAt || product.created_at,
-    updatedAt: product.updatedAt || product.updated_at,
-    soldAt: product.soldAt || product.sold_at
-  };
-
-  // Preserve the seller object if it exists
-  if (product.seller) {
-    transformedProduct.seller = transformSeller(product.seller);
-  }
-
-  return transformedProduct as Product;
-};
-
-// Helper function to transform seller data from API
-export function transformSeller(seller: any): Seller | null {
-  if (!seller) return null;
-  return {
-    id: seller.id,
-    fullName: seller.full_name || seller.fullName || 'Unknown Seller',
-    email: seller.email || '',
-    phone: seller.phone || '',
-    // Required fields with default values
-    bannerUrl: seller.banner_url || seller.bannerUrl || '',
-    shopName: seller.shop_name || seller.shopName || 'My Shop',
-    // Timestamps
-    createdAt: seller.created_at || seller.createdAt || new Date().toISOString(),
-    updatedAt: seller.updated_at || seller.updatedAt || new Date().toISOString(),
-    theme: seller.theme || 'default',
-    // Optional fields
-    ...(seller.bio && { bio: seller.bio }),
-    ...(seller.avatar_url && { avatarUrl: seller.avatar_url }),
-    ...(seller.avatarUrl && { avatarUrl: seller.avatarUrl }), // Handle both cases
-    ...(seller.location && { location: seller.location }),
-    ...(seller.city && { city: seller.city }),
-    ...(seller.website && { website: seller.website }),
-    ...(seller.social_media && { socialMedia: seller.social_media }),
-    ...(seller.socialMedia && { socialMedia: seller.socialMedia }), // Handle both cases
-    // Physical shop fields
-    hasPhysicalShop: seller.hasPhysicalShop || seller.has_physical_shop || !!seller.physicalAddress || !!seller.physical_address,
-    ...(seller.physicalAddress && { physicalAddress: seller.physicalAddress }),
-    ...(seller.physical_address && { physicalAddress: seller.physical_address }), // Handle both cases
-    ...(seller.latitude && { latitude: seller.latitude }),
-    ...(seller.longitude && { longitude: seller.longitude }),
-    // Metrics
-    ...(seller.clientCount !== undefined && { clientCount: Number(seller.clientCount) }),
-    ...(seller.client_count !== undefined && { clientCount: Number(seller.client_count) }),
-    ...(seller.totalWishlistCount !== undefined && { totalWishlistCount: Number(seller.totalWishlistCount) }),
-    ...(seller.total_wishlist_count !== undefined && { totalWishlistCount: Number(seller.total_wishlist_count) }),
-    ...(seller.wishlistCount !== undefined && { wishlistCount: Number(seller.wishlistCount) }),
-    ...(seller.wishlist_count !== undefined && { wishlistCount: Number(seller.wishlist_count) }),
-    ...(seller.knockCount !== undefined && { knockCount: Number(seller.knockCount) }),
-    ...(seller.knock_count !== undefined && { knockCount: Number(seller.knock_count) })
-  };
-}
+export type { Product, Seller };
+export { transformProduct, transformSeller };
 
 export const publicApiService = {
   // Search for sellers by city and optional location

@@ -19,6 +19,31 @@ class EscrowManager {
         );
         const paymentId = paymentResult.rows[0]?.id;
 
+        const { rows: logisticsHolds } = await client.query(
+            `SELECT lr.status AS request_status,
+                    BOOL_OR(ll.status = 'failed') AS has_failed_leg
+             FROM logistics_requests lr
+             LEFT JOIN logistics_legs ll ON ll.logistics_request_id = lr.id
+             WHERE lr.order_id = $1
+               AND lr.status <> 'cancelled'
+             GROUP BY lr.id, lr.status
+             LIMIT 1`,
+            [orderId]
+        );
+
+        const logisticsHold = logisticsHolds[0];
+        if (
+            logisticsHold
+            && (
+                logisticsHold.request_status === 'manual_review'
+                || logisticsHold.request_status === 'failed'
+                || logisticsHold.has_failed_leg === true
+            )
+        ) {
+            logger.warn(`[EscrowManager] Escrow release blocked for Order ${orderId}; logistics requires review.`);
+            return { success: false, reason: 'logistics_delivery_hold' };
+        }
+
         // 2. Calculate amounts safely
         const rawPayout = Number.parseFloat(
             order.seller_payout_amount ?? order.sellerPayoutAmount ?? 0

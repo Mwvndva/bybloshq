@@ -32,6 +32,7 @@ async function startServer() {
   // 2. Boot Event Listeners before any loader can start retry workers, cron, or outbox replay.
   await import('./events/order.events.js');
   await import('./events/payment.events.js');
+  await import('./events/logistics.events.js');
   const { default: eventBus } = await import('./events/eventBus.js');
   await eventBus.verifyRequiredListeners();
   logger.info('[EventBus] All event listeners registered');

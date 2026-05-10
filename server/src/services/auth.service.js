@@ -2,8 +2,6 @@ import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import logger from '../shared/utils/logger.js';
 import User from '../models/user.model.js';
-import BuyerService from './buyer.service.js';
-import SellerService from './seller.service.js';
 import * as SellerModel from '../models/seller.model.js';
 import Buyer from '../models/buyer.model.js';
 import { signToken } from '../shared/utils/jwt.js';
@@ -11,6 +9,7 @@ import { sendPasswordResetEmail } from '../shared/utils/email.js';
 import { pool } from '../shared/db/database.js';
 import PendingRegistration from '../models/pendingRegistration.model.js';
 import ReferralService from './referral.service.js';
+import ProfileProvisioningService from './profileProvisioning.service.js';
 
 // FIXED BUG-AUTH-02: cost factor must match bcrypt.hash(password, 12) used in user.model.js
 // Regenerate with: node -e "const b=require('bcrypt');b.hash('__timing_dummy__',12).then(console.log)"
@@ -240,19 +239,19 @@ class AuthService {
             // Already a verified user - check if they already have this profile type
             switch (type) {
                 case 'seller': {
-                    const existingSeller = await SellerModel.findSellerByUserId(existingUser.id);
-                    if (existingSeller) throw new Error('A seller account with this email already exists.');
-
-                    // Add seller profile to existing user
-                    const seller = await SellerService.register({ ...data, termsAccepted });
+                    const seller = await ProfileProvisioningService.createSellerProfileForExistingUser({
+                        ...data,
+                        email: normalizedEmail,
+                        termsAccepted
+                    });
                     return { status: 'created', user: seller };
                 }
                 case 'buyer': {
-                    const existingBuyer = await Buyer.findByUserId(existingUser.id);
-                    if (existingBuyer) throw new Error('A buyer account with this email already exists.');
-
-                    // Add buyer profile to existing user
-                    const buyer = await BuyerService.register({ ...data, termsAccepted });
+                    const buyer = await ProfileProvisioningService.createBuyerProfileForExistingUser({
+                        ...data,
+                        email: normalizedEmail,
+                        termsAccepted
+                    });
                     return { status: 'created', user: buyer };
                 }
                 default:
@@ -290,6 +289,17 @@ class AuthService {
         await sendVerificationEmail(normalizedEmail, rawToken, type);
 
         return { status: 'pending_verification', email: normalizedEmail };
+    }
+
+    static async registerGuestBuyer(data) {
+        const effectivePassword = data.password || crypto.randomBytes(16).toString('hex');
+
+        return AuthService.register({
+            ...data,
+            password: effectivePassword,
+            location: data.location || data.city || 'Not specified',
+            termsAccepted: data.termsAccepted !== undefined ? data.termsAccepted : true
+        }, 'buyer');
     }
 
     /**

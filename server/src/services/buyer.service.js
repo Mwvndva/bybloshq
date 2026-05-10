@@ -1,180 +1,131 @@
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import logger from '../shared/utils/logger.js';
 import Buyer from '../models/buyer.model.js';
 import { signToken } from '../shared/utils/jwt.js';
 import User from '../models/user.model.js';
+import { pool } from '../shared/db/database.js';
+import ProfileProvisioningService from './profileProvisioning.service.js';
 
 class BuyerService {
     static async register(data) {
-        const { fullName, email, phone, mobilePayment, whatsappNumber, mobile_payment: mp, whatsapp_number: wn, password, city, location } = data;
-        const mobile_payment = mp || mobilePayment || phone;
-        const whatsapp_number = whatsappNumber || wn || phone;
-
-        const client = await (await import('../shared/db/database.js')).pool.connect();
-        try {
-            await client.query('BEGIN');
-
-            // 1. Check if user already exists
-            const existingUserResult = await client.query('SELECT * FROM users WHERE LOWER(email) = $1 FOR UPDATE', [email.toLowerCase()]);
-            const existingUser = existingUserResult.rows[0];
-
-            if (existingUser) {
-                const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
-                if (!isPasswordCorrect) {
-                    logger.info(`[DEBUG] BuyerService: Password check FAILED for existing user ${email}`);
-                    throw new Error('An account with this email already exists. Please login or use the correct password.');
-                }
-                logger.info(`[DEBUG] BuyerService: Password check SUCCESS for existing user ${email}`);
-
-                let buyer = await Buyer.findByUserId(existingUser.id);
-                if (buyer) {
-                    throw new Error('A buyer account with this email already exists.');
-                }
-
-                buyer = await Buyer.create({
-                    fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
-                }, client);
-
-                // Ensure role exists in user_roles
-                const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
-                if (roleResult.rows[0]) {
-                    await client.query(
-                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                        [existingUser.id, roleResult.rows[0].id]
-                    );
-                }
-
-                await client.query('COMMIT');
-
-                // Invalidate cross-role cache for this user
-                try {
-                    const CacheService = (await import('./cache.service.js')).default;
-                    const userId = existingUser?.id;
-                    if (userId) {
-                        await CacheService.delete(`user:${userId}:cross-roles`);
-                    }
-                } catch (cacheErr) {
-                    // Non-critical — cache will expire naturally
-                    const logger = (await import('../shared/utils/logger.js')).default;
-                    logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
-                }
-
-                return buyer;
-            }
-
-            // 2. Create new User + Profile atomically
-            const newUser = await User.create({ email, password, role: 'buyer', is_verified: false }, client);
-            const buyer = await Buyer.create({
-                fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id,
-                termsAccepted: data.termsAccepted
-            }, client);
-
-            await client.query('COMMIT');
-
-            // Invalidate cross-role cache for this user
-            try {
-                const CacheService = (await import('./cache.service.js')).default;
-                const userId = newUser?.id;
-                if (userId) {
-                    await CacheService.delete(`user:${userId}:cross-roles`);
-                }
-            } catch (cacheErr) {
-                // Non-critical — cache will expire naturally
-                const logger = (await import('../shared/utils/logger.js')).default;
-                logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
-            }
-
-            return buyer;
-        } catch (error) {
-            await client.query('ROLLBACK');
-            throw error;
-        } finally {
-            client.release();
-        }
+        return ProfileProvisioningService.createBuyerProfileForExistingUser(data);
     }
 
     static async registerGuest(data) {
-        const { fullName, email, phone, mobilePayment, whatsappNumber, mobile_payment: mp, whatsapp_number: wn, city, location, password } = data;
+        const {
+            fullName,
+            email,
+            phone,
+            mobilePayment,
+            whatsappNumber,
+            mobile_payment: mp,
+            whatsapp_number: wn,
+            city,
+            location,
+            password
+        } = data;
         const mobile_payment = mobilePayment || mp || phone;
         const whatsapp_number = whatsappNumber || wn || phone;
+        const normalizedEmail = (email || '').trim().toLowerCase();
 
-        const client = await (await import('../shared/db/database.js')).pool.connect();
+        const existingUser = await User.findByEmail(normalizedEmail);
+        if (!existingUser) {
+            return {
+                status: 'identity_required',
+                registrationData: {
+                    fullName,
+                    email: normalizedEmail,
+                    phone,
+                    mobilePayment: mobile_payment,
+                    whatsappNumber: whatsapp_number,
+                    city,
+                    location: location || city || 'Not specified',
+                    password,
+                    termsAccepted: data.termsAccepted !== undefined ? data.termsAccepted : true
+                }
+            };
+        }
+
+        const client = await pool.connect();
         try {
             await client.query('BEGIN');
 
-            const existingUserResult = await client.query('SELECT * FROM users WHERE email = $1 FOR UPDATE', [email.toLowerCase()]);
-            const existingUser = existingUserResult.rows[0];
+            const existingUserResult = await client.query(
+                'SELECT * FROM users WHERE LOWER(email) = $1 FOR UPDATE',
+                [normalizedEmail]
+            );
+            const lockedUser = existingUserResult.rows[0];
 
-            if (existingUser) {
-                // If user exists, they MUST provide a password to link/use this account (Task 11 fix)
-                if (!password) {
-                    const error = new Error('An account with this email already exists. Please login to proceed.');
-                    error.requiresLogin = true;
-                    throw error;
-                }
-
-                const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
-                if (!isPasswordCorrect) {
-                    const error = new Error('An account with this email already exists. Please login or use the correct password.');
-                    error.requiresLogin = true;
-                    throw error;
-                }
-
-                let buyer = await Buyer.findByUserId(existingUser.id);
-                if (!buyer) {
-                    buyer = await Buyer.create({
-                        fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
-                    }, client);
-                }
-
-                const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
-                if (roleResult.rows[0]) {
-                    await client.query(
-                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                        [existingUser.id, roleResult.rows[0].id]
-                    );
-                }
-
+            if (!lockedUser) {
                 await client.query('COMMIT');
-
-                // Invalidate cross-role cache for this user
-                try {
-                    const CacheService = (await import('./cache.service.js')).default;
-                    const userId = existingUser?.id;
-                    if (userId) {
-                        await CacheService.delete(`user:${userId}:cross-roles`);
+                return {
+                    status: 'identity_required',
+                    registrationData: {
+                        fullName,
+                        email: normalizedEmail,
+                        phone,
+                        mobilePayment: mobile_payment,
+                        whatsappNumber: whatsapp_number,
+                        city,
+                        location: location || city || 'Not specified',
+                        password,
+                        termsAccepted: data.termsAccepted !== undefined ? data.termsAccepted : true
                     }
-                } catch (cacheErr) {
-                    // Non-critical — cache will expire naturally
-                    const logger = (await import('../shared/utils/logger.js')).default;
-                    logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
-                }
-
-                return { buyer };
+                };
             }
 
-            // FIXED BUG-GUEST-03: generate a random password for guests who don't provide one
-            // They can set a real password later via the reset-password flow
-            const { default: crypto } = await import('node:crypto');
-            const effectivePassword = password || crypto.randomBytes(16).toString('hex');
+            if (!password) {
+                const error = new Error('An account with this email already exists. Please login to proceed.');
+                error.requiresLogin = true;
+                throw error;
+            }
 
-            const AuthService = (await import('./auth.service.js')).default;
+            const isPasswordCorrect = await User.verifyPassword(password, lockedUser.password_hash);
+            if (!isPasswordCorrect) {
+                const error = new Error('An account with this email already exists. Please login or use the correct password.');
+                error.requiresLogin = true;
+                throw error;
+            }
 
-            const result = await AuthService.register({
-                email,
-                password: effectivePassword,
-                fullName,
-                mobilePayment: mobile_payment,
-                whatsappNumber: whatsapp_number,
-                city,
-                location: location || city || 'Not specified',
-                termsAccepted: data.termsAccepted !== undefined ? data.termsAccepted : true
-            }, 'buyer');
+            const buyerResult = await client.query(
+                'SELECT *, user_id AS "userId" FROM buyers WHERE user_id = $1 FOR UPDATE',
+                [lockedUser.id]
+            );
+            let buyer = buyerResult.rows[0] ? Buyer.createInstance(buyerResult.rows[0]) : null;
+            if (!buyer) {
+                buyer = await Buyer.create({
+                    fullName,
+                    email: normalizedEmail,
+                    mobilePayment: mobile_payment,
+                    whatsappNumber: whatsapp_number,
+                    city,
+                    location,
+                    userId: lockedUser.id,
+                    termsAccepted: data.termsAccepted
+                }, client);
+            }
 
-            return result;
+            const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
+            if (roleResult.rows[0]) {
+                await client.query(
+                    'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [lockedUser.id, roleResult.rows[0].id]
+                );
+            }
+
+            await client.query('COMMIT');
+
+            try {
+                const CacheService = (await import('./cache.service.js')).default;
+                await CacheService.delete(`user:${lockedUser.id}:cross-roles`);
+            } catch (cacheErr) {
+                logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
+            }
+
+            return { buyer };
         } catch (error) {
-            await client.query('ROLLBACK');
+            await client.query('ROLLBACK').catch(rollbackError =>
+                logger.error('[BUYER_REGISTER] Rollback failed:', rollbackError)
+            );
             throw error;
         } finally {
             client.release();
@@ -182,21 +133,16 @@ class BuyerService {
     }
 
     static async login(email, password) {
-        // 1. Find user in unified users table
         const userFound = await User.findByEmail(email);
         if (!userFound) return null;
 
-        // 2. Verify password against unified user record
         const isValid = await User.verifyPassword(password, userFound.password_hash);
         if (!isValid) return null;
 
-        // 3. Fetch buyer profile strictly linked to this user identity
-        const buyer = await Buyer.findByUserId(userFound.id);
-        return buyer;
+        return Buyer.findByUserId(userFound.id);
     }
 
     static signToken(buyer) {
-        // CRITICAL: Use user_id (from users table) not id (from buyers table)
         const userId = buyer.user_id || buyer.userId;
 
         if (!userId) {
@@ -208,6 +154,3 @@ class BuyerService {
 }
 
 export default BuyerService;
-
-
-

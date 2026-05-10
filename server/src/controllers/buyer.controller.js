@@ -624,6 +624,9 @@ export const saveBuyerInfo = async (req, res, next) => {
         password,
         termsAccepted: req.body.termsAccepted === true // Explicitly from frontend
       });
+      if (result.status === 'identity_required') {
+        result = await AuthService.registerGuestBuyer(result.registrationData);
+      }
     } catch (err) {
       if (err.requiresLogin) {
         return res.status(200).json({
