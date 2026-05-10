@@ -5,8 +5,7 @@ INSERT INTO roles (name, slug)
 VALUES ('Logistics', 'logistics')
 ON CONFLICT (slug)
 DO UPDATE SET
-    name = EXCLUDED.name,
-    updated_at = NOW();
+    name = EXCLUDED.name;
 
 CREATE INDEX IF NOT EXISTS idx_users_logistics_email
     ON users (LOWER(email))
