@@ -21,6 +21,8 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
     if (value === undefined || isNaN(value)) return `${currency} 0.00`;
     return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
+
+const HUB_DROPOFF_LOCATION = 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32';
 import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download, MapPin, CreditCard } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
@@ -43,6 +45,7 @@ export default function SellerOrdersSection() {
     const [showPickupDialog, setShowPickupDialog] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+    const [readyAction, setReadyAction] = useState<'hub_dropoff' | 'shop_ready'>('hub_dropoff');
     const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [pickupOrder, setPickupOrder] = useState<Order | null>(null);
@@ -126,8 +129,9 @@ export default function SellerOrdersSection() {
         );
     }, [orders, searchQuery]);
 
-    const handleReadyForPickupClick = (orderId: string) => {
+    const handleReadyForPickupClick = (orderId: string, action: 'hub_dropoff' | 'shop_ready' = 'hub_dropoff') => {
         setSelectedOrderId(orderId);
+        setReadyAction(action);
         setShowPickupDialog(true);
     };
 
@@ -206,6 +210,28 @@ export default function SellerOrdersSection() {
         });
     };
 
+    const selectHubDropoff = async (orderId: string) => {
+        await runWithLock(async () => {
+            try {
+                setIsUpdating(true);
+                await sellerApi.selectHubDropoff(orderId);
+                await refreshOrders();
+                toast({
+                    title: 'Hub drop-off selected',
+                    description: 'Drop the package at the hub within 24 hours, then mark it dropped off.'
+                });
+            } catch (error: any) {
+                toast({
+                    title: 'Could not select hub drop-off',
+                    description: error?.response?.data?.message || error?.message || 'Please try again.',
+                    variant: 'destructive'
+                });
+            } finally {
+                setIsUpdating(false);
+            }
+        });
+    };
+
     const markAsReadyForPickup = async () => {
         if (!selectedOrderId) return;
 
@@ -215,13 +241,18 @@ export default function SellerOrdersSection() {
             try {
                 setIsUpdating(true);
 
-                // Update order status to DELIVERY_COMPLETE
-                await sellerApi.updateOrderStatus(selectedOrderId, 'DELIVERY_COMPLETE' as OrderStatus);
+                if (readyAction === 'hub_dropoff') {
+                    await sellerApi.markDroppedAtHub(selectedOrderId);
+                } else {
+                    await sellerApi.updateOrderStatus(selectedOrderId, 'READY_FOR_BUYER' as OrderStatus);
+                }
                 await refreshOrders();
 
                 toast({
-                    title: 'Order Ready for Pickup',
-                    description: 'The buyer has been notified that their order is ready for pickup.',
+                    title: readyAction === 'hub_dropoff' ? 'Package dropped at hub' : 'Order ready for pickup',
+                    description: readyAction === 'hub_dropoff'
+                        ? 'The buyer and logistics timeline have been updated.'
+                        : 'The buyer has been notified that their order is ready for shop pickup.',
                 });
             } catch (err) {
                 console.error('Failed to update order status:', err);
@@ -233,6 +264,7 @@ export default function SellerOrdersSection() {
             } finally {
                 setIsUpdating(false);
                 setSelectedOrderId(null);
+                setReadyAction('hub_dropoff');
             }
         });
     };
@@ -293,7 +325,7 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                await sellerApi.updateOrderStatus(orderId, 'CONFIRMED' as OrderStatus);
+                await sellerApi.confirmBooking(orderId);
                 await refreshOrders();
 
                 toast({
@@ -456,11 +488,33 @@ export default function SellerOrdersSection() {
                         filteredOrders.map((order) => {
                             const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                             const isDigital = order.items?.some(i => i.productType === 'digital');
+                            const isPaid = ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '');
+                            const isPhysicalOnline = !isService && !isDigital && order.fulfillment_type === 'COURIER';
+                            const sellerHandoff = order.metadata?.seller_handoff || {};
                             const pickupTracking = order.logistics?.pickupLeg;
-                            const canRequestPickup = !isService
+                            const pickupIsActive = !!pickupTracking && !['failed', 'cancelled'].includes(String(pickupTracking.status || '').toLowerCase());
+                            const handoffStatus = String(sellerHandoff.status || '').toLowerCase();
+                            const canChooseHandoff = isPhysicalOnline
+                                && isPaid
+                                && !pickupIsActive
+                                && !['dropoff_selected', 'dropped_at_hub'].includes(handoffStatus);
+                            const canRequestPickup = canChooseHandoff;
+                            const canSelectHubDropoff = canChooseHandoff;
+                            const canMarkDroppedAtHub = isPhysicalOnline
+                                && isPaid
+                                && handoffStatus === 'dropoff_selected'
+                                && !pickupIsActive;
+                            const canConfirmBooking = isService
+                                && isPaid
+                                && ['PAID', 'AWAITING_SELLER_ACTION', 'SERVICE_PENDING', 'BOOKED'].includes(order.status);
+                            const canCompleteService = isService
+                                && isPaid
+                                && ['CONFIRMED', 'FULFILLING'].includes(order.status);
+                            const canMarkShopReady = !isService
                                 && !isDigital
-                                && ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')
-                                && !pickupTracking;
+                                && !isPhysicalOnline
+                                && isPaid
+                                && ['PAID', 'AWAITING_SELLER_ACTION', 'DELIVERY_PENDING'].includes(order.status);
 
                             let cardClasses = "transition-all duration-300 bg-black border shadow-[0_12px_32px_rgba(0,0,0,0.35)] hover:border-yellow-400/40 ";
                             let itemClasses = "text-xs sm:text-sm text-white rounded-lg px-3 py-2 border ";
@@ -500,6 +554,18 @@ export default function SellerOrdersSection() {
                                                         {order.status === 'COMPLETED' ? (
                                                             <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
                                                                 <CheckCircle className="h-3 w-3 mr-1" /> Completed
+                                                            </Badge>
+                                                        ) : order.status === 'AWAITING_SELLER_ACTION' ? (
+                                                            <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Clock className="h-3 w-3 mr-1" /> Seller Action
+                                                            </Badge>
+                                                        ) : order.status === 'FULFILLING' ? (
+                                                            <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Truck className="h-3 w-3 mr-1" /> Fulfilling
+                                                            </Badge>
+                                                        ) : order.status === 'READY_FOR_BUYER' ? (
+                                                            <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Package className="h-3 w-3 mr-1" /> Ready for Buyer
                                                             </Badge>
                                                         ) : order.status === 'DELIVERY_COMPLETE' ? (
                                                             <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -643,6 +709,20 @@ export default function SellerOrdersSection() {
 
                                                 {/* Action Buttons */}
                                                 <div className="w-full">
+                                                    {canSelectHubDropoff && (
+                                                        <div className="mb-2 space-y-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="w-full justify-center border-blue-400/30 bg-blue-500/10 text-blue-100 hover:bg-blue-500/20 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                                onClick={() => selectHubDropoff(order.id)}
+                                                                disabled={isUpdating}
+                                                            >
+                                                                <MapPin className="h-3 w-3 mr-1.5" />
+                                                                I will drop off at hub
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                     {canRequestPickup && (
                                                         <div className="mb-2 space-y-1.5">
                                                             <Button
@@ -657,6 +737,22 @@ export default function SellerOrdersSection() {
                                                             <p className="text-[10px] leading-relaxed text-white/60">
                                                                 Optional. Without pickup, drop the package at the hub within 24 hours.
                                                             </p>
+                                                        </div>
+                                                    )}
+                                                    {canMarkDroppedAtHub && (
+                                                        <div className="mb-2 rounded-lg border border-blue-400/25 bg-blue-500/10 p-2">
+                                                            <p className="mb-2 text-[10px] leading-relaxed text-blue-100">
+                                                                Drop at {HUB_DROPOFF_LOCATION} within 24 hours.
+                                                            </p>
+                                                            <Button
+                                                                size="sm"
+                                                                className="w-full justify-center bg-blue-500 hover:bg-blue-600 text-white text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                                onClick={() => handleReadyForPickupClick(order.id, 'hub_dropoff')}
+                                                                disabled={isUpdating}
+                                                            >
+                                                                <Package className="h-3 w-3 mr-1.5" />
+                                                                Mark Dropped Off at Hub
+                                                            </Button>
                                                         </div>
                                                     )}
                                                     {pickupTracking?.status === 'payment_pending' && (
@@ -678,7 +774,7 @@ export default function SellerOrdersSection() {
                                                             </Button>
                                                         </div>
                                                     )}
-                                                    {order.status === 'SERVICE_PENDING' && (
+                                                    {canConfirmBooking && (
                                                         <div className="space-y-1.5">
                                                             <Button
                                                                 size="sm"
@@ -701,13 +797,39 @@ export default function SellerOrdersSection() {
                                                             </Button>
                                                         </div>
                                                     )}
+                                                    {canCompleteService && (
+                                                        <div className="space-y-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                onClick={() => markAsServiceCompleted(order.id)}
+                                                                disabled={isUpdating}
+                                                            >
+                                                                <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
+                                                                Mark Service Completed
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                    {canMarkShopReady && (
+                                                        <div className="space-y-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                onClick={() => handleReadyForPickupClick(order.id, 'shop_ready')}
+                                                                disabled={isUpdating}
+                                                            >
+                                                                <Package className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
+                                                                Mark Ready for Shop Pickup
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                     {order.status === 'DELIVERY_PENDING' &&
-                                                        (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')) && (
+                                                        isPaid && !isPhysicalOnline && (
                                                             <div className="space-y-1.5">
                                                                 <Button
                                                                     size="sm"
                                                                     className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
-                                                                    onClick={() => handleReadyForPickupClick(order.id)}
+                                                                    onClick={() => handleReadyForPickupClick(order.id, 'shop_ready')}
                                                                     disabled={isUpdating}
                                                                 >
                                                                     <Truck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
@@ -874,13 +996,16 @@ export default function SellerOrdersSection() {
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center">
                                 <Truck className="h-4 w-4 text-blue-300" />
                             </div>
-                            Confirm Package Drop-off
+                            {readyAction === 'hub_dropoff' ? 'Confirm Package Drop-off' : 'Confirm Shop Pickup Readiness'}
                         </DialogTitle>
                         <DialogDescription className="text-sm text-white/75 leading-relaxed">
-                            Have you dropped off the package at the specified location?
+                            {readyAction === 'hub_dropoff'
+                                ? 'Have you dropped off the package at the specified location?'
+                                : 'Is this order ready for the buyer to collect at your shop?'}
                         </DialogDescription>
                     </DialogHeader>
 
+                    {readyAction === 'hub_dropoff' && (
                     <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-4 my-4">
                         <div className="flex items-start gap-3">
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -889,17 +1014,18 @@ export default function SellerOrdersSection() {
                             <div className="text-sm">
                                 <p className="font-semibold text-blue-100 mb-1">Drop-off Location:</p>
                                 <p className="text-blue-50">
-                                    <strong>Dynamic Mall</strong><br />
-                                    Along Tomboya Street<br />
-                                    Shop Number: <strong>SL 32</strong>
+                                    {HUB_DROPOFF_LOCATION}
                                 </p>
                             </div>
                         </div>
                     </div>
+                    )}
 
                     <div className="bg-yellow-500/10 border border-yellow-400/20 rounded-xl p-3 mb-4">
                         <p className="text-sm text-yellow-100 font-semibold">
-                            Please confirm only after the package has been physically dropped off at the specified location.
+                            {readyAction === 'hub_dropoff'
+                                ? 'Please confirm only after the package has been physically dropped off at the specified location.'
+                                : 'Please confirm only after the package is ready to hand over to the buyer.'}
                         </p>
                     </div>
 
@@ -925,7 +1051,7 @@ export default function SellerOrdersSection() {
                             ) : (
                                 <>
                                     <CheckCircle className="h-3 w-3 mr-2" />
-                                    Confirm Drop-off
+                                    {readyAction === 'hub_dropoff' ? 'Confirm Drop-off' : 'Confirm Ready'}
                                 </>
                             )}
                         </Button>

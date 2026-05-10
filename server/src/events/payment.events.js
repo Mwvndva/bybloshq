@@ -40,6 +40,21 @@ eventBus.on(AppEvents.PAYMENT.COMPLETED, async ({ eventId, payment, order }) => 
         });
     }
 
+    const physicalOnlineRequestResult = await LogisticsRequestService.ensurePhysicalOnlineRequestAfterPayment({
+        payment,
+        order,
+        eventId: eventId || `payment.completed:${payment.id}`
+    });
+
+    if (physicalOnlineRequestResult.ensured) {
+        logger.info('[Event:PaymentCompleted] Physical online logistics request ensured', {
+            paymentId: payment.id,
+            orderId: order?.id,
+            requestId: physicalOnlineRequestResult.requestId,
+            status: physicalOnlineRequestResult.status
+        });
+    }
+
     await PaymentReceiptService.sendBuyerEmailsAfterPayment({
         eventBus,
         eventId: eventId || `payment.completed:${payment.id}`,

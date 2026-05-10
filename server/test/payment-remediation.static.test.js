@@ -965,9 +965,10 @@ test('fulfillment transitions are isolated from order service orchestration', ()
   assert.match(transitionService, /static async completeDigitalOrder\(client,\s*order,\s*items\)/);
   assert.match(transitionService, /InventoryReservationService\.commitReservedInventory\(client,\s*items\)/);
   assert.match(transitionService, /BookingService\.finalizeSlot\(client,\s*order\.id\)/);
-  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.FULFILLMENT_PENDING/);
-  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.BOOKED/);
-  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.DELIVERY_PENDING/);
+  assert.match(transitionService, /assertValidTransition\(currentOrder\.status,\s*OrderStatus\.AWAITING_SELLER_ACTION/);
+  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.AWAITING_SELLER_ACTION/);
+  assert.match(transitionService, /assertValidTransition\(order\.status,\s*OrderStatus\.FULFILLING/);
+  assert.match(transitionService, /assertValidTransition\(OrderStatus\.FULFILLING,\s*OrderStatus\.COMPLETED/);
   assert.doesNotMatch(orderService, /static async _completePhysicalOrder/);
   assert.doesNotMatch(orderService, /static async _completeServiceOrder/);
   assert.doesNotMatch(orderService, /static async _completeDigitalOrder/);
@@ -1170,6 +1171,7 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
   assert.match(frontendDashboard, /Pickup \+ Delivery/);
   assert.match(frontendDashboard, /Delivery Only/);
   assert.match(frontendDashboard, /Pickup Only/);
+  assert.match(frontendDashboard, /Hub Drop-off \/ Hub Collection/);
   assert.match(frontendDashboard, /pickup_assigned/);
   assert.match(frontendDashboard, /out_for_delivery/);
   assert.match(frontendDashboard, /delivered/);
@@ -1268,12 +1270,55 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   assert.match(logisticsDashboardService, /pickupDelivery/);
   assert.match(logisticsDashboardService, /deliveryOnly/);
   assert.match(logisticsDashboardService, /pickupOnly/);
+  assert.match(logisticsDashboardService, /hubDropoff/);
   assert.match(logisticsDashboardService, /Invalid \$\{legType\} transition/);
   assert.match(logisticsDashboardService, /ALLOWED_LOGISTICS_TRANSITIONS/);
 
   assert.match(logisticsEvents, /eventBus\.deliverRecipient/);
   assert.match(recipientDelivery, /ON CONFLICT \(event_id, recipient_key, channel\)/);
   assert.match(recipientDelivery, /Recipient delivery already completed; suppressing duplicate/);
+});
+
+test('unified order flow exposes seller hub handoff and service booking actions', () => {
+  const migration = read('migrations/20260511010000_unified_order_logistics_statuses.sql');
+  const orderService = read('src/services/order.service.js');
+  const logisticsRequestService = read('src/services/logisticsRequest.service.js');
+  const paymentEvents = read('src/events/payment.events.js');
+  const sellerRoutes = read('src/routes/seller.routes.js');
+  const orderController = read('src/controllers/order.controller.js');
+  const sellerApi = read('../src/api/seller/ordersApi.ts');
+  const sellerOrders = read('../src/components/seller/SellerOrdersSection.tsx');
+
+  assert.match(migration, /AWAITING_SELLER_ACTION/);
+  assert.match(migration, /FULFILLING/);
+  assert.match(migration, /READY_FOR_BUYER/);
+  assert.match(logisticsRequestService, /ensurePhysicalOnlineRequestAfterPayment/);
+  assert.match(logisticsRequestService, /seller_handoff\.awaiting_choice/);
+  assert.match(paymentEvents, /ensurePhysicalOnlineRequestAfterPayment/);
+
+  assert.match(orderService, /static async selectHubDropoff/);
+  assert.match(orderService, /static async markDroppedAtHub/);
+  assert.match(orderService, /static async confirmBooking/);
+  assert.match(orderService, /seller_handoff\.dropoff_selected/);
+  assert.match(orderService, /seller_handoff\.dropped_at_hub/);
+  assert.doesNotMatch(orderService, /BookingService/);
+
+  assert.match(sellerRoutes, /\/orders\/:id\/select-hub-dropoff/);
+  assert.match(sellerRoutes, /\/orders\/:id\/mark-dropped-at-hub/);
+  assert.match(sellerRoutes, /\/orders\/:id\/confirm-booking/);
+  assert.match(orderController, /OrderService\.selectHubDropoff/);
+  assert.match(orderController, /OrderService\.markDroppedAtHub/);
+  assert.match(orderController, /OrderService\.confirmBooking/);
+  assert.match(sellerApi, /selectHubDropoff/);
+  assert.match(sellerApi, /markDroppedAtHub/);
+  assert.match(sellerApi, /confirmBooking/);
+
+  assert.match(sellerOrders, /I will drop off at hub/);
+  assert.match(sellerOrders, /Request pickup/);
+  assert.match(sellerOrders, /Mark Dropped Off at Hub/);
+  assert.match(sellerOrders, /Confirm Booking/);
+  assert.match(sellerOrders, /Mark Service Completed/);
+  assert.match(sellerOrders, /within 24 hours/);
 });
 
 test('logistics WhatsApp notifications are milestone-only and notification-only', () => {

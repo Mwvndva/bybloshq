@@ -256,6 +256,8 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
                 deliveryMode: metadata.delivery.deliveryMode || metadata.delivery.delivery_mode || null,
                 pricing: metadata.pricing || null
             } : null,
+            seller_handoff: metadata.seller_handoff || null,
+            service_confirmation: metadata.service_confirmation || null,
         },
         logistics,
         fulfillment_type: orderObj.fulfillment_type || orderObj.fulfillmentType || null,

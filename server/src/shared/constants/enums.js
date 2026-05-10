@@ -10,6 +10,9 @@ export const OrderStatus = {
     HELD: 'HELD',
     PAYMENT_PENDING: 'PAYMENT_PENDING',
     PAID: 'PAID',
+    AWAITING_SELLER_ACTION: 'AWAITING_SELLER_ACTION',
+    FULFILLING: 'FULFILLING',
+    READY_FOR_BUYER: 'READY_FOR_BUYER',
     PROCESSING: 'PROCESSING',
     SERVICE_PENDING: 'SERVICE_PENDING',
     DELIVERY_PENDING: 'DELIVERY_PENDING',
@@ -26,6 +29,7 @@ export const OrderStatus = {
     EXPIRED: 'EXPIRED',
     REFUND_PENDING: 'REFUND_PENDING',
     REFUNDED: 'REFUNDED',
+    MANUAL_REVIEW: 'MANUAL_REVIEW',
     COMPENSATION_REQUIRED: 'COMPENSATION_REQUIRED'
 };
 
@@ -48,6 +52,7 @@ export const PaymentStatus = {
     COMPLETED: 'completed',
     FAILED: 'failed',
     CANCELLED: 'cancelled',
+    MANUAL_REVIEW: 'manual_review',
     SUCCESS: 'success',
     PAID: 'paid',
     MANUAL_REVIEW_REQUIRED: 'manual_review_required',

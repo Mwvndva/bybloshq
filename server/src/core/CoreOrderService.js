@@ -36,6 +36,21 @@ const CoreOrderService = {
         return svc.updateOrderStatus(orderId, user, status);
     },
 
+    async selectHubDropoff(orderId, sellerId) {
+        const svc = await getLegacyService();
+        return svc.selectHubDropoff(orderId, sellerId);
+    },
+
+    async markDroppedAtHub(orderId, sellerId) {
+        const svc = await getLegacyService();
+        return svc.markDroppedAtHub(orderId, sellerId);
+    },
+
+    async confirmBooking(orderId, sellerId) {
+        const svc = await getLegacyService();
+        return svc.confirmBooking(orderId, sellerId);
+    },
+
     async cancelOrder(orderId, reason) {
         const svc = await getLegacyService();
         return svc.cancelOrder(orderId, reason);

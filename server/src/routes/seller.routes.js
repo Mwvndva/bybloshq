@@ -95,6 +95,10 @@ router.post(
   orderController.requestSellerPickup
 );
 
+router.post('/orders/:id/select-hub-dropoff', orderController.selectHubDropoff);
+router.post('/orders/:id/mark-dropped-at-hub', orderController.markDroppedAtHub);
+router.post('/orders/:id/confirm-booking', orderController.confirmBooking);
+
 // Get seller by ID (protected)
 // This must come after other specific routes to avoid conflicts
 router.get('/:id(\\d+)', sellerController.getSellerById);

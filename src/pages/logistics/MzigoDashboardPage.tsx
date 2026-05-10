@@ -51,6 +51,13 @@ const GROUPS = [
     tone: 'border-fuchsia-300/60 bg-fuchsia-300/10',
     pill: 'bg-fuchsia-300 text-black',
   },
+  {
+    key: 'hubDropoff',
+    title: 'Hub Drop-off / Hub Collection',
+    description: 'Seller is dropping off at the hub without a paid Mzigo pickup leg.',
+    tone: 'border-emerald-300/60 bg-emerald-300/10',
+    pill: 'bg-emerald-300 text-black',
+  },
 ] as const;
 
 const SORT_OPTIONS: Array<{ value: LogisticsSort; label: string }> = [
@@ -426,6 +433,7 @@ const MzigoDashboardPage = () => {
     pickupDelivery: dashboard?.groups?.pickupDelivery || [],
     deliveryOnly: dashboard?.groups?.deliveryOnly || [],
     pickupOnly: dashboard?.groups?.pickupOnly || [],
+    hubDropoff: dashboard?.groups?.hubDropoff || [],
   }), [dashboard]);
 
   const handleLogout = () => {

@@ -88,7 +88,13 @@ eventBus.on(AppEvents.ORDER.FULFILLED, async ({ eventId, order, items = [] }) =>
     await deliverAll('Event:OrderFulfilled', eventId, [
         hasDigital ? { key: `order:${order.id}:buyer:digital`, run: () => whatsappService.notifyBuyerDigitalDelivery({ order: notificationOrder, items: notificationItems }) } : null,
         { key: `order:${order.id}:buyer:payment_success`, run: () => whatsappService.notifyBuyerPaymentSuccess({ order: notificationOrder, items: notificationItems }) },
-        notificationOrder.fulfillmentType === 'COURIER' ? { key: `order:${order.id}:courier:new`, run: () => whatsappService.notifyCourierNewOrder({ order: notificationOrder, items: notificationItems }) } : null
+        { key: `order:${order.id}:seller:payment_success`, run: () => whatsappService.notifySellerStatusUpdate({
+            buyer: notificationOrder.buyer,
+            seller: notificationOrder.seller,
+            order: notificationOrder,
+            location: notificationOrder.location,
+            newStatus: notificationOrder.status || 'AWAITING_SELLER_ACTION'
+        }) }
     ]);
 });
 
