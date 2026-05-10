@@ -67,6 +67,7 @@ test('public polling and cron delegate successful completion to CorePaymentServi
 
 test('payment service selects configured payin provider and persists provider payment method', () => {
   const paymentService = read('src/services/payment.service.js');
+  const paymentMethodMigration = read('migrations/20260510070000_allow_paystack_payment_method.sql');
 
   assert.match(paymentService, /process\.env\.PAYMENT_PROVIDER \|\| 'payd'/);
   assert.match(paymentService, /this\.paymentProviderClient = this\.provider === 'paystack'[\s\S]*new PaystackProviderClient\(\)[\s\S]*new PaydProviderClient\(\)/);
@@ -74,6 +75,8 @@ test('payment service selects configured payin provider and persists provider pa
   assert.match(paymentService, /payment:\s*\{[\s\S]*method:\s*provider/);
   assert.match(paymentService, /payment_method:\s*provider/);
   assert.match(paymentService, /VALUES \(\$1, \$2, \$3, \$4, \$5, 'pending', \$6, \$7, \$8::jsonb\)/);
+  assert.match(paymentMethodMigration, /to_regtype\('public\.payment_method'\)/);
+  assert.match(paymentMethodMigration, /ALTER TYPE public\.payment_method ADD VALUE IF NOT EXISTS 'paystack'/);
 });
 
 test('withdrawal payouts route through configured provider after wallet deduction commit', () => {
@@ -1179,9 +1182,18 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   const recipientDelivery = read('src/events/recipientDelivery.js');
   const phoneModal = read('../src/components/PhoneCheckModal.tsx');
   const productCard = read('../src/components/ProductCard.tsx');
+  const productCardUtils = read('../src/components/product-card/productCardUtils.ts');
+  const productCardModals = read('../src/components/product-card/ProductCardModals.tsx');
 
   assert.match(phoneModal, /doorDelivery:\s*false/);
   assert.match(phoneModal, /doorDelivery:\s*true/);
+  assert.match(phoneModal, /canUseDoorDelivery = Boolean\(isPhysicalProduct && productPrice > 0\)/);
+  assert.match(phoneModal, /wantsDoorDelivery = canUseDoorDelivery && doorDeliveryEnabled/);
+  assert.match(productCardUtils, /isPhysical = productType === 'physical' && !isDigital && !isService/);
+  assert.match(productCard, /doorDeliverySelectionRef\.current = isPhysical && delivery\?\.doorDelivery \? delivery : null/);
+  assert.match(productCard, /wantsDoorDelivery = isPhysical && doorDeliverySelection\?\.doorDelivery === true/);
+  assert.match(productCardModals, /isPhysicalProduct=\{isPhysicalProduct\}/);
+  assert.doesNotMatch(productCardModals, /!product\.is_digital && product\.product_type !== 'service'/);
   assert.match(productCard, /wantsDoorDelivery/);
   assert.match(productCard, /delivery:\s*wantsDoorDelivery \?/);
   assert.match(paymentService, /if \(wantsDoorDelivery\)/);

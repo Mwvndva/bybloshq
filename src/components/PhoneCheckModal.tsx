@@ -56,7 +56,8 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   const [isQuoteLoading, setIsQuoteLoading] = useState(false);
 
   const productPrice = Number(purchaseDetails?.productPrice || 0);
-  const displayedDeliveryFee = doorDeliveryEnabled ? Number(deliveryQuote?.feeAmount || 0) : 0;
+  const canUseDoorDelivery = Boolean(isPhysicalProduct && productPrice > 0);
+  const displayedDeliveryFee = canUseDoorDelivery && doorDeliveryEnabled ? Number(deliveryQuote?.feeAmount || 0) : 0;
   const displayedTotal = productPrice + displayedDeliveryFee;
 
   useEffect(() => {
@@ -71,7 +72,13 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!doorDeliveryEnabled) {
+    if (!canUseDoorDelivery && doorDeliveryEnabled) {
+      setDoorDeliveryEnabled(false);
+    }
+  }, [canUseDoorDelivery, doorDeliveryEnabled]);
+
+  useEffect(() => {
+    if (!canUseDoorDelivery || !doorDeliveryEnabled) {
       setDeliveryQuote(null);
       setQuoteError('');
       setIsQuoteLoading(false);
@@ -124,7 +131,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [doorDeliveryEnabled, deliveryLocation.address, deliveryLocation.lat, deliveryLocation.lng, productPrice]);
+  }, [canUseDoorDelivery, doorDeliveryEnabled, deliveryLocation.address, deliveryLocation.lat, deliveryLocation.lng, productPrice]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +149,9 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       return;
     }
 
-    if (doorDeliveryEnabled) {
+    const wantsDoorDelivery = canUseDoorDelivery && doorDeliveryEnabled;
+
+    if (wantsDoorDelivery) {
       if (!deliveryLocation.address.trim() || deliveryLocation.lat === null || deliveryLocation.lng === null) {
         setError('Please pin your delivery location and enter the full address');
         return;
@@ -159,7 +168,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       }
     }
 
-    onPhoneSubmit(phone.trim(), doorDeliveryEnabled ? {
+    onPhoneSubmit(phone.trim(), wantsDoorDelivery ? {
       doorDelivery: true,
       address: deliveryLocation.address.trim(),
       lat: deliveryLocation.lat ?? undefined,
@@ -213,7 +222,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                     <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Price</span>
                     <span className="text-sm sm:text-base font-black text-yellow-300">{formatCurrency(purchaseDetails.productPrice)}</span>
                   </div>
-                  {isPhysicalProduct && (
+                  {canUseDoorDelivery && (
                     <div className="border-t border-yellow-300/20 pt-3 space-y-3">
                       <label className="flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-black px-3 py-2 cursor-pointer">
                         <span className="flex items-center gap-2 text-xs font-black text-white">
