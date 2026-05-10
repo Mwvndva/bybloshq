@@ -170,17 +170,17 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex flex-col w-[95vw] max-w-[425px] max-h-[85dvh] p-0 gap-0 overflow-hidden rounded-3xl border border-slate-200 shadow-2xl bg-white text-slate-950">
+      <DialogContent className="flex flex-col w-[95vw] max-w-[425px] max-h-[85dvh] p-0 gap-0 overflow-hidden rounded-3xl border border-white/15 shadow-2xl bg-black text-white">
         <DialogHeader className="p-6 sm:p-8 pb-2 shrink-0 space-y-4">
-          <div className="mx-auto w-14 h-14 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center shadow-inner">
+          <div className="mx-auto w-14 h-14 bg-yellow-300/10 border border-yellow-300/30 rounded-2xl flex items-center justify-center shadow-inner">
             <Phone className="h-7 w-7 text-yellow-400" />
           </div>
-          <DialogTitle className="text-xl font-black text-center text-slate-950 uppercase tracking-tight">Mobile Payment Number</DialogTitle>
+          <DialogTitle className="text-xl font-black text-center text-white uppercase tracking-tight">Mobile Payment Number</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto p-5 sm:p-8 py-4 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">M-Pesa Number</Label>
+              <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-wider text-white/70 ml-1">M-Pesa Number</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -189,34 +189,34 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                 onChange={(e) => setPhone(e.target.value)}
                 required
                 disabled={isLoading}
-                className="rounded-xl border-slate-200 focus-visible:ring-yellow-400 h-10 sm:h-12 bg-white text-sm sm:text-base px-4 text-slate-950 placeholder:text-slate-400"
+                className="rounded-xl border-white/15 focus-visible:ring-yellow-400 h-10 sm:h-12 bg-[#050505] text-sm sm:text-base px-4 text-white placeholder:text-white/45"
               />
               {error && <p className="text-xs text-red-500 font-medium ml-1">{error}</p>}
             </div>
             <div className="space-y-3">
-                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed px-1">
+                <p className="text-xs sm:text-sm text-white/75 font-medium leading-relaxed px-1">
                 Please enter your M-Pesa number to proceed with payment.
               </p>
 
               {/* 🛡️ ESCROW NOTICE: Buyer Protection (CRITICAL UX FIX) */}
               {purchaseDetails && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 space-y-3">
+                <div className="bg-[#080808] border border-yellow-300/25 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Shop</span>
-                    <span className="text-xs sm:text-sm font-bold text-slate-950 text-right truncate">{purchaseDetails.shopName}</span>
+                    <span className="text-xs sm:text-sm font-bold text-white text-right truncate">{purchaseDetails.shopName}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Product</span>
-                    <span className="text-xs sm:text-sm font-bold text-slate-950 text-right truncate">{purchaseDetails.productName}</span>
+                    <span className="text-xs sm:text-sm font-bold text-white text-right truncate">{purchaseDetails.productName}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-yellow-200 pt-3">
+                  <div className="flex items-center justify-between gap-3 border-t border-yellow-300/20 pt-3">
                     <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Price</span>
                     <span className="text-sm sm:text-base font-black text-yellow-300">{formatCurrency(purchaseDetails.productPrice)}</span>
                   </div>
                   {isPhysicalProduct && (
-                    <div className="border-t border-yellow-200 pt-3 space-y-3">
-                      <label className="flex items-center justify-between gap-3 rounded-xl border border-yellow-200 bg-white/70 px-3 py-2 cursor-pointer">
-                        <span className="flex items-center gap-2 text-xs font-black text-slate-950">
+                    <div className="border-t border-yellow-300/20 pt-3 space-y-3">
+                      <label className="flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-black px-3 py-2 cursor-pointer">
+                        <span className="flex items-center gap-2 text-xs font-black text-white">
                           <Truck className="h-4 w-4 text-yellow-500" />
                           Door delivery
                         </span>
@@ -231,7 +231,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 
                       {doorDeliveryEnabled && (
                         <div className="space-y-3">
-                          <div className="rounded-2xl border border-yellow-200 bg-white p-3">
+                          <div className="rounded-2xl border border-white/15 bg-black p-3">
                             <LocationPicker
                               label="Delivery Location"
                               detailedLabel="Full Delivery Address"
@@ -244,31 +244,31 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                                   lng: coordinates?.lng ?? null
                                 });
                               }}
-                              className="[&_label]:!text-slate-700 [&_p]:!text-slate-500"
+                              className="[&_label]:!text-white [&_p]:!text-white/65 [&_input]:!bg-[#050505] [&_input]:!text-white [&_input]:!border-white/15 [&_input::placeholder]:!text-white/40"
                             />
                           </div>
 
-                          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-3 space-y-2">
+                          <div className="rounded-2xl border border-yellow-300/25 bg-[#050505] p-3 space-y-2">
                             <div className="flex items-center justify-between gap-3">
                               <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Delivery fee</span>
-                              <span className="text-xs font-black text-slate-950">
+                              <span className="text-xs font-black text-white">
                                 {isQuoteLoading ? 'Calculating...' : formatCurrency(displayedDeliveryFee)}
                               </span>
                             </div>
                             {deliveryQuote && (
                               <div className="flex items-center justify-between gap-3">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Distance</span>
-                                <span className="text-xs font-bold text-slate-700">
+                                <span className="text-xs font-bold text-white/75">
                                   {deliveryQuote.chargeableDistanceKm} km billed
                                 </span>
                               </div>
                             )}
-                            <div className="flex items-center justify-between gap-3 border-t border-yellow-200 pt-2">
+                            <div className="flex items-center justify-between gap-3 border-t border-yellow-300/20 pt-2">
                               <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Total to pay</span>
-                              <span className="text-sm font-black text-slate-950">{formatCurrency(displayedTotal)}</span>
+                              <span className="text-sm font-black text-white">{formatCurrency(displayedTotal)}</span>
                             </div>
                             {quoteError && <p className="text-xs text-red-500 font-bold">{quoteError}</p>}
-                            <div className="flex items-start gap-2 rounded-xl bg-white p-2 text-[11px] font-bold leading-relaxed text-slate-700">
+                            <div className="flex items-start gap-2 rounded-xl bg-black border border-white/10 p-2 text-[11px] font-bold leading-relaxed text-white/75">
                               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />
                               <span>Deliveries are made within 24 hours.</span>
                             </div>
@@ -280,18 +280,18 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                 </div>
               )}
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+              <div className="bg-[#080808] border border-white/15 rounded-2xl p-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-green-500">Secure Escrow Protection</span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed font-medium">
+                <p className="text-[11px] sm:text-xs text-white/75 leading-relaxed font-medium">
                   Your money is 100% safe. We hold your payment in a secure escrow system and <strong>only release it to the seller after you confirm</strong> the order is received.
                 </p>
               </div>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:gap-3 p-5 sm:p-8 pt-4 mt-auto border-t border-slate-100 shrink-0 bg-slate-50/70 backdrop-blur-sm">
+          <div className="flex flex-col gap-2 sm:gap-3 p-5 sm:p-8 pt-4 mt-auto border-t border-white/10 shrink-0 bg-[#050505]/95 backdrop-blur-sm">
             <Button
               type="submit"
               disabled={isLoading}
@@ -310,7 +310,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
               variant="ghost"
               onClick={onClose}
               disabled={isLoading}
-              className="w-full rounded-xl text-slate-500 hover:text-slate-950 hover:bg-slate-100 font-bold"
+              className="w-full rounded-xl text-white/65 hover:text-white hover:bg-white/10 font-bold"
             >
               Cancel
             </Button>
