@@ -371,16 +371,16 @@ class OrderService {
       const validTransitions = {
         [OrderStatus.PENDING]: [OrderStatus.RESERVED, OrderStatus.PROCESSING, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.PAID, OrderStatus.CANCELLED],
         [OrderStatus.RESERVED]: [OrderStatus.PAID, OrderStatus.EXPIRED, OrderStatus.CANCELLED, OrderStatus.FAILED],
-        [OrderStatus.PAID]: [OrderStatus.AWAITING_SELLER_ACTION, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
-        [OrderStatus.AWAITING_SELLER_ACTION]: [OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
-        [OrderStatus.FULFILLING]: [OrderStatus.READY_FOR_BUYER, OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-        [OrderStatus.READY_FOR_BUYER]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-        [OrderStatus.PROCESSING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.CONFIRMED, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-        [OrderStatus.SERVICE_PENDING]: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.FULFILLING, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
+        [OrderStatus.PAID]: [OrderStatus.AWAITING_SELLER_ACTION, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED],
+        [OrderStatus.AWAITING_SELLER_ACTION]: [OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED],
+        [OrderStatus.FULFILLING]: [OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED],
+        [OrderStatus.READY_FOR_BUYER]: [OrderStatus.CANCELLED],
+        [OrderStatus.PROCESSING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.CONFIRMED, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED],
+        [OrderStatus.SERVICE_PENDING]: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.FULFILLING, OrderStatus.CANCELLED],
         [OrderStatus.DELIVERY_PENDING]: [OrderStatus.PROCESSING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.FULFILLING, OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED],
-        [OrderStatus.COLLECTION_PENDING]: [OrderStatus.PROCESSING, OrderStatus.READY_FOR_BUYER, OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
-        [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-        [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.COLLECTION_PENDING]: [OrderStatus.PROCESSING, OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED],
+        [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.CANCELLED],
+        [OrderStatus.CONFIRMED]: [OrderStatus.READY_FOR_BUYER, OrderStatus.CANCELLED],
         [OrderStatus.EXPIRED]: [OrderStatus.RESERVED, OrderStatus.CANCELLED], // Can potentially be re-reserved if user retries
         [OrderStatus.COMPLETED]: [],
         [OrderStatus.CANCELLED]: [],
@@ -392,6 +392,10 @@ class OrderService {
 
       logger.info(`[OrderService] Status transition requested: ${currentStatus} -> ${newStatus} for Order #${order.order_number}`);
 
+      if (newStatus === OrderStatus.COMPLETED) {
+        throw new Error('Buyer confirmation is required to complete an order and release seller funds');
+      }
+
       if (!validTransitions[currentStatus]?.includes(newStatus)) {
         logger.error(`[OrderService] Invalid status transition blocked: ${currentStatus} -> ${newStatus}`);
         throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
@@ -401,23 +405,16 @@ class OrderService {
 
       // 4. Determine side-effects (payment status updates)
       let paymentStatus = order.payment_status;
-      if (newStatus === OrderStatus.COMPLETED && order.payment_status === 'pending') {
-        paymentStatus = 'completed';
-      } else if (newStatus === OrderStatus.CANCELLED && order.payment_status === 'pending') {
+      if (newStatus === OrderStatus.CANCELLED && order.payment_status === 'pending') {
         paymentStatus = 'cancelled';
       }
 
       // 5. Update Order
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, paymentStatus);
 
-      // 6. Handle Seller Payout if Completed
-      if (newStatus === OrderStatus.COMPLETED && currentStatus !== OrderStatus.COMPLETED) {
-        await this._processSellerPayout(client, updatedOrder);
-      }
-
       await client.query('COMMIT');
 
-      // 7. Send Notification
+      // 6. Send Notification
       try {
         const details = await OrderReadService.getStatusNotificationDetails(orderId);
 
@@ -1122,18 +1119,30 @@ class OrderService {
         throw new Error('Unauthorized: You can only update your own orders');
       }
 
-      // Allow if shipped, delivered, pending, or confirmed (for services)
-      const allowedStatuses = [
-        OrderStatus.PENDING,
-        OrderStatus.DELIVERY_PENDING,
+      const buyerConfirmStatuses = [
         OrderStatus.DELIVERY_COMPLETE,
-        OrderStatus.CONFIRMED,
-        OrderStatus.SERVICE_PENDING,
         OrderStatus.COLLECTION_PENDING,
-        OrderStatus.FULFILLING,
         OrderStatus.READY_FOR_BUYER
       ];
-      if (!allowedStatuses.includes(order.status)) {
+
+      let canConfirmReceipt = buyerConfirmStatuses.includes(order.status);
+      if (!canConfirmReceipt && order.status === OrderStatus.FULFILLING) {
+        const deliveryLegResult = await client.query(
+          `SELECT ll.status
+           FROM logistics_requests lr
+           JOIN logistics_legs ll
+             ON ll.logistics_request_id = lr.id
+            AND ll.leg_type = 'delivery'
+           WHERE lr.order_id = $1
+           ORDER BY ll.created_at DESC
+           LIMIT 1`,
+          [orderId]
+        );
+        const deliveryStatus = String(deliveryLegResult.rows[0]?.status || '').toLowerCase();
+        canConfirmReceipt = deliveryStatus === 'delivered' || deliveryStatus === 'completed';
+      }
+
+      if (!canConfirmReceipt) {
         throw new Error(`Cannot confirm receipt for order in ${order.status} status`);
       }
 

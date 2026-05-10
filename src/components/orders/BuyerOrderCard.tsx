@@ -6,9 +6,11 @@ import { getImageUrl } from '@/lib/utils';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 import { OrderLogisticsTracking } from './OrderLogisticsTracking';
 import {
+  canConfirmOrderReceipt,
   detailPillClass,
   formatOrderCurrency,
   formatOrderDate,
+  getConfirmReceiptLabel,
   getPaymentStatusBadge,
   getStatusBadge,
   glassCardStyle,
@@ -23,7 +25,6 @@ interface BuyerOrderCardProps {
   downloadProgress: Record<string, number>;
   onViewDetails: (order: Order) => void;
   onConfirmReceipt: (orderId: string) => void;
-  onCollection: (orderId: string) => void;
   onDownload: (order: Order) => void;
   onToggleClientStatus: (sellerId: string, sellerName: string) => void;
 }
@@ -36,13 +37,13 @@ export function BuyerOrderCard({
   downloadProgress,
   onViewDetails,
   onConfirmReceipt,
-  onCollection,
   onDownload,
   onToggleClientStatus
 }: BuyerOrderCardProps) {
   const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
   const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
   const productType = order.items[0]?.productType || 'PHYSICAL';
+  const canConfirmReceipt = canConfirmOrderReceipt(order);
   const instruction = getOrderInstruction({
     status: order.status,
     userRole: 'buyer',
@@ -155,13 +156,13 @@ export function BuyerOrderCard({
               View Details
             </Button>
 
-            {(order.status === 'DELIVERY_COMPLETE' || order.status === 'CONFIRMED') && (
+            {canConfirmReceipt && (
               <Button
                 size="sm"
                 className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm"
                 onClick={() => onConfirmReceipt(order.id)}
               >
-                {order.status === 'CONFIRMED' ? 'Mark as Done' : 'Confirm Receipt'}
+                {getConfirmReceiptLabel(order)}
               </Button>
             )}
 
@@ -185,16 +186,6 @@ export function BuyerOrderCard({
                     Download
                   </>
                 )}
-              </Button>
-            )}
-
-            {order.status === 'COLLECTION_PENDING' && (
-              <Button
-                size="sm"
-                className="flex-1 sm:flex-none bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-xs sm:text-sm"
-                onClick={() => onCollection(order.id)}
-              >
-                Mark as Collected
               </Button>
             )}
 

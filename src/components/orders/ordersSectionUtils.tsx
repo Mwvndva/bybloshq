@@ -60,6 +60,25 @@ export const isServiceOrder = (order?: Order | null): boolean => {
   return order.status === 'CONFIRMED' || order.items.some((item: any) => item.productType === 'service' || item.isService);
 };
 
+export const canConfirmOrderReceipt = (order?: Order | null): boolean => {
+  if (!order) return false;
+
+  if (['DELIVERY_COMPLETE', 'READY_FOR_BUYER', 'COLLECTION_PENDING'].includes(order.status)) {
+    return true;
+  }
+
+  if (order.status !== 'FULFILLING') {
+    return false;
+  }
+
+  const deliveryStatus = order.logistics?.deliveryLeg?.status?.toLowerCase();
+  return deliveryStatus === 'delivered' || deliveryStatus === 'completed';
+};
+
+export const getConfirmReceiptLabel = (order?: Order | null): string => {
+  return isServiceOrder(order) ? 'Mark as Done' : 'Confirm Receipt';
+};
+
 export const getStatusBadge = (status: string) => {
   const statusValue = status?.toUpperCase() || 'PENDING';
   switch (statusValue) {
@@ -82,6 +101,20 @@ export const getStatusBadge = (status: string) => {
         <Badge className={`bg-gradient-to-r from-purple-500/90 to-purple-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <Package className="h-3 w-3 mr-1" />
           Delivery Complete
+        </Badge>
+      );
+    case 'READY_FOR_BUYER':
+      return (
+        <Badge className={`bg-gradient-to-r from-emerald-500/90 to-green-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
+          <Package className="h-3 w-3 mr-1" />
+          Ready for Buyer
+        </Badge>
+      );
+    case 'FULFILLING':
+      return (
+        <Badge className={`bg-gradient-to-r from-amber-500/90 to-orange-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
+          <Truck className="h-3 w-3 mr-1" />
+          Fulfilling
         </Badge>
       );
     case 'COMPLETED':

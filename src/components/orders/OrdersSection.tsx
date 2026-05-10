@@ -42,7 +42,6 @@ export default function OrdersSection() {
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<Order | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
@@ -113,11 +112,6 @@ export default function OrdersSection() {
     setShowReceiptDialog(true);
   };
 
-  const handleCollectionClick = (orderId: string) => {
-    setCurrentOrderId(orderId);
-    setShowCollectionDialog(true);
-  };
-
   const handleCancelOrder = async () => {
     if (!currentOrderId) return;
     setShowCancelDialog(false);
@@ -157,26 +151,6 @@ export default function OrdersSection() {
         toast.error(err.code === 'ECONNABORTED'
           ? 'Request timed out. Please check your internet connection and try again.'
           : `Error: ${errorMessage}`, { id: loadingToast });
-      } finally {
-        setIsConfirming(null);
-      }
-    });
-  };
-
-  const handleMarkAsCollected = async () => {
-    if (!currentOrderId) return;
-    setShowCollectionDialog(false);
-
-    await runWithLock(async () => {
-      setIsConfirming(currentOrderId);
-      const loadingToast = toast.loading('Marking as collected...');
-
-      try {
-        await buyerApi.markOrderAsCollected(currentOrderId);
-        toast.success('Order completed! Funds released to seller.', { id: loadingToast });
-        await fetchOrders();
-      } catch (err: any) {
-        toast.error(err.response?.data?.message || err.message || 'Failed to mark as collected', { id: loadingToast });
       } finally {
         setIsConfirming(null);
       }
@@ -301,7 +275,6 @@ export default function OrdersSection() {
             downloadProgress={downloadProgress}
             onViewDetails={setSelectedOrderForDetails}
             onConfirmReceipt={handleConfirmReceiptClick}
-            onCollection={handleCollectionClick}
             onDownload={(orderToDownload) => {
               if (isDigitalOrder(orderToDownload)) handleDownload(orderToDownload);
             }}
@@ -316,19 +289,15 @@ export default function OrdersSection() {
         isConfirming={isConfirming}
         showCancelDialog={showCancelDialog}
         showReceiptDialog={showReceiptDialog}
-        showCollectionDialog={showCollectionDialog}
         selectedOrderForDetails={selectedOrderForDetails}
         viewingImage={viewingImage}
         onCancelDialogChange={setShowCancelDialog}
         onReceiptDialogChange={setShowReceiptDialog}
-        onCollectionDialogChange={setShowCollectionDialog}
         onSelectedOrderChange={setSelectedOrderForDetails}
         onViewingImageChange={setViewingImage}
         onCancelOrder={handleCancelOrder}
         onConfirmReceipt={handleConfirmReceipt}
-        onMarkAsCollected={handleMarkAsCollected}
         onConfirmReceiptClick={handleConfirmReceiptClick}
-        onCollectionClick={handleCollectionClick}
       />
     </div>
   );
