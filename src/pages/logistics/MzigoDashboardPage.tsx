@@ -7,12 +7,15 @@ import {
   ExternalLink,
   Loader2,
   LogOut,
+  Mail,
   MapPin,
   PackageCheck,
   Phone,
   RefreshCw,
   ShoppingBag,
+  Store,
   Truck,
+  UserRound,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -169,6 +172,28 @@ function mapAnchor(label: string, href?: string | null) {
   );
 }
 
+function DetailField({
+  label,
+  value,
+  icon,
+  children,
+}: {
+  label: string;
+  value?: ReactNode;
+  icon?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg bg-white/[0.04] px-3 py-2">
+      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+        {icon}
+        {label}
+      </p>
+      <div className="text-sm text-white">{value || children || 'Not provided'}</div>
+    </div>
+  );
+}
+
 function DashboardStat({
   label,
   value,
@@ -308,6 +333,12 @@ function RequestCard({
   const productSummary = request.product.summary || primaryProduct?.name || 'Package';
   const isCompleted = readOnly || request.isCompleted || request.status === 'completed';
   const completedAt = request.completedAt || request.order.completedAt || null;
+  const sellerDisplayName = request.seller.shopName || request.seller.name || 'Seller not available';
+  const sellerAddress = request.seller.physicalAddress || request.seller.location || 'No seller address saved';
+  const buyerDeliveryAddress = request.deliveryLeg?.destination.address
+    || request.deliveryLeg?.destination.label
+    || null;
+  const buyerMapLink = request.deliveryLeg?.destination.mapLink || null;
 
   return (
     <article className={`rounded-2xl border p-4 text-white shadow-lg shadow-black/30 ${tone}`}>
@@ -329,7 +360,7 @@ function RequestCard({
         </div>
       </div>
 
-      <div className="mb-4 grid gap-3 md:grid-cols-2">
+      <div className="mb-4 grid gap-3 xl:grid-cols-[1.1fr_1fr_1fr]">
         <div className="rounded-xl border border-white/10 bg-black/45 p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
             <ShoppingBag size={15} />
@@ -347,18 +378,39 @@ function RequestCard({
 
         <div className="rounded-xl border border-white/10 bg-black/45 p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <PackageCheck size={15} />
-            Shop
+            <Store size={15} />
+            Seller details
           </div>
-          <p className="text-sm text-white">{request.seller.shopName || request.seller.name || 'Shop not available'}</p>
-          <p className="mt-1 flex items-center gap-2 text-xs text-white/70">
-            <Phone size={12} />
-            {request.seller.phone || 'No seller phone'}
-          </p>
-          <p className="mt-2 text-xs text-white/70">
-            {request.seller.physicalAddress || request.seller.location || 'No seller address saved'}
-          </p>
-          {mapAnchor('Open seller map', request.seller.mapLink)}
+          <div className="space-y-2">
+            <DetailField label="Shop" value={sellerDisplayName} icon={<Store size={12} />} />
+            <DetailField label="Phone" value={request.seller.phone || 'No seller phone'} icon={<Phone size={12} />} />
+            <DetailField label="Address" icon={<MapPin size={12} />}>
+              <p>{sellerAddress}</p>
+              {request.seller.mapLink ? (
+                <div className="mt-1">{mapAnchor('Open seller map', request.seller.mapLink)}</div>
+              ) : (
+                <p className="mt-1 text-xs text-white/50">No seller map pin saved.</p>
+              )}
+            </DetailField>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+            <UserRound size={15} />
+            Buyer details
+          </div>
+          <div className="space-y-2">
+            <DetailField label="Buyer" value={request.buyer.name || 'Buyer not available'} icon={<UserRound size={12} />} />
+            <DetailField label="Phone" value={request.buyer.phone || 'No buyer phone'} icon={<Phone size={12} />} />
+            {request.buyer.email && (
+              <DetailField label="Email" value={request.buyer.email} icon={<Mail size={12} />} />
+            )}
+            <DetailField label="Delivery" icon={<MapPin size={12} />}>
+              <p>{buyerDeliveryAddress || 'No door delivery. Buyer follows hub or shop collection flow.'}</p>
+              {buyerMapLink && <div className="mt-1">{mapAnchor('Open buyer map', buyerMapLink)}</div>}
+            </DetailField>
+          </div>
         </div>
       </div>
 
@@ -387,18 +439,21 @@ function RequestCard({
         <div className="rounded-xl border border-white/10 bg-black/45 p-3">
           <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
             <MapPin size={15} />
-            Seller drop-off
+            Seller handoff / hub
           </p>
           <p className="text-sm text-white">{request.sellerDropoff.address || request.sellerDropoff.label || 'Not set'}</p>
           {mapAnchor('Open drop-off map', request.sellerDropoff.mapLink)}
         </div>
 
         <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-          <p className="mb-1 text-sm font-semibold text-white">Buyer delivery</p>
-          <p className="text-sm text-white">
-            {request.deliveryLeg?.destination.address || 'No buyer door delivery'}
+          <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
+            <PackageCheck size={15} />
+            Card classification
           </p>
-          <p className="mt-1 text-xs text-white/70">{request.buyer.phone || 'No buyer phone'}</p>
+          <p className="text-sm capitalize text-white">{request.group.replace(/_/g, ' ')}</p>
+          <p className="mt-1 text-xs text-white/70">
+            Pickup fee: {statusLabel(request.pickupFeeStatus)} | Delivery fee: {statusLabel(request.deliveryFeeStatus)}
+          </p>
         </div>
       </div>
 

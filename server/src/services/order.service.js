@@ -557,6 +557,7 @@ class OrderService {
     const client = await pool.connect();
     let oldStatus = null;
     let newStatus = OrderStatus.FULFILLING;
+    let newOrderNotificationEvent = null;
 
     try {
       await client.query('BEGIN');
@@ -634,7 +635,14 @@ class OrderService {
         ]
       );
 
+      newOrderNotificationEvent = await LogisticsRequestService.enqueueNewOrderNotification(client, {
+        requestId: request.id,
+        orderId: order.id,
+        source: 'seller_hub_dropoff'
+      });
+
       await client.query('COMMIT');
+      eventBus.dispatchAfterCommit(newOrderNotificationEvent?.eventId, 'HubDropoffNewOrderNotification');
       await this._emitOrderUpdate(order.id, oldStatus, newStatus, 'Seller selected hub drop-off. Hub deadline is 24 hours.', 'OrderService.selectHubDropoff');
       return updatedRows[0];
     } catch (error) {

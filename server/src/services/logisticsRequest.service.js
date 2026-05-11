@@ -81,6 +81,24 @@ function isPhysicalOnlineOrder(order) {
 }
 
 class LogisticsRequestService {
+    static async enqueueNewOrderNotification(client, {
+        requestId,
+        orderId,
+        paymentId = null,
+        source = 'system'
+    }) {
+        if (!requestId || !orderId) return null;
+
+        return eventBus.enqueueInTransaction(client, AppEvents.LOGISTICS.NOTIFICATION, {
+            eventId: `logistics.notification.new_order:${requestId}:${orderId}:${source}`,
+            notificationType: 'new_order',
+            requestId,
+            orderId,
+            paymentId,
+            source
+        });
+    }
+
     static async getMzigoEgoPartner(client) {
         const { rows } = await client.query(
             `SELECT id, name, slug
@@ -698,6 +716,7 @@ class LogisticsRequestService {
 
         try {
             await client.query('BEGIN');
+            let newOrderNotificationEvent = null;
             let notificationEvent = null;
 
             const { rows: paymentRows } = await client.query(
@@ -811,6 +830,12 @@ class LogisticsRequestService {
             );
 
             await LogisticsTrackingLinkService.ensureLinksForRequest(client, logistics.request_id);
+            newOrderNotificationEvent = await this.enqueueNewOrderNotification(client, {
+                requestId: logistics.request_id,
+                orderId: lockedOrder.id,
+                paymentId: lockedPayment.id,
+                source: 'door_delivery_paid'
+            });
             notificationEvent = await eventBus.enqueueInTransaction(client, AppEvents.LOGISTICS.NOTIFICATION, {
                 eventId: `logistics.notification.delivery_paid:${logistics.request_id}:${logistics.delivery_leg_id}:${lockedPayment.id}`,
                 notificationType: 'delivery_paid',
@@ -841,6 +866,7 @@ class LogisticsRequestService {
             );
 
             await client.query('COMMIT');
+            eventBus.dispatchAfterCommit(newOrderNotificationEvent?.eventId, 'LogisticsNewOrderNotification');
             eventBus.dispatchAfterCommit(notificationEvent?.eventId, 'LogisticsDeliveryPaidNotification');
 
             return {
@@ -875,6 +901,7 @@ class LogisticsRequestService {
 
         try {
             await client.query('BEGIN');
+            let newOrderNotificationEvent = null;
             let notificationEvent = null;
 
             const { rows: paymentRows } = await client.query(
@@ -988,6 +1015,12 @@ class LogisticsRequestService {
             );
 
             await LogisticsTrackingLinkService.ensureLinksForRequest(client, logistics.request_id);
+            newOrderNotificationEvent = await this.enqueueNewOrderNotification(client, {
+                requestId: logistics.request_id,
+                orderId: lockedOrder.id,
+                paymentId: lockedPayment.id,
+                source: 'seller_pickup_paid'
+            });
             notificationEvent = await eventBus.enqueueInTransaction(client, AppEvents.LOGISTICS.NOTIFICATION, {
                 eventId: `logistics.notification.pickup_paid:${logistics.request_id}:${logistics.pickup_leg_id}:${lockedPayment.id}`,
                 notificationType: 'pickup_paid',
@@ -1018,6 +1051,7 @@ class LogisticsRequestService {
             );
 
             await client.query('COMMIT');
+            eventBus.dispatchAfterCommit(newOrderNotificationEvent?.eventId, 'LogisticsNewOrderNotification');
             eventBus.dispatchAfterCommit(notificationEvent?.eventId, 'LogisticsPickupPaidNotification');
 
             return {

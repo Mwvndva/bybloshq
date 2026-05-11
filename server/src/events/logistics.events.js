@@ -5,6 +5,7 @@ import logger from '../shared/utils/logger.js';
 import LogisticsTrackingLinkService from '../services/logisticsTrackingLink.service.js';
 
 const IMPORTANT_LOGISTICS_NOTIFICATION_TYPES = new Set([
+    'new_order',
     'delivery_paid',
     'pickup_paid',
     'pickup_assigned',
@@ -81,7 +82,7 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
          JOIN product_orders po ON po.id = lr.order_id
          LEFT JOIN sellers s ON s.id = po.seller_id
          LEFT JOIN buyers b ON b.id = po.buyer_id
-         JOIN logistics_legs ll ON ll.logistics_request_id = lr.id
+         LEFT JOIN logistics_legs ll ON ll.logistics_request_id = lr.id
              AND ($2::bigint IS NULL OR ll.id = $2::bigint)
          LEFT JOIN LATERAL (
              SELECT json_agg(json_build_object(
@@ -94,7 +95,12 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
          ) items ON TRUE
          WHERE ($1::bigint IS NULL OR lr.id = $1::bigint)
            AND ($3::integer IS NULL OR lr.order_id = $3::integer)
-         ORDER BY CASE WHEN $2::bigint IS NOT NULL AND ll.id = $2::bigint THEN 0 ELSE 1 END
+         ORDER BY CASE
+             WHEN $2::bigint IS NOT NULL AND ll.id = $2::bigint THEN 0
+             WHEN ll.leg_type = 'pickup' THEN 1
+             WHEN ll.leg_type = 'delivery' THEN 2
+             ELSE 3
+         END
          LIMIT 1`,
         [requestId || null, legId || null, orderId || null]
     );
@@ -148,24 +154,30 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
 }
 
 async function deliverAll(eventId, context, notificationType) {
+    const requestKey = context.leg?.id
+        ? `logistics:${context.request.id}:${context.leg.id}:${notificationType}`
+        : `logistics:${context.request.id}:request:${notificationType}`;
+    const partnerOnly = notificationType === 'new_order';
+    const skipPartner = ['delivery_paid', 'pickup_paid'].includes(notificationType);
+
     const deliveries = [
-        context.buyer.phone
+        !partnerOnly && context.buyer.phone
             ? {
-                key: `logistics:${context.request.id}:${context.leg.id}:${notificationType}:buyer`,
+                key: `${requestKey}:buyer`,
                 role: 'buyer',
                 phone: context.buyer.phone
             }
             : null,
-        context.seller.phone
+        !partnerOnly && context.seller.phone
             ? {
-                key: `logistics:${context.request.id}:${context.leg.id}:${notificationType}:seller`,
+                key: `${requestKey}:seller`,
                 role: 'seller',
                 phone: context.seller.phone
             }
             : null,
-        context.partner.phone
+        !skipPartner && context.partner.phone
             ? {
-                key: `logistics:${context.request.id}:${context.leg.id}:${notificationType}:partner`,
+                key: `${requestKey}:partner`,
                 role: 'partner',
                 phone: context.partner.phone
             }
