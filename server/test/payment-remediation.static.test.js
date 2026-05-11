@@ -700,8 +700,9 @@ test('email templates resolve from docker root and order WhatsApp events use nor
   assert.match(emailUtils, /Email template not found/);
   assert.match(orderEvents, /OrderReadService\.getStatusNotificationDetails/);
   assert.match(orderEvents, /OrderNotificationPayloadService\.prepareNormalizedNotificationPayload/);
-  assert.match(orderEvents, /notifySellerNewOrder\(notificationOrder\)/);
-  assert.match(orderEvents, /notifyBuyerOrderConfirmation\(notificationOrder\)/);
+  assert.match(orderEvents, /WhatsApp waits for payment completion/);
+  assert.doesNotMatch(orderEvents, /notifySellerNewOrder|notifyBuyerOrderConfirmation/);
+  assert.doesNotMatch(whatsappService, /async notifySellerNewOrder|async notifyBuyerOrderConfirmation/);
   assert.match(whatsappService, /async notifyBuyerPaymentSuccess/);
   assert.match(whatsappService, /async notifyBuyerDigitalDelivery/);
   assert.match(whatsappService, /async notifyCourierNewOrder/);
@@ -1271,6 +1272,8 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   assert.match(logisticsDashboardService, /deliveryOnly/);
   assert.match(logisticsDashboardService, /pickupOnly/);
   assert.match(logisticsDashboardService, /hubDropoff/);
+  assert.match(logisticsDashboardService, /const completed = requests[\s\S]*request => request\.isCompleted/);
+  assert.match(logisticsDashboardService, /po\.status AS order_status/);
   assert.match(logisticsDashboardService, /Invalid \$\{legType\} transition/);
   assert.match(logisticsDashboardService, /ALLOWED_LOGISTICS_TRANSITIONS/);
 

@@ -52,12 +52,13 @@ export interface LogisticsLeg {
 export interface LogisticsRequestCard {
   id: number;
   packageCode?: string;
-  group: 'pickup_delivery' | 'delivery_only' | 'pickup_only' | 'hub_dropoff';
+  group: 'pickup_delivery' | 'delivery_only' | 'pickup_only' | 'hub_dropoff' | 'completed';
   status: string;
   deadlineAt?: string | null;
   completedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  isCompleted?: boolean;
   isOverdue: boolean;
   order: {
     id: number;
@@ -66,6 +67,7 @@ export interface LogisticsRequestCard {
     paymentStatus: string;
     status?: string | null;
     paidAt?: string | null;
+    completedAt?: string | null;
     createdAt?: string;
   };
   partner?: {
@@ -132,6 +134,7 @@ export interface LogisticsDashboardResponse {
     deliveryOnly: LogisticsRequestCard[];
     pickupOnly: LogisticsRequestCard[];
     hubDropoff: LogisticsRequestCard[];
+    completed: LogisticsRequestCard[];
   };
 }
 

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CalendarClock,
+  CheckCircle2,
   ExternalLink,
   Loader2,
   LogOut,
@@ -29,7 +30,7 @@ import {
 } from '@/api/logisticsApi';
 import { toast } from 'sonner';
 
-const GROUPS = [
+const ACTIVE_GROUPS = [
   {
     key: 'pickupDelivery',
     title: 'Pickup + Delivery',
@@ -59,6 +60,14 @@ const GROUPS = [
     pill: 'bg-emerald-300 text-black',
   },
 ] as const;
+
+const COMPLETED_GROUP = {
+  key: 'completed',
+  title: 'Completed Deliveries',
+  description: 'Orders and logistics requests already completed. Cards are kept here for delivery history.',
+  tone: 'border-white/15 bg-white/[0.04]',
+  pill: 'bg-white text-black',
+} as const;
 
 const SORT_OPTIONS: Array<{ value: LogisticsSort; label: string }> = [
   { value: 'priority', label: 'Priority' },
@@ -160,6 +169,28 @@ function mapAnchor(label: string, href?: string | null) {
   );
 }
 
+function DashboardStat({
+  label,
+  value,
+  icon,
+  tone = 'border-white/10 bg-white/[0.03]',
+}: {
+  label: string;
+  value: number | string;
+  icon: ReactNode;
+  tone?: string;
+}) {
+  return (
+    <div className={`rounded-2xl border p-4 ${tone}`}>
+      <div className="mb-3 flex items-center justify-between gap-3 text-white/65">
+        <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
+        {icon}
+      </div>
+      <p className="text-2xl font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
 function nextActions(legType: LogisticsLegType, leg?: LogisticsLeg | null) {
   if (!leg?.status) return [];
   const status = String(leg.status).toLowerCase();
@@ -173,6 +204,7 @@ function LegPanel({
   requestId,
   onStatusUpdate,
   updatingStatusKey,
+  readOnly = false,
 }: {
   title: string;
   leg?: LogisticsLeg | null;
@@ -180,6 +212,7 @@ function LegPanel({
   requestId: number;
   onStatusUpdate: (requestId: number, legType: LogisticsLegType, status: LogisticsStatusUpdate) => void;
   updatingStatusKey?: string | null;
+  readOnly?: boolean;
 }) {
   if (!leg) {
     return (
@@ -190,7 +223,7 @@ function LegPanel({
     );
   }
 
-  const actions = nextActions(legType, leg);
+  const actions = readOnly ? [] : nextActions(legType, leg);
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
@@ -224,7 +257,11 @@ function LegPanel({
         </div>
       </div>
 
-      {actions.length > 0 ? (
+      {readOnly ? (
+        <p className="mt-4 rounded-lg bg-black/35 px-3 py-2 text-xs text-white/60">
+          Completed delivery history. Status changes are closed.
+        </p>
+      ) : actions.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {actions.map((action) => {
             const statusKey = `${requestId}:${legType}:${action.status}`;
@@ -258,15 +295,19 @@ function RequestCard({
   now,
   onStatusUpdate,
   updatingStatusKey,
+  readOnly = false,
 }: {
   request: LogisticsRequestCard;
   tone: string;
   now: number;
   onStatusUpdate: (requestId: number, legType: LogisticsLegType, status: LogisticsStatusUpdate) => void;
   updatingStatusKey?: string | null;
+  readOnly?: boolean;
 }) {
   const primaryProduct = request.product.items[0];
   const productSummary = request.product.summary || primaryProduct?.name || 'Package';
+  const isCompleted = readOnly || request.isCompleted || request.status === 'completed';
+  const completedAt = request.completedAt || request.order.completedAt || null;
 
   return (
     <article className={`rounded-2xl border p-4 text-white shadow-lg shadow-black/30 ${tone}`}>
@@ -275,13 +316,16 @@ function RequestCard({
           <p className="text-xs uppercase tracking-wide text-white/60">Order</p>
           <h3 className="text-lg font-semibold text-white">{request.order.orderNumber}</h3>
           <p className="text-sm text-white/75">{request.packageCode || `Package #${request.id}`}</p>
+          <span className="mt-2 inline-flex rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[11px] font-semibold uppercase text-white/75">
+            {isCompleted ? 'completed' : statusLabel(request.status)}
+          </span>
         </div>
         <div className="rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-right">
-          <p className="text-xs text-white/60">Deadline</p>
+          <p className="text-xs text-white/60">{isCompleted ? 'Completed' : 'Deadline'}</p>
           <p className={request.isOverdue ? 'text-sm font-semibold text-red-300' : 'text-sm font-semibold text-yellow-200'}>
-            {deadlineText(request.deadlineAt, now)}
+            {isCompleted ? 'Done' : deadlineText(request.deadlineAt, now)}
           </p>
-          <p className="text-[11px] text-white/60">{formatDate(request.deadlineAt)}</p>
+          <p className="text-[11px] text-white/60">{formatDate(isCompleted ? completedAt : request.deadlineAt)}</p>
         </div>
       </div>
 
@@ -295,7 +339,7 @@ function RequestCard({
           <div className="mt-2 space-y-1 text-xs text-white/70">
             {request.product.items.map((item) => (
               <p key={item.id}>
-                {item.name} x{item.quantity} · {formatCurrency(item.subtotal)}
+                {item.name} x{item.quantity} - {formatCurrency(item.subtotal)}
               </p>
             ))}
           </div>
@@ -326,6 +370,7 @@ function RequestCard({
           requestId={request.id}
           onStatusUpdate={onStatusUpdate}
           updatingStatusKey={updatingStatusKey}
+          readOnly={isCompleted}
         />
         <LegPanel
           title="Delivery"
@@ -334,6 +379,7 @@ function RequestCard({
           requestId={request.id}
           onStatusUpdate={onStatusUpdate}
           updatingStatusKey={updatingStatusKey}
+          readOnly={isCompleted}
         />
       </div>
 
@@ -434,7 +480,19 @@ const MzigoDashboardPage = () => {
     deliveryOnly: dashboard?.groups?.deliveryOnly || [],
     pickupOnly: dashboard?.groups?.pickupOnly || [],
     hubDropoff: dashboard?.groups?.hubDropoff || [],
+    completed: dashboard?.groups?.completed || [],
   }), [dashboard]);
+
+  const activeCount = grouped.pickupDelivery.length
+    + grouped.deliveryOnly.length
+    + grouped.pickupOnly.length
+    + grouped.hubDropoff.length;
+  const overdueCount = [
+    ...grouped.pickupDelivery,
+    ...grouped.deliveryOnly,
+    ...grouped.pickupOnly,
+    ...grouped.hubDropoff,
+  ].filter((request) => request.isOverdue).length;
 
   const handleLogout = () => {
     clearLogisticsSession();
@@ -453,7 +511,7 @@ const MzigoDashboardPage = () => {
   return (
     <main className="min-h-screen bg-black text-white">
       <header className="sticky top-0 z-20 border-b border-white/10 bg-black/95 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => navigate('/')}
@@ -480,14 +538,16 @@ const MzigoDashboardPage = () => {
         </div>
       </header>
 
-      <section className="mx-auto max-w-7xl px-4 py-6">
+      <section className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 text-sm text-white/70">
               <Truck size={16} />
-              {dashboard?.count || 0} active logistics orders
+              {activeCount} active logistics orders
             </p>
-            <p className="mt-1 text-xs text-white/55">Sorted by overdue orders, deadlines, and paid order age.</p>
+            <p className="mt-1 text-xs text-white/55">
+              Completed orders are separated from active work so dispatch can focus on open movement.
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -516,6 +576,32 @@ const MzigoDashboardPage = () => {
           </div>
         </div>
 
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <DashboardStat
+            label="Active"
+            value={activeCount}
+            icon={<Truck size={18} />}
+            tone="border-yellow-300/25 bg-yellow-300/10"
+          />
+          <DashboardStat
+            label="Overdue"
+            value={overdueCount}
+            icon={<CalendarClock size={18} />}
+            tone={overdueCount > 0 ? 'border-red-300/30 bg-red-400/10' : 'border-white/10 bg-white/[0.03]'}
+          />
+          <DashboardStat
+            label="Completed"
+            value={grouped.completed.length}
+            icon={<CheckCircle2 size={18} />}
+            tone="border-emerald-300/25 bg-emerald-300/10"
+          />
+          <DashboardStat
+            label="Total Visible"
+            value={dashboard?.count || 0}
+            icon={<PackageCheck size={18} />}
+          />
+        </div>
+
         {requestsQuery.isLoading ? (
           <div className="grid gap-4 lg:grid-cols-3">
             {[0, 1, 2].map((item) => (
@@ -524,7 +610,7 @@ const MzigoDashboardPage = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {GROUPS.map((group) => {
+            {ACTIVE_GROUPS.map((group) => {
               const cards = grouped[group.key];
               return (
                 <section key={group.key}>
@@ -543,7 +629,7 @@ const MzigoDashboardPage = () => {
                       No {group.title.toLowerCase()} orders right now.
                     </div>
                   ) : (
-                    <div className="grid gap-4 xl:grid-cols-2">
+                    <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
                       {cards.map((request) => (
                         <RequestCard
                           key={request.id}
@@ -559,6 +645,38 @@ const MzigoDashboardPage = () => {
                 </section>
               );
             })}
+
+            <section>
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">{COMPLETED_GROUP.title}</h2>
+                  <p className="text-sm text-white/65">{COMPLETED_GROUP.description}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${COMPLETED_GROUP.pill}`}>
+                  {grouped.completed.length} orders
+                </span>
+              </div>
+
+              {grouped.completed.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/65">
+                  No completed deliveries yet.
+                </div>
+              ) : (
+                <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+                  {grouped.completed.map((request) => (
+                    <RequestCard
+                      key={request.id}
+                      request={request}
+                      tone={COMPLETED_GROUP.tone}
+                      now={now}
+                      onStatusUpdate={handleStatusUpdate}
+                      updatingStatusKey={updatingStatusKey}
+                      readOnly
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         )}
       </section>
