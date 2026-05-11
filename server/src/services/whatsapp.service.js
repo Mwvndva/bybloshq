@@ -594,33 +594,6 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
         return message.trim();
     }
 
-    async notifySellerNewOrder(order) {
-        const sellerWhatsApp = order.seller?.whatsapp_number || order.seller?.phone;
-        if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
-
-        try {
-            const msg = this.buildWhatsAppMessage(order, 'seller');
-            return this.sendMessage(sellerWhatsApp, msg);
-        } catch (err) {
-            logger.error(`[WHATSAPP] Failed to notify seller: ${err.message}`);
-            return false;
-        }
-    }
-
-    async notifyBuyerOrderConfirmation(order) {
-        const buyerWhatsApp = order.buyer?.whatsapp_number || order.buyer?.phone;
-        if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
-
-        try {
-            const msg = this.buildWhatsAppMessage(order, 'buyer');
-            logger.info(`[WHATSAPP] Sending Order Confirmation to Buyer ${buyerWhatsApp}`);
-            return this.sendMessage(buyerWhatsApp, msg);
-        } catch (err) {
-            logger.error(`[WHATSAPP] Failed to notify buyer: ${err.message}`);
-            return false;
-        }
-    }
-
     async notifyBuyerPaymentSuccess({ order, items = [] }) {
         const buyerWhatsApp = order.buyer?.whatsapp_number || order.buyer?.phone;
         if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;

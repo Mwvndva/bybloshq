@@ -48,11 +48,7 @@ async function loadNormalizedOrder(order, fallbackItems = []) {
 eventBus.on(AppEvents.ORDER.CREATED, async ({ eventId, order, items, seller, buyer }) => {
     const normalized = await loadNormalizedOrder(order, items);
     const notificationOrder = normalized.order;
-    logger.info(`[Event:OrderCreated] Processing for Order #${notificationOrder.orderNumber || order.order_number}`);
-    await deliverAll('Event:OrderCreated', eventId, [
-        { key: `order:${order.id}:seller:new`, run: () => whatsappService.notifySellerNewOrder(notificationOrder) },
-        { key: `order:${order.id}:buyer:confirmation`, run: () => whatsappService.notifyBuyerOrderConfirmation(notificationOrder) }
-    ]);
+    logger.info(`[Event:OrderCreated] Recorded Order #${notificationOrder.orderNumber || order.order_number}; WhatsApp waits for payment completion`);
 });
 
 /**

@@ -9,6 +9,7 @@ import LogisticsTrackingLinkService from './logisticsTrackingLink.service.js';
 const MZIGO_EGO_SLUG = 'mzigo-ego';
 const DROPOFF_LOCATION = process.env.DROPOFF_LOCATION || 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32';
 const COMPLETED_PAYMENT_STATUSES = new Set(['completed', 'success', 'paid']);
+const COMPLETED_ORDER_STATUSES = new Set(['COMPLETED']);
 const LOGISTICS_VISIBLE_REQUEST_STATUSES = new Set([
     'active',
     'in_progress',
@@ -293,27 +294,50 @@ function groupType(hasPickup, hasDelivery) {
     return 'hub_dropoff';
 }
 
+function isCompletedRequest(row, hasPickup, hasDelivery) {
+    const orderStatus = String(row.order_status || '').toUpperCase();
+    const requestStatus = String(row.request_status || '').toLowerCase();
+    if (COMPLETED_ORDER_STATUSES.has(orderStatus) || requestStatus === 'completed') {
+        return true;
+    }
+
+    const pickupStatus = String(row.pickup_status || '').toLowerCase();
+    const deliveryStatus = String(row.delivery_status || '').toLowerCase();
+    const pickupComplete = !hasPickup || ['dropped_at_hub', 'completed'].includes(pickupStatus);
+    const deliveryComplete = !hasDelivery || ['delivered', 'completed'].includes(deliveryStatus);
+
+    return (hasPickup || hasDelivery) && pickupComplete && deliveryComplete;
+}
+
 function mapRequestRow(row) {
     const hasPickup = isVisibleLeg(row, 'pickup');
     const hasDelivery = isVisibleLeg(row, 'delivery');
     const pickupLeg = mapLeg(row, 'pickup');
     const deliveryLeg = mapLeg(row, 'delivery');
+    const isCompleted = isCompletedRequest(row, hasPickup, hasDelivery);
     const deadlineAt = row.pickup_deadline_at
         || row.delivery_deadline_at
         || row.request_deadline_at
+        || null;
+    const completedAt = row.request_completed_at
+        || row.order_completed_at
+        || row.delivery_completed_at
+        || row.pickup_completed_at
         || null;
 
     return {
         id: row.request_id,
         packageCode: row.package_code,
-        group: groupType(hasPickup, hasDelivery),
-        status: row.request_status,
+        group: isCompleted ? 'completed' : groupType(hasPickup, hasDelivery),
+        status: isCompleted ? 'completed' : row.request_status,
         serviceLevel: row.service_level,
         deadlineAt,
-        completedAt: row.request_completed_at || null,
+        completedAt,
         createdAt: row.request_created_at,
         updatedAt: row.request_updated_at,
+        isCompleted,
         isOverdue: Boolean(deadlineAt && new Date(deadlineAt).getTime() < Date.now()
+            && !isCompleted
             && !['completed', 'cancelled'].includes(String(row.request_status || '').toLowerCase())),
         partner: row.partner_id ? {
             id: row.partner_id,
@@ -328,6 +352,7 @@ function mapRequestRow(row) {
             paymentStatus: row.order_payment_status,
             status: row.order_status || null,
             paidAt: row.paid_at,
+            completedAt: row.order_completed_at || null,
             createdAt: row.order_created_at
         },
         product: {
@@ -365,11 +390,20 @@ function mapRequestRow(row) {
 }
 
 function groupRequests(requests) {
+    const completed = requests
+        .filter(request => request.isCompleted)
+        .sort((left, right) => {
+            const rightTime = new Date(right.completedAt || right.updatedAt || right.createdAt || 0).getTime();
+            const leftTime = new Date(left.completedAt || left.updatedAt || left.createdAt || 0).getTime();
+            return rightTime - leftTime;
+        });
+
     return {
         pickupDelivery: requests.filter(request => request.group === 'pickup_delivery'),
         deliveryOnly: requests.filter(request => request.group === 'delivery_only'),
         pickupOnly: requests.filter(request => request.group === 'pickup_only'),
-        hubDropoff: requests.filter(request => request.group === 'hub_dropoff')
+        hubDropoff: requests.filter(request => request.group === 'hub_dropoff'),
+        completed
     };
 }
 
@@ -1179,7 +1213,9 @@ class LogisticsDashboardService {
                 po.order_number,
                 po.total_amount,
                 po.payment_status AS order_payment_status,
+                po.status AS order_status,
                 po.paid_at,
+                po.completed_at AS order_completed_at,
                 po.created_at AS order_created_at,
                 po.buyer_name,
                 po.buyer_email,
@@ -1372,6 +1408,7 @@ class LogisticsDashboardService {
                 po.payment_status AS order_payment_status,
                 po.status AS order_status,
                 po.paid_at,
+                po.completed_at AS order_completed_at,
                 po.created_at AS order_created_at,
                 po.buyer_name,
                 po.buyer_email,
