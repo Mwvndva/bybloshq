@@ -1337,6 +1337,8 @@ test('logistics WhatsApp notifications are milestone-only and notification-only'
   assert.match(index, /await import\('\.\/events\/logistics\.events\.js'\)/);
   assert.match(eventTypes, /LOGISTICS:\s*\{[\s\S]*NOTIFICATION:\s*'logistics\.notification'/);
   assert.match(eventTypes, /AppEvents\.LOGISTICS\.NOTIFICATION/);
+  assert.match(logisticsRequestService, /enqueueNewOrderNotification/);
+  assert.match(logisticsRequestService, /notificationType:\s*'new_order'/);
   assert.match(logisticsRequestService, /notificationType:\s*'delivery_paid'/);
   assert.match(logisticsRequestService, /notificationType:\s*'pickup_paid'/);
   assert.match(logisticsRequestService, /LogisticsTrackingLinkService\.ensureLinksForRequest/);
@@ -1351,6 +1353,9 @@ test('logistics WhatsApp notifications are milestone-only and notification-only'
   assert.match(logisticsDashboardService, /pickup_failed/);
   assert.match(logisticsDashboardService, /eventBus\.enqueueInTransaction\(client,\s*AppEvents\.LOGISTICS\.NOTIFICATION/);
   assert.match(logisticsEvents, /IMPORTANT_LOGISTICS_NOTIFICATION_TYPES/);
+  assert.match(logisticsEvents, /new_order/);
+  assert.match(logisticsEvents, /whatsappService\.COURIER_NUMBER/);
+  assert.match(logisticsEvents, /partnerOnly/);
   assert.match(logisticsEvents, /delivery_paid/);
   assert.match(logisticsEvents, /pickup_paid/);
   assert.match(logisticsEvents, /sendLogisticsMilestoneNotification/);
@@ -1360,6 +1365,9 @@ test('logistics WhatsApp notifications are milestone-only and notification-only'
   assert.match(logisticsTrackingLinkService, /timingSafeEqual/);
   assert.match(logisticsEvents, /WhatsApp is notification-only/);
   assert.match(whatsappService, /WhatsApp is notification only\. Byblos tracking is the source of truth/);
+  assert.match(whatsappService, /New Mzigo Order/);
+  assert.match(whatsappService, /Open the Mzigo dashboard/);
+  assert.match(whatsappService, /COURIER_WHATSAPP_NUMBER/);
   assert.match(whatsappService, /Track here:/);
   assert.doesNotMatch(logisticsEvents, /UPDATE\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
   assert.doesNotMatch(logisticsEvents, /INSERT INTO\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);

@@ -396,6 +396,117 @@ class WhatsAppService {
         const isShopPickup = isPhysical && hasShop;
         const isMobileService = isService && !hasShop;
         const isShopService = isService && hasShop;
+        const roleKey = isBuyer ? 'buyer' : 'seller';
+        const flowKey = isDigital
+            ? 'digital'
+            : isMobileService
+                ? 'mobileService'
+                : isShopService
+                    ? 'shopService'
+                    : isSystemDelivery
+                        ? 'systemDelivery'
+                        : isShopPickup
+                            ? 'shopPickup'
+                            : 'default';
+        const instructions = {
+            AWAITING_SELLER_ACTION: {
+                buyer: {
+                    mobileService: '*Next step:* Wait for the seller to confirm the booking. After the service is done, use your buyer dashboard to mark it completed and release funds.',
+                    shopService: '*Next step:* Wait for the seller to confirm the booking. After the service is done, use your buyer dashboard to mark it completed and release funds.',
+                    systemDelivery: `*Next step:* The seller must choose hub drop-off or paid Mzigo pickup. You will be notified when the package reaches ${this.DROPOFF_LOCATION} or goes out for door delivery.`,
+                    shopPickup: '*Next step:* The seller is preparing your order. You will be notified when it is ready for pickup.'
+                },
+                seller: {
+                    mobileService: '*Next step:* Confirm the booking in your seller dashboard, then provide the service as scheduled. The buyer confirms completion.',
+                    shopService: '*Next step:* Confirm the booking in your seller dashboard, then provide the service as scheduled. The buyer confirms completion.',
+                    systemDelivery: `*Next step:* In your seller dashboard, choose "I will drop off at hub" or "Request Mzigo pickup". Hub drop-off is due within 24 hours at ${this.DROPOFF_LOCATION}.`,
+                    shopPickup: '*Next step:* Prepare the order and mark it ready for shop pickup in your seller dashboard.'
+                }
+            },
+            FULFILLING: {
+                buyer: {
+                    digital: '*Next step:* Open your buyer dashboard to access the digital product.',
+                    mobileService: '*Next step:* Attend the confirmed service. After it is completed, mark it completed in your buyer dashboard to release funds.',
+                    shopService: '*Next step:* Attend the confirmed service. After it is completed, mark it completed in your buyer dashboard to release funds.',
+                    systemDelivery: '*Next step:* Track package movement in your buyer dashboard. You will be notified when it is ready for collection or out for delivery.',
+                    shopPickup: '*Next step:* Wait for the seller to mark the order ready for pickup.'
+                },
+                seller: {
+                    mobileService: '*Next step:* Provide the service as scheduled. The buyer must confirm completion before funds are released.',
+                    shopService: '*Next step:* Provide the service as scheduled. The buyer must confirm completion before funds are released.',
+                    systemDelivery: '*Next step:* Complete your selected handoff. If you chose hub drop-off, mark the package dropped at hub after you deliver it there.',
+                    shopPickup: '*Next step:* Prepare the order and mark it ready for buyer pickup.'
+                }
+            },
+            READY_FOR_BUYER: {
+                buyer: {
+                    systemDelivery: `*Next step:* Collect your order at ${this.DROPOFF_LOCATION}. After collection, mark it completed in your buyer dashboard to release funds.`,
+                    shopService: '*Next step:* If the service is complete, mark it completed in your buyer dashboard to release funds.',
+                    shopPickup: '*Next step:* Collect your order at the shop, then mark it completed in your buyer dashboard to release funds.'
+                },
+                seller: {
+                    mobileService: '*Status:* Buyer has been notified. The buyer must mark the service completed to release funds.',
+                    shopService: '*Status:* Buyer has been notified. The buyer must mark the service completed to release funds.',
+                    systemDelivery: '*Status:* Buyer has been notified. Hand over the package only after confirming the order details. The buyer confirms completion.',
+                    shopPickup: '*Status:* Buyer has been notified. Hand over the package only after confirming the order details. The buyer confirms completion.'
+                }
+            },
+            COLLECTION_PENDING: {
+                buyer: {
+                    systemDelivery: `*Next step:* Collect your order at ${this.DROPOFF_LOCATION}, then mark it completed in your buyer dashboard.`,
+                    shopPickup: '*Next step:* Collect your order at the shop, then mark it completed in your buyer dashboard.',
+                    shopService: '*Next step:* If the service is complete, mark it completed in your buyer dashboard to release funds.'
+                },
+                seller: {
+                    default: '*Status:* Buyer has been notified. Buyer confirmation is required for fund release.'
+                }
+            },
+            DELIVERY_PENDING: {
+                buyer: {
+                    systemDelivery: '*Next step:* Your order is moving through logistics. Wait for a hub collection or door delivery update before taking action.',
+                    default: '*Next step:* Your order is on the way. Be ready to receive it and confirm completion after receiving it.'
+                },
+                seller: {
+                    systemDelivery: '*Next step:* Logistics tracking is active. Follow the buyer and Mzigo updates in your seller dashboard.',
+                    default: "*Next step:* Proceed with delivery to the buyer's address."
+                }
+            },
+            PROCESSING: {
+                buyer: {
+                    mobileService: '*Next step:* The seller is preparing for your service appointment. After completion, mark it completed in your buyer dashboard.',
+                    shopService: '*Next step:* The seller is preparing for your service appointment. After completion, mark it completed in your buyer dashboard.',
+                    default: '*Next step:* The seller is preparing your order. Wait for the next status update.'
+                },
+                seller: {
+                    default: '*Next step:* Finish preparation and update the order status from your seller dashboard.'
+                }
+            },
+            SERVICE_PENDING: {
+                buyer: {
+                    default: '*Next step:* Wait for the seller to confirm the service booking details.'
+                },
+                seller: {
+                    default: '*Next step:* Confirm the service booking in your seller dashboard.'
+                }
+            },
+            COMPLETED: {
+                buyer: {
+                    default: '*Status:* Order completed. Thank you for using Byblos.'
+                },
+                seller: {
+                    default: '*Status:* Order completed. Funds are released according to Byblos payout rules.'
+                }
+            }
+        };
+        const initialStatuses = new Set(['CONFIRMED', 'PAID', 'PENDING', 'RESERVED']);
+        const normalizedStatus = status === 'READY_FOR_COLLECTION'
+            ? 'COLLECTION_PENDING'
+            : initialStatuses.has(status)
+                ? 'AWAITING_SELLER_ACTION'
+                : status;
+        const selectedInstruction = instructions[normalizedStatus]?.[roleKey]?.[flowKey]
+            || instructions[normalizedStatus]?.[roleKey]?.default;
+        if (selectedInstruction) return selectedInstruction;
 
         if (status === 'AWAITING_SELLER_ACTION') {
             if (isBuyer) {
@@ -701,12 +812,31 @@ _Keep this message private. Your buyer dashboard also has your downloads._
             `${buMeta.booking_time || buMeta.bookingTime ? ' at ' + (buMeta.booking_time || buMeta.bookingTime) : ''}\n`
             : '';
 
+        const locationSection = (() => {
+            if (isShopPickup || isShopService) {
+                const shopLat = seller.latitude || seller.seller_latitude;
+                const shopLng = seller.longitude || seller.seller_longitude;
+                const shopAddr = seller.physicalAddress || seller.physical_address || seller.shopName || 'Shop address not provided';
+                const mapsLink = shopLat && shopLng
+                    ? `https://www.google.com/maps/search/?api=1&query=${shopLat},${shopLng}`
+                    : null;
+                return `Shop: ${shopAddr}\n${mapsLink ? `Map: ${mapsLink}\n` : ''}`;
+            }
+            if (isSystemDelivery && ['AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER', 'COLLECTION_PENDING', 'DELIVERY_COMPLETE'].includes(newStatus)) {
+                return `Hub: ${this.DROPOFF_LOCATION}\n`;
+            }
+            if (isMobileService) {
+                return `Service address: ${loc?.address || 'Not provided'}\n`;
+            }
+            return '';
+        })();
+
         const msg = `
 ✅ *Status Update: #${order.orderNumber}*${buBooking}
 Type: *${typeLabel}*
 New Status: *${newStatus.replace(/_/g, ' ')}*
 
-${locationDetails}${instructions ? `${instructions}\n` : ''}
+${locationSection}${instructions ? `${instructions}\n` : ''}
 _Check your dashboard for full details._
 `.trim();
 
@@ -753,11 +883,25 @@ _Check your dashboard for full details._
             `${suMeta.booking_time || suMeta.bookingTime ? ' at ' + (suMeta.booking_time || suMeta.bookingTime) : ''}\n`
             : '';
 
+        const sellerLocationSection = (() => {
+            if (isMobileService) {
+                const hasBuyerLocation = loc?.lat && loc?.lng;
+                const mapsLink = hasBuyerLocation
+                    ? `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`
+                    : null;
+                return `Buyer location: ${loc?.address || 'Not provided'}\n${mapsLink ? `Map: ${mapsLink}\n` : ''}`;
+            }
+            if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER'].includes(newStatus)) {
+                return `Hub drop-off point: ${this.DROPOFF_LOCATION}\n`;
+            }
+            return '';
+        })();
+
         const msg = `
 ✅ *Status Update: #${order.orderNumber}*${suBooking}
 New Status: *${newStatus.replace(/_/g, ' ')}*
 
-${locationDetails}${instructions ? `${instructions}\n` : ''}
+${sellerLocationSection}${instructions ? `${instructions}\n` : ''}
 _Managed via your dashboard._
 `.trim();
 
@@ -828,6 +972,7 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
 
     logisticsMilestoneTitle(notificationType) {
         const titles = {
+            new_order: 'New Mzigo order',
             delivery_paid: 'Door delivery paid',
             pickup_paid: 'Seller pickup paid',
             pickup_assigned: 'Pickup assigned',
@@ -863,10 +1008,71 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
         const trackingLink = recipientRole === 'seller'
             ? context?.trackingLinks?.seller?.url
             : context?.trackingLinks?.buyer?.url;
+        const dashboardUrl = `${String(process.env.FRONTEND_URL || 'https://bybloshq.space').replace(/\/$/, '')}/mzigo/dashboard`;
 
-        const audienceLine = recipientRole === 'partner'
-            ? `Coordinate this ${leg.type || 'logistics'} leg in the Mzigo dashboard.`
-            : `Track here: ${trackingLink || 'Open Byblos to view the official tracking timeline.'}`;
+        if (recipientRole === 'partner' && notificationType === 'new_order') {
+            const message = `
+*New Mzigo Order*
+Order: *#${orderNumber}*
+Package: *${packageCode}*
+Items: ${itemSummary}
+
+*Seller*
+Name: ${seller.name || 'Seller'}
+Phone: ${seller.phone || 'Not provided'}
+Location: ${seller.location || 'Check dashboard'}
+
+*Buyer*
+Name: ${buyer.name || 'Buyer'}
+Phone: ${buyer.phone || 'Not provided'}
+
+Action: Open the Mzigo dashboard and review the full order card before assigning pickup, confirming hub arrival, or updating delivery.
+Dashboard: ${dashboardUrl}
+
+_WhatsApp is notification only. Byblos tracking is the source of truth._
+`.trim();
+
+            return this.sendMessage(phone, message);
+        }
+
+        const audienceLine = (() => {
+            if (recipientRole === 'partner') {
+                return `Action: Open the Mzigo dashboard to coordinate this ${leg.type || 'logistics'} leg.\nDashboard: ${dashboardUrl}`;
+            }
+            if (notificationType === 'delivery_paid' && recipientRole === 'buyer') {
+                return `Action: Door delivery is paid. Track updates here: ${trackingLink || 'Open your buyer dashboard.'}`;
+            }
+            if (notificationType === 'delivery_paid' && recipientRole === 'seller') {
+                return 'Action: Prepare the package and choose hub drop-off or request Mzigo pickup in your seller dashboard.';
+            }
+            if (notificationType === 'pickup_paid' && recipientRole === 'seller') {
+                return 'Action: Keep the package ready at the pickup location. Mzigo will update pickup progress.';
+            }
+            if (notificationType === 'picked_up_from_seller') {
+                return recipientRole === 'seller'
+                    ? 'Action: Pickup is complete. Track the package until it reaches the hub.'
+                    : 'Action: The package has left the seller. Watch for hub collection or door delivery updates.';
+            }
+            if (notificationType === 'dropped_at_hub') {
+                return recipientRole === 'buyer'
+                    ? `Action: If this is hub collection, collect the package at ${this.DROPOFF_LOCATION} and mark the order completed after collection.`
+                    : 'Action: Package reached the hub. Track the next buyer collection or delivery update.';
+            }
+            if (notificationType === 'out_for_delivery') {
+                return recipientRole === 'buyer'
+                    ? 'Action: Be ready to receive the package. After receiving it, mark the order completed in your buyer dashboard.'
+                    : 'Action: Delivery is in progress. Wait for delivered confirmation.';
+            }
+            if (notificationType === 'delivered') {
+                return recipientRole === 'buyer'
+                    ? 'Action: Confirm the package in your buyer dashboard if everything is correct. This releases funds under Byblos rules.'
+                    : 'Action: Buyer confirmation is required for final fund release.';
+            }
+            if (notificationType === 'delivery_delayed' || notificationType === 'delivery_failed' || notificationType === 'pickup_failed') {
+                return 'Action: Check your dashboard for the latest status and wait for support or Mzigo follow-up.';
+            }
+            return `Track here: ${trackingLink || 'Open Byblos to view the official tracking timeline.'}`;
+        })();
 
         const message = `
 *${title}*

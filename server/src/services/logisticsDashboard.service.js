@@ -230,6 +230,14 @@ function mapLink(latitude, longitude, address) {
     return null;
 }
 
+function coordinateMapLink(latitude, longitude) {
+    const lat = parseNumber(latitude);
+    const lng = parseNumber(longitude);
+    if (lat === null || lng === null) return null;
+    if (lat === 0 && lng === 0) return null;
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+}
+
 function isVisibleLeg(row, prefix) {
     const id = row[`${prefix}_leg_id`];
     if (!id) return false;
@@ -368,7 +376,7 @@ function mapRequestRow(row) {
             phone: row.seller_phone,
             physicalAddress: row.seller_physical_address,
             location: row.seller_location,
-            mapLink: mapLink(row.seller_latitude, row.seller_longitude, row.seller_physical_address || row.seller_location)
+            mapLink: coordinateMapLink(row.seller_latitude, row.seller_longitude)
         },
         buyer: {
             name: row.buyer_profile_name || row.buyer_name,
