@@ -13,6 +13,8 @@ import LogisticsQuoteService from './logisticsQuote.service.js';
 import LogisticsRequestService from './logisticsRequest.service.js';
 
 const roundMoney = (amount) => Math.round(Number(amount) * 100) / 100;
+const BUYER_SERVICE_CHARGE_RATE = 0.015;
+const calculateBuyerServiceCharge = (amount) => roundMoney(Number(amount || 0) * BUYER_SERVICE_CHARGE_RATE);
 
 const isDoorDeliveryRequested = (delivery = {}, metadata = {}) => {
     return delivery.doorDelivery === true
@@ -1406,7 +1408,6 @@ export class PaymentService {
         const wantsDoorDelivery = isDoorDeliveryRequested(deliveryRequest, metadata);
         let deliveryQuote = null;
         let buyerDeliveryFee = 0;
-        let payableTotal = productSubtotal;
 
         if (wantsDoorDelivery) {
             if (!isPhysicalProduct) {
@@ -1417,8 +1418,11 @@ export class PaymentService {
             assertDoorDeliveryLocation(buyerDeliveryLocation);
             deliveryQuote = LogisticsQuoteService.quoteBuyerDoorDelivery(buyerDeliveryLocation);
             buyerDeliveryFee = deliveryQuote.feeAmount;
-            payableTotal = roundMoney(productSubtotal + buyerDeliveryFee);
         }
+
+        const paymentBaseTotal = roundMoney(productSubtotal + buyerDeliveryFee);
+        const buyerServiceCharge = calculateBuyerServiceCharge(paymentBaseTotal);
+        const payableTotal = roundMoney(paymentBaseTotal + buyerServiceCharge);
 
         if (payableTotal <= 0) throw new Error('Invalid order amount after secure calculation');
 
@@ -1483,6 +1487,9 @@ export class PaymentService {
                     ...(metadata.pricing || {}),
                     product_subtotal: productSubtotal,
                     buyer_delivery_fee: buyerDeliveryFee,
+                    buyer_service_charge_rate: BUYER_SERVICE_CHARGE_RATE,
+                    buyer_service_charge: buyerServiceCharge,
+                    payment_base_total: paymentBaseTotal,
                     payable_total: payableTotal,
                     seller_payout_base: productSubtotal,
                     seller_payout_excludes_delivery_fee: true
@@ -1550,6 +1557,9 @@ export class PaymentService {
                     product_type: product.product_type,
                     product_subtotal: productSubtotal,
                     buyer_delivery_fee: buyerDeliveryFee,
+                    buyer_service_charge_rate: BUYER_SERVICE_CHARGE_RATE,
+                    buyer_service_charge: buyerServiceCharge,
+                    payment_base_total: paymentBaseTotal,
                     payable_total: payableTotal,
                     delivery: orderData.metadata.delivery,
                     buyer_id: buyerId,

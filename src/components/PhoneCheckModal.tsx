@@ -8,6 +8,10 @@ import { formatCurrency } from '@/lib/utils';
 import LocationPicker from '@/components/common/LocationPicker';
 import apiClient from '@/lib/apiClient';
 
+const BUYER_SERVICE_CHARGE_RATE = 0.015;
+const calculateBuyerServiceCharge = (amount: number) => Math.round(amount * BUYER_SERVICE_CHARGE_RATE * 100) / 100;
+const calculateBuyerPayableTotal = (amount: number) => Math.round((amount + calculateBuyerServiceCharge(amount)) * 100) / 100;
+
 export interface DoorDeliverySelection {
   doorDelivery: boolean;
   address?: string;
@@ -58,7 +62,9 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   const productPrice = Number(purchaseDetails?.productPrice || 0);
   const canUseDoorDelivery = Boolean(isPhysicalProduct && productPrice > 0);
   const displayedDeliveryFee = canUseDoorDelivery && doorDeliveryEnabled ? Number(deliveryQuote?.feeAmount || 0) : 0;
-  const displayedTotal = productPrice + displayedDeliveryFee;
+  const displayedPaymentBase = productPrice + displayedDeliveryFee;
+  const displayedServiceCharge = calculateBuyerServiceCharge(displayedPaymentBase);
+  const displayedTotal = calculateBuyerPayableTotal(displayedPaymentBase);
 
   useEffect(() => {
     if (!isOpen) {
@@ -113,7 +119,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
           distanceKm: Number(quote?.distanceKm || 0),
           chargeableDistanceKm: Number(quote?.chargeableDistanceKm || 0),
           rateKesPerKm: Number(quote?.rateKesPerKm || 40),
-          totalAmount: productPrice + feeAmount
+          totalAmount: calculateBuyerPayableTotal(productPrice + feeAmount)
         });
       } catch (quoteError: any) {
         if (quoteError?.name !== 'CanceledError' && quoteError?.code !== 'ERR_CANCELED') {
@@ -222,6 +228,22 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                     <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Price</span>
                     <span className="text-sm sm:text-base font-black text-yellow-300">{formatCurrency(purchaseDetails.productPrice)}</span>
                   </div>
+                  {doorDeliveryEnabled && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Delivery fee</span>
+                      <span className="text-xs sm:text-sm font-black text-white">
+                        {isQuoteLoading ? 'Calculating...' : formatCurrency(displayedDeliveryFee)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Service charge</span>
+                    <span className="text-xs sm:text-sm font-black text-white">{formatCurrency(displayedServiceCharge)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-yellow-300/20 pt-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Total to pay</span>
+                    <span className="text-sm sm:text-base font-black text-yellow-300">{formatCurrency(displayedTotal)}</span>
+                  </div>
                   {canUseDoorDelivery && (
                     <div className="border-t border-yellow-300/20 pt-3 space-y-3">
                       <label className="flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-black px-3 py-2 cursor-pointer">
@@ -272,10 +294,6 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                                 </span>
                               </div>
                             )}
-                            <div className="flex items-center justify-between gap-3 border-t border-yellow-300/20 pt-2">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Total to pay</span>
-                              <span className="text-sm font-black text-white">{formatCurrency(displayedTotal)}</span>
-                            </div>
                             {quoteError && <p className="text-xs text-red-500 font-bold">{quoteError}</p>}
                             <div className="flex items-start gap-2 rounded-xl bg-black border border-white/10 p-2 text-[11px] font-bold leading-relaxed text-white/75">
                               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />
