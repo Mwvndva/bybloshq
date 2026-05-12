@@ -272,8 +272,16 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
             <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white rounded-xl">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              {aestheticCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+            <SelectContent className="z-[100] rounded-xl border-yellow-400/40 bg-zinc-950 text-white shadow-2xl shadow-black/70">
+              {aestheticCategories.map(c => (
+                <SelectItem
+                  key={c.id}
+                  value={c.id}
+                  className="text-white focus:bg-yellow-400 focus:text-black data-[state=checked]:bg-yellow-400/15 data-[state=checked]:text-yellow-100"
+                >
+                  {c.title}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
