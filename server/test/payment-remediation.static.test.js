@@ -1283,6 +1283,9 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   assert.match(logisticsDashboardService, /po\.status AS order_status/);
   assert.match(logisticsDashboardService, /Invalid \$\{legType\} transition/);
   assert.match(logisticsDashboardService, /ALLOWED_LOGISTICS_TRANSITIONS/);
+  assert.match(logisticsDashboardService, /WHEN \$3 THEN COALESCE\(completed_at, NOW\(\)\)/);
+  assert.match(logisticsDashboardService, /nextStatus === 'completed'/);
+  assert.doesNotMatch(logisticsDashboardService, /WHEN \$2 = 'completed'/);
 
   assert.match(logisticsEvents, /eventBus\.deliverRecipient/);
   assert.match(recipientDelivery, /ON CONFLICT \(event_id, recipient_key, channel\)/);
