@@ -1137,12 +1137,21 @@ class OrderService {
         OrderStatus.COLLECTION_PENDING,
         OrderStatus.READY_FOR_BUYER
       ];
+      const nonConfirmableStatuses = [
+        OrderStatus.COMPLETED,
+        OrderStatus.CANCELLED,
+        OrderStatus.FAILED,
+        OrderStatus.REFUND_PENDING,
+        OrderStatus.REFUNDED,
+        OrderStatus.MANUAL_REVIEW,
+        OrderStatus.COMPENSATION_REQUIRED
+      ];
 
       let canConfirmReceipt = buyerConfirmStatuses.includes(order.status);
       if (!canConfirmReceipt && isServiceOrder) {
         canConfirmReceipt = [OrderStatus.CONFIRMED, OrderStatus.FULFILLING].includes(order.status);
       }
-      if (!canConfirmReceipt && order.status === OrderStatus.FULFILLING) {
+      if (!canConfirmReceipt && !nonConfirmableStatuses.includes(order.status)) {
         const deliveryLegResult = await client.query(
           `SELECT ll.status
            FROM logistics_requests lr
