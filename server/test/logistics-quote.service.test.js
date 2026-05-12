@@ -100,17 +100,16 @@ test('quote service rejects invalid coordinates before calculating a fee', () =>
   );
 });
 
-test('configured environment values can override hub and door delivery rate without frontend fee input', () => {
+test('configured environment values can override hub and shared logistics rate without frontend fee input', () => {
   const env = {
     LOGISTICS_HUB_LABEL: 'Configured Hub',
     LOGISTICS_HUB_ADDRESS: 'Configured Address',
     LOGISTICS_HUB_LATITUDE: '0',
     LOGISTICS_HUB_LONGITUDE: '0',
-    LOGISTICS_RATE_KES_PER_KM: '50',
-    DOOR_DELIVERY_RATE_KES_PER_KM: '65'
+    LOGISTICS_RATE_KES_PER_KM: '65'
   };
 
-  const quote = LogisticsQuoteService.quoteBuyerDoorDelivery(
+  const deliveryQuote = LogisticsQuoteService.quoteBuyerDoorDelivery(
     {
       latitude: 0,
       longitude: 0.01
@@ -120,28 +119,50 @@ test('configured environment values can override hub and door delivery rate with
     }
   );
 
-  assert.equal(quote.origin.label, 'Configured Hub');
-  assert.equal(quote.origin.address, 'Configured Address');
-  assert.equal(quote.rateKesPerKm, 65);
-  assert.equal(quote.feeAmount, quote.chargeableDistanceKm * 65);
-});
-
-test('seller pickup keeps using the general logistics rate when door delivery has its own rate', () => {
-  const quote = LogisticsQuoteService.quoteSellerPickup(
+  const pickupQuote = LogisticsQuoteService.quoteSellerPickup(
     {
       latitude: 0.01,
       longitude: 0
     },
     {
-      env: {
-        LOGISTICS_HUB_LATITUDE: '0',
-        LOGISTICS_HUB_LONGITUDE: '0',
-        LOGISTICS_RATE_KES_PER_KM: '50',
-        DOOR_DELIVERY_RATE_KES_PER_KM: '65'
-      }
+      env
     }
   );
 
-  assert.equal(quote.rateKesPerKm, 50);
-  assert.equal(quote.feeAmount, quote.chargeableDistanceKm * 50);
+  assert.equal(deliveryQuote.origin.label, 'Configured Hub');
+  assert.equal(deliveryQuote.origin.address, 'Configured Address');
+  assert.equal(deliveryQuote.rateKesPerKm, 65);
+  assert.equal(pickupQuote.rateKesPerKm, 65);
+  assert.equal(deliveryQuote.feeAmount, deliveryQuote.chargeableDistanceKm * 65);
+  assert.equal(pickupQuote.feeAmount, pickupQuote.chargeableDistanceKm * 65);
+});
+
+test('legacy door delivery rate env falls back to the shared rate for both quote types', () => {
+  const env = {
+    LOGISTICS_HUB_LATITUDE: '0',
+    LOGISTICS_HUB_LONGITUDE: '0',
+    DOOR_DELIVERY_RATE_KES_PER_KM: '70'
+  };
+
+  const deliveryQuote = LogisticsQuoteService.quoteBuyerDoorDelivery(
+    {
+      latitude: 0,
+      longitude: 0.01
+    },
+    {
+      env
+    }
+  );
+  const pickupQuote = LogisticsQuoteService.quoteSellerPickup(
+    {
+      latitude: 0.01,
+      longitude: 0
+    },
+    {
+      env
+    }
+  );
+
+  assert.equal(deliveryQuote.rateKesPerKm, 70);
+  assert.equal(pickupQuote.rateKesPerKm, 70);
 });
