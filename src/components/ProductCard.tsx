@@ -17,6 +17,9 @@ import { ProductCardModals } from '@/components/product-card/ProductCardModals';
 import { createCheckoutAttemptToken, getProductFlags, getThemeClasses, normalizePhone, type Theme } from '@/components/product-card/productCardUtils';
 import type { DoorDeliverySelection } from '@/components/PhoneCheckModal';
 
+const BUYER_SERVICE_CHARGE_RATE = 0.015;
+const calculateBuyerServiceCharge = (amount: number) => Math.round(amount * BUYER_SERVICE_CHARGE_RATE * 100) / 100;
+const calculateBuyerPayableTotal = (amount: number) => Math.round((amount + calculateBuyerServiceCharge(amount)) * 100) / 100;
 
 interface ProductCardProps {
   product: Product;
@@ -318,7 +321,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     buyerId?: string | number
   ) => {
     const activeDoorDeliverySelection = isPhysical ? doorDeliverySelectionRef.current : null;
-    const estimatedPayableAmount = product.price + (activeDoorDeliverySelection?.doorDelivery ? Number(activeDoorDeliverySelection?.quote?.feeAmount || 0) : 0);
+    const estimatedPaymentBase = product.price + (activeDoorDeliverySelection?.doorDelivery ? Number(activeDoorDeliverySelection?.quote?.feeAmount || 0) : 0);
+    const estimatedPayableAmount = calculateBuyerPayableTotal(estimatedPaymentBase);
 
     // 0. Minimum Amount Validation (payment provider requirement)
     if (estimatedPayableAmount < 10) {
@@ -344,7 +348,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         buyerLocation: activeBooking?.buyerLocation
       });
       const wantsDoorDelivery = isPhysical && doorDeliverySelection?.doorDelivery === true;
-      const paymentEstimate = product.price + (wantsDoorDelivery ? Number(doorDeliverySelection?.quote?.feeAmount || 0) : 0);
+      const paymentBaseEstimate = product.price + (wantsDoorDelivery ? Number(doorDeliverySelection?.quote?.feeAmount || 0) : 0);
+      const paymentEstimate = calculateBuyerPayableTotal(paymentBaseEstimate);
       const checkoutToken = getCheckoutAttemptToken();
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
