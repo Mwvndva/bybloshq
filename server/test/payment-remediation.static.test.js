@@ -287,6 +287,7 @@ test('EscrowManager remains isolated behind buyer confirmation release callers',
     .sort();
 
   const orderService = read('src/services/order.service.js');
+  const ordersSectionUtils = read('../src/components/orders/ordersSectionUtils.tsx');
   const deadlineService = read('src/services/orderDeadline.service.js');
   const inventoryService = read('src/services/inventoryReservation.service.js');
   const fulfillmentTransition = read('src/services/orderFulfillmentTransition.service.js');
@@ -298,6 +299,11 @@ test('EscrowManager remains isolated behind buyer confirmation release callers',
   assert.doesNotMatch(inventoryService, /EscrowManager|escrowManager|releaseFunds/);
   assert.doesNotMatch(fulfillmentTransition, /EscrowManager|escrowManager|releaseFunds/);
   assert.doesNotMatch(payoutCallbackStateMachine, /EscrowManager|escrowManager|releaseFunds/);
+  assert.match(orderService, /nonConfirmableStatuses/);
+  assert.match(orderService, /deliveryStatus === 'delivered' \|\| deliveryStatus === 'completed'/);
+  assert.doesNotMatch(orderService, /!canConfirmReceipt && order\.status === OrderStatus\.FULFILLING/);
+  assert.match(ordersSectionUtils, /terminalStatuses/);
+  assert.match(ordersSectionUtils, /deliveryStatus === 'delivered' \|\| deliveryStatus === 'completed'/);
 });
 
 test('fulfillment retry cron routes through fulfillment queue', () => {
@@ -1143,6 +1149,10 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
   const frontendDashboard = read('../src/pages/logistics/MzigoDashboardPage.tsx');
 
   const requestReadMethod = service.slice(service.indexOf('static async getDashboardRequests'));
+  const readyForBuyerHelper = service.slice(
+    service.indexOf('async function markOrderReadyForBuyerAfterDeliveredLeg'),
+    service.indexOf('const ADMIN_LOGISTICS_STATUS_FILTERS')
+  );
 
   assert.match(migration, /VALUES \('Logistics', 'logistics'\)/);
   assert.doesNotMatch(migration, /updated_at/);
@@ -1171,7 +1181,10 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
   assert.doesNotMatch(`${service}\n${logisticsEvents}\n${trackingService}`, /\boi\.(name|price)\b/);
   assert.doesNotMatch(requestReadMethod, /UPDATE\s+(payments|product_orders|withdrawal_requests)/i);
   assert.doesNotMatch(requestReadMethod, /INSERT INTO\s+(payments|product_orders|withdrawal_requests)/i);
-  assert.doesNotMatch(service, /UPDATE\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
+  assert.match(readyForBuyerHelper, /UPDATE product_orders/);
+  assert.match(readyForBuyerHelper, /status = 'READY_FOR_BUYER'/);
+  assert.doesNotMatch(readyForBuyerHelper, /total_amount|seller_payout_amount|platform_fee|payment_status|payment_reference|completed_at/);
+  assert.doesNotMatch(service, /UPDATE\s+(payments|withdrawal_requests|seller_balances|wallets)/i);
   assert.doesNotMatch(service, /INSERT INTO\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
   assert.match(frontendRoutes, /\/mzigo\/dashboard/);
   assert.match(frontendApi, /Authorization:\s*`Bearer \$\{token\}`/);
@@ -1217,7 +1230,7 @@ test('admin logistics oversight can inspect, override, and resolve disputes with
   assert.match(service, /lr\.status = 'manual_review'/);
   assert.match(service, /lr\.metadata->'admin_dispute_resolution'/);
 
-  assert.doesNotMatch(service, /UPDATE\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
+  assert.doesNotMatch(service, /UPDATE\s+(payments|withdrawal_requests|seller_balances|wallets)/i);
   assert.doesNotMatch(service, /INSERT INTO\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
   assert.match(escrowManager, /FROM logistics_requests lr/);
   assert.match(escrowManager, /logistics_delivery_hold/);
@@ -1245,6 +1258,7 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
   const logisticsDashboardService = read('src/services/logisticsDashboard.service.js');
   const logisticsMigration = read('migrations/20260510010000_add_logistics_data_model.sql');
+  const deliveredLogisticsSyncMigration = read('migrations/20260512170000_sync_delivered_logistics_ready_for_buyer.sql');
   const logisticsEvents = read('src/events/logistics.events.js');
   const recipientDelivery = read('src/events/recipientDelivery.js');
   const phoneModal = read('../src/components/PhoneCheckModal.tsx');
@@ -1286,6 +1300,13 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   assert.match(logisticsDashboardService, /WHEN \$3 THEN COALESCE\(completed_at, NOW\(\)\)/);
   assert.match(logisticsDashboardService, /nextStatus === 'completed'/);
   assert.doesNotMatch(logisticsDashboardService, /WHEN \$2 = 'completed'/);
+  assert.match(logisticsDashboardService, /markOrderReadyForBuyerAfterDeliveredLeg/);
+  assert.match(logisticsDashboardService, /status = 'READY_FOR_BUYER'/);
+  assert.match(logisticsDashboardService, /internalStatus === 'delivered'/);
+  assert.match(deliveredLogisticsSyncMigration, /UPDATE product_orders po/);
+  assert.match(deliveredLogisticsSyncMigration, /SET status = 'READY_FOR_BUYER'/);
+  assert.match(deliveredLogisticsSyncMigration, /ll\.status IN \('delivered', 'completed'\)/);
+  assert.doesNotMatch(deliveredLogisticsSyncMigration, /payment_status|seller_payout_amount|platform_fee|total_amount|wallet|withdrawal/i);
 
   assert.match(logisticsEvents, /eventBus\.deliverRecipient/);
   assert.match(recipientDelivery, /ON CONFLICT \(event_id, recipient_key, channel\)/);

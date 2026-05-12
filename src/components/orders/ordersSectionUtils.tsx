@@ -65,6 +65,12 @@ export const isServiceOrder = (order?: Order | null): boolean => {
 export const canConfirmOrderReceipt = (order?: Order | null): boolean => {
   if (!order) return false;
 
+  const terminalStatuses = ['COMPLETED', 'CANCELLED', 'FAILED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED'];
+  const deliveryStatus = order.logistics?.deliveryLeg?.status?.toLowerCase();
+  if (!terminalStatuses.includes(order.status) && (deliveryStatus === 'delivered' || deliveryStatus === 'completed')) {
+    return true;
+  }
+
   if (isServiceOrder(order)) {
     return ['CONFIRMED', 'FULFILLING', 'READY_FOR_BUYER', 'DELIVERY_COMPLETE', 'COLLECTION_PENDING'].includes(order.status);
   }
@@ -77,7 +83,6 @@ export const canConfirmOrderReceipt = (order?: Order | null): boolean => {
     return false;
   }
 
-  const deliveryStatus = order.logistics?.deliveryLeg?.status?.toLowerCase();
   return deliveryStatus === 'delivered' || deliveryStatus === 'completed';
 };
 

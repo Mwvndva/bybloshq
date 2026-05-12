@@ -93,6 +93,38 @@ const IMPORTANT_LOGISTICS_STATUS_NOTIFICATIONS = new Set([
     'pickup_failed'
 ]);
 
+async function markOrderReadyForBuyerAfterDeliveredLeg(client, orderId, source) {
+    const { rows } = await client.query(
+        `UPDATE product_orders
+         SET status = 'READY_FOR_BUYER',
+             metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+             updated_at = NOW()
+         WHERE id = $1
+           AND status IN (
+               'PAID',
+               'AWAITING_SELLER_ACTION',
+               'FULFILLING',
+               'PROCESSING',
+               'DELIVERY_PENDING',
+               'DELIVERY_COMPLETE',
+               'COLLECTION_PENDING',
+               'CONFIRMED'
+           )
+         RETURNING id, status`,
+        [
+            orderId,
+            JSON.stringify({
+                logistics_delivery_ready_for_buyer: {
+                    source,
+                    updated_at: new Date().toISOString()
+                }
+            })
+        ]
+    );
+
+    return rows[0] || null;
+}
+
 const ADMIN_LOGISTICS_STATUS_FILTERS = new Set([
     'all',
     'active',
@@ -775,6 +807,9 @@ class LogisticsDashboardService {
             });
 
             if (record.leg_status === internalStatus) {
+                const readyOrder = normalizedLegType === 'delivery' && internalStatus === 'delivered'
+                    ? await markOrderReadyForBuyerAfterDeliveredLeg(client, record.order_id, 'mzigo_delivery_idempotent')
+                    : null;
                 await client.query('COMMIT');
                 return {
                     updated: false,
@@ -784,7 +819,8 @@ class LogisticsDashboardService {
                     previousStatus: record.leg_status,
                     status: internalStatus,
                     externalStatus,
-                    logisticsStatus: record.request_status
+                    logisticsStatus: record.request_status,
+                    orderStatus: readyOrder?.status || null
                 };
             }
 
@@ -821,6 +857,9 @@ class LogisticsDashboardService {
             const updatedLeg = updatedLegRows[0];
 
             const requestStatus = await this.reconcileRequestStatusLocked(client, record.request_id);
+            const readyOrder = normalizedLegType === 'delivery' && internalStatus === 'delivered'
+                ? await markOrderReadyForBuyerAfterDeliveredLeg(client, record.order_id, 'mzigo_delivery_delivered')
+                : null;
 
             await client.query(
                 `INSERT INTO logistics_tracking_events
@@ -882,6 +921,7 @@ class LogisticsDashboardService {
                 externalStatus,
                 logisticsStatus: requestStatus?.status || record.request_status,
                 logisticsCompletedAt: requestStatus?.completed_at || null,
+                orderStatus: readyOrder?.status || null,
                 updatedAt: updatedLeg.updated_at
             };
         } catch (error) {
@@ -952,6 +992,9 @@ class LogisticsDashboardService {
             });
 
             if (record.leg_status === internalStatus) {
+                const readyOrder = normalizedLegType === 'delivery' && internalStatus === 'delivered'
+                    ? await markOrderReadyForBuyerAfterDeliveredLeg(client, record.order_id, 'admin_delivery_idempotent')
+                    : null;
                 await client.query(
                     `INSERT INTO logistics_tracking_events
                         (
@@ -991,7 +1034,8 @@ class LogisticsDashboardService {
                     previousStatus: record.leg_status,
                     status: internalStatus,
                     externalStatus,
-                    logisticsStatus: record.request_status
+                    logisticsStatus: record.request_status,
+                    orderStatus: readyOrder?.status || null
                 };
             }
 
@@ -1029,6 +1073,9 @@ class LogisticsDashboardService {
             );
             const updatedLeg = updatedLegRows[0];
             const requestStatus = await this.reconcileRequestStatusLocked(client, record.request_id);
+            const readyOrder = normalizedLegType === 'delivery' && internalStatus === 'delivered'
+                ? await markOrderReadyForBuyerAfterDeliveredLeg(client, record.order_id, 'admin_delivery_delivered')
+                : null;
 
             await client.query(
                 `INSERT INTO logistics_tracking_events
@@ -1090,6 +1137,7 @@ class LogisticsDashboardService {
                 externalStatus,
                 logisticsStatus: requestStatus?.status || record.request_status,
                 logisticsCompletedAt: requestStatus?.completed_at || null,
+                orderStatus: readyOrder?.status || null,
                 updatedAt: updatedLeg.updated_at
             };
         } catch (error) {
