@@ -1057,7 +1057,7 @@ export class PaymentService {
                 `SELECT oi.id,
                         oi.product_name,
                         oi.quantity,
-                        COALESCE(oi.metadata->>'productType', p.product_type, 'physical') AS product_type,
+                        COALESCE(oi.metadata->>'productType', p.product_type::text, 'physical') AS product_type,
                         COALESCE(p.is_digital, false) AS is_digital
                  FROM order_items oi
                  LEFT JOIN products p ON p.id = oi.product_id
