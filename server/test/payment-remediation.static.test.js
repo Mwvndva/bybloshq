@@ -693,6 +693,8 @@ test('successful product payments send buyer order confirmation and unique recei
   assert.match(receiptService, /payment:\$\{payment\.id\}:buyer:order_confirmation/);
   assert.match(receiptService, /payment:\$\{payment\.id\}:buyer:payment_receipt/);
   assert.match(receiptService, /Door delivery fee/);
+  assert.match(receiptService, /Service charge/);
+  assert.match(receiptService, /buyer_service_charge/);
   assert.match(receiptService, /sendSellerPickupReceiptAfterPayment/);
   assert.match(receiptService, /payment:\$\{payment\.id\}:seller:pickup_receipt/);
   assert.match(paymentEvents, /PaymentReceiptService\.sendSellerPickupReceiptAfterPayment/);
