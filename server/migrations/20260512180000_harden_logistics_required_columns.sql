@@ -171,6 +171,15 @@ ALTER TABLE logistics_tracking_events
     ADD COLUMN IF NOT EXISTS metadata JSONB,
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE;
 
+CREATE OR REPLACE FUNCTION prevent_logistics_tracking_event_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'logistics_tracking_events are immutable';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS logistics_tracking_events_immutable ON logistics_tracking_events;
+
 UPDATE logistics_tracking_events
 SET
     event_type = COALESCE(NULLIF(event_type, ''), 'legacy.event'),
@@ -199,6 +208,11 @@ ALTER TABLE logistics_tracking_events
     ALTER COLUMN metadata SET DEFAULT '{}'::jsonb,
     ALTER COLUMN metadata SET NOT NULL,
     ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TRIGGER logistics_tracking_events_immutable
+    BEFORE UPDATE OR DELETE ON logistics_tracking_events
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_logistics_tracking_event_mutation();
 
 ALTER TABLE logistics_tracking_links
     ADD COLUMN IF NOT EXISTS logistics_request_id BIGINT REFERENCES logistics_requests(id) ON DELETE RESTRICT,
