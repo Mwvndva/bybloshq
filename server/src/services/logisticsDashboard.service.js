@@ -703,13 +703,13 @@ class LogisticsDashboardService {
             `UPDATE logistics_requests
              SET status = $2,
                  completed_at = CASE
-                    WHEN $2 = 'completed' THEN COALESCE(completed_at, NOW())
+                    WHEN $3 THEN COALESCE(completed_at, NOW())
                     ELSE completed_at
                  END,
                  updated_at = NOW()
              WHERE id = $1
              RETURNING status, completed_at`,
-            [requestId, nextStatus]
+            [requestId, nextStatus, nextStatus === 'completed']
         );
 
         return rows[0];
