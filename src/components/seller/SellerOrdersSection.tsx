@@ -378,6 +378,13 @@ export default function SellerOrdersSection() {
         });
     };
 
+    const pickupOrderIsPhysicalOnline = pickupOrder
+        ? !pickupOrder.items?.some(item => item.productType === 'service' || item.productType === 'digital') && pickupOrder.fulfillment_type === 'COURIER'
+        : false;
+    const pickupDialogHelpText = pickupOrderIsPhysicalOnline
+        ? 'Pickup is optional. If you do not request pickup, drop the package at the hub within 24 hours.'
+        : 'Pickup is optional. Mzigo Ego can pick up from your physical shop; otherwise mark the order ready for buyer shop pickup.';
+
     if (isLoading) {
         return (
             <div className="space-y-4 sm:space-y-6">
@@ -487,17 +494,23 @@ export default function SellerOrdersSection() {
                         filteredOrders.map((order) => {
                             const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                             const isDigital = order.items?.some(i => i.productType === 'digital');
+                            const isPhysicalOrder = !isService && !isDigital;
                             const isPaid = ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '');
-                            const isPhysicalOnline = !isService && !isDigital && order.fulfillment_type === 'COURIER';
+                            const isPhysicalOnline = isPhysicalOrder && order.fulfillment_type === 'COURIER';
                             const sellerHandoff = order.metadata?.seller_handoff || {};
                             const pickupTracking = order.logistics?.pickupLeg;
                             const pickupIsActive = !!pickupTracking && !['failed', 'cancelled'].includes(String(pickupTracking.status || '').toLowerCase());
                             const handoffStatus = String(sellerHandoff.status || '').toLowerCase();
+                            const orderStatus = String(order.status || '').toUpperCase();
                             const canChooseHandoff = isPhysicalOnline
                                 && isPaid
                                 && !pickupIsActive
                                 && !['dropoff_selected', 'dropped_at_hub'].includes(handoffStatus);
-                            const canRequestPickup = canChooseHandoff;
+                            const canRequestPickup = isPhysicalOrder
+                                && isPaid
+                                && !pickupIsActive
+                                && !['dropoff_selected', 'dropped_at_hub'].includes(handoffStatus)
+                                && !['READY_FOR_BUYER', 'COMPLETED', 'CANCELLED', 'FAILED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW'].includes(orderStatus);
                             const canSelectHubDropoff = canChooseHandoff;
                             const canMarkDroppedAtHub = isPhysicalOnline
                                 && isPaid
@@ -734,7 +747,9 @@ export default function SellerOrdersSection() {
                                                                 Request pickup
                                                             </Button>
                                                             <p className="text-[10px] leading-relaxed text-white/60">
-                                                                Optional. Without pickup, drop the package at the hub within 24 hours.
+                                                                {isPhysicalOnline
+                                                                    ? 'Optional. Without pickup, drop the package at the hub within 24 hours.'
+                                                                    : 'Optional. Mzigo Ego can pick up from your physical shop.'}
                                                             </p>
                                                         </div>
                                                     )}
@@ -878,7 +893,7 @@ export default function SellerOrdersSection() {
                             Request Mzigo Ego pickup
                         </DialogTitle>
                         <DialogDescription className="text-sm text-white/75">
-                            Pickup is optional. If you do not request pickup, drop the package at the hub within 24 hours.
+                            {pickupDialogHelpText}
                         </DialogDescription>
                     </DialogHeader>
 

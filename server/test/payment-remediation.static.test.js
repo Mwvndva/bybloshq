@@ -908,6 +908,9 @@ test('seller pickup fee payment activates pickup logistics without mutating prod
   assert.match(sanitize, /pickupLeg:\s*sanitizeLeg/);
   assert.match(sellerOrdersApi, /requestPickup/);
   assert.match(sellerOrdersSection, /Request pickup/);
+  assert.match(sellerOrdersSection, /const isPhysicalOrder = !isService && !isDigital/);
+  assert.match(sellerOrdersSection, /const canRequestPickup = isPhysicalOrder/);
+  assert.match(sellerOrdersSection, /Mzigo Ego can pick up from your physical shop/);
   assert.match(sellerOrdersSection, /drop the package at the hub within 24 hours/);
   assert.match(buyerOrderCard, /OrderLogisticsTracking/);
   assert.match(orderLogisticsTracking, /Seller pickup/);
@@ -1349,6 +1352,8 @@ test('unified order flow exposes seller hub handoff and service booking actions'
 
   assert.match(sellerOrders, /I will drop off at hub/);
   assert.match(sellerOrders, /Request pickup/);
+  assert.match(sellerOrders, /const canSelectHubDropoff = canChooseHandoff/);
+  assert.match(sellerOrders, /const canRequestPickup = isPhysicalOrder/);
   assert.match(sellerOrders, /Mark Dropped Off at Hub/);
   assert.match(sellerOrders, /Confirm Booking/);
   assert.match(sellerOrders, /Mark Service Delivered/);
