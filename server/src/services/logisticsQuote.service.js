@@ -88,6 +88,21 @@ class LogisticsQuoteService {
         return rate;
     }
 
+    static getConfiguredDoorDeliveryRate(env = process.env) {
+        const fallbackRate = this.getConfiguredRate(env);
+        const rate = parseOptionalNumber(
+            env.DOOR_DELIVERY_RATE_KES_PER_KM,
+            fallbackRate,
+            'DOOR_DELIVERY_RATE_KES_PER_KM'
+        );
+
+        if (rate < 0) {
+            throw new Error('DOOR_DELIVERY_RATE_KES_PER_KM cannot be negative');
+        }
+
+        return rate;
+    }
+
     static calculateDistanceKm(origin, destination) {
         const normalizedOrigin = normalizeLocation(origin, 'origin');
         const normalizedDestination = normalizeLocation(destination, 'destination');
@@ -124,7 +139,7 @@ class LogisticsQuoteService {
             ? normalizeLocation(options.hub, 'hub')
             : this.getConfiguredHub(options.env);
         const destination = normalizeLocation(buyerLocation, 'buyerLocation');
-        const rateKesPerKm = options.rateKesPerKm ?? this.getConfiguredRate(options.env);
+        const rateKesPerKm = options.rateKesPerKm ?? this.getConfiguredDoorDeliveryRate(options.env);
         const distanceKm = this.calculateDistanceKm(hub, destination);
         const feeAmount = this.calculateFeeForDistance(distanceKm, rateKesPerKm);
 
