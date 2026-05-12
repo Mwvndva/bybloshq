@@ -70,6 +70,13 @@ function extractReceipt(providerPayload = {}) {
         || null;
 }
 
+function normalizeReceiptForColumn(value) {
+    if (value === null || value === undefined) return null;
+    const receipt = String(value).trim();
+    if (!receipt) return null;
+    return receipt.length <= 50 ? receipt : null;
+}
+
 function buildPaymentReceiptId(paymentRow = {}) {
     return `BYB-RCPT-${String(paymentRow.id).padStart(8, '0')}`;
 }
@@ -414,7 +421,7 @@ const CorePaymentService = {
             }
 
             const logisticsFeePayment = isSellerPickupFeePayment(paymentRow.metadata);
-            const receipt = extractReceipt(providerPayload);
+            const receipt = normalizeReceiptForColumn(extractReceipt(providerPayload));
             const completionMetadata = {
                 completion_source: source,
                 provider_status: providerStatus,

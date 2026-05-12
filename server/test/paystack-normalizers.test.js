@@ -43,6 +43,24 @@ test('Paystack charge payload normalization converts subunit amounts once', () =
     assert.equal(normalized.data.amount, 123.45);
 });
 
+test('Paystack failed charge keeps gateway response out of short M-Pesa receipt field', () => {
+    const gatewayResponse = 'The attempted payment failed because customer does not have sufficient funds.';
+    const normalized = normalizePaystackChargePayload({
+        event: 'charge.failed',
+        data: {
+            amount: 1000,
+            reference: 'BYB-ORDER-FAILED',
+            status: 'failed',
+            gateway_response: gatewayResponse
+        }
+    });
+
+    assert.equal(normalized.success, false);
+    assert.equal(normalized.status, PaymentStatus.FAILED);
+    assert.equal(normalized.gateway_response, gatewayResponse);
+    assert.equal(normalized.mpesa_receipt, null);
+});
+
 test('Paystack transfer normalizer keeps payout statuses separate from payment_status', () => {
     assert.equal(normalizePaystackTransferStatus({ event: 'transfer.success' }), 'success');
     assert.equal(normalizePaystackTransferStatus({ event: 'transfer.failed' }), 'failed');

@@ -54,6 +54,8 @@ test('service slot release uses schema column expires_at', () => {
 
 test('public polling and cron delegate successful completion to CorePaymentService', () => {
   const paymentService = read('src/services/payment.service.js');
+  const core = read('src/core/CorePaymentService.js');
+  const paystackNormalizer = read('src/shared/utils/paystackPaymentNormalizer.js');
 
   assert.match(paymentService, /source:\s*'status_polling'/);
   assert.match(paymentService, /source:\s*'payment_cron'/);
@@ -63,6 +65,9 @@ test('public polling and cron delegate successful completion to CorePaymentServi
   assert.doesNotMatch(paymentService, /amount:\s*providerData\?\.amount\s*\?\?\s*payment\.amount/);
   assert.match(paymentService, /Legacy payment success mutation is disabled/);
   assert.match(paymentService, /Legacy payment callback mutation is disabled/);
+  assert.match(core, /normalizeReceiptForColumn\(extractReceipt\(providerPayload\)\)/);
+  assert.match(paystackNormalizer, /mpesa_receipt:\s*details\.receipt_number \|\| root\.receipt_number \|\| null/);
+  assert.doesNotMatch(paystackNormalizer, /mpesa_receipt:\s*details\.receipt_number \|\| details\.gateway_response/);
 });
 
 test('public order status polling resolves order numbers and surfaces provider failures', () => {
@@ -881,6 +886,8 @@ test('seller pickup fee payment activates pickup logistics without mutating prod
   assert.match(paymentService, /payment_method:\s*provider/);
   assert.match(paymentService, /payment_purpose:\s*'seller_pickup_fee'/);
   assert.match(paymentService, /logistics_payment_type:\s*'seller_pickup_fee'/);
+  assert.match(paymentService, /p\.product_type::text/);
+  assert.doesNotMatch(paymentService, /COALESCE\(oi\.metadata->>'productType', p\.product_type, 'physical'\)/);
   assert.match(paymentService, /LogisticsRequestService\.createSellerPickupPaymentPending/);
   assert.match(paymentService, /markLogisticsPaymentInitiationFailed/);
   assert.match(paymentService, /orderId && !isSellerPickupFeePayment/);

@@ -88,7 +88,7 @@ export function normalizePaystackChargePayload(rawPayload = {}, explicitReferenc
         paid_at: details.paid_at || details.paidAt || null,
         channel: details.channel || root.channel || 'mobile_money',
         gateway_response: details.gateway_response || root.gateway_response || null,
-        mpesa_receipt: details.receipt_number || details.gateway_response || root.receipt_number || root.gateway_response || null,
+        mpesa_receipt: details.receipt_number || root.receipt_number || null,
         raw_response: root,
         data: {
             ...details,
