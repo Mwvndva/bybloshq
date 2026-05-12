@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS logistics_partners (
     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     name VARCHAR(160) NOT NULL,
     slug VARCHAR(160) NOT NULL,
-    contact_name VARCHAR(160),
     email VARCHAR(255),
     phone VARCHAR(50),
     whatsapp_number VARCHAR(50),

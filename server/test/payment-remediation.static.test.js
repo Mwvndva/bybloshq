@@ -752,6 +752,32 @@ test('startup schema check hard-fails when critical fintech structures are missi
   assert.doesNotMatch(schemaCheck, /Attempting to create/);
 });
 
+test('logistics migrations backfill required runtime columns and prune unused columns', () => {
+  const baseMigration = read('migrations/20260510010000_add_logistics_data_model.sql');
+  const hardeningMigration = read('migrations/20260512180000_harden_logistics_required_columns.sql');
+  const schemaCheck = read('src/loaders/schemaCheck.js');
+
+  assert.doesNotMatch(baseMigration, /contact_name/);
+  assert.match(hardeningMigration, /DROP COLUMN IF EXISTS contact_name/);
+  assert.match(hardeningMigration, /INSERT INTO logistics_partners \(name, slug, active, metadata, created_at, updated_at\)/);
+  assert.match(hardeningMigration, /ALTER COLUMN name SET NOT NULL/);
+  assert.match(hardeningMigration, /ALTER COLUMN slug SET NOT NULL/);
+  assert.match(hardeningMigration, /ALTER COLUMN status SET DEFAULT 'pending'/);
+  assert.match(hardeningMigration, /ALTER COLUMN service_level SET DEFAULT 'standard'/);
+  assert.match(hardeningMigration, /ALTER COLUMN fee_amount SET DEFAULT 0/);
+  assert.match(hardeningMigration, /ALTER COLUMN fee_currency SET DEFAULT 'KES'/);
+  assert.match(hardeningMigration, /ALTER COLUMN source SET DEFAULT 'system'/);
+  assert.match(hardeningMigration, /ALTER COLUMN active SET DEFAULT TRUE/);
+  assert.match(hardeningMigration, /RAISE EXCEPTION 'logistics_requests has rows missing required order_id or partner_id'/);
+  assert.match(hardeningMigration, /RAISE EXCEPTION 'logistics_legs has rows missing required request, leg_type, or payer'/);
+  assert.match(schemaCheck, /package_code/);
+  assert.match(schemaCheck, /service_level/);
+  assert.match(schemaCheck, /origin_address/);
+  assert.match(schemaCheck, /destination_address/);
+  assert.match(schemaCheck, /actor_label/);
+  assert.match(schemaCheck, /expires_at/);
+});
+
 test('fraud-recorded payment webhooks are acknowledged to stop provider retry storms', () => {
   const controller = read('src/controllers/payment.controller.js');
 
