@@ -13,6 +13,7 @@ import LogisticsQuoteService from './logisticsQuote.service.js';
 import LogisticsRequestService from './logisticsRequest.service.js';
 
 const roundMoney = (amount) => Math.round(Number(amount) * 100) / 100;
+const roundPayableTotal = (amount) => Math.ceil(roundMoney(amount));
 const BUYER_SERVICE_CHARGE_RATE = 0.015;
 const calculateBuyerServiceCharge = (amount) => roundMoney(Number(amount || 0) * BUYER_SERVICE_CHARGE_RATE);
 
@@ -1422,7 +1423,7 @@ export class PaymentService {
 
         const paymentBaseTotal = roundMoney(productSubtotal + buyerDeliveryFee);
         const buyerServiceCharge = calculateBuyerServiceCharge(paymentBaseTotal);
-        const payableTotal = roundMoney(paymentBaseTotal + buyerServiceCharge);
+        const payableTotal = roundPayableTotal(paymentBaseTotal + buyerServiceCharge);
 
         if (payableTotal <= 0) throw new Error('Invalid order amount after secure calculation');
 

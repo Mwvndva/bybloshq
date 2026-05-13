@@ -859,9 +859,10 @@ test('door delivery payment totals are recalculated by backend and do not inflat
   assert.match(paymentService, /assertDoorDeliveryLocation\(buyerDeliveryLocation\)/);
   assert.match(paymentService, /LogisticsQuoteService\.quoteBuyerDoorDelivery\(buyerDeliveryLocation\)/);
   assert.match(paymentService, /BUYER_SERVICE_CHARGE_RATE\s*=\s*0\.015/);
+  assert.match(paymentService, /roundPayableTotal\s*=\s*\(amount\)\s*=>\s*Math\.ceil\(roundMoney\(amount\)\)/);
   assert.match(paymentService, /paymentBaseTotal\s*=\s*roundMoney\(productSubtotal \+ buyerDeliveryFee\)/);
   assert.match(paymentService, /buyerServiceCharge\s*=\s*calculateBuyerServiceCharge\(paymentBaseTotal\)/);
-  assert.match(paymentService, /payableTotal\s*=\s*roundMoney\(paymentBaseTotal \+ buyerServiceCharge\)/);
+  assert.match(paymentService, /payableTotal\s*=\s*roundPayableTotal\(paymentBaseTotal \+ buyerServiceCharge\)/);
   assert.match(paymentService, /buyer_service_charge:\s*buyerServiceCharge/);
   assert.match(paymentService, /amount:\s*payableTotal/);
   assert.match(paymentService, /service:\s*\{[\s\S]*total:\s*payableTotal/);
@@ -1316,9 +1317,10 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   assert.match(paymentService, /assertDoorDeliveryLocation\(buyerDeliveryLocation\)/);
   assert.match(paymentService, /buyerDeliveryFee = deliveryQuote\.feeAmount/);
   assert.match(paymentService, /BUYER_SERVICE_CHARGE_RATE\s*=\s*0\.015/);
+  assert.match(paymentService, /roundPayableTotal\s*=\s*\(amount\)\s*=>\s*Math\.ceil\(roundMoney\(amount\)\)/);
   assert.match(paymentService, /paymentBaseTotal\s*=\s*roundMoney\(productSubtotal \+ buyerDeliveryFee\)/);
   assert.match(paymentService, /buyerServiceCharge\s*=\s*calculateBuyerServiceCharge\(paymentBaseTotal\)/);
-  assert.match(paymentService, /payableTotal\s*=\s*roundMoney\(paymentBaseTotal \+ buyerServiceCharge\)/);
+  assert.match(paymentService, /payableTotal\s*=\s*roundPayableTotal\(paymentBaseTotal \+ buyerServiceCharge\)/);
   assert.doesNotMatch(paymentService, /payableTotal\s*=\s*.*frontendQuote/);
 
   assert.match(paymentService, /LogisticsQuoteService\.quoteSellerPickup\(pickup\)/);
