@@ -7,7 +7,7 @@ class AdminService {
     const queries = {
       sellers: "SELECT COUNT(*) FROM sellers WHERE COALESCE(status, 'active') <> 'deleted'",
       products: "SELECT COUNT(*) FROM products WHERE COALESCE(status, 'available') <> 'deleted'",
-      buyers: 'SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL', // Registered buyers
+      buyers: 'SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL', // Active registered buyers
       clients: 'SELECT COUNT(DISTINCT buyer_id) FROM product_orders WHERE payment_status = \'completed\' AND buyer_id IS NOT NULL',
       orders: 'SELECT COUNT(*) FROM product_orders',
       wishlists: 'SELECT COUNT(*) FROM wishlists',
@@ -351,6 +351,7 @@ class AdminService {
       FROM buyers b
       JOIN product_orders po ON po.buyer_id = b.id
       LEFT JOIN sellers s ON s.id = po.seller_id
+      WHERE b.user_id IS NOT NULL
       GROUP BY b.id, s.id, s.full_name, s.shop_name
       ORDER BY MAX(po.created_at) DESC
       LIMIT 500
@@ -425,7 +426,6 @@ class AdminService {
         await client.query(`
           UPDATE buyers
           SET user_id = NULL,
-              status = 'deleted',
               full_name = 'Deleted buyer',
               email = $2,
               mobile_payment = CONCAT('deleted-', $1::text),

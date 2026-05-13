@@ -383,7 +383,7 @@ const getAllBuyers = async (req, res, next) => {
         location,
         created_at
       FROM buyers 
-      WHERE COALESCE(status, 'active') <> 'deleted'
+      WHERE user_id IS NOT NULL
       ORDER BY created_at DESC
     `;
 
