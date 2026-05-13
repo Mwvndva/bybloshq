@@ -63,7 +63,7 @@ export const normalizeSellerAnalytics = (productsData: Product[], analyticsData:
     (sum: number, monthData: { sales?: number }) => sum + (monthData.sales || 0),
     0
   );
-  const totalRevenue = analyticsData.totalRevenue || salesTotal || 0;
+  const totalRevenue = analyticsData.totalRevenue ?? salesTotal ?? 0;
 
   return {
     totalProducts: analyticsData.totalProducts,

@@ -1,6 +1,16 @@
 import { pool } from '../shared/db/database.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 
+const SELLER_ANALYTICS_EXCLUDED_STATUSES = [
+  'CANCELLED',
+  'FAILED',
+  'EXPIRED',
+  'REFUND_PENDING',
+  'REFUNDED',
+  'MANUAL_REVIEW',
+  'COMPENSATION_REQUIRED'
+];
+
 /**
  * @desc    Get analytics data for the authenticated seller
  * @route   GET /api/sellers/analytics
@@ -30,13 +40,22 @@ export const getSellerAnalytics = async (req, res, next) => {
       ),
       pool.query(
         `SELECT
-           COALESCE(total_sales, 0) as total_sales,
-           COALESCE(net_revenue, 0) as net_revenue,
-           COALESCE(balance, 0) as balance,
-           COALESCE(client_count, 0) as client_count
-         FROM sellers
-         WHERE id = $1`,
-        [sellerId]
+           COALESCE(financials.total_sales, 0) as total_sales,
+           COALESCE(financials.net_revenue, 0) as net_revenue,
+           COALESCE(s.balance, 0) as balance,
+           COALESCE(s.client_count, 0) as client_count
+         FROM sellers s
+         LEFT JOIN LATERAL (
+           SELECT
+             COALESCE(SUM(o.total_amount), 0) as total_sales,
+             COALESCE(SUM(o.seller_payout_amount), 0) as net_revenue
+           FROM product_orders o
+           WHERE o.seller_id = s.id
+             AND o.payment_status = 'completed'
+             AND o.status::text <> ALL($2::text[])
+         ) financials ON true
+         WHERE s.id = $1`,
+        [sellerId, SELLER_ANALYTICS_EXCLUDED_STATUSES]
       ),
       pool.query(
         `SELECT
@@ -44,11 +63,12 @@ export const getSellerAnalytics = async (req, res, next) => {
            COALESCE(SUM(o.total_amount), 0) as sales
          FROM product_orders o
          WHERE o.seller_id = $1
-           AND o.status IN ('PROCESSING', 'COMPLETED', 'DELIVERY_PENDING', 'COLLECTION_PENDING', 'SERVICE_PENDING')
+           AND o.payment_status = 'completed'
+           AND o.status::text <> ALL($2::text[])
            AND o.created_at >= NOW() - INTERVAL '12 months'
          GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
          ORDER BY month`,
-        [sellerId]
+        [sellerId, SELLER_ANALYTICS_EXCLUDED_STATUSES]
       ),
       pool.query(
         `SELECT
@@ -71,10 +91,11 @@ export const getSellerAnalytics = async (req, res, next) => {
            ) as items
          FROM product_orders o
          WHERE o.seller_id = $1
-           AND o.status IN ('SERVICE_PENDING', 'COLLECTION_PENDING', 'DELIVERY_PENDING')
+           AND o.payment_status = 'completed'
+           AND o.status::text <> ALL($2::text[])
          ORDER BY o.created_at DESC
          LIMIT 8`,
-        [sellerId]
+        [sellerId, SELLER_ANALYTICS_EXCLUDED_STATUSES]
       ),
       pool.query(
         `SELECT COUNT(*) as wishlist_count

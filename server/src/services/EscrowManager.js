@@ -70,11 +70,7 @@ class EscrowManager {
 
         const sellerPayoutAmount = Math.round(rawPayout * 100) / 100;
         const totalAmount = Math.round(rawTotal * 100) / 100;
-        const platformFeeAmount = Math.round(
-            Number.parseFloat(
-                order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount)
-            ) * 100
-        ) / 100;
+        const platformFeeAmount = this.calculatePlatformRetainedAmount(order, totalAmount, sellerPayoutAmount);
         const sellerId = order.seller_id ?? order.sellerId;
 
         if (sellerPayoutAmount <= 0) {
@@ -123,6 +119,46 @@ class EscrowManager {
             `[EscrowManager] Released KES ${sellerPayoutAmount} to seller ${sellerId} for Order ${orderId} (source: ${source})`,
         );
         return { success: true, alreadyReleased: false };
+    }
+
+    roundMoney(amount) {
+        return Math.round(Number(amount || 0) * 100) / 100;
+    }
+
+    getOrderMetadata(order) {
+        if (!order?.metadata) return {};
+        if (typeof order.metadata === 'string') {
+            try {
+                return JSON.parse(order.metadata);
+            } catch {
+                return {};
+            }
+        }
+        return order.metadata;
+    }
+
+    calculatePlatformRetainedAmount(order, totalAmount, sellerPayoutAmount) {
+        const metadata = this.getOrderMetadata(order);
+        const hasCheckoutPricing = Boolean(
+            metadata?.pricing?.payable_total !== undefined
+            || metadata?.pricing?.buyer_delivery_fee !== undefined
+            || metadata?.pricing?.buyer_service_charge !== undefined
+        );
+
+        if (hasCheckoutPricing) {
+            const buyerDeliveryFee = this.roundMoney(metadata?.pricing?.buyer_delivery_fee || 0);
+            const retainedAmount = this.roundMoney(totalAmount - sellerPayoutAmount - buyerDeliveryFee);
+
+            if (Number.isFinite(retainedAmount) && retainedAmount >= 0) {
+                return retainedAmount;
+            }
+        }
+
+        return this.roundMoney(
+            Number.parseFloat(
+                order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount)
+            )
+        );
     }
 }
 
