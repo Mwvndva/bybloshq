@@ -10,7 +10,7 @@ import apiClient from '@/lib/apiClient';
 
 const BUYER_SERVICE_CHARGE_RATE = 0.015;
 const calculateBuyerServiceCharge = (amount: number) => Math.round(amount * BUYER_SERVICE_CHARGE_RATE * 100) / 100;
-const calculateBuyerPayableTotal = (amount: number) => Math.round((amount + calculateBuyerServiceCharge(amount)) * 100) / 100;
+const calculateBuyerPayableTotal = (amount: number) => Math.ceil(Math.round((amount + calculateBuyerServiceCharge(amount)) * 100) / 100);
 
 export interface DoorDeliverySelection {
   doorDelivery: boolean;
