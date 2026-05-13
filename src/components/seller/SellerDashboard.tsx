@@ -174,12 +174,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <UnifiedAnalyticsHub analytics={analytics} />
         </div>
 
-        <div
-          className="seller-service-charge-notice mb-4 rounded-2xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-xs sm:text-sm font-semibold leading-relaxed"
-        >
-          Byblos adds a 1.5% service charge to each product price to keep products safe in transit, secure the transaction, and support our operations and maintenance.
-        </div>
-
         <SellerDashboardTabs
           activeTab={activeTab}
           hasUnreadOrders={hasUnreadOrders}
