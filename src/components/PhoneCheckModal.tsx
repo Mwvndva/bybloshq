@@ -8,9 +8,11 @@ import { formatCurrency } from '@/lib/utils';
 import LocationPicker from '@/components/common/LocationPicker';
 import apiClient from '@/lib/apiClient';
 
-const BUYER_SERVICE_CHARGE_RATE = 0.015;
-const calculateBuyerServiceCharge = (amount: number) => Math.round(amount * BUYER_SERVICE_CHARGE_RATE * 100) / 100;
-const calculateBuyerPayableTotal = (amount: number) => Math.ceil(Math.round((amount + calculateBuyerServiceCharge(amount)) * 100) / 100);
+const PRODUCT_SERVICE_CHARGE_RATE = 0.015;
+const calculateProductServiceCharge = (amount: number) => Math.ceil(amount * PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
+const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 0) => {
+  return Math.ceil(Math.round((productAmount + deliveryFee + calculateProductServiceCharge(productAmount)) * 100) / 100);
+};
 
 export interface DoorDeliverySelection {
   doorDelivery: boolean;
@@ -62,9 +64,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   const productPrice = Number(purchaseDetails?.productPrice || 0);
   const canUseDoorDelivery = Boolean(isPhysicalProduct && productPrice > 0);
   const displayedDeliveryFee = canUseDoorDelivery && doorDeliveryEnabled ? Number(deliveryQuote?.feeAmount || 0) : 0;
-  const displayedPaymentBase = productPrice + displayedDeliveryFee;
-  const displayedServiceCharge = calculateBuyerServiceCharge(displayedPaymentBase);
-  const displayedTotal = calculateBuyerPayableTotal(displayedPaymentBase);
+  const displayedTotal = calculateBuyerPayableTotal(productPrice, displayedDeliveryFee);
 
   useEffect(() => {
     if (!isOpen) {
@@ -119,7 +119,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
           distanceKm: Number(quote?.distanceKm || 0),
           chargeableDistanceKm: Number(quote?.chargeableDistanceKm || 0),
           rateKesPerKm: Number(quote?.rateKesPerKm || 40),
-          totalAmount: calculateBuyerPayableTotal(productPrice + feeAmount)
+          totalAmount: calculateBuyerPayableTotal(productPrice, feeAmount)
         });
       } catch (quoteError: any) {
         if (quoteError?.name !== 'CanceledError' && quoteError?.code !== 'ERR_CANCELED') {
@@ -236,10 +236,6 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Service charge</span>
-                    <span className="text-xs sm:text-sm font-black text-white">{formatCurrency(displayedServiceCharge)}</span>
-                  </div>
                   <div className="flex items-center justify-between gap-3 border-t border-yellow-300/20 pt-3">
                     <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Total to pay</span>
                     <span className="text-sm sm:text-base font-black text-yellow-300">{formatCurrency(displayedTotal)}</span>

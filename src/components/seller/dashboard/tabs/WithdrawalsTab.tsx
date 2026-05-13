@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { exportWithdrawalsToCSV } from '@/utils/exportUtils';
-import { MIN_WITHDRAWAL_AMOUNT } from '../dashboardUtils';
+import { getWithdrawalFee, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS } from '../dashboardUtils';
 import type { WithdrawalRequest } from '../types';
 
 interface WithdrawalsTabProps {
@@ -43,6 +43,12 @@ export function WithdrawalsTab({
   withdrawalForm,
   withdrawalRequests
 }: WithdrawalsTabProps) {
+  const requestedAmount = Number.parseFloat(withdrawalForm.amount || '0');
+  const withdrawalFee = getWithdrawalFee(requestedAmount);
+  const totalDeducted = Number.isFinite(requestedAmount) && requestedAmount >= MIN_WITHDRAWAL_AMOUNT
+    ? requestedAmount + withdrawalFee
+    : 0;
+
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="text-center px-2 sm:px-0">
@@ -71,8 +77,15 @@ export function WithdrawalsTab({
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-black text-[10px] sm:text-xs">Minimum: KSh {MIN_WITHDRAWAL_AMOUNT}</h4>
           <p className="text-black text-[9px] sm:text-[10px] mt-0.5 leading-tight">
-            Ensure sufficient balance before requesting withdrawal.
+            Withdrawal charges are deducted from your seller balance together with the requested amount.
           </p>
+          <div className="mt-2 grid gap-1 text-[9px] sm:text-[10px] font-semibold text-black sm:grid-cols-3">
+            {WITHDRAWAL_FEE_TIERS.map((tier) => (
+              <span key={tier.label} className="rounded-lg bg-black/10 px-2 py-1">
+                {tier.label}: KSh {tier.fee}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -139,6 +152,18 @@ export function WithdrawalsTab({
                   required
                 />
               </div>
+              {totalDeducted > 0 && (
+                <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs font-semibold text-slate-950">
+                  <div className="flex justify-between gap-3">
+                    <span>Withdrawal charge</span>
+                    <span>{formatKes(withdrawalFee)}</span>
+                  </div>
+                  <div className="mt-1 flex justify-between gap-3 text-sm font-black">
+                    <span>Total deducted from balance</span>
+                    <span>{formatKes(totalDeducted)}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex gap-3 pt-4">
                 <Button
                   type="submit"
@@ -262,7 +287,7 @@ export function WithdrawalsTab({
                       <p className="text-xs text-slate-700">
                         M-Pesa: {request.mpesaNumber} ({request.mpesaName})
                       </p>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Requested</p>
                           <p className="text-xs font-semibold text-slate-950">{new Date(request.createdAt).toLocaleString()}</p>
@@ -270,6 +295,10 @@ export function WithdrawalsTab({
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Processed</p>
                           <p className="text-xs font-semibold text-slate-950">{request.processedAt ? new Date(request.processedAt).toLocaleString() : 'Pending'}</p>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Charge</p>
+                          <p className="text-xs font-semibold text-slate-950">{formatKes(request.withdrawalFee || getWithdrawalFee(request.amount))}</p>
                         </div>
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Provider Ref</p>

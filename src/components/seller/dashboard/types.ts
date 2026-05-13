@@ -5,6 +5,8 @@ export type SellerTabId = 'overview' | 'products' | 'orders' | 'withdrawals' | '
 export interface WithdrawalRequest {
   id: string;
   amount: number;
+  withdrawalFee?: number;
+  totalDeducted?: number;
   mpesaNumber: string;
   mpesaName: string;
   status: 'processing' | 'completed' | 'failed' | 'compensation_required';

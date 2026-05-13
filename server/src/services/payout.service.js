@@ -152,7 +152,16 @@ class PayoutService {
     }
 
     async refundToWallet(client, request) {
-        const amount = Number.parseFloat(request.amount);
+        let metadata = request.metadata || {};
+        if (typeof metadata === 'string') {
+            try {
+                metadata = JSON.parse(metadata || '{}');
+            } catch {
+                metadata = {};
+            }
+        }
+        const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
+        const amount = Number.parseFloat(request.amount) + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0);
         let newBalance = null;
 
         if (request.seller_id) {

@@ -3,6 +3,7 @@ import ProductModel from '../models/product.model.js';
 import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
 import cacheService from './cache.service.js';
+import Fees from '../config/fees.js';
 
 class ProductService {
     /**
@@ -21,8 +22,8 @@ class ProductService {
         }
 
         const priceValue = Number.parseFloat(price);
-        if (priceValue < 10) {
-            throw new Error('Minimum price must be KES 10');
+        if (!Number.isFinite(priceValue) || priceValue < Fees.PRODUCT_MIN_PRICE) {
+            throw new Error(`Minimum price must be KES ${Fees.PRODUCT_MIN_PRICE}`);
         }
 
         if (is_digital && !digital_file_path) {
@@ -98,7 +99,7 @@ class ProductService {
 
         const productData = {
             name: name.trim(),
-            price: Number.parseFloat(price),
+            price: priceValue,
             description: description.trim(),
             image_url: imageData,
             images: data.images ? JSON.stringify(data.images) : '[]',
@@ -169,8 +170,8 @@ class ProductService {
             if (name !== undefined) updateFields.name = name;
             if (price !== undefined) {
                 const priceValue = Number.parseFloat(price);
-                if (priceValue < 10) {
-                    throw new Error('Minimum price must be KES 10');
+                if (!Number.isFinite(priceValue) || priceValue < Fees.PRODUCT_MIN_PRICE) {
+                    throw new Error(`Minimum price must be KES ${Fees.PRODUCT_MIN_PRICE}`);
                 }
                 updateFields.price = priceValue;
             }

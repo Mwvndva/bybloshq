@@ -289,10 +289,17 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
 export const sanitizeWithdrawalRequest = (request) => {
     if (!request) return null;
     const reqObj = request.toObject ? request.toObject() : request;
+    const metadata = parseObject(reqObj.metadata, {});
+    const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
+    const totalDeducted = Number.parseFloat(metadata.total_deducted || 0);
 
     return {
         id: reqObj.id,
         amount: Number.parseFloat(reqObj.amount),
+        withdrawalFee: Number.isFinite(withdrawalFee) ? withdrawalFee : 0,
+        totalDeducted: Number.isFinite(totalDeducted) && totalDeducted > 0
+            ? totalDeducted
+            : Number.parseFloat(reqObj.amount) + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0),
         status: reqObj.status,
         mpesaNumber: reqObj.mpesaNumber || reqObj.mpesa_number, // User's own number
         mpesaName: reqObj.mpesaName || reqObj.mpesa_name,       // User's own name
@@ -301,7 +308,7 @@ export const sanitizeWithdrawalRequest = (request) => {
         processedAt: reqObj.processedAt || reqObj.processed_at || null,
         processedBy: reqObj.processedBy || reqObj.processed_by || null,
         providerReference: reqObj.providerReference || reqObj.provider_reference || null,
-        mpesaReceipt: reqObj.mpesaReceipt || reqObj.mpesa_receipt || reqObj.metadata?.mpesa_receipt || null,
+        mpesaReceipt: reqObj.mpesaReceipt || reqObj.mpesa_receipt || metadata.mpesa_receipt || null,
         failureReason: reqObj.failureReason || reqObj.failure_reason, // Helpful for user
         message: reqObj.message // Helper message if we added one
         // Removed: raw_response, internal IDs

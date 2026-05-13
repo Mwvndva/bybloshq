@@ -2,6 +2,7 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import payoutService from './payout.service.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import Fees from '../config/fees.js';
 import PayoutCallbackStateMachineService, {
     providerPayloadIndicatesSuccess,
     providerPayloadIndicatesFailure
@@ -306,7 +307,7 @@ class WithdrawalService {
 
             const { rows: existingRequests } = await client.query(
                 `SELECT id, amount, seller_id, mpesa_number, mpesa_name, status, idempotency_key,
-                        provider_reference, created_at
+                        provider_reference, metadata, created_at
                  FROM withdrawal_requests
                  WHERE seller_id = $1
                    AND idempotency_key = $2
@@ -323,13 +324,14 @@ class WithdrawalService {
                 return request;
             }
 
-            let deductionAmount = validatedAmount;
+            const withdrawalFee = Fees.calculateWithdrawalFee(validatedAmount);
+            const deductionAmount = validatedAmount + withdrawalFee;
 
             const currentBalance = Number.parseFloat(entity.balance || 0);
             if (currentBalance < deductionAmount) {
                 throw new Error(
                     `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
-                    `Required: KES ${deductionAmount.toLocaleString()}`
+                    `Required: KES ${deductionAmount.toLocaleString()} including withdrawal charge`
                 );
             }
 
@@ -341,15 +343,19 @@ class WithdrawalService {
 
             const insertResult = await client.query(
                 `INSERT INTO withdrawal_requests 
-                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, idempotency_key, created_at)
-                 VALUES ($1, $2, $3, $4, 'processing', TRUE, $5, NOW())
-                 RETURNING id, amount, seller_id, mpesa_number, mpesa_name, status, idempotency_key, created_at`,
+                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, idempotency_key, metadata, created_at)
+                 VALUES ($1, $2, $3, $4, 'processing', TRUE, $5, $6::jsonb, NOW())
+                 RETURNING id, amount, seller_id, mpesa_number, mpesa_name, status, idempotency_key, metadata, created_at`,
                 [
                     entityId,
                     validatedAmount,
                     normalizedPhone,
                     mpesaName.trim(),
-                    normalizedIdempotencyKey
+                    normalizedIdempotencyKey,
+                    JSON.stringify({
+                        withdrawal_fee: withdrawalFee,
+                        total_deducted: deductionAmount
+                    })
                 ]
             );
 

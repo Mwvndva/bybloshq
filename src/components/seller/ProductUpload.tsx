@@ -61,6 +61,16 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
       return;
     }
 
+    const priceValue = Number.parseFloat(formData.price);
+    if (!Number.isFinite(priceValue) || priceValue < 50) {
+      toast({
+        title: 'Error',
+        description: 'Minimum price must be KES 50',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -79,7 +89,7 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
       // Create the product with the image URL and seller ID
       const productData = {
         name: formData.name,
-        price: parseFloat(formData.price),
+        price: priceValue,
         description: formData.description,
         aesthetic: formData.aesthetic,
         image_url: imageUrl,
@@ -186,7 +196,7 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
               id="price"
               name="price"
               type="number"
-              min="0"
+              min="50"
               step="0.01"
               value={formData.price}
               onChange={handleInputChange}

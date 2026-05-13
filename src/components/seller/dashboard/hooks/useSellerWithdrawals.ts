@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { sellerApi } from '@/api/sellerApi';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
-import { MIN_WITHDRAWAL_AMOUNT } from '../dashboardUtils';
+import { getWithdrawalFee, MIN_WITHDRAWAL_AMOUNT } from '../dashboardUtils';
 import { sellerDashboardQueryKeys } from '../queryKeys';
 
 interface UseSellerWithdrawalsArgs {
@@ -95,10 +95,13 @@ export function useSellerWithdrawals({ balance, enabled = true, toast }: UseSell
       return;
     }
 
-    if (amount > balance) {
+    const withdrawalFee = getWithdrawalFee(amount);
+    const totalDeduction = amount + withdrawalFee;
+
+    if (totalDeduction > balance) {
       toast({
         title: 'Error',
-        description: 'Withdrawal amount cannot exceed available balance',
+        description: `Available balance must cover the withdrawal and KSh ${withdrawalFee} charge.`,
         variant: 'destructive',
       });
       return;

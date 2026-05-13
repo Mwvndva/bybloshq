@@ -1,6 +1,16 @@
 import type { AnalyticsData, Product } from './types';
 
 export const MIN_WITHDRAWAL_AMOUNT = 50;
+export const WITHDRAWAL_FEE_TIERS = [
+  { min: 50, max: 1500, fee: 21, label: 'KSh 50 - KSh 1,500' },
+  { min: 1501, max: 19999.99, fee: 45, label: 'KSh 1,501 - KSh 19,999' },
+  { min: 20000, max: Number.POSITIVE_INFINITY, fee: 63, label: 'KSh 20,000 and above' }
+] as const;
+
+export const getWithdrawalFee = (amount: number) => {
+  if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) return 0;
+  return WITHDRAWAL_FEE_TIERS.find(({ min, max }) => amount >= min && amount <= max)?.fee || 0;
+};
 
 export const pendingOverviewStatuses = new Set([
   'SERVICE_PENDING',
