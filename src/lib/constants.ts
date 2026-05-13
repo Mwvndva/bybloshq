@@ -1,5 +1,5 @@
-export const PLATFORM_FEE_RATE = 0.01;
-export const PLATFORM_FEE_PERCENTAGE = '1%';
+export const PLATFORM_FEE_AMOUNT = 10;
+export const PLATFORM_FEE_LABEL = 'KSh 10';
 export const DEFAULT_CURRENCY = 'KES';
 
 // Location data with Kenyan cities and their areas

@@ -986,7 +986,10 @@ class OrderService {
       return sum + subtotal;
     }, 0);
 
-    const platformFee = Math.round(totalAmount * Fees.PLATFORM_COMMISSION_RATE * 100) / 100;
+    const platformFee = Math.min(
+      Math.round(Number(Fees.PLATFORM_COMMISSION_AMOUNT || 0) * 100) / 100,
+      Math.round(totalAmount * 100) / 100
+    );
     const sellerPayout = Math.round((totalAmount - platformFee) * 100) / 100;
 
     return {

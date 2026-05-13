@@ -191,7 +191,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
 
               <Sub title="2.3 Seller Terms">
                 <BulletList items={[
-                  "A commission of 1% is charged on every completed sale. This is non-negotiable and non-refundable.",
+                  "A commission of KSh 10 is charged on every completed sale. This is non-negotiable and non-refundable.",
                   "Sellers warrant that all listings are truthful, lawful, and not misleading (Consumer Protection Act, 2012).",
                   "Sellers must fulfill orders within the stated timeframe or face suspension.",
                   "Sellers are solely responsible for tax obligations on income earned, including VAT and income tax to KRA.",
