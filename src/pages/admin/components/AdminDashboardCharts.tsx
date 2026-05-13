@@ -11,13 +11,17 @@ export interface StatsCardProps {
   trend: number | null;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+const COLORS = ['#38bdf8', '#f59e0b', '#22c55e', '#e879f9', '#f43f5e', '#a3e635'];
+
+const hasChartData = (data: any[] = []) => data.some(item =>
+  Object.values(item || {}).some(value => typeof value === 'number' && value > 0)
+);
 
 export const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
   <div className="relative group">
     <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/0 to-yellow-500/0 rounded-[2rem] blur opacity-0 group-hover:opacity-30 group-hover:from-yellow-500/50 group-hover:to-orange-500/50 transition duration-500" />
 
-    <Card className="relative bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden transition-all duration-500 group-hover:bg-[#0A0A0A]/60 group-hover:scale-[1.02] group-hover:border-white/20">
+    <Card className="relative bg-[#0A0A0A]/70 border border-white/10 shadow-xl rounded-2xl overflow-hidden transition-all duration-300 group-hover:bg-[#0A0A0A]/90 group-hover:border-white/20">
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none" />
 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
@@ -48,7 +52,7 @@ export const StatsCard = ({ title, value, icon, description, trend }: StatsCardP
 );
 
 export const ChartContainer = ({ title, description, children, className = '' }: { title: string, description: string, children: ReactNode, className?: string }) => (
-  <Card className={`${className} bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden group hover:border-white/20 transition-all duration-500`}>
+  <Card className={`${className} bg-[#0A0A0A]/70 border border-white/10 shadow-xl rounded-2xl overflow-hidden group hover:border-white/20 transition-all duration-300`}>
     <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
     <CardHeader className="relative z-10 pb-2">
       <CardTitle className="text-xl font-bold text-white group-hover:text-yellow-50 transition-colors">{title}</CardTitle>
@@ -138,53 +142,59 @@ export const SalesChart = ({ data }: { data: any[] }) => (
 );
 
 export const ProductStatusChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="Product Distribution" description="Inventory breakdown by status" className="col-span-4 lg:col-span-2">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={80}
-          outerRadius={110}
-          paddingAngle={8}
-          dataKey="value"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-        />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
+  <ChartContainer title="Product Distribution" description="Product mix by catalog type" className="col-span-4 lg:col-span-2">
+    {hasChartData(data) ? (
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={74}
+            outerRadius={108}
+            paddingAngle={5}
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '0.75rem', color: '#fff' }}
+          />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex h-full items-center justify-center text-center">
+        <p className="text-sm font-semibold text-gray-500">No catalog distribution yet</p>
+      </div>
+    )}
   </ChartContainer>
 );
 
 export const GeoDistributionChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="Geographic Reach" description="Top 5 Areas by user density" className="col-span-4 lg:col-span-2">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={80}
-          outerRadius={110}
-          paddingAngle={5}
-          dataKey="value"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} stroke="none" />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-        />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
+  <ChartContainer title="Geographic Reach" description="Regions by GMV, buyers, and sellers" className="col-span-4 lg:col-span-2">
+    {hasChartData(data) ? (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} layout="vertical" margin={{ left: 24, right: 12 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+          <XAxis type="number" stroke="#6b7280" axisLine={false} tickLine={false} fontSize={12} />
+          <YAxis type="category" dataKey="name" width={96} stroke="#9ca3af" axisLine={false} tickLine={false} fontSize={12} />
+          <Tooltip
+            cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
+            contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '0.75rem', color: '#fff' }}
+          />
+          <Legend />
+          <Bar dataKey="gmv" fill="#f59e0b" radius={[0, 8, 8, 0]} name="GMV" />
+          <Bar dataKey="buyers" fill="#38bdf8" radius={[0, 8, 8, 0]} name="Buyers" />
+          <Bar dataKey="sellers" fill="#22c55e" radius={[0, 8, 8, 0]} name="Sellers" />
+        </BarChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex h-full items-center justify-center text-center">
+        <p className="text-sm font-semibold text-gray-500">No geographic activity yet</p>
+      </div>
+    )}
   </ChartContainer>
 );

@@ -40,6 +40,9 @@ interface DashboardAnalytics {
     wishlists?: number;
   };
   totalWishlists?: number;
+  activeOrders?: number;
+  lowStockProducts?: number;
+  pendingWithdrawals?: number;
   userGrowth?: Array<{ name: string; buyers: number; sellers: number }>;
   revenueTrends?: Array<{ name: string; revenue: number; orders: number }>;
   salesTrends?: Array<{ name: string; sales: number }>;
@@ -237,6 +240,9 @@ const NewAdminDashboard = () => {
           totalBuyers: dashboardStats?.totalBuyers || totalBuyersCount,
           totalClients: dashboardStats?.totalClients || 0,
           totalWishlists: dashboardStats?.totalWishlists || 0,
+          activeOrders: dashboardStats?.activeOrders || 0,
+          lowStockProducts: dashboardStats?.lowStockProducts || 0,
+          pendingWithdrawals: dashboardStats?.pendingWithdrawals || 0,
           userGrowth: analytics?.userGrowth || [],
           revenueTrends: analytics?.revenueTrends || [],
           salesTrends: analytics?.salesTrends || [],
@@ -335,16 +341,16 @@ const NewAdminDashboard = () => {
 
   const statsCards: StatsCardProps[] = [
     {
-      title: 'Total Products',
+      title: 'Products',
       value: dashboardState.analytics.totalProducts.toLocaleString(),
       icon: <Package className="h-4 w-4 text-orange-500" />,
-      description: 'Available products',
+      description: `${dashboardState.analytics.lowStockProducts || 0} low stock`,
       trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.products ?? 0)
         ? dashboardState.analytics.monthlyGrowth?.products ?? 0
         : null
     },
     {
-      title: 'Total Sellers',
+      title: 'Sellers',
       value: dashboardState.analytics.totalSellers?.toLocaleString() || '0',
       icon: <ShoppingCart className="h-4 w-4 text-purple-500" />,
       description: 'Active sellers',
@@ -353,7 +359,7 @@ const NewAdminDashboard = () => {
         : null
     },
     {
-      title: 'Total Buyers',
+      title: 'Buyers',
       value: dashboardState.analytics.totalBuyers?.toLocaleString() || '0',
       icon: <UserCircle className="h-4 w-4 text-cyan-500" />,
       description: 'Registered buyers',
@@ -362,7 +368,7 @@ const NewAdminDashboard = () => {
         : null
     },
     {
-      title: 'Total Sales',
+      title: 'Sales',
       value: `KSh ${dashboardState.financialMetrics.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-green-600" />,
       description: `${dashboardState.financialMetrics.totalOrders} orders`,
@@ -371,7 +377,7 @@ const NewAdminDashboard = () => {
         : null
     },
     {
-      title: 'Total Commission',
+      title: 'Commission',
       value: `KSh ${dashboardState.financialMetrics.totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-yellow-600" />,
       description: 'Platform earnings',
@@ -380,24 +386,24 @@ const NewAdminDashboard = () => {
         : null
     },
     {
-      title: 'Total Refunds',
+      title: 'Refunds',
       value: `KSh ${dashboardState.financialMetrics.totalRefunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-red-600" />,
       description: `${dashboardState.financialMetrics.totalRefundRequests} completed`,
       trend: null
     },
     {
-      title: 'Total Wishlists',
-      value: dashboardState.analytics.totalWishlists?.toLocaleString() || '0',
-      icon: <Package className="h-4 w-4 text-pink-500" />,
-      description: 'Items in wishlists',
+      title: 'Open Orders',
+      value: dashboardState.analytics.activeOrders?.toLocaleString() || '0',
+      icon: <Activity className="h-4 w-4 text-blue-500" />,
+      description: 'Paid but not closed',
       trend: null
     },
     {
-      title: 'Total Clients',
+      title: 'Clients',
       value: dashboardState.analytics.totalClients?.toLocaleString() || '0',
       icon: <Users className="h-4 w-4 text-blue-400" />,
-      description: 'Purchasing customers',
+      description: `${dashboardState.analytics.pendingWithdrawals || 0} pending payouts`,
       trend: null
     }
   ];
@@ -556,24 +562,29 @@ const NewAdminDashboard = () => {
   };
 
   // Handle deleting/blocking user
-  const handleDeleteUser = async (userId: string, role: 'seller' | 'buyer') => {
-    if (!window.confirm(`Are you sure you want to block and delete this ${role}? This action cannot be undone.`)) {
+  const handleDeleteUser = async (userId: string | undefined, role: 'seller' | 'buyer') => {
+    if (!userId) {
+      toast.error(`This ${role} is already detached from a login user`);
+      return;
+    }
+
+    if (!window.confirm(`Delete this ${role}'s login account? Financial history and order records will be preserved for audit.`)) {
       return;
     }
 
     try {
       await adminApi.deleteUser(userId);
-      toast.success(`${role.charAt(0).toUpperCase() + role.slice(1)} account deleted successfully`);
+      toast.success(`${role.charAt(0).toUpperCase() + role.slice(1)} user deleted. History was preserved.`);
 
       // Refresh data
       setDashboardState(prev => ({
         ...prev,
-        sellers: role === 'seller' ? prev.sellers.filter(s => s.id !== userId) : prev.sellers,
-        buyers: role === 'buyer' ? prev.buyers.filter(b => b.id !== userId) : prev.buyers
+        sellers: role === 'seller' ? prev.sellers.filter(s => String(s.user_id) !== String(userId)) : prev.sellers,
+        buyers: role === 'buyer' ? prev.buyers.filter(b => String(b.user_id) !== String(userId)) : prev.buyers
       }));
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user account');
+      toast.error((error as any)?.response?.data?.message || 'Failed to delete user account');
     }
   };
 
@@ -639,14 +650,7 @@ const NewAdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-yellow-500/30 selection:text-black">
-      <div className="max-w-[1600px] mx-auto p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12">
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-yellow-500/10 blur-[120px] animate-pulse" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-orange-500/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-          <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-blue-500/5 blur-[100px]" />
-        </div>
-
-        <div className="relative z-10 max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
+        <div className="mx-auto w-full max-w-[1760px] p-4 md:p-8 lg:p-10 space-y-8">
           <AdminDashboardHeader />
 
           {/* Stats Grid */}
@@ -757,14 +761,14 @@ const NewAdminDashboard = () => {
                                   <Eye className="h-3 md:h-3.5 w-3 md:w-3.5" />
                                   <span className="hidden sm:inline ml-2">Inspect</span>
                                 </Button>
-                                <Button
+                            <Button
                                   variant="outline"
                                   size="sm"
                                   className="h-9 md:h-10 px-3 md:px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[9px] md:text-[10px] border transition-all"
                                   onClick={() => handleDeleteUser(seller.user_id, 'seller')}
                                 >
-                                  <Lock className="h-3 md:h-3.5 w-3 md:w-3.5" />
-                                  <span className="hidden sm:inline ml-2">Terminate</span>
+                                  <XCircle className="h-3 md:h-3.5 w-3 md:w-3.5" />
+                                  <span className="hidden sm:inline ml-2">Delete</span>
                                 </Button>
                               </div>
                             </td>
@@ -871,8 +875,8 @@ const NewAdminDashboard = () => {
                                   className="h-9 md:h-10 px-3 md:px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[9px] md:text-[10px] border transition-all"
                                   onClick={() => handleDeleteUser(buyer.user_id, 'buyer')}
                                 >
-                                  <Lock className="h-3 md:h-3.5 w-3 md:w-3.5" />
-                                  <span className="hidden sm:inline ml-2">Suspend</span>
+                                  <XCircle className="h-3 md:h-3.5 w-3 md:w-3.5" />
+                                  <span className="hidden sm:inline ml-2">Delete</span>
                                 </Button>
                               </div>
                             </td>
@@ -1116,7 +1120,6 @@ const NewAdminDashboard = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
     </div>
   );
 };

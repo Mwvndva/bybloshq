@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Store } from 'lucide-react';
+import { AlertTriangle, Package, Store, WalletCards } from 'lucide-react';
 import {
   ChartContainer,
   GeoDistributionChart,
@@ -18,17 +18,55 @@ interface AdminOverviewTabProps {
 }
 
 export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers }: AdminOverviewTabProps) {
+  const operatingCards = [
+    {
+      label: 'Open paid orders',
+      value: dashboardState.analytics.activeOrders || 0,
+      detail: 'Needs fulfillment or buyer confirmation',
+      icon: <Package className="h-4 w-4 text-blue-400" />
+    },
+    {
+      label: 'Pending withdrawals',
+      value: dashboardState.analytics.pendingWithdrawals || 0,
+      detail: 'Needs payout monitoring',
+      icon: <WalletCards className="h-4 w-4 text-emerald-400" />
+    },
+    {
+      label: 'Low stock products',
+      value: dashboardState.analytics.lowStockProducts || 0,
+      detail: 'Inventory attention',
+      icon: <AlertTriangle className="h-4 w-4 text-amber-400" />
+    }
+  ];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
-      <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
-      <SalesChart data={dashboardState.analytics.salesTrends || []} />
-      <ProductStatusChart data={dashboardState.analytics.productStatus || []} />
-      <GeoDistributionChart data={dashboardState.analytics.geoDistribution || []} />
+      <div className="col-span-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+        {operatingCards.map(card => (
+          <Card key={card.label} className="rounded-2xl border border-white/10 bg-[#0A0A0A]/70 shadow-xl">
+            <CardContent className="flex items-center justify-between p-5">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">{card.label}</p>
+                <p className="mt-2 text-3xl font-black tabular-nums text-white">{Number(card.value).toLocaleString()}</p>
+                <p className="mt-1 text-xs font-medium text-gray-500">{card.detail}</p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                {card.icon}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      <ChartContainer title="Premium Entities" description="Top shops by client conversion" className="col-span-4 lg:col-span-2">
+      <SalesChart data={dashboardState.analytics.salesTrends || []} />
+      <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
+      <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
+      <GeoDistributionChart data={dashboardState.analytics.geoDistribution || []} />
+      <ProductStatusChart data={dashboardState.analytics.productStatus || []} />
+
+      <ChartContainer title="Top Shops" description="Highest client conversion" className="col-span-4 lg:col-span-2">
         <div className="space-y-4 h-full flex flex-col justify-center">
-          {dashboardState.topShops?.slice(0, 3).map((shop: any, index: number) => (
+          {dashboardState.topShops?.length ? dashboardState.topShops.slice(0, 3).map((shop: any, index: number) => (
             <div key={shop.id} className="flex items-center justify-between p-5 bg-white/[0.03] rounded-[1.5rem] border border-white/5 hover:bg-white/10 transition-all duration-500 group/shop">
               <div className="flex items-center gap-5">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black italic shadow-inner transition-transform group-hover/shop:scale-110 ${index === 0 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
@@ -48,11 +86,13 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
                 <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest opacity-50">Pulse</p>
               </div>
             </div>
-          ))}
+          )) : (
+            <p className="text-center text-sm font-semibold text-gray-500">No shop conversion data yet</p>
+          )}
         </div>
       </ChartContainer>
 
-      <Card className="lg:col-span-4 bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
+      <Card className="lg:col-span-4 bg-[#0A0A0A]/70 border border-white/10 rounded-2xl overflow-hidden shadow-xl">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 md:p-8 border-b border-white/5 bg-white/[0.01] gap-4">
           <div>
             <CardTitle className="text-xl md:text-2xl font-black text-white tracking-tighter">Velocity Stream</CardTitle>

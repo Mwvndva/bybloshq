@@ -5,12 +5,29 @@ class AdminService {
   async getDashboardStats() {
     // Parallel queries
     const queries = {
-      sellers: 'SELECT COUNT(*) FROM sellers',
-      products: 'SELECT COUNT(*) FROM products',
+      sellers: "SELECT COUNT(*) FROM sellers WHERE COALESCE(status, 'active') <> 'deleted'",
+      products: "SELECT COUNT(*) FROM products WHERE COALESCE(status, 'available') <> 'deleted'",
       buyers: 'SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL', // Registered buyers
-      clients: 'SELECT 0::int AS count',
+      clients: 'SELECT COUNT(DISTINCT buyer_id) FROM product_orders WHERE payment_status = \'completed\' AND buyer_id IS NOT NULL',
       orders: 'SELECT COUNT(*) FROM product_orders',
-      wishlists: 'SELECT COUNT(*) FROM wishlists'
+      wishlists: 'SELECT COUNT(*) FROM wishlists',
+      activeOrders: `
+        SELECT COUNT(*)
+        FROM product_orders
+        WHERE payment_status = 'completed'
+          AND status::text NOT IN ('COMPLETED', 'CANCELLED', 'FAILED', 'EXPIRED', 'REFUNDED')
+      `,
+      lowStockProducts: `
+        SELECT COUNT(*)
+        FROM products
+        WHERE COALESCE(track_inventory, false) = true
+          AND COALESCE(quantity, 0) <= COALESCE(NULLIF(low_stock_threshold, 0), 10)
+      `,
+      pendingWithdrawals: `
+        SELECT COUNT(*)
+        FROM withdrawal_requests
+        WHERE status NOT IN ('completed', 'failed', 'rejected')
+      `
     };
 
     const stats = {};
@@ -33,6 +50,7 @@ class AdminService {
       const topShopsRes = await pool.query(`
                 SELECT s.id, s.full_name as name, s.shop_name, COALESCE(s.client_count, 0) as client_count
                 FROM sellers s
+                WHERE COALESCE(s.status, 'active') <> 'deleted'
                 ORDER BY COALESCE(s.client_count, 0) DESC
                 LIMIT 3
             `);
@@ -55,6 +73,9 @@ class AdminService {
       totalProducts: stats.total_products,
       totalOrders: stats.total_orders,
       totalWishlists: stats.total_wishlists,
+      activeOrders: stats.total_activeOrders,
+      lowStockProducts: stats.total_lowStockProducts,
+      pendingWithdrawals: stats.total_pendingWithdrawals,
       topShops
     };
   }
@@ -78,6 +99,8 @@ class AdminService {
               ORDER BY m.month;
             `;
 
+      const excludedOrderStatuses = "('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')";
+
       // 2. Revenue Trends (Platform commission)
       const revenueQuery = `
               WITH months AS (
@@ -94,7 +117,7 @@ class AdminService {
               FROM months m
               LEFT JOIN product_orders o ON date_trunc('month', o.created_at) = m.month 
                 AND o.payment_status = 'completed'
-                AND o.status IN ('PENDING', 'DELIVERY_COMPLETE', 'COMPLETED')
+                AND o.status::text NOT IN ${excludedOrderStatuses}
               GROUP BY m.month
               ORDER BY m.month;
             `;
@@ -114,32 +137,74 @@ class AdminService {
               FROM months m
               LEFT JOIN product_orders o ON date_trunc('month', o.created_at) = m.month 
                 AND o.payment_status = 'completed'
-                AND o.status IN ('PENDING', 'DELIVERY_COMPLETE', 'COMPLETED')
+                AND o.status::text NOT IN ${excludedOrderStatuses}
               GROUP BY m.month
               ORDER BY m.month;
             `;
 
-      // 3. Product Status Distribution
+      // 3. Product Distribution
       const productStatusQuery = `
               SELECT 
                 CASE 
-                  WHEN status = 'available' THEN 'Available'
-                  WHEN status = 'sold' THEN 'Sold'
-                  ELSE INITCAP(status::text)
+                  WHEN COALESCE(product_type::text, '') = '' THEN 'Physical'
+                  ELSE INITCAP(product_type::text)
                 END as name,
-                COUNT(*) as value
+                COUNT(*) as value,
+                COALESCE(SUM(COALESCE(quantity, 0)), 0) AS inventory
               FROM products 
-              WHERE status != 'draft'
+              WHERE COALESCE(status::text, 'available') != 'draft'
               GROUP BY 1;
             `;
 
-      // 4. Geographic Distribution (Top 5 Cities)
+      // 4. Geographic Distribution (buyers, sellers, and paid order GMV)
       const geoQuery = `
-              SELECT COALESCE(NULLIF(city, ''), 'Unknown City') as name, COUNT(*) as value
-              FROM buyers 
-              GROUP BY 1
-              ORDER BY value DESC 
-              LIMIT 5;
+              WITH buyer_regions AS (
+                SELECT
+                  COALESCE(NULLIF(TRIM(city), ''), NULLIF(TRIM(location), ''), 'Unknown') AS name,
+                  COUNT(*) AS buyers,
+                  0::int AS sellers,
+                  0::numeric AS gmv
+                FROM buyers
+                GROUP BY 1
+              ),
+              seller_regions AS (
+                SELECT
+                  COALESCE(NULLIF(TRIM(city), ''), NULLIF(TRIM(location), ''), 'Unknown') AS name,
+                  0::int AS buyers,
+                  COUNT(*) AS sellers,
+                  0::numeric AS gmv
+                FROM sellers
+                GROUP BY 1
+              ),
+              order_regions AS (
+                SELECT
+                  COALESCE(NULLIF(TRIM(po.location_address), ''), NULLIF(TRIM(s.city), ''), NULLIF(TRIM(s.location), ''), 'Unknown') AS name,
+                  0::int AS buyers,
+                  0::int AS sellers,
+                  COALESCE(SUM(po.total_amount), 0) AS gmv
+                FROM product_orders po
+                LEFT JOIN sellers s ON s.id = po.seller_id
+                WHERE po.payment_status = 'completed'
+                  AND po.status::text NOT IN ${excludedOrderStatuses}
+                GROUP BY 1
+              ),
+              combined AS (
+                SELECT * FROM buyer_regions
+                UNION ALL
+                SELECT * FROM seller_regions
+                UNION ALL
+                SELECT * FROM order_regions
+              )
+              SELECT
+                name,
+                SUM(buyers) AS buyers,
+                SUM(sellers) AS sellers,
+                SUM(gmv) AS gmv,
+                SUM(buyers + sellers) AS value
+              FROM combined
+              GROUP BY name
+              ORDER BY gmv DESC, value DESC
+              LIMIT 8;
             `;
 
       const [userGrowth, revenueTrends, salesTrends, productStatus, geoDist] = await Promise.all([
@@ -169,8 +234,18 @@ class AdminService {
         userGrowth: userGrowth.rows,
         revenueTrends: revenueTrends.rows,
         salesTrends: salesTrends.rows,
-        productStatus: productStatus.rows,
-        geoDistribution: geoDist.rows
+        productStatus: productStatus.rows.map(row => ({
+          ...row,
+          value: Number.parseInt(row.value, 10) || 0,
+          inventory: Number.parseInt(row.inventory, 10) || 0
+        })),
+        geoDistribution: geoDist.rows.map(row => ({
+          name: row.name,
+          value: Number.parseInt(row.value, 10) || 0,
+          buyers: Number.parseInt(row.buyers, 10) || 0,
+          sellers: Number.parseInt(row.sellers, 10) || 0,
+          gmv: Number.parseFloat(row.gmv) || 0
+        }))
       };
     } catch (error) {
       logger.error('Error fetching analytics:', error);
@@ -187,7 +262,9 @@ class AdminService {
   async getAllSellers() {
     const query = `
             SELECT id, user_id, full_name as name, email, whatsapp_number as phone, status, city, location, created_at, shop_name, balance
-            FROM sellers ORDER BY created_at DESC
+            FROM sellers
+            WHERE COALESCE(status, 'active') <> 'deleted'
+            ORDER BY created_at DESC
         `;
     const { rows } = await pool.query(query);
     return rows;
@@ -257,7 +334,41 @@ class AdminService {
   }
 
   async getAllClients() {
-    return [];
+    const { rows } = await pool.query(`
+      SELECT
+        b.id,
+        b.full_name AS name,
+        b.email,
+        b.mobile_payment AS phone,
+        b.city,
+        b.location,
+        MAX(po.created_at) AS created_at,
+        COUNT(po.id) AS order_count,
+        COALESCE(SUM(CASE WHEN po.payment_status = 'completed' THEN po.total_amount ELSE 0 END), 0) AS total_spend,
+        s.id AS seller_id,
+        s.full_name AS seller_name,
+        s.shop_name AS seller_shop_name
+      FROM buyers b
+      JOIN product_orders po ON po.buyer_id = b.id
+      LEFT JOIN sellers s ON s.id = po.seller_id
+      GROUP BY b.id, s.id, s.full_name, s.shop_name
+      ORDER BY MAX(po.created_at) DESC
+      LIMIT 500
+    `);
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      city: row.city,
+      location: row.location,
+      created_at: row.created_at,
+      orderCount: Number.parseInt(row.order_count, 10) || 0,
+      totalSpend: Number.parseFloat(row.total_spend) || 0,
+      sellerId: row.seller_id,
+      sellerName: row.seller_shop_name || row.seller_name || 'Unassigned'
+    }));
   }
 
   async deleteUser(userId) {
@@ -266,29 +377,33 @@ class AdminService {
       await client.query('BEGIN');
 
       // 1. Identify user role
-      const userRes = await client.query('SELECT role FROM users WHERE id = $1', [userId]);
+      const userRes = await client.query('SELECT id, role, email FROM users WHERE id = $1 FOR UPDATE', [userId]);
       if (userRes.rows.length === 0) throw new Error('User not found');
-      const role = userRes.rows[0].role;
+      const user = userRes.rows[0];
+      const deletedEmail = `deleted-user-${userId}@bybloshq.local`;
 
-      if (role === 'seller') {
-        const sellerRes = await client.query('SELECT id FROM sellers WHERE user_id = $1', [userId]);
+      if (user.role === 'seller') {
+        const sellerRes = await client.query('SELECT id FROM sellers WHERE user_id = $1 FOR UPDATE', [userId]);
         if (sellerRes.rows.length > 0) {
           const sellerId = sellerRes.rows[0].id;
 
-          // Delete payout and withdrawal history (FK dependencies)
-          await client.query('DELETE FROM payouts WHERE seller_id = $1', [sellerId]);
-          await client.query('DELETE FROM withdrawal_requests WHERE seller_id = $1', [sellerId]);
+          await client.query(`
+            UPDATE sellers
+            SET user_id = NULL,
+                status = 'deleted',
+                full_name = 'Deleted seller',
+                email = $2,
+                whatsapp_number = NULL,
+                updated_at = NOW()
+            WHERE id = $1
+          `, [sellerId, deletedEmail]);
 
-          // Delete junction tables
-          await client.query('DELETE FROM seller_clients WHERE seller_id = $1', [sellerId]);
-
-          // Delete orders and products
-          await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE seller_id = $1)', [sellerId]);
-          await client.query('DELETE FROM product_orders WHERE seller_id = $1', [sellerId]);
-          await client.query('DELETE FROM wishlists WHERE product_id IN (SELECT id FROM products WHERE seller_id = $1)', [sellerId]);
-          await client.query('DELETE FROM products WHERE seller_id = $1', [sellerId]);
-
-          await client.query('DELETE FROM sellers WHERE id = $1', [sellerId]);
+          await client.query(`
+            UPDATE products
+            SET status = 'deleted',
+                updated_at = NOW()
+            WHERE seller_id = $1
+          `, [sellerId]);
         }
       }
 
@@ -303,21 +418,28 @@ class AdminService {
       `, [userId]);
       await client.query('DELETE FROM seller_clients WHERE user_id = $1', [userId]);
 
-      const buyerRow = await client.query('SELECT id FROM buyers WHERE user_id = $1', [userId]);
+      const buyerRow = await client.query('SELECT id FROM buyers WHERE user_id = $1 FOR UPDATE', [userId]);
       if (buyerRow.rows.length > 0) {
         const buyerId = buyerRow.rows[0].id;
-        // Cleanup buyer specific FKs
         await client.query('DELETE FROM wishlists WHERE buyer_id = $1', [buyerId]);
-        await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE buyer_id = $1)', [buyerId]);
-        await client.query('DELETE FROM product_orders WHERE buyer_id = $1', [buyerId]);
-        await client.query('DELETE FROM buyers WHERE id = $1', [buyerId]);
+        await client.query(`
+          UPDATE buyers
+          SET user_id = NULL,
+              status = 'deleted',
+              full_name = 'Deleted buyer',
+              email = $2,
+              mobile_payment = CONCAT('deleted-', $1::text),
+              whatsapp_number = NULL,
+              updated_at = NOW()
+          WHERE id = $1
+        `, [buyerId, deletedEmail]);
       }
 
       // Now safe to delete the user row
       await client.query('DELETE FROM users WHERE id = $1', [userId]);
 
       await client.query('COMMIT');
-      return true;
+      return { deletedUserId: Number(userId), preservedHistory: true };
     } catch (error) {
       await client.query('ROLLBACK');
       logger.error(`Error deleting user ${userId}:`, error);
