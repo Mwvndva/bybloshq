@@ -476,12 +476,12 @@ const SectionHeading = ({ number, title }: { number: string; title: string }) =>
 const Sub = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="mb-5">
     <h3 className="font-semibold text-[#1a1a1a] mb-2 text-[13px]">{title}</h3>
-    <div className="text-gray-700 leading-relaxed">{children}</div>
+    <div className="text-[#1a1a1a] leading-relaxed">{children}</div>
   </div>
 );
 
 const BulletList = ({ items }: { items: string[] }) => (
-  <ul className="list-disc pl-5 mt-2 space-y-1.5 text-gray-700">
+  <ul className="list-disc pl-5 mt-2 space-y-1.5 text-[#1a1a1a]">
     {items.map((item, i) => <li key={i}>{item}</li>)}
   </ul>
 );
