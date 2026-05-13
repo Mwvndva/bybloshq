@@ -67,7 +67,7 @@ interface WithdrawalRequest {
   amount: number;
   mpesaNumber: string;
   mpesaName: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'processing' | 'failed' | string;
   sellerId: string;
   sellerName: string;
   sellerEmail: string;
@@ -400,13 +400,23 @@ const NewAdminDashboard = () => {
       trend: null
     },
     {
-      title: 'Clients',
-      value: dashboardState.analytics.totalClients?.toLocaleString() || '0',
+      title: 'Pending Payouts',
+      value: dashboardState.analytics.pendingWithdrawals?.toLocaleString() || '0',
       icon: <Users className="h-4 w-4 text-blue-400" />,
-      description: `${dashboardState.analytics.pendingWithdrawals || 0} pending payouts`,
+      description: `${dashboardState.analytics.totalClients?.toLocaleString() || '0'} paying clients`,
       trend: null
     }
   ];
+
+  const pendingPayoutRequests = useMemo(() => (
+    dashboardState.withdrawalRequests.filter(request =>
+      !['completed', 'failed', 'rejected'].includes(String(request.status).toLowerCase())
+    )
+  ), [dashboardState.withdrawalRequests]);
+
+  const pendingPayoutAmount = useMemo(() => (
+    pendingPayoutRequests.reduce((sum, request) => sum + (Number(request.amount) || 0), 0)
+  ), [pendingPayoutRequests]);
 
   const metricsData = useMemo(() => {
     if (!dashboardState.monthlyMetrics?.length) {
@@ -918,6 +928,32 @@ const NewAdminDashboard = () => {
                     />
                   </div>
                 </CardHeader>
+                <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.012] p-5 md:grid-cols-3 md:p-8">
+                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-200/70">Open orders</p>
+                      <Activity className="h-4 w-4 text-blue-300" />
+                    </div>
+                    <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.analytics.activeOrders?.toLocaleString() || '0'}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-100/50">Paid and not closed</p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200/70">Pending payouts</p>
+                      <DollarSign className="h-4 w-4 text-emerald-300" />
+                    </div>
+                    <p className="mt-3 text-2xl font-black text-white tabular-nums">{pendingPayoutRequests.length.toLocaleString()}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-emerald-100/50">Awaiting settlement</p>
+                  </div>
+                  <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/[0.06] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/70">Pending payout value</p>
+                      <TrendingUp className="h-4 w-4 text-yellow-300" />
+                    </div>
+                    <p className="mt-3 text-2xl font-black text-white tabular-nums">KSh {pendingPayoutAmount.toLocaleString()}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-yellow-100/50">Capital waiting to leave</p>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.015] p-5 md:grid-cols-3 md:p-8">
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Provider health</p>
