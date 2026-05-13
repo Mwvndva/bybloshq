@@ -399,8 +399,8 @@ export const adminApi = {
         mpesaName: String(request.mpesa_name || request.mpesaName || ''),
         status: String(request.status || 'pending'),
         sellerId: String(request.seller_id || request.sellerId || ''),
-        sellerName: String(request.seller_name || request.sellerName || 'Unknown Seller'),
-        sellerEmail: String(request.seller_email || request.sellerEmail || ''),
+        sellerName: String(request.entityName || request.entity_name || request.seller_name || request.sellerName || request.mpesaName || request.mpesa_name || 'Seller'),
+        sellerEmail: String(request.entityEmail || request.entity_email || request.seller_email || request.sellerEmail || ''),
         providerReference: request.provider_reference || request.providerReference || null,
         // Use camelCase for consistency
         createdAt: request.created_at || request.createdAt || new Date().toISOString(),

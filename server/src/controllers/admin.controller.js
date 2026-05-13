@@ -491,7 +491,7 @@ const getAllWithdrawalRequests = async (req, res, next) => {
                     WHEN wr.seller_id IS NOT NULL THEN 'seller'
                     ELSE 'unknown'
                 END AS entity_type,
-                s.full_name AS entity_name,
+                COALESCE(NULLIF(s.shop_name, ''), NULLIF(s.full_name, ''), NULLIF(wr.mpesa_name, ''), 'Seller') AS entity_name,
                 s.email AS entity_email,
                 s.whatsapp_number AS entity_phone,
                 s.balance AS current_balance
