@@ -383,6 +383,7 @@ const getAllBuyers = async (req, res, next) => {
         location,
         created_at
       FROM buyers 
+      WHERE COALESCE(status, 'active') <> 'deleted'
       ORDER BY created_at DESC
     `;
 
@@ -462,14 +463,15 @@ const getAllClients = async (req, res, next) => {
 const deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await AdminService.deleteUser(id);
+    const result = await AdminService.deleteUser(id);
     res.status(200).json({
       status: 'success',
-      message: 'User account and associated data deleted successfully'
+      message: 'User login deleted. Financial, order, and logistics history was preserved for audit.',
+      data: result
     });
   } catch (error) {
     console.error('Error deleting user:', error);
-    next(new AppError('Failed to delete user account', 500));
+    next(new AppError(error.message || 'Failed to delete user account', error.statusCode || 500));
   }
 };
 
@@ -719,7 +721,7 @@ const getFinancialMetrics = async (req, res, next) => {
         COUNT(*) as total_orders
       FROM product_orders
       WHERE payment_status = 'completed'
-        AND status NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
+        AND status::text NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
     `);
 
     // Get total commission (platform_fee_amount)
@@ -728,7 +730,7 @@ const getFinancialMetrics = async (req, res, next) => {
         COALESCE(SUM(platform_fee_amount), 0) as total_commission
       FROM product_orders
       WHERE payment_status = 'completed'
-        AND status NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
+        AND status::text NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
     `);
 
     // Get total refunds made
@@ -792,7 +794,7 @@ const getMonthlyFinancialData = async (req, res, next) => {
           COALESCE(SUM(platform_fee_amount), 0) AS commission
         FROM product_orders
         WHERE payment_status = 'completed'
-          AND status NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
+          AND status::text NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
           AND created_at >= CURRENT_DATE - interval '12 months'
         GROUP BY date_trunc('month', created_at)
       ),
