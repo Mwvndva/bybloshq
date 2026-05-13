@@ -85,6 +85,7 @@ export function ProductEditDialog({
                 <Input
                   id="edit-price"
                   type="number"
+                  min={50}
                   value={formData.price}
                   onChange={(event) => onFormDataChange({ ...formData, price: event.target.value })}
                   className="bg-black border-white/20 text-white h-9 text-sm"

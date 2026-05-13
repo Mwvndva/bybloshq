@@ -11,11 +11,12 @@ import PaydProviderClient from '../providers/PaydProviderClient.js';
 import PaystackProviderClient from '../providers/PaystackProviderClient.js';
 import LogisticsQuoteService from './logisticsQuote.service.js';
 import LogisticsRequestService from './logisticsRequest.service.js';
+import Fees from '../config/fees.js';
 
 const roundMoney = (amount) => Math.round(Number(amount) * 100) / 100;
 const roundPayableTotal = (amount) => Math.ceil(roundMoney(amount));
-const BUYER_SERVICE_CHARGE_RATE = 0.015;
-const calculateBuyerServiceCharge = (amount) => roundMoney(Number(amount || 0) * BUYER_SERVICE_CHARGE_RATE);
+const PRODUCT_SERVICE_CHARGE_RATE = Fees.PRODUCT_SERVICE_CHARGE_RATE;
+const calculateProductServiceCharge = (amount) => Fees.calculateProductServiceCharge(amount);
 
 const isDoorDeliveryRequested = (delivery = {}, metadata = {}) => {
     return delivery.doorDelivery === true
@@ -1422,8 +1423,8 @@ export class PaymentService {
         }
 
         const paymentBaseTotal = roundMoney(productSubtotal + buyerDeliveryFee);
-        const buyerServiceCharge = calculateBuyerServiceCharge(paymentBaseTotal);
-        const payableTotal = roundPayableTotal(paymentBaseTotal + buyerServiceCharge);
+        const productServiceCharge = calculateProductServiceCharge(productSubtotal);
+        const payableTotal = roundPayableTotal(paymentBaseTotal + productServiceCharge);
 
         if (payableTotal <= 0) throw new Error('Invalid order amount after secure calculation');
 
@@ -1488,8 +1489,10 @@ export class PaymentService {
                     ...(metadata.pricing || {}),
                     product_subtotal: productSubtotal,
                     buyer_delivery_fee: buyerDeliveryFee,
-                    buyer_service_charge_rate: BUYER_SERVICE_CHARGE_RATE,
-                    buyer_service_charge: buyerServiceCharge,
+                    buyer_service_charge_rate: PRODUCT_SERVICE_CHARGE_RATE,
+                    buyer_service_charge: productServiceCharge,
+                    product_service_charge_rate: PRODUCT_SERVICE_CHARGE_RATE,
+                    product_service_charge: productServiceCharge,
                     payment_base_total: paymentBaseTotal,
                     payable_total: payableTotal,
                     seller_payout_base: productSubtotal,
@@ -1558,8 +1561,10 @@ export class PaymentService {
                     product_type: product.product_type,
                     product_subtotal: productSubtotal,
                     buyer_delivery_fee: buyerDeliveryFee,
-                    buyer_service_charge_rate: BUYER_SERVICE_CHARGE_RATE,
-                    buyer_service_charge: buyerServiceCharge,
+                    buyer_service_charge_rate: PRODUCT_SERVICE_CHARGE_RATE,
+                    buyer_service_charge: productServiceCharge,
+                    product_service_charge_rate: PRODUCT_SERVICE_CHARGE_RATE,
+                    product_service_charge: productServiceCharge,
                     payment_base_total: paymentBaseTotal,
                     payable_total: payableTotal,
                     delivery: orderData.metadata.delivery,
