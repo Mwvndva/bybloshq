@@ -5,6 +5,7 @@ import Order from '../models/order.model.js';
 import BookingService from '../modules/bookings/booking.service.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import InventoryReservationService from './inventoryReservation.service.js';
+import escrowManager from './EscrowManager.js';
 
 class OrderFulfillmentTransitionService {
     static async executeFulfillment(client, order) {
@@ -73,7 +74,12 @@ class OrderFulfillmentTransitionService {
             await this.grantDigitalAccess(client, order, items);
 
             assertValidTransition(OrderStatus.FULFILLING, OrderStatus.COMPLETED, order.id);
-            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.COMPLETED, 'completed');
+            const completedOrder = await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.COMPLETED, 'completed');
+            const releaseResult = await escrowManager.releaseFunds(client, completedOrder, 'DigitalFulfillment');
+
+            if (!releaseResult.success && !releaseResult.alreadyReleased) {
+                throw new Error(`Digital escrow release blocked: ${releaseResult.reason || 'unknown_reason'}`);
+            }
         } catch (err) {
             logger.error(`[FULFILLMENT-DIGITAL] Failed delivery for Order ${order.id}:`, err);
             throw err;

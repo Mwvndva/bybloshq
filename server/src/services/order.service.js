@@ -101,7 +101,7 @@ class OrderService {
         metadata.items = items;
         this._validateItems(items);
 
-        // 3. Calculate totals and fees
+        // 3. Calculate product totals and seller payout.
         const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
         logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
@@ -240,13 +240,28 @@ class OrderService {
         const totalQuantity = items.reduce((sum, item) => sum + (Number.parseInt(item.quantity, 10) || 1), 0);
         const orderNumber = await this._generateOrderNumber(client);
 
+        const payableTotal = this._roundMoney(service.total || totalAmount);
+        const platformRetainedAmount = this._calculatePlatformRetainedAmount({
+          payableTotal,
+          sellerPayout,
+          metadata,
+          fallbackPlatformFee: platformFee
+        });
+
+        metadata.pricing = {
+          ...(metadata.pricing || {}),
+          seller_commission_fee: platformFee,
+          platform_retained_amount: platformRetainedAmount,
+          platform_retained_excludes_delivery_fee: true
+        };
+
         // 5f. Prepare Order Record (PIN-02: UNIFIED SCHEMA MAPPING)
         const orderRecord = {
           order_number: orderNumber,
           buyer_id: buyer.id,
           seller_id: sellerId,
-          total_amount: service.total || totalAmount,
-          platform_fee_amount: platformFee,
+          total_amount: payableTotal,
+          platform_fee_amount: platformRetainedAmount,
           seller_payout_amount: sellerPayout,
           payment_method: payment.method,
           buyer_name: buyer.name,
@@ -979,6 +994,19 @@ class OrderService {
       platformFee,
       sellerPayout
     };
+  }
+
+  static _roundMoney(amount) {
+    return Math.round(Number(amount || 0) * 100) / 100;
+  }
+
+  static _calculatePlatformRetainedAmount({ payableTotal, sellerPayout, metadata = {}, fallbackPlatformFee = 0 }) {
+    const buyerDeliveryFee = this._roundMoney(metadata?.pricing?.buyer_delivery_fee || 0);
+    const retainedAmount = this._roundMoney(payableTotal - sellerPayout - buyerDeliveryFee);
+    const fallbackAmount = this._roundMoney(fallbackPlatformFee);
+
+    if (!Number.isFinite(retainedAmount) || retainedAmount < 0) return fallbackAmount;
+    return retainedAmount;
   }
 
   static _determineInitialStatus(orderType) {
