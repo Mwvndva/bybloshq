@@ -5,8 +5,13 @@ class AdminService {
   async getDashboardStats() {
     // Parallel queries
     const queries = {
-      sellers: "SELECT COUNT(*) FROM sellers WHERE COALESCE(status, 'active') <> 'deleted'",
-      products: "SELECT COUNT(*) FROM products WHERE COALESCE(status, 'available') <> 'deleted'",
+      sellers: 'SELECT COUNT(*) FROM sellers WHERE user_id IS NOT NULL',
+      products: `
+        SELECT COUNT(*)
+        FROM products p
+        LEFT JOIN sellers s ON s.id = p.seller_id
+        WHERE s.user_id IS NOT NULL
+      `,
       buyers: 'SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL', // Active registered buyers
       clients: 'SELECT COUNT(DISTINCT buyer_id) FROM product_orders WHERE payment_status = \'completed\' AND buyer_id IS NOT NULL',
       orders: 'SELECT COUNT(*) FROM product_orders',
@@ -19,9 +24,11 @@ class AdminService {
       `,
       lowStockProducts: `
         SELECT COUNT(*)
-        FROM products
-        WHERE COALESCE(track_inventory, false) = true
-          AND COALESCE(quantity, 0) <= COALESCE(NULLIF(low_stock_threshold, 0), 10)
+        FROM products p
+        LEFT JOIN sellers s ON s.id = p.seller_id
+        WHERE s.user_id IS NOT NULL
+          AND COALESCE(p.track_inventory, false) = true
+          AND COALESCE(p.quantity, 0) <= COALESCE(NULLIF(p.low_stock_threshold, 0), 10)
       `,
       pendingWithdrawals: `
         SELECT COUNT(*)
@@ -50,7 +57,7 @@ class AdminService {
       const topShopsRes = await pool.query(`
                 SELECT s.id, s.full_name as name, s.shop_name, COALESCE(s.client_count, 0) as client_count
                 FROM sellers s
-                WHERE COALESCE(s.status, 'active') <> 'deleted'
+                WHERE s.user_id IS NOT NULL
                 ORDER BY COALESCE(s.client_count, 0) DESC
                 LIMIT 3
             `);
@@ -93,8 +100,8 @@ class AdminService {
               )
               SELECT 
                 to_char(m.month, 'Mon') as name,
-                (SELECT COUNT(*) FROM buyers WHERE date_trunc('month', created_at) <= m.month) as buyers,
-                (SELECT COUNT(*) FROM sellers WHERE date_trunc('month', created_at) <= m.month) as sellers
+                (SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL AND date_trunc('month', created_at) <= m.month) as buyers,
+                (SELECT COUNT(*) FROM sellers WHERE user_id IS NOT NULL AND date_trunc('month', created_at) <= m.month) as sellers
               FROM months m
               ORDER BY m.month;
             `;
@@ -151,8 +158,10 @@ class AdminService {
                 END as name,
                 COUNT(*) as value,
                 COALESCE(SUM(COALESCE(quantity, 0)), 0) AS inventory
-              FROM products 
-              WHERE COALESCE(status::text, 'available') != 'draft'
+              FROM products p
+              LEFT JOIN sellers s ON s.id = p.seller_id
+              WHERE s.user_id IS NOT NULL
+                AND COALESCE(p.status::text, 'available') != 'draft'
               GROUP BY 1;
             `;
 
@@ -165,6 +174,7 @@ class AdminService {
                   0::int AS sellers,
                   0::numeric AS gmv
                 FROM buyers
+                WHERE user_id IS NOT NULL
                 GROUP BY 1
               ),
               seller_regions AS (
@@ -174,6 +184,7 @@ class AdminService {
                   COUNT(*) AS sellers,
                   0::numeric AS gmv
                 FROM sellers
+                WHERE user_id IS NOT NULL
                 GROUP BY 1
               ),
               order_regions AS (
@@ -263,7 +274,7 @@ class AdminService {
     const query = `
             SELECT id, user_id, full_name as name, email, whatsapp_number as phone, status, city, location, created_at, shop_name, balance
             FROM sellers
-            WHERE COALESCE(status, 'active') <> 'deleted'
+            WHERE user_id IS NOT NULL
             ORDER BY created_at DESC
         `;
     const { rows } = await pool.query(query);
@@ -391,7 +402,6 @@ class AdminService {
           await client.query(`
             UPDATE sellers
             SET user_id = NULL,
-                status = 'deleted',
                 full_name = 'Deleted seller',
                 email = $2,
                 whatsapp_number = NULL,
@@ -399,12 +409,6 @@ class AdminService {
             WHERE id = $1
           `, [sellerId, deletedEmail]);
 
-          await client.query(`
-            UPDATE products
-            SET status = 'deleted',
-                updated_at = NOW()
-            WHERE seller_id = $1
-          `, [sellerId]);
         }
       }
 
