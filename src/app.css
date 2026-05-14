@@ -447,6 +447,11 @@ body.dashboard-active .withdrawal-minimum-note * {
     color: #000000 !important;
 }
 
+body.dashboard-active .withdrawal-fee-summary,
+body.dashboard-active .withdrawal-fee-summary * {
+    color: #111111 !important;
+}
+
 body.dashboard-active .seller-service-charge-notice,
 body.dashboard-active .seller-service-charge-notice * {
     color: #111111 !important;
