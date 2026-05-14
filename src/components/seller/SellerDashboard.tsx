@@ -191,6 +191,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
         {activeTab === 'overview' && (
           <OverviewTab
+            analytics={analytics}
             pendingOverviewOrders={pendingOverviewOrders}
             sellerProfile={sellerProfile}
             onCopyShopLink={handleCopyShopLink}

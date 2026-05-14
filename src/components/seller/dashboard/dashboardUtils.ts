@@ -13,9 +13,15 @@ export const getWithdrawalFee = (amount: number) => {
 };
 
 export const pendingOverviewStatuses = new Set([
+  'PAID',
+  'AWAITING_SELLER_ACTION',
+  'FULFILLING',
+  'READY_FOR_BUYER',
   'SERVICE_PENDING',
   'COLLECTION_PENDING',
-  'DELIVERY_PENDING'
+  'DELIVERY_PENDING',
+  'PROCESSING',
+  'READY_FOR_COLLECTION'
 ]);
 
 export const sellerDashboardTabs = [
@@ -45,9 +51,18 @@ export const getPendingStatusStyles = (status: string) => {
     case 'SERVICE_PENDING':
       return 'border-purple-200 bg-purple-50 text-purple-900';
     case 'COLLECTION_PENDING':
+    case 'READY_FOR_COLLECTION':
       return 'border-amber-200 bg-amber-50 text-amber-900';
     case 'DELIVERY_PENDING':
       return 'border-cyan-200 bg-cyan-50 text-cyan-900';
+    case 'AWAITING_SELLER_ACTION':
+    case 'PAID':
+      return 'border-yellow-200 bg-yellow-50 text-yellow-900';
+    case 'FULFILLING':
+    case 'PROCESSING':
+      return 'border-blue-200 bg-blue-50 text-blue-900';
+    case 'READY_FOR_BUYER':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-900';
     default:
       return 'border-slate-200 bg-slate-50 text-slate-900';
   }
