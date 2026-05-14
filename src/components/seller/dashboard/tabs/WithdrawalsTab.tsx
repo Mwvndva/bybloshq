@@ -153,7 +153,7 @@ export function WithdrawalsTab({
                 />
               </div>
               {totalDeducted > 0 && (
-                <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs font-semibold text-slate-950">
+                <div className="withdrawal-fee-summary rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs font-semibold">
                   <div className="flex justify-between gap-3">
                     <span>Withdrawal charge</span>
                     <span>{formatKes(withdrawalFee)}</span>
