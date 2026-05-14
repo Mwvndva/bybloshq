@@ -153,13 +153,13 @@ class ReferralService {
 
     /**
      * Called after a referred seller completes their FIRST paid order.
-     * Sets referral_active_until = NOW() + 6 months.
+     * Sets referral_active_until = NOW() + 3 months.
      * @param {number} referredSellerId
      */
     static async activateReferral(referredSellerId) {
         const result = await pool.query(
             `UPDATE sellers
-       SET referral_active_until = NOW() + INTERVAL '6 months'
+       SET referral_active_until = NOW() + INTERVAL '3 months'
        WHERE id = $1
          AND referred_by_seller_id IS NOT NULL
          AND referral_active_until IS NULL
@@ -275,42 +275,52 @@ class ReferralService {
             for (/** @type {any} */ const row of activeReferrals.rows) {
                 const { referred_seller_id, referred_shop_name, referrer_seller_id, referrer_whatsapp } = row;
 
-                // 1. Calculate Seller Payout GMV for the referred seller in the target month/year (Timezone aware)
-                const gmvResult = await client.query(
-                    `SELECT COALESCE(SUM(seller_payout_amount), 0) AS gmv
-           FROM product_orders
-           WHERE seller_id = $1
-             AND payment_status = 'completed'
-             AND paid_at >= $2
-             AND paid_at < $3
-             AND paid_at <= (
-               SELECT referral_active_until
-               FROM sellers
-               WHERE id = $1
-             )`,
+                // 1. Count products sold by the referred seller in the target month/year.
+                const salesResult = await client.query(
+                    `WITH qualifying_orders AS (
+               SELECT id, seller_payout_amount, COALESCE(total_quantity, 1) AS total_quantity
+               FROM product_orders
+               WHERE seller_id = $1
+                 AND payment_status = 'completed'
+                 AND paid_at >= $2
+                 AND paid_at < $3
+                 AND paid_at <= (
+                   SELECT referral_active_until
+                   FROM sellers
+                   WHERE id = $1
+                 )
+             ),
+             order_units AS (
+               SELECT
+                 qo.id,
+                 qo.seller_payout_amount,
+                 COALESCE(SUM(oi.quantity), qo.total_quantity, 1) AS units_sold
+               FROM qualifying_orders qo
+               LEFT JOIN order_items oi ON oi.order_id = qo.id
+               GROUP BY qo.id, qo.seller_payout_amount, qo.total_quantity
+             )
+             SELECT
+               COALESCE(SUM(seller_payout_amount), 0) AS referred_gmv,
+               COALESCE(SUM(units_sold), 0) AS units_sold
+             FROM order_units`,
                     [referred_seller_id, periodStart, periodEnd]
                 );
 
-                const gmv = Number.parseFloat(gmvResult.rows[0].gmv);
-                logger.info(`[REFERRAL-CRON] Seller ${referred_seller_id} GMV (Seller Payout) for ${year}-${month}: ${gmv}`);
-                if (gmv <= 0) continue;
+                const referredGmv = Number.parseFloat(salesResult.rows[0].referred_gmv || 0);
+                const unitsSold = Number.parseInt(salesResult.rows[0].units_sold || 0, 10);
+                logger.info(`[REFERRAL-CRON] Seller ${referred_seller_id} products sold for ${year}-${month}: ${unitsSold}`);
+                if (unitsSold <= 0) continue;
 
-                // 2. Calculate reward
-                const reward = Number.parseFloat((gmv * Fees.REFERRAL_REWARD_RATE).toFixed(2));
+                // 2. Calculate reward: flat KES 3 per product sold by the referred seller.
+                const reward = Number.parseFloat((unitsSold * Fees.REFERRAL_REWARD_PER_PRODUCT).toFixed(2));
 
-                // 3. Skip sub-1 KES rewards
-                if (reward < 1) {
-                    logger.info(`[REFERRAL-CRON] Skipping seller ${referred_seller_id} — reward ${reward} KES below minimum`);
-                    continue;
-                }
-
-                // 4. Insert log row (idempotent)
+                // 3. Insert log row (idempotent)
                 const insertResult = await client.query(
                     `INSERT INTO referral_earnings_log
-             (referrer_seller_id, referred_seller_id, period_month, period_year, referred_gmv, reward_amount)
-           VALUES ($1, $2, $3, $4, $5, $6)
+             (referrer_seller_id, referred_seller_id, period_month, period_year, referred_gmv, referred_units_sold, reward_amount)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            ON CONFLICT (referrer_seller_id, referred_seller_id, period_month, period_year) DO NOTHING`,
-                    [referrer_seller_id, referred_seller_id, month, year, gmv, reward]
+                    [referrer_seller_id, referred_seller_id, month, year, referredGmv, unitsSold, reward]
                 );
 
                 if (insertResult.rowCount === 0) {
@@ -318,7 +328,7 @@ class ReferralService {
                     continue;
                 }
 
-                // 5. Credit referrer's balance with FOR UPDATE lock
+                // 4. Credit referrer's balance with FOR UPDATE lock
                 await client.query(
                     `UPDATE sellers
                      SET balance = balance + $1,
@@ -330,7 +340,7 @@ class ReferralService {
                 processed++;
                 totalCredited = Number.parseFloat((totalCredited + reward).toFixed(2));
 
-                logger.info(`[REFERRAL-CRON] SUCCESS: Credited KES ${reward} to referrer ${referrer_seller_id} from referred ${referred_seller_id} (GMV: ${gmv})`);
+                logger.info(`[REFERRAL-CRON] SUCCESS: Credited KES ${reward} to referrer ${referrer_seller_id} from referred ${referred_seller_id} (products sold: ${unitsSold})`);
 
                 const rewardEvent = await eventBus.enqueueInTransaction(client, AppEvents.REFERRAL.REWARD_CREATED, {
                     eventId: `referral.reward_created:${referrer_seller_id}:${referred_seller_id}:${year}:${month}`,
@@ -342,6 +352,7 @@ class ReferralService {
                         amount: reward,
                         referredShopName: referred_shop_name,
                         referredSellerId: referred_seller_id,
+                        unitsSold,
                         periodMonth: month,
                         periodYear: year
                     }

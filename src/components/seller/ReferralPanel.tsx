@@ -129,7 +129,7 @@ const ReferralPanel: React.FC<ReferralPanelProps> = ({ totalSales }) => {
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">Unlock Rewards</h3>
                     <p className="text-gray-400 max-w-sm mx-auto mb-8">
-                        Refer other sellers and earn 0.2% of their sales for 6 months!
+                        Refer other sellers and earn KES 3 for every product they sell for 3 months!
                     </p>
                     <Button
                         onClick={handleGenerateCode}

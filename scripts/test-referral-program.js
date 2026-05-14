@@ -52,19 +52,19 @@ async function runTests() {
       `);
             // @ts-ignore
             const foundLogCols = logColumnsResult.rows.map((r) => r.column_name);
-            const expectedLogCols = ['referrer_seller_id', 'referred_seller_id', 'period_month', 'period_year', 'reward_amount', 'referred_gmv', 'credited_at'];
+            const expectedLogCols = ['referrer_seller_id', 'referred_seller_id', 'period_month', 'period_year', 'reward_amount', 'referred_gmv', 'referred_units_sold', 'credited_at'];
             const missingLogCols = expectedLogCols.filter(c => !foundLogCols.includes(c));
 
             if (missingLogCols.length > 0) {
                 throw new Error(`Missing columns in referral_earnings_log: ${missingLogCols.join(', ')}`);
             }
 
-            if (Fees.REFERRAL_REWARD_RATE !== 0.002) {
-                throw new Error(`Fees.REFERRAL_REWARD_RATE is ${Fees.REFERRAL_REWARD_RATE}, expected 0.002`);
+            if (Fees.REFERRAL_REWARD_PER_PRODUCT !== 3) {
+                throw new Error(`Fees.REFERRAL_REWARD_PER_PRODUCT is ${Fees.REFERRAL_REWARD_PER_PRODUCT}, expected 3`);
             }
 
             console.log(`✅ PASS: Database Schema Validation — Schema is correct.`);
-            console.log(`📊 REFERRAL_REWARD_RATE = ${Fees.REFERRAL_REWARD_RATE}`);
+            console.log(`📊 REFERRAL_REWARD_PER_PRODUCT = ${Fees.REFERRAL_REWARD_PER_PRODUCT}`);
             passed++;
         } catch (err) {
             console.log(`❌ FAIL: Database Schema Validation — ${(err instanceof Error ? err.message : String(err))}`);
@@ -189,12 +189,12 @@ async function runTests() {
         VALUES ($1, $2, 0, $3, $4, 0, 0, $5, $6, '0700000000', '0700000000') RETURNING id
       `, [referred.id, `ACTIVATE${TEST_MARKER}`, OrderStatus.COMPLETED, PaymentStatus.COMPLETED, 'Test Buyer Ref', `testbuyer${TEST_MARKER}@test.com`]);
 
-            await ReferralService.activateReferral(orderRes.rows[0].id);
+            await ReferralService.activateReferral(referred.id);
 
             const checkRes = await pool.query("SELECT referral_active_until FROM sellers WHERE id = $1", [referred.id]);
             const date = new Date(checkRes.rows[0].referral_active_until);
             const expected = new Date();
-            expected.setMonth(expected.getMonth() + 6);
+            expected.setMonth(expected.getMonth() + 3);
 
             // Diff in seconds
             const diff = Math.abs(date.getTime() - expected.getTime()) / 1000;
@@ -202,13 +202,13 @@ async function runTests() {
                 throw new Error(`Stored date ${date} too far from expected ${expected} (diff: ${diff}s)`);
             }
 
-            console.log(`✅ PASS: Referral Activation — Activated for 6 months.`);
+            console.log(`✅ PASS: Referral Activation — Activated for 3 months.`);
             console.log(`📊 Referral active until: ${date.toISOString()}`);
             passed++;
 
             // Idempotency check
             const originalDate = checkRes.rows[0].referral_active_until;
-            await ReferralService.activateReferral(orderRes.rows[0].id);
+            await ReferralService.activateReferral(referred.id);
             const checkRes2 = await pool.query("SELECT referral_active_until FROM sellers WHERE id = $1", [referred.id]);
             if (new Date(checkRes2.rows[0].referral_active_until).getTime() !== new Date(originalDate).getTime()) {
                 throw new Error('referral_active_until was reset on second activation call');
@@ -233,7 +233,7 @@ async function runTests() {
                 await pool.query(`
           INSERT INTO product_orders 
           (seller_id, order_number, total_amount, status, payment_status, paid_at, buyer_name, buyer_email, platform_fee_amount, seller_payout_amount, buyer_mobile_payment, buyer_whatsapp_number)
-          VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, 0, 0, '0700000000', '0700000000')
+          VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, 0, $3, '0700000000', '0700000000')
         `, [referred.id, `ORDER-00${i + 1}${TEST_MARKER}`, orderAmounts[i], OrderStatus.COMPLETED, PaymentStatus.COMPLETED, 'Test Buyer Ref', `testbuyer${TEST_MARKER}@test.com`]);
             }
 
@@ -253,7 +253,12 @@ async function runTests() {
                 throw new Error(`Expected GMV 50000, got ${log.referred_gmv}`);
             }
 
-            const expectedReward = 50000 * Fees.REFERRAL_REWARD_RATE;
+            const expectedUnitsSold = orderAmounts.length;
+            if (parseInt(log.referred_units_sold, 10) !== expectedUnitsSold) {
+                throw new Error(`Expected units sold ${expectedUnitsSold}, got ${log.referred_units_sold}`);
+            }
+
+            const expectedReward = expectedUnitsSold * Fees.REFERRAL_REWARD_PER_PRODUCT;
             if (parseFloat(log.reward_amount) !== expectedReward) {
                 throw new Error(`Expected reward ${expectedReward}, got ${log.reward_amount}`);
             }
