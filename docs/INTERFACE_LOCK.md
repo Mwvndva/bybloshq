@@ -134,7 +134,7 @@ Webhook replay protection:
 Fee configuration lives in `server/src/config/fees.js`:
 
 - Platform commission: `1%`
-- Referral reward: `0.2%`
+- Referral reward: `KES 3 per product sold by a referred seller for 3 months`
 - Minimum withdrawal: `KES 50`
 - Maximum withdrawal: `KES 250,000`
 - Currency: `KES`

@@ -167,7 +167,9 @@ eventBus.on(AppEvents.REFERRAL.REWARD_CREATED, async ({ eventId, seller, reward 
     logger.info(`[Event:ReferralRewardCreated] Seller ${seller?.id} reward ${reward?.amount}`);
     if (seller?.whatsapp_number) {
         const amount = Number(reward.amount || 0);
-        const message = `Byblos: You earned KES ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} from ${reward.referredShopName}'s sales this month. Keep building your squad!`;
+        const unitsSold = Number(reward.unitsSold || 0);
+        const unitText = unitsSold > 0 ? ` from ${unitsSold.toLocaleString('en-KE')} referred product${unitsSold === 1 ? '' : 's'} sold` : '';
+        const message = `Byblos: You earned KES ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${unitText} by ${reward.referredShopName} this month. Keep building your squad!`;
         await eventBus.deliverRecipient(eventId, `referral:${reward.id || reward.referredSellerId || amount}:seller:${seller.id}`, () => whatsappService.sendMessage(seller.whatsapp_number, message));
     }
 });
