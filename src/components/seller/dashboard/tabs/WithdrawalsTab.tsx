@@ -62,7 +62,7 @@ export function WithdrawalsTab({
             <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Available Balance</h3>
             <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Current balance for withdrawal</p>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 md:p-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg sm:rounded-xl p-3 md:p-4 w-full sm:w-auto">
             <p className="text-lg sm:text-xl md:text-2xl font-black text-green-800">
               {formatKes(balance)}
             </p>
@@ -93,17 +93,17 @@ export function WithdrawalsTab({
         {!showWithdrawalForm ? (
           <Button
             onClick={() => setShowWithdrawalForm(true)}
-            className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto h-7 sm:h-auto"
+            className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-4 sm:px-5 md:px-6 py-2.5 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto h-11 sm:h-auto"
             disabled={balance < MIN_WITHDRAWAL_AMOUNT}
           >
             <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             Request Withdrawal
           </Button>
         ) : (
-          <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-6 md:p-8 shadow-sm">
             <h4 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Request Withdrawal</h4>
             <form onSubmit={handleWithdrawalRequest} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="amount" className="text-xs font-semibold text-slate-700 mb-2 block">
                     Amount (KSh)
@@ -116,7 +116,7 @@ export function WithdrawalsTab({
                     placeholder="Enter amount"
                     min={MIN_WITHDRAWAL_AMOUNT}
                     max={balance}
-                    className="h-7 sm:h-8 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="h-10 sm:h-11 text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
                     required
                   />
                   <p className="text-xs text-slate-700 mt-1">
@@ -133,7 +133,7 @@ export function WithdrawalsTab({
                     value={withdrawalForm.mpesaNumber}
                     onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaNumber: e.target.value }))}
                     placeholder="0712345678"
-                    className="h-7 sm:h-8 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="h-10 sm:h-11 text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
                     required
                   />
                 </div>
@@ -148,27 +148,27 @@ export function WithdrawalsTab({
                   value={withdrawalForm.mpesaName}
                   onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaName: e.target.value }))}
                   placeholder="Enter name as registered on M-Pesa"
-                  className="h-7 sm:h-8 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
+                  className="h-10 sm:h-11 text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
                   required
                 />
               </div>
               {totalDeducted > 0 && (
                 <div className="withdrawal-fee-summary rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs font-semibold">
-                  <div className="flex justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3">
                     <span>Withdrawal charge</span>
                     <span>{formatKes(withdrawalFee)}</span>
                   </div>
-                  <div className="mt-1 flex justify-between gap-3 text-sm font-black">
+                  <div className="mt-1 flex items-center justify-between gap-3 text-sm font-black">
                     <span>Total deducted from balance</span>
                     <span>{formatKes(totalDeducted)}</span>
                   </div>
                 </div>
               )}
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3 sm:pt-4">
                 <Button
                   type="submit"
                   disabled={isRequestingWithdrawal}
-                  className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-1.5 h-6 text-xs rounded-lg font-semibold"
+                  className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-2 h-10 sm:h-8 text-xs rounded-lg font-semibold w-full sm:w-auto"
                   size="sm"
                 >
                   {isRequestingWithdrawal ? (
@@ -194,7 +194,7 @@ export function WithdrawalsTab({
                       mpesaName: ''
                     });
                   }}
-                  className="px-4 py-1.5 h-6 text-xs rounded-lg bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 h-10 sm:h-8 text-xs rounded-lg bg-white border-slate-200 text-slate-700 hover:bg-slate-50 w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
@@ -204,22 +204,22 @@ export function WithdrawalsTab({
         )}
       </div>
 
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
-        <div className="flex justify-between items-center mb-4 sm:mb-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 md:p-8 shadow-sm border border-slate-200">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
           <div>
             <h3 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950">Withdrawal Requests</h3>
             <p className="text-slate-700 text-xs sm:text-sm font-medium mt-1">Track your withdrawal request history</p>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 mb-4">
           <div className="flex flex-col sm:flex-row gap-2 flex-1">
             <div className="relative flex-1">
               <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-white border-slate-200 text-slate-950 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                className="h-10 bg-white border-slate-200 text-slate-950 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                 placeholder="Start date"
               />
             </div>
@@ -229,7 +229,7 @@ export function WithdrawalsTab({
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-white border-slate-200 text-slate-950 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                className="h-10 bg-white border-slate-200 text-slate-950 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                 placeholder="End date"
               />
             </div>
@@ -241,7 +241,7 @@ export function WithdrawalsTab({
                 }}
                 variant="outline"
                 size="icon"
-                className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 w-full sm:w-10"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -251,7 +251,7 @@ export function WithdrawalsTab({
           <Button
             onClick={() => exportWithdrawalsToCSV(withdrawalRequests)}
             variant="outline"
-            className="border-slate-200 text-slate-700 hover:bg-slate-50 gap-2"
+            className="border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 h-10 w-full lg:w-auto"
             disabled={withdrawalRequests.length === 0}
           >
             <Download className="h-4 w-4" />
@@ -260,14 +260,14 @@ export function WithdrawalsTab({
         </div>
 
         {filteredWithdrawals.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {filteredWithdrawals.map((request) => (
               <Card key={request.id} className="group hover:shadow-xl transition-all duration-300 bg-white border border-slate-200">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <p className="text-base sm:text-xl font-black text-slate-950">
+                <CardContent className="p-3 sm:p-5 lg:p-6">
+                  <div className="flex min-w-0 justify-between items-start">
+                    <div className="space-y-2 min-w-0 w-full">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                        <p className="text-base sm:text-xl font-black text-slate-950 truncate">
                           {formatKes(request.amount)}
                         </p>
                         <Badge
@@ -284,10 +284,10 @@ export function WithdrawalsTab({
                           {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-700">
+                      <p className="text-xs text-slate-700 break-words">
                         M-Pesa: {request.mpesaNumber} ({request.mpesaName})
                       </p>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                      <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Requested</p>
                           <p className="text-xs font-semibold text-slate-950">{new Date(request.createdAt).toLocaleString()}</p>
