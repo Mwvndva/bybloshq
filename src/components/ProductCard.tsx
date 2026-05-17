@@ -17,7 +17,7 @@ import { ProductCardModals } from '@/components/product-card/ProductCardModals';
 import { createCheckoutAttemptToken, getProductFlags, getThemeClasses, normalizePhone, type Theme } from '@/components/product-card/productCardUtils';
 import type { DoorDeliverySelection } from '@/components/PhoneCheckModal';
 
-const PRODUCT_SERVICE_CHARGE_RATE = 0.015;
+const PRODUCT_SERVICE_CHARGE_RATE = 0.02;
 const calculateProductServiceCharge = (amount: number) => Math.ceil(amount * PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
 const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 0) => {
   return Math.ceil(Math.round((productAmount + deliveryFee + calculateProductServiceCharge(productAmount)) * 100) / 100);

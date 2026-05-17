@@ -1,6 +1,6 @@
 const Fees = {
     PRODUCT_MIN_PRICE: 50,             // Minimum seller product price in KES
-    PRODUCT_SERVICE_CHARGE_RATE: 0.015, // Price-inclusive service charge for operations/transit security
+    PRODUCT_SERVICE_CHARGE_RATE: 0.02,  // Price-inclusive service charge for operations/transit security
     PLATFORM_COMMISSION_AMOUNT: 10,    // Flat KES 10 platform cut per order
     REFERRAL_REWARD_PER_PRODUCT: 3,    // Flat KES 3 referral reward per product sold by a referred seller
     DEFAULT_CURRENCY: 'KES',
