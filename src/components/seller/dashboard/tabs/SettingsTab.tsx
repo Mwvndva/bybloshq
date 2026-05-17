@@ -1,4 +1,4 @@
-import { Edit, Gift, Loader2 } from 'lucide-react';
+import { Edit, Gift, Loader2, Trash2 } from 'lucide-react';
 import type { Theme } from '@/api/sellerApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,10 +17,12 @@ interface SettingsTabProps {
   getLocations: () => string[];
   handleBusinessPhotoUploaded: () => void;
   handleCityChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleDeleteLocation: () => Promise<void>;
   handleLocationChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   handleSaveProfile: () => Promise<void>;
   handleShopLocationChange: (address: string, coordinates: { lat: number; lng: number } | null) => void;
   isCheckingShopName: boolean;
+  isDeletingLocation: boolean;
   isEditing: boolean;
   isSaving: boolean;
   sellerProfile: any;
@@ -35,10 +37,12 @@ export function SettingsTab({
   getLocations,
   handleBusinessPhotoUploaded,
   handleCityChange,
+  handleDeleteLocation,
   handleLocationChange,
   handleSaveProfile,
   handleShopLocationChange,
   isCheckingShopName,
+  isDeletingLocation,
   isEditing,
   isSaving,
   sellerProfile,
@@ -245,13 +249,30 @@ export function SettingsTab({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
               <h4 className="text-base sm:text-lg lg:text-xl font-bold text-white">Location Settings</h4>
               {!isEditing && (
-                <button
-                  onClick={toggleEdit}
-                  className="text-xs sm:text-sm text-yellow-300 hover:text-yellow-200 font-medium flex items-center gap-1 self-start sm:self-auto"
-                >
-                  <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  Edit Location
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-auto">
+                  <button
+                    onClick={toggleEdit}
+                    className="text-xs sm:text-sm text-yellow-300 hover:text-yellow-200 font-medium flex items-center justify-center gap-1"
+                  >
+                    <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    Edit Location
+                  </button>
+                  {(sellerProfile?.physicalAddress || sellerProfile?.latitude || sellerProfile?.longitude) && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteLocation}
+                      disabled={isDeletingLocation}
+                      className="text-xs sm:text-sm text-red-200 hover:text-red-100 font-medium flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isDeletingLocation ? (
+                        <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      )}
+                      Delete Location
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -303,12 +324,27 @@ export function SettingsTab({
             <div className="p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
               <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">Physical Shop Address</p>
               {isEditing ? (
-                <div className="mt-2">
+                <div className="mt-2 space-y-3">
                   <ShopLocationPicker
                     initialAddress={formData.physicalAddress}
                     initialCoordinates={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
                     onLocationChange={handleShopLocationChange}
                   />
+                  {(formData.physicalAddress || formData.latitude || formData.longitude || sellerProfile?.physicalAddress) && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteLocation}
+                      disabled={isDeletingLocation || isSaving}
+                      className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-red-400/30 bg-red-500/10 text-red-200 text-xs font-semibold hover:bg-red-500/20 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isDeletingLocation ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      Delete Location
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
