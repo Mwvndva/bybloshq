@@ -52,6 +52,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
   const [formData, setFormData] = useState<SellerSettingsFormData>(() => buildInitialFormData(sellerProfile));
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingLocation, setIsDeletingLocation] = useState(false);
   const [shopNameAvailable, setShopNameAvailable] = useState<boolean | null>(null);
   const [isCheckingShopName, setIsCheckingShopName] = useState(false);
 
@@ -121,6 +122,78 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
       longitude: coordinates?.lng || null
     }));
   }, []);
+
+  const handleDeleteLocation = useCallback(async () => {
+    const hasLocation = Boolean(
+      formData.physicalAddress ||
+      sellerProfile?.physicalAddress ||
+      formData.latitude ||
+      formData.longitude ||
+      sellerProfile?.latitude ||
+      sellerProfile?.longitude
+    );
+
+    if (!hasLocation) {
+      toast({
+        title: 'No location saved',
+        description: 'There is no shop location to delete.',
+      });
+      return;
+    }
+
+    const confirmed = window.confirm('Delete your saved shop location? Buyers will no longer see a physical pickup address until you add one again.');
+    if (!confirmed) return;
+
+    setIsDeletingLocation(true);
+
+    try {
+      const payload = {
+        physicalAddress: null,
+        latitude: null,
+        longitude: null
+      };
+
+      if (updateSellerProfile) {
+        await updateSellerProfile(payload);
+      } else {
+        await sellerApi.updateProfile(payload);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        physicalAddress: '',
+        latitude: null,
+        longitude: null
+      }));
+
+      queryClient.invalidateQueries({ queryKey: ['sellerDashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-dashboard', 'summary'] });
+
+      toast({
+        title: 'Location deleted',
+        description: 'Your shop pickup location has been removed.',
+      });
+    } catch (error: any) {
+      console.error('Error deleting shop location:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete shop location. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeletingLocation(false);
+    }
+  }, [
+    formData.physicalAddress,
+    formData.latitude,
+    formData.longitude,
+    queryClient,
+    sellerProfile?.physicalAddress,
+    sellerProfile?.latitude,
+    sellerProfile?.longitude,
+    toast,
+    updateSellerProfile
+  ]);
 
   const toggleEdit = useCallback(() => {
     setIsEditing(prev => {
@@ -213,10 +286,12 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     getLocations,
     handleBusinessPhotoUploaded,
     handleCityChange,
+    handleDeleteLocation,
     handleLocationChange,
     handleSaveProfile,
     handleShopLocationChange,
     isCheckingShopName,
+    isDeletingLocation,
     isEditing,
     isSaving,
     setFormData,
