@@ -18,6 +18,16 @@ const roundPayableTotal = (amount) => Math.ceil(roundMoney(amount));
 const PRODUCT_SERVICE_CHARGE_RATE = Fees.PRODUCT_SERVICE_CHARGE_RATE;
 const calculateProductServiceCharge = (amount) => Fees.calculateProductServiceCharge(amount);
 
+const parseObject = (value) => {
+    if (!value) return {};
+    if (typeof value === 'object') return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return {};
+    }
+};
+
 const isDoorDeliveryRequested = (delivery = {}, metadata = {}) => {
     return delivery.doorDelivery === true
         || delivery.door_delivery === true
@@ -1070,7 +1080,8 @@ export class PaymentService {
                 [normalizedOrderId]
             );
 
-            const orderMetadata = typeof order.metadata === 'object' ? order.metadata : {};
+            const orderMetadata = parseObject(order.metadata);
+            const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
             const hasPhysicalItem = itemRows.length
                 ? itemRows.some(item => {
                     const type = String(item.product_type || '').toLowerCase();
@@ -1080,6 +1091,10 @@ export class PaymentService {
 
             if (!hasPhysicalItem) {
                 throw new Error('Pickup is only available for physical product orders');
+            }
+
+            if (fulfillmentType !== 'COURIER') {
+                throw new Error('Mzigo pickup is only available for courier orders from online shops. Shop pickup orders must be collected from the seller address.');
             }
 
             const { rows: existingPickupRows } = await client.query(

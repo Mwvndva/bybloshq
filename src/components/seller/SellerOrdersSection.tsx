@@ -383,7 +383,7 @@ export default function SellerOrdersSection() {
         : false;
     const pickupDialogHelpText = pickupOrderIsPhysicalOnline
         ? 'Pickup is optional. If you do not request pickup, drop the package at the hub within 24 hours.'
-        : 'Pickup is optional. Mzigo Ego can pick up from your physical shop; otherwise mark the order ready for buyer shop pickup.';
+        : 'Mzigo pickup is only available for online shop courier orders.';
 
     if (isLoading) {
         return (
@@ -506,7 +506,7 @@ export default function SellerOrdersSection() {
                                 && isPaid
                                 && !pickupIsActive
                                 && !['dropoff_selected', 'dropped_at_hub'].includes(handoffStatus);
-                            const canRequestPickup = isPhysicalOrder
+                            const canRequestPickup = isPhysicalOnline
                                 && isPaid
                                 && !pickupIsActive
                                 && !['dropoff_selected', 'dropped_at_hub'].includes(handoffStatus)
@@ -747,9 +747,7 @@ export default function SellerOrdersSection() {
                                                                 Request pickup
                                                             </Button>
                                                             <p className="text-[10px] leading-relaxed text-white/60">
-                                                                {isPhysicalOnline
-                                                                    ? 'Optional. Without pickup, drop the package at the hub within 24 hours.'
-                                                                    : 'Optional. Mzigo Ego can pick up from your physical shop.'}
+                                                                Optional. Without pickup, drop the package at the hub within 24 hours.
                                                             </p>
                                                         </div>
                                                     )}
