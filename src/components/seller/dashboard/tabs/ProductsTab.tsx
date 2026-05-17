@@ -33,7 +33,7 @@ export function ProductsTab({
 
       <div className="space-y-4">
         <div className="seller-service-charge-notice rounded-2xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-xs sm:text-sm font-semibold leading-relaxed">
-          Byblos adds a 1.5% service charge to each product price to keep products safe in transit, secure the transaction, and support our operations and maintenance.
+          Byblos adds a 2% service charge to each product price to keep products safe in transit, secure the transaction, and support our operations and maintenance.
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">

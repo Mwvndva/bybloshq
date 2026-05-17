@@ -144,6 +144,7 @@ class PaymentReceiptService {
     if (!payload) return { skipped: true };
 
     const buyerEmail = payload.buyer_email;
+    const sellerEmail = payload.seller_email || order?.seller_email || null;
 
     await eventBus.deliverRecipient(
       eventId,
@@ -159,9 +160,35 @@ class PaymentReceiptService {
       { channel: 'email' }
     );
 
+    if (sellerEmail) {
+      await eventBus.deliverRecipient(
+        eventId,
+        `payment:${payment.id}:seller:payment_receipt_copy`,
+        () => sendPaymentReceiptEmail(
+          sellerEmail,
+          {
+            ...payload,
+            buyer_name: payload.seller_name || order?.seller_name || 'Seller',
+            buyer_email: sellerEmail,
+            receipt_title: 'Seller Payment Receipt Copy',
+            billing_label: 'Seller',
+            confirmation_note: 'Buyer payment confirmed. This receipt copy is for your seller records.'
+          },
+          true
+        ),
+        { channel: 'email' }
+      );
+    } else {
+      logger.warn('[PaymentReceiptService] Skipping seller payment receipt copy because seller email is missing', {
+        paymentId: payment.id,
+        orderId: order.id
+      });
+    }
+
     return {
       delivered: true,
-      receiptId: payload.receipt_id
+      receiptId: payload.receipt_id,
+      sellerReceiptDelivered: Boolean(sellerEmail)
     };
   }
 
