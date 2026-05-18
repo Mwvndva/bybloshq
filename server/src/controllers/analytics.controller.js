@@ -43,7 +43,9 @@ export const getSellerAnalytics = async (req, res, next) => {
            COALESCE(financials.total_sales, 0) as total_sales,
            COALESCE(financials.net_revenue, 0) as net_revenue,
            COALESCE(s.balance, 0) as balance,
-           COALESCE(s.client_count, 0) as client_count
+           COALESCE(s.client_count, 0) as client_count,
+           COALESCE(creator_links.creator_count, 0) as creator_count,
+           COALESCE(creator_sales.creator_generated_sales, 0) as creator_generated_sales
          FROM sellers s
          LEFT JOIN LATERAL (
            SELECT
@@ -54,6 +56,22 @@ export const getSellerAnalytics = async (req, res, next) => {
              AND o.payment_status = 'completed'
              AND o.status::text <> ALL($2::text[])
          ) financials ON true
+         LEFT JOIN LATERAL (
+           SELECT COUNT(DISTINCT scl.creator_id)::int as creator_count
+           FROM seller_creator_links scl
+           JOIN creators c ON c.id = scl.creator_id
+           WHERE scl.seller_id = s.id
+             AND scl.status = 'active'
+             AND c.status = 'active'
+         ) creator_links ON true
+         LEFT JOIN LATERAL (
+           SELECT COALESCE(SUM(o.total_amount), 0) as creator_generated_sales
+           FROM product_orders o
+           WHERE o.seller_id = s.id
+             AND o.payment_status = 'completed'
+             AND o.status::text <> ALL($2::text[])
+             AND COALESCE(o.metadata, '{}'::jsonb) ? 'creator_attribution'
+         ) creator_sales ON true
          WHERE s.id = $1`,
         [sellerId, SELLER_ANALYTICS_EXCLUDED_STATUSES]
       ),
@@ -118,6 +136,8 @@ export const getSellerAnalytics = async (req, res, next) => {
       net_revenue: 0,
       balance: 0,
       client_count: 0,
+      creator_count: 0,
+      creator_generated_sales: 0,
     };
 
     const analyticsData = {
@@ -126,6 +146,8 @@ export const getSellerAnalytics = async (req, res, next) => {
       totalRevenue: parseFloat(sellerStats.net_revenue || 0),
       balance: parseFloat(sellerStats.balance || 0),
       clientCount: parseInt(sellerStats.client_count || 0),
+      creatorCount: parseInt(sellerStats.creator_count || 0),
+      creatorGeneratedSales: parseFloat(sellerStats.creator_generated_sales || 0),
       wishlistCount: parseInt(wishlistCountResult.rows[0]?.wishlist_count || 0),
       clickCount: parseInt(clickCountResult.rows[0]?.click_count || 0),
       monthlySales: monthlySalesResult.rows.map(row => ({

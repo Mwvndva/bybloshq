@@ -57,6 +57,8 @@ export interface AnalyticsData {
   totalPayout: number;
   balance: number;
   clientCount: number;
+  creatorCount: number;
+  creatorGeneratedSales: number;
   wishlistCount: number;
   clickCount: number;
   monthlySales: Array<{ month: string; sales: number }>;
