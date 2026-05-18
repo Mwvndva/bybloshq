@@ -21,6 +21,7 @@ import wishlistRoutes from './wishlist.routes.js';
 import marketingRoutes from './marketing.routes.js';
 import logisticsRoutes from './logistics.routes.js';
 import trackingRoutes from './tracking.routes.js';
+import creatorRoutes from './creator.routes.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -42,5 +43,6 @@ router.use('/whatsapp', whatsappRoutes);
 router.use('/wishlist', wishlistRoutes);
 router.use('/logistics', logisticsRoutes);
 router.use('/tracking', trackingRoutes);
+router.use('/creators', creatorRoutes);
 
 export default router;

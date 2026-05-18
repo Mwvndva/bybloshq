@@ -342,6 +342,16 @@ export const sellerProfileApi = {
     return response.data.data;
   },
 
+  async inviteCreator(email: string) {
+    const response = await sellerApiInstance.post('/sellers/creator-invites', { email });
+    return response.data?.data?.invite;
+  },
+
+  async getCreatorInvites() {
+    const response = await sellerApiInstance.get('/sellers/creator-invites');
+    return response.data?.data?.invites || [];
+  },
+
   verifyEmail: async (email: string, token: string): Promise<{ success: boolean; message: string }> => {
     try {
       const response = await apiClient.get(`/sellers/verify-email`, {

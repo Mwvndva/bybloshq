@@ -98,6 +98,7 @@ const getLoginRedirectPath = (url: string): string => {
     const redirectMap: Record<string, string> = {
         '/buyers': '/buyer/login',
         '/sellers': '/seller/login',
+        '/creators': '/creator/login',
         '/organizers': '/organizer/login',
         '/admin': '/admin/login',
     };
@@ -126,7 +127,7 @@ const handleUnauthorized = (error: any) => {
         throw error;
     }
 
-    const roles = ['buyer', 'seller', 'organizer', 'admin'];
+    const roles = ['buyer', 'seller', 'creator', 'organizer', 'admin'];
     const hadActiveSession = roles.some(role =>
         localStorage.getItem(`${role}SessionActive`) === 'true'
     );

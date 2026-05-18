@@ -2,6 +2,7 @@ const Fees = {
     PRODUCT_MIN_PRICE: 50,             // Minimum seller product price in KES
     PRODUCT_SERVICE_CHARGE_RATE: 0.02,  // Price-inclusive service charge for operations/transit security
     PLATFORM_COMMISSION_AMOUNT: 10,    // Flat KES 10 platform cut per order
+    CREATOR_COMMISSION_RATE: 0.01,     // Default creator cut from seller payout base
     REFERRAL_REWARD_PER_PRODUCT: 3,    // Flat KES 3 referral reward per product sold by a referred seller
     DEFAULT_CURRENCY: 'KES',
     MIN_WITHDRAWAL_AMOUNT: 50,         // Minimum seller withdrawal amount in KES

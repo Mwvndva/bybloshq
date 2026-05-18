@@ -137,6 +137,18 @@ export const protect = async (req, res, next) => {
               AND COALESCE(s.status, 'active') = 'active'
           `;
         break;
+      case 'creator':
+        userQuery = `
+            SELECT
+                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
+                c.id as profile_id, c.first_name, c.last_name, c.mpesa_number, c.balance, c.total_sales, c.total_earnings, c.status, c.referral_code, c.total_referral_earnings
+            FROM users u
+            LEFT JOIN creators c ON u.id = c.user_id
+            WHERE u.id = $1
+              AND c.id IS NOT NULL
+              AND COALESCE(c.status, 'active') = 'active'
+          `;
+        break;
       default:
         return next(new AppError('Invalid user role', 401));
     }
@@ -157,7 +169,7 @@ export const protect = async (req, res, next) => {
     // 5) CROSS-ROLE SUPPORT: Check if user has other role profiles
     // This allows sellers who make purchases to access buyer endpoints
     // Skip for admin users
-    let crossRoles = { buyer_id: null, seller_id: null };
+    let crossRoles = { buyer_id: null, seller_id: null, creator_id: null };
 
     if (userType !== 'admin') {
       const cacheKey = `user:${decoded.id}:cross-roles`;
@@ -169,7 +181,8 @@ export const protect = async (req, res, next) => {
         const crossRoleQuery = `
           SELECT 
             (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
-            (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id
+            (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id,
+            (SELECT id FROM creators WHERE user_id = $1 AND status = 'active' LIMIT 1) as creator_id
         `;
         const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
         crossRoles = crossRoleResult.rows[0];
@@ -199,10 +212,12 @@ export const protect = async (req, res, next) => {
       profileId: userData.profile_id, // The ID of the profile used for this login
       buyerId: crossRoles.buyer_id,
       sellerId: crossRoles.seller_id,
+      creatorId: crossRoles.creator_id,
 
       // Boolean flags
       hasBuyerProfile: !!crossRoles.buyer_id,
       hasSellerProfile: !!crossRoles.seller_id,
+      hasCreatorProfile: !!crossRoles.creator_id,
 
       ...userData
     };
@@ -210,6 +225,7 @@ export const protect = async (req, res, next) => {
     // Add explicit aliases so any code referencing the old non-existent names works
     user.sellerProfileId = user.sellerId;
     user.buyerProfileId = user.buyerId;
+    user.creatorProfileId = user.creatorId;
 
     if (userType !== 'admin') {
       logger.debug(`[AUTH] Identity verified`, { userId: user.id, userType: user.userType });

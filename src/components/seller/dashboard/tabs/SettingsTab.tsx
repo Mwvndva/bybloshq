@@ -1,11 +1,13 @@
-import { Edit, Gift, Loader2, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Copy, Edit, Loader2, MailPlus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Theme } from '@/api/sellerApi';
+import { sellerApi } from '@/api/sellerApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { BannerUpload } from '../../BannerUpload';
 import { BusinessPhotoUpload } from '../../BusinessPhotoUpload';
-import ReferralPanel from '../../ReferralPanel';
 import ShopLocationPicker from '../../ShopLocationPicker';
 import { ThemeSelector } from '../../ThemeSelector';
 import { getSellerInitials } from '../dashboardUtils';
@@ -50,6 +52,47 @@ export function SettingsTab({
   shopNameAvailable,
   toggleEdit
 }: SettingsTabProps) {
+  const [creatorEmail, setCreatorEmail] = useState('');
+  const [creatorInvites, setCreatorInvites] = useState<any[]>([]);
+  const [isInvitingCreator, setIsInvitingCreator] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    sellerApi.getCreatorInvites()
+      .then((invites) => {
+        if (mounted) setCreatorInvites(invites);
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleInviteCreator = async () => {
+    if (!creatorEmail.trim()) {
+      toast.error('Enter a creator email.');
+      return;
+    }
+
+    setIsInvitingCreator(true);
+    try {
+      const invite = await sellerApi.inviteCreator(creatorEmail.trim());
+      setCreatorInvites((current) => [invite, ...current.filter((item) => item.id !== invite.id)]);
+      setCreatorEmail('');
+      toast.success('Creator invite sent.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || error?.message || 'Could not send invite.');
+    } finally {
+      setIsInvitingCreator(false);
+    }
+  };
+
+  const copyCreatorLink = async (link?: string) => {
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
+    toast.success('Creator link copied.');
+  };
+
   return (
     <div className="w-full space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -381,17 +424,75 @@ export function SettingsTab({
       </section>
 
       <section className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 lg:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/10 p-2">
-              <Gift className="h-5 w-5 text-yellow-400" />
+              <MailPlus className="h-5 w-5 text-yellow-400" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white">Refer & Earn</h3>
-              <p className="text-gray-400 text-xs sm:text-sm">Build your squad and earn rewards from their sales</p>
+              <h3 className="text-xl font-black text-white">Invite Creators</h3>
+              <p className="text-gray-400 text-xs sm:text-sm">
+                Give influencers a creator link for your shop. They earn 1% after completed sales.
+              </p>
             </div>
           </div>
+        </div>
 
-          <ReferralPanel totalSales={sellerProfile?.totalSales || 0} />
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <Input
+            type="email"
+            value={creatorEmail}
+            onChange={(event) => setCreatorEmail(event.target.value)}
+            placeholder="creator@example.com"
+            className="h-10 border-white/10 bg-black/30 text-white placeholder:text-white/35"
+          />
+          <Button
+            type="button"
+            onClick={handleInviteCreator}
+            disabled={isInvitingCreator}
+            className="h-10 bg-yellow-400 font-black text-black hover:bg-yellow-300"
+          >
+            {isInvitingCreator ? 'Sending...' : 'Send Invite'}
+          </Button>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-white/10">
+          {creatorInvites.length === 0 ? (
+            <div className="bg-black/20 p-4 text-sm font-medium text-white/50">
+              No creator invites yet.
+            </div>
+          ) : (
+            <div className="divide-y divide-white/10">
+              {creatorInvites.map((invite) => (
+                <div key={invite.id} className="grid gap-3 bg-black/20 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-white">
+                      {invite.creatorName || invite.email}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                      {invite.status}
+                      {invite.code ? ` · ${Number(invite.commissionRate || 0.01) * 100}% creator cut` : ''}
+                    </p>
+                    {invite.shopUrl && (
+                      <p className="mt-1 truncate text-xs text-yellow-200/80">{invite.shopUrl}</p>
+                    )}
+                  </div>
+                  {invite.shopUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => copyCreatorLink(invite.shopUrl)}
+                      className="h-9 border-white/10 bg-transparent text-white hover:bg-white/5"
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Link
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

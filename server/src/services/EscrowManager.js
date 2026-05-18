@@ -1,4 +1,5 @@
 import logger from '../shared/utils/logger.js';
+import CreatorService from './creator.service.js';
 
 class EscrowManager {
     /**
@@ -105,6 +106,8 @@ class EscrowManager {
              WHERE id = $3`,
             [sellerPayoutAmount, totalAmount, sellerId],
         );
+
+        await CreatorService.creditCreatorForOrder(client, { order, paymentId });
 
         // 5. Optional: Update order metadata for visibility, but NOT as the source of truth for logic
         await client.query(

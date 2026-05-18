@@ -15,6 +15,7 @@ export const clearAllAuthData = () => {
         'sellerToken',
         'buyer_token',
         'organizerToken',
+        'creatorToken',
         'adminToken',
         'authToken',
         'jwt',
@@ -23,6 +24,7 @@ export const clearAllAuthData = () => {
         'buyer',
         'sellerSessionActive',
         'buyerSessionActive',
+        'creatorSessionActive',
         'adminSessionActive',
         'organizerSessionActive'
     ];

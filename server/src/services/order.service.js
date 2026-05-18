@@ -102,7 +102,15 @@ class OrderService {
         this._validateItems(items);
 
         // 3. Calculate product totals and seller payout.
-        const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
+        let { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
+        const creatorCommissionAmount = this._resolveCreatorCommissionAmount(metadata, sellerPayout);
+        if (creatorCommissionAmount > 0) {
+          sellerPayout = this._roundMoney(sellerPayout - creatorCommissionAmount);
+          metadata.creator_attribution = {
+            ...(metadata.creator_attribution || {}),
+            commission_amount: creatorCommissionAmount
+          };
+        }
         logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
         // 4. Enrich items with product data and verify inventory
@@ -251,6 +259,7 @@ class OrderService {
         metadata.pricing = {
           ...(metadata.pricing || {}),
           seller_commission_fee: platformFee,
+          creator_commission_amount: creatorCommissionAmount,
           platform_retained_amount: platformRetainedAmount,
           platform_retained_excludes_delivery_fee: true
         };
@@ -1001,6 +1010,18 @@ class OrderService {
 
   static _roundMoney(amount) {
     return Math.round(Number(amount || 0) * 100) / 100;
+  }
+
+  static _resolveCreatorCommissionAmount(metadata = {}, sellerPayout = 0) {
+    const attribution = metadata.creator_attribution || {};
+    const amount = this._roundMoney(attribution.commission_amount || 0);
+    const maxCommission = this._roundMoney(Math.max(Number(sellerPayout || 0), 0));
+
+    if (!Number.isFinite(amount) || amount <= 0 || amount > maxCommission) {
+      return 0;
+    }
+
+    return amount;
   }
 
   static _calculatePlatformRetainedAmount({ payableTotal, sellerPayout, metadata = {}, fallbackPlatformFee = 0 }) {
