@@ -61,6 +61,21 @@ export const creatorApi = {
   generateReferralCode: async () => {
     const response = await apiClient.post('/creators/referral/generate-code');
     return response.data?.data?.referralCode;
+  },
+
+  trackLinkClick: async (code: string) => {
+    const response = await apiClient.post(`/creators/links/${encodeURIComponent(code)}/click`);
+    return response.data;
+  },
+
+  requestWithdrawal: async (amount: number | string) => {
+    const idempotencyKey = `creator-withdrawal-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const response = await apiClient.post(
+      '/creators/withdrawals',
+      { amount, idempotencyKey },
+      { headers: { 'Idempotency-Key': idempotencyKey } }
+    );
+    return response.data?.data?.withdrawal;
   }
 };
 

@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package, Users } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
+import creatorApi from '@/api/creatorApi';
 import { formatCurrency, getImageUrl, cn } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
 import type { Product as ProductType, Seller, Aesthetic } from '@/types';
@@ -71,6 +72,16 @@ const ShopPage = () => {
 
   const { isAuthenticated } = useBuyerAuth();
   const themeClasses = useShopTheme((sellerInfo?.theme as Theme) || 'default');
+
+  useEffect(() => {
+    const creatorCode = new URLSearchParams(location.search).get('creator');
+    if (!creatorCode) return;
+
+    const storageKey = `creator-click:${creatorCode}`;
+    if (sessionStorage.getItem(storageKey)) return;
+    sessionStorage.setItem(storageKey, '1');
+    creatorApi.trackLinkClick(creatorCode).catch(() => undefined);
+  }, [location.search]);
 
   useEffect(() => {
     const fetchShopData = async () => {

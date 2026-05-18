@@ -139,7 +139,11 @@ export const getDashboard = async (req, res, next) => {
       data: {
         creator: sanitizeCreator(dashboard.creator),
         shops: dashboard.shops,
-        earnings: dashboard.earnings
+        earnings: dashboard.earnings,
+        monthly: dashboard.monthly,
+        leaderboard: dashboard.leaderboard,
+        withdrawals: dashboard.withdrawals,
+        linkClicks: dashboard.linkClicks
       }
     });
   } catch (error) {
@@ -160,6 +164,32 @@ export const generateReferralCode = async (req, res, next) => {
   try {
     const referralCode = await CreatorService.generateReferralCode(req.user.creatorId || req.user.profileId);
     res.status(200).json({ status: 'success', data: { referralCode } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const trackLinkClick = async (req, res, next) => {
+  try {
+    await CreatorService.recordLinkClick({
+      code: req.params.code,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+    res.status(200).json({ status: 'success' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requestWithdrawal = async (req, res, next) => {
+  try {
+    const request = await CreatorService.createWithdrawalRequest({
+      creatorId: req.user.creatorId || req.user.profileId,
+      amount: req.body.amount,
+      idempotencyKey: req.get('Idempotency-Key') || req.body.idempotencyKey
+    });
+    res.status(201).json({ status: 'success', data: { withdrawal: request } });
   } catch (error) {
     next(error);
   }
