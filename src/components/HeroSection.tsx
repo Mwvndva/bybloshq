@@ -9,6 +9,14 @@ interface HeroSectionProps {
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   return (
     <section className="relative min-h-[82dvh] flex items-center justify-center overflow-hidden bg-black">
+      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <Link to="/creator/login">
+          <Button className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-yellow-400 hover:text-black">
+            Creator
+          </Button>
+        </Link>
+      </div>
+
       {/* Background with deep blur and subtle movement */}
       <div
         className="absolute inset-0 z-0 opacity-100"

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import creatorApi from '@/api/creatorApi';
@@ -41,6 +41,12 @@ export default function CreatorLogin() {
           <Button disabled={loading} className="h-11 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Log in'}
           </Button>
+          <p className="text-center text-sm font-medium text-white/50">
+            New creator?{' '}
+            <Link to="/creator/register" className="font-black text-yellow-300 hover:text-yellow-200">
+              Create an account
+            </Link>
+          </p>
         </form>
       </div>
     </main>
