@@ -1,10 +1,10 @@
 import cron from 'node-cron';
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
-import ProductModel from '../models/product.model.js';
 import Order from '../models/order.model.js';
 import { OrderStatus, PaymentStatus } from '../shared/constants/enums.js';
 import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
+import InventoryReservationService from '../services/inventoryReservation.service.js';
 
 const RECONCILIATION_LOCK_KEY = 'byblos:reconciliation-engine';
 
@@ -121,17 +121,8 @@ class ReconciliationEngine {
                 }
 
                 if (lockedOrder.order_type === 'PHYSICAL' || !lockedOrder.order_type) {
-                    const { rows: items } = await client.query(
-                        'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
-                        [order.id]
-                    );
-
-                    for (const item of items) {
-                        const released = await ProductModel.release(client, item.product_id, item.quantity);
-                        if (!released) {
-                            logger.warn(`[RECON] Inventory release skipped for product ${item.product_id}; reserved quantity may already be zero.`);
-                        }
-                    }
+                    const released = await InventoryReservationService.releaseOrderInventory(client, order.id);
+                    logger.info(`[RECON] Released ${released} product reservation(s) for expired order ${order.id}`);
                 }
 
                 await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, PaymentStatus.CANCELLED);
@@ -173,16 +164,8 @@ class ReconciliationEngine {
                 logger.warn(`[RECON] Found stuck PAYMENT_PENDING order ${order.id} (${order.order_type}). Cancelling.`);
 
                 if (order.order_type === 'PHYSICAL' || !order.order_type) {
-                    const { rows: items } = await client.query(
-                        'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
-                        [order.id]
-                    );
-                    for (const item of items) {
-                        const released = await ProductModel.release(client, item.product_id, item.quantity);
-                        if (!released) {
-                            logger.warn(`[RECON] Inventory release skipped for product ${item.product_id} (order ${order.id}); reserved quantity may already be zero.`);
-                        }
-                    }
+                    const released = await InventoryReservationService.releaseOrderInventory(client, order.id);
+                    logger.info(`[RECON] Released ${released} product reservation(s) for stuck order ${order.id}`);
                 }
 
                 if (order.order_type === 'SERVICE') {
