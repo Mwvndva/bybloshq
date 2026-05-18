@@ -175,8 +175,18 @@ class CreatorService {
       let user = await User.findByEmail(email);
       if (!user) {
         user = await User.create({ email, password: data.password, role: 'creator', is_verified: false }, client);
-      } else if (user.role !== 'creator') {
-        throw new Error('This email is already used by another Byblos account. Use a different creator email.');
+      } else {
+        const isPasswordCorrect = await User.verifyPassword(data.password, user.password_hash);
+        if (!isPasswordCorrect) {
+          throw new Error('This email already has a Byblos account. Enter that account password to add creator access.');
+        }
+
+        await client.query(
+          `INSERT INTO user_roles (user_id, role_id)
+           SELECT $1, id FROM roles WHERE slug = 'creator'
+           ON CONFLICT DO NOTHING`,
+          [user.id]
+        );
       }
 
       const referredBy = data.referralCode
@@ -220,8 +230,12 @@ class CreatorService {
 
       await client.query('COMMIT');
 
-      await AuthService.sendEmailVerification(email, 'creator');
-      return { status: 'pending_verification', email };
+      if (!user.is_verified) {
+        await AuthService.sendEmailVerification(email, 'creator');
+        return { status: 'pending_verification', email };
+      }
+
+      return { status: 'created', email };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
