@@ -133,13 +133,15 @@ export const getProfile = async (req, res, next) => {
 
 export const getDashboard = async (req, res, next) => {
   try {
-    const dashboard = await CreatorService.getDashboard(req.user.creatorId || req.user.profileId);
+    const dashboard = await CreatorService.getDashboard(req.user.creatorId || req.user.profileId, req.query.period);
     res.status(200).json({
       status: 'success',
       data: {
         creator: sanitizeCreator(dashboard.creator),
         shops: dashboard.shops,
         earnings: dashboard.earnings,
+        analysis: dashboard.analysis,
+        analysisPeriod: dashboard.analysisPeriod,
         monthly: dashboard.monthly,
         leaderboard: dashboard.leaderboard,
         withdrawals: dashboard.withdrawals,

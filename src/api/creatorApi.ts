@@ -48,8 +48,10 @@ export const creatorApi = {
     return response.data?.data?.creator;
   },
 
-  getDashboard: async () => {
-    const response = await apiClient.get('/creators/dashboard');
+  getDashboard: async (period: 'daily' | 'weekly' | 'monthly' = 'monthly') => {
+    const response = await apiClient.get('/creators/dashboard', {
+      params: { period }
+    });
     return response.data?.data;
   },
 
