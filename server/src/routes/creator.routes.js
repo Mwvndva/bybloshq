@@ -6,6 +6,7 @@ import * as creatorController from '../controllers/creator.controller.js';
 const router = express.Router();
 
 router.get('/invites/:token', creatorController.getInvite);
+router.post('/links/:code/click', creatorController.trackLinkClick);
 router.post('/register', authLimiter, creatorController.register);
 router.post('/login', authLimiter, creatorController.login);
 router.get('/verify-email', creatorController.verifyEmail);
@@ -17,5 +18,6 @@ router.get('/profile', creatorController.getProfile);
 router.get('/dashboard', creatorController.getDashboard);
 router.get('/referral/dashboard', creatorController.getReferralDashboard);
 router.post('/referral/generate-code', creatorController.generateReferralCode);
+router.post('/withdrawals', creatorController.requestWithdrawal);
 
 export default router;

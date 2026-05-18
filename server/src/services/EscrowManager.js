@@ -108,6 +108,7 @@ class EscrowManager {
         );
 
         await CreatorService.creditCreatorForOrder(client, { order, paymentId });
+        await CreatorService.creditCreatorReferralForSeller(client, { order });
 
         // 5. Optional: Update order metadata for visibility, but NOT as the source of truth for logic
         await client.query(

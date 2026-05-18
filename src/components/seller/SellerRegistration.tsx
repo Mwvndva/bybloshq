@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,9 @@ import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 
 const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register } = useSellerAuth();
+  const referralCode = searchParams.get('ref') || '';
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -254,6 +256,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         physicalAddress: formData.physicalAddress,
         latitude: formData.latitude,
         longitude: formData.longitude,
+        referralCode,
         termsAccepted: true
       });
 

@@ -105,9 +105,42 @@ class ReferralService {
      */
     static async applyReferral(newSellerId, referralCode, dbClient = pool) {
         const normalizedCode = String(referralCode || '').trim().toUpperCase();
-        if (!newSellerId || !/^BY[A-Z0-9]{6}$/.test(normalizedCode)) {
+        if (!newSellerId || !/^(BY[A-Z0-9]{6}|CR[A-Z0-9]+)$/.test(normalizedCode)) {
             logger.warn(`[ReferralService] Invalid referral code format used: ${referralCode}`);
             return null;
+        }
+
+        if (normalizedCode.startsWith('CR')) {
+            let creatorResult;
+            try {
+                creatorResult = await dbClient.query(
+                    'SELECT id FROM creators WHERE referral_code = $1 AND status = $2',
+                    [normalizedCode, 'active']
+                );
+            } catch (err) {
+                const errorMsg = err instanceof Error ? err.message : String(err);
+                logger.error(`[ReferralService] Error looking up creator referral code: ${errorMsg}`);
+                return null;
+            }
+
+            if (creatorResult.rowCount === 0) {
+                logger.warn(`[ReferralService] Invalid creator referral code used: ${referralCode}`);
+                return null;
+            }
+
+            const creatorId = creatorResult.rows[0].id;
+            const updateResult = await dbClient.query(
+                'UPDATE sellers SET referred_by_creator_id = $1 WHERE id = $2 AND referred_by_creator_id IS NULL RETURNING id',
+                [creatorId, newSellerId]
+            );
+
+            if (updateResult.rowCount === 0) {
+                logger.info(`[REFERRAL] Seller ${newSellerId} already has a creator referrer; skipped code ${normalizedCode}`);
+                return null;
+            }
+
+            logger.info(`[REFERRAL] Seller ${newSellerId} referred by creator ${creatorId} (code: ${normalizedCode})`);
+            return { referredSellerId: newSellerId, referrerCreatorId: creatorId };
         }
 
         let referrerResult;

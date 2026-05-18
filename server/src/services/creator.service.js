@@ -6,6 +6,7 @@ import { signToken } from '../shared/utils/jwt.js';
 import { sendEmail, sendVerificationEmail } from '../shared/utils/email.js';
 import Fees from '../config/fees.js';
 import logger from '../shared/utils/logger.js';
+import payoutService from './payout.service.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
 const INVITE_EXPIRY_DAYS = 14;
@@ -403,6 +404,70 @@ class CreatorService {
     );
   }
 
+  static async creditCreatorReferralForSeller(client, { order }) {
+    const sellerId = order.seller_id ?? order.sellerId;
+    if (!sellerId) return;
+
+    const { rows } = await client.query(
+      `SELECT referred_by_creator_id FROM sellers WHERE id = $1 LIMIT 1`,
+      [sellerId]
+    );
+    const referrerId = rows[0]?.referred_by_creator_id;
+    if (!referrerId) return;
+
+    const units = Math.max(Number(order.total_quantity || 1), 1);
+    const amount = roundMoney(units * Number(Fees.REFERRAL_REWARD_PER_PRODUCT || 3));
+    const { rows: inserted } = await client.query(
+      `INSERT INTO creator_referral_earnings
+         (referrer_creator_id, referred_creator_id, referred_seller_id, order_id, amount, units_sold)
+       VALUES ($1, NULL, $2, $3, $4, $5)
+       ON CONFLICT (order_id) DO NOTHING
+       RETURNING id`,
+      [referrerId, sellerId, order.id, amount, units]
+    );
+
+    if (!inserted.length) return;
+
+    await client.query(
+      `UPDATE creators
+       SET balance = balance + $1,
+           total_referral_earnings = total_referral_earnings + $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [amount, referrerId]
+    );
+  }
+
+  static async recordLinkClick({ code, ipAddress, userAgent }) {
+    const normalizedCode = String(code || '').trim().toUpperCase();
+    if (!normalizedCode) return null;
+
+    const { rows } = await pool.query(
+      `WITH target AS (
+         SELECT id, creator_id, seller_id
+         FROM seller_creator_links
+         WHERE code = $1 AND status = 'active'
+         LIMIT 1
+       ),
+       updated AS (
+         UPDATE seller_creator_links
+         SET click_count = click_count + 1,
+             updated_at = NOW()
+         WHERE id = (SELECT id FROM target)
+         RETURNING id
+       ),
+       inserted AS (
+         INSERT INTO creator_link_clicks (seller_creator_link_id, creator_id, seller_id, ip_address, user_agent)
+         SELECT id, creator_id, seller_id, $2, $3 FROM target
+         RETURNING id
+       )
+       SELECT target.id, target.creator_id, target.seller_id FROM target`,
+      [normalizedCode, ipAddress || null, userAgent || null]
+    );
+
+    return rows[0] || null;
+  }
+
   static async getDashboard(creatorId) {
     const { rows: creatorRows } = await pool.query(`SELECT * FROM creators WHERE id = $1`, [creatorId]);
     const creator = creatorRows[0];
@@ -413,6 +478,7 @@ class CreatorService {
               scl.code,
               scl.commission_rate,
               scl.status,
+              scl.click_count,
               s.shop_name,
               s.full_name AS seller_name,
               COUNT(ce.id) AS sales_count,
@@ -437,26 +503,208 @@ class CreatorService {
       [creatorId]
     );
 
-    return { creator, shops, earnings };
+    const { rows: monthly } = await pool.query(
+      `SELECT month,
+              SUM(sales_count)::int AS sales,
+              SUM(earnings)::numeric AS earnings,
+              SUM(clicks)::int AS clicks
+       FROM (
+         SELECT TO_CHAR(ce.created_at, 'YYYY-MM') AS month,
+                COUNT(*) AS sales_count,
+                COALESCE(SUM(ce.amount), 0) AS earnings,
+                0 AS clicks
+         FROM creator_earnings ce
+         WHERE ce.creator_id = $1
+           AND ce.created_at >= NOW() - INTERVAL '12 months'
+         GROUP BY TO_CHAR(ce.created_at, 'YYYY-MM')
+         UNION ALL
+         SELECT TO_CHAR(cre.created_at, 'YYYY-MM') AS month,
+                0 AS sales_count,
+                COALESCE(SUM(cre.amount), 0) AS earnings,
+                0 AS clicks
+         FROM creator_referral_earnings cre
+         WHERE cre.referrer_creator_id = $1
+           AND cre.created_at >= NOW() - INTERVAL '12 months'
+         GROUP BY TO_CHAR(cre.created_at, 'YYYY-MM')
+         UNION ALL
+         SELECT TO_CHAR(clc.created_at, 'YYYY-MM') AS month,
+                0 AS sales_count,
+                0 AS earnings,
+                COUNT(*) AS clicks
+         FROM creator_link_clicks clc
+         WHERE clc.creator_id = $1
+           AND clc.created_at >= NOW() - INTERVAL '12 months'
+         GROUP BY TO_CHAR(clc.created_at, 'YYYY-MM')
+       ) series
+       GROUP BY month
+       ORDER BY month`,
+      [creatorId]
+    );
+
+    const { rows: leaderboard } = await pool.query(
+      `SELECT id,
+              first_name,
+              last_name,
+              total_sales,
+              total_earnings,
+              total_referral_earnings,
+              (total_earnings + total_referral_earnings) AS total_income
+       FROM creators
+       WHERE status = 'active'
+       ORDER BY total_income DESC, total_sales DESC, id ASC
+       LIMIT 10`
+    );
+
+    const { rows: clickRows } = await pool.query(
+      `SELECT COUNT(*)::int AS link_clicks
+       FROM creator_link_clicks
+       WHERE creator_id = $1`,
+      [creatorId]
+    );
+
+    const { rows: withdrawals } = await pool.query(
+      `SELECT id, amount, withdrawal_fee, total_deducted, mpesa_number, status, provider_reference, created_at
+       FROM creator_withdrawal_requests
+       WHERE creator_id = $1
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [creatorId]
+    );
+
+    return {
+      creator,
+      shops,
+      earnings,
+      monthly,
+      leaderboard,
+      withdrawals,
+      linkClicks: Number.parseInt(clickRows[0]?.link_clicks || 0, 10)
+    };
   }
 
   static async getReferralDashboard(creatorId) {
     const code = await this.generateReferralCode(creatorId);
     const { rows } = await pool.query(
-      `SELECT c.id,
-              c.first_name,
-              c.last_name,
-              c.created_at,
+      `SELECT s.id,
+              s.shop_name AS first_name,
+              '' AS last_name,
+              s.created_at,
+              s.shop_name,
               COALESCE(SUM(cre.amount), 0) AS earnings,
               COALESCE(SUM(cre.units_sold), 0) AS units_sold
-       FROM creators c
-       LEFT JOIN creator_referral_earnings cre ON cre.referred_creator_id = c.id
-       WHERE c.referred_by_creator_id = $1
-       GROUP BY c.id
-       ORDER BY c.created_at DESC`,
+       FROM sellers s
+       LEFT JOIN creator_referral_earnings cre ON cre.referred_seller_id = s.id AND cre.referrer_creator_id = $1
+       WHERE s.referred_by_creator_id = $1
+       GROUP BY s.id
+       ORDER BY s.created_at DESC`,
       [creatorId]
     );
-    return { referralCode: code, referredCreators: rows };
+    return { referralCode: code, referredSellers: rows };
+  }
+
+  static async createWithdrawalRequest({ creatorId, amount, idempotencyKey }) {
+    const validatedAmount = payoutService.validateAmount(amount);
+    const normalizedIdempotencyKey = String(idempotencyKey || '').trim().slice(0, 120);
+    if (!normalizedIdempotencyKey) throw new Error('Idempotency-Key header is required.');
+
+    const withdrawalFee = Fees.calculateWithdrawalFee(validatedAmount);
+    const totalDeducted = roundMoney(validatedAmount + withdrawalFee);
+    const client = await pool.connect();
+    let request;
+    let creator;
+
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `SELECT id, first_name, last_name, mpesa_number, balance
+         FROM creators
+         WHERE id = $1 AND status = 'active'
+         FOR UPDATE`,
+        [creatorId]
+      );
+      creator = rows[0];
+      if (!creator) throw new Error('Creator profile not found.');
+
+      const { rows: existing } = await client.query(
+        `SELECT * FROM creator_withdrawal_requests
+         WHERE creator_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [creatorId, normalizedIdempotencyKey]
+      );
+      if (existing[0]) {
+        await client.query('COMMIT');
+        return existing[0];
+      }
+
+      if (Number(creator.balance || 0) < totalDeducted) {
+        throw new Error(`Insufficient balance. Required KES ${totalDeducted.toLocaleString()} including withdrawal charge.`);
+      }
+
+      await client.query(
+        `UPDATE creators SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
+        [totalDeducted, creatorId]
+      );
+
+      const mpesaName = `${creator.first_name || ''} ${creator.last_name || ''}`.trim() || 'Byblos Creator';
+      const insert = await client.query(
+        `INSERT INTO creator_withdrawal_requests
+           (creator_id, amount, withdrawal_fee, total_deducted, mpesa_number, mpesa_name, idempotency_key, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+         RETURNING *`,
+        [
+          creatorId,
+          validatedAmount,
+          withdrawalFee,
+          totalDeducted,
+          payoutService.normalizePhoneForPayout(creator.mpesa_number),
+          mpesaName,
+          normalizedIdempotencyKey,
+          JSON.stringify({ source: 'creator_dashboard' })
+        ]
+      );
+      request = insert.rows[0];
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    payoutService.initiatePayout({
+      phone_number: request.mpesa_number,
+      amount: validatedAmount,
+      narration: `Byblos creator withdrawal ${request.id}`,
+      idempotency_key: normalizedIdempotencyKey,
+      recipient_name: request.mpesa_name
+    }).then(async (providerResult) => {
+      await pool.query(
+        `UPDATE creator_withdrawal_requests
+         SET status = 'processing',
+             provider_reference = $2,
+             metadata = metadata || $3::jsonb,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [request.id, providerResult.provider_reference || providerResult.reference || null, JSON.stringify({ provider_result: providerResult })]
+      );
+    }).catch(async (error) => {
+      logger.error('[CREATOR_WITHDRAWAL] Payout failed:', error.message);
+      await pool.query(
+        `UPDATE creator_withdrawal_requests
+         SET status = 'failed',
+             metadata = metadata || $2::jsonb,
+             updated_at = NOW(),
+             processed_at = NOW()
+         WHERE id = $1`,
+        [request.id, JSON.stringify({ provider_error: { message: error.message, code: error.code || null } })]
+      );
+      await pool.query(
+        `UPDATE creators SET balance = balance + $1, updated_at = NOW() WHERE id = $2`,
+        [request.total_deducted, creatorId]
+      );
+    });
+
+    return request;
   }
 }
 
