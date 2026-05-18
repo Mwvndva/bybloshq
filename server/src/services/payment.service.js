@@ -1411,7 +1411,6 @@ export class PaymentService {
         const product = productResult.rows[0];
 
         if (product.seller_status !== 'active') throw new Error('Seller is not accepting orders');
-        if (product.status !== 'available') throw new Error('Product not available');
 
         // 2. Security: Calculate secure product total and backend-owned logistics fee.
         const dbPrice = Number.parseFloat(product.price || 0);
@@ -1476,6 +1475,8 @@ export class PaymentService {
                 };
             }
         }
+
+        if (product.status !== 'available') throw new Error('Product not available');
 
         // 4. Create Order (PIN-02: UNIFIED ORDER CONTEXT)
         const provider = this.provider;
