@@ -3,7 +3,6 @@ import type { Theme } from '@/api/sellerApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { BannerUpload } from '../../BannerUpload';
 import { BusinessPhotoUpload } from '../../BusinessPhotoUpload';
 import ReferralPanel from '../../ReferralPanel';
 import ShopLocationPicker from '../../ShopLocationPicker';
@@ -51,63 +50,59 @@ export function SettingsTab({
   toggleEdit
 }: SettingsTabProps) {
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-      <div className="text-center px-2 sm:px-0">
-        <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-slate-950 mb-2 sm:mb-3">Store Settings</h2>
-        <p className="text-slate-700 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto px-4 sm:px-0">
-          Manage your store configuration and preferences. Update your store details, location, and appearance.
-        </p>
+    <div className="w-full space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-yellow-300/80">Settings</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Shop controls</h2>
+          <p className="mt-1 max-w-2xl text-xs font-medium text-white/50 sm:text-sm">
+            Keep your public shop details, appearance, contacts, and pickup location current.
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {isEditing ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={toggleEdit}
+                disabled={isSaving}
+                className="h-10 w-full border-white/10 bg-transparent text-white hover:bg-white/5 sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                className="h-10 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:w-auto"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={toggleEdit}
+              className="h-10 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:w-auto"
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-2.5 sm:p-3 lg:p-5 xl:p-6 shadow-lg border border-white/10">
-          <BannerUpload
-            currentBannerUrl={sellerProfile?.bannerImage}
-            onBannerUploaded={() => undefined}
-          />
-        </div>
-
-        <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-2.5 sm:p-3 lg:p-5 xl:p-6 shadow-lg border border-white/10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="mb-2 sm:mb-0 flex-1 min-w-0">
-              <h3 className="text-sm sm:text-lg lg:text-xl font-black text-white truncate">Store Information</h3>
-              <p className="text-gray-300 text-[10px] sm:text-xs font-medium mt-1">
-                Your store details and contact information
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-              {isEditing ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={toggleEdit}
-                    disabled={isSaving}
-                    className="text-xs sm:text-sm bg-transparent border-white/10 text-gray-200 hover:bg-white/5 flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveProfile}
-                    disabled={isSaving}
-                    className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
-                  >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={toggleEdit}
-                  className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
-                >
-                  <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 sm:mr-1.5" />
-                  Edit Profile
-                </Button>
-              )}
-            </div>
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 lg:p-6">
+        <SectionHeader title="Business Profile" description="The core identity buyers see on your shop page." />
+        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <BusinessPhotoUpload
+              currentPhotoUrl={sellerProfile?.avatarUrl}
+              fallbackInitials={getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}
+              onPhotoUploaded={handleBusinessPhotoUploaded}
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-4 mb-4 sm:mb-6 lg:mb-8 space-y-4 sm:space-y-0">
-            <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Shop Name</p>
               {isEditing ? (
                 <div className="space-y-1">
@@ -145,7 +140,7 @@ export function SettingsTab({
               )}
             </div>
 
-            <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Full Name</p>
               {isEditing ? (
                 <Input
@@ -162,15 +157,7 @@ export function SettingsTab({
               )}
             </div>
 
-            <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2">
-              <BusinessPhotoUpload
-                currentPhotoUrl={sellerProfile?.avatarUrl}
-                fallbackInitials={getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}
-                onPhotoUploaded={handleBusinessPhotoUploaded}
-              />
-            </div>
-
-            <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:col-span-2">
               <div className="flex items-center justify-between gap-3 mb-1">
                 <p className="text-xs sm:text-sm font-medium text-gray-300">Shop Bio</p>
                 {isEditing && (
@@ -191,15 +178,28 @@ export function SettingsTab({
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 lg:p-6">
+        <ThemeSelector
+          currentTheme={(sellerProfile?.theme as Theme) || 'default'}
+          onThemeChange={() => undefined}
+        />
+      </section>
+
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 lg:p-6">
+        <SectionHeader title="Contact & Socials" description="Where buyers can identify and reach your business." />
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Email</p>
               <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.email || 'Not set'}>
                 {sellerProfile?.email || 'Not set'}
               </p>
             </div>
 
-            <div className="p-3 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-[10px] sm:text-xs font-medium text-gray-300 mb-1">WhatsApp Number</p>
               {isEditing ? (
                 <Input
@@ -243,11 +243,13 @@ export function SettingsTab({
               onChange={(value) => setFormData(prev => ({ ...prev, facebookLink: value }))}
               iconPath={<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>}
             />
-          </div>
+        </div>
+      </section>
 
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 lg:p-6">
           <div className="space-y-3 sm:space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-              <h4 className="text-base sm:text-lg lg:text-xl font-bold text-white">Location Settings</h4>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <SectionHeader title="Location Settings" description="Set where buyers collect orders from your physical shop." />
               {!isEditing && (
                 <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-auto">
                   <button
@@ -277,7 +279,7 @@ export function SettingsTab({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">City</p>
                 {isEditing ? (
                   <select
@@ -298,7 +300,7 @@ export function SettingsTab({
                 )}
               </div>
 
-              <div className="p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">Location/Area</p>
                 {isEditing ? (
                   <select
@@ -321,7 +323,7 @@ export function SettingsTab({
               </div>
             </div>
 
-            <div className="p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">Physical Shop Address</p>
               {isEditing ? (
                 <div className="mt-2 space-y-3">
@@ -368,11 +370,11 @@ export function SettingsTab({
               )}
             </div>
           </div>
-        </div>
+      </section>
 
-        <div className="space-y-4">
+      <section className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 lg:p-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
+            <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/10 p-2">
               <Gift className="h-5 w-5 text-yellow-400" />
             </div>
             <div>
@@ -382,15 +384,16 @@ export function SettingsTab({
           </div>
 
           <ReferralPanel totalSales={sellerProfile?.totalSales || 0} />
-        </div>
+      </section>
+    </div>
+  );
+}
 
-        <div className="bg-white/90 backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-slate-200">
-          <ThemeSelector
-            currentTheme={(sellerProfile?.theme as Theme) || 'default'}
-            onThemeChange={() => undefined}
-          />
-        </div>
-      </div>
+function SectionHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div>
+      <h3 className="text-base font-black tracking-tight text-white sm:text-lg">{title}</h3>
+      <p className="mt-1 text-xs font-medium text-white/45 sm:text-sm">{description}</p>
     </div>
   );
 }
@@ -407,7 +410,7 @@ interface SocialInputProps {
 
 function SocialInput({ displayValue, iconPath, isEditing, label, onChange, placeholder, value }: SocialInputProps) {
   return (
-    <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
       <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">{label}</p>
       {isEditing ? (
         <Input

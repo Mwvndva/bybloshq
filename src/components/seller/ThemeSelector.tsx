@@ -60,26 +60,25 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-lg">
-          <Palette className="h-5 w-5 text-white" />
+        <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/10 p-2">
+          <Palette className="h-5 w-5 text-yellow-300" />
         </div>
         <div>
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900">Shop Theme</h3>
-          <p className="text-xs sm:text-sm text-gray-900 mt-0.5">Choose a color theme for your shop page</p>
+          <h3 className="text-base font-black tracking-tight text-white sm:text-lg">Shop Theme</h3>
+          <p className="mt-1 text-xs font-medium text-white/45 sm:text-sm">Choose a color theme for your shop page</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {themeColors.map((theme) => (
           <button
             key={theme.value}
             type="button"
             onClick={() => handleThemeSelect(theme.value as Theme)}
-            className={`relative group h-20 sm:h-24 lg:h-28 rounded-xl overflow-hidden border-2 transition-all duration-300 shadow-md hover:shadow-lg ${selectedTheme === theme.value
-              ? 'ring-2 ring-offset-2 ring-yellow-500 scale-105 border-yellow-400'
-              : 'border-gray-200 hover:border-gray-300 hover:scale-105'
+            className={`relative group h-20 overflow-hidden rounded-2xl border transition-all duration-200 sm:h-24 ${selectedTheme === theme.value
+              ? 'border-yellow-300 ring-2 ring-yellow-300/25'
+              : 'border-white/10 hover:border-white/25'
               }`}
           >
             <div
@@ -100,17 +99,17 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
               >
                 {theme.name}
               </span>
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
+              <div className="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/5" />
             </div>
           </button>
         ))}
       </div>
 
-      <div className="pt-2 sm:pt-4 flex justify-center sm:justify-start">
+      <div className="flex justify-start pt-1">
         <Button
           onClick={saveTheme}
           disabled={isSaving || selectedTheme === currentTheme}
-          className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-6 py-3 text-sm font-bold shadow-lg hover:shadow-xl transition-all"
+          className="h-10 w-full bg-yellow-400 px-6 text-sm font-black text-black hover:bg-yellow-300 sm:w-auto"
         >
           {isSaving ? (
             <>
