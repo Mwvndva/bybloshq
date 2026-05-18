@@ -1,8 +1,8 @@
 -- Migration: creator program
 -- Reason: Add invited creator accounts, creator links, and completed-sale creator commissions.
 
-INSERT INTO roles (name, slug, created_at, updated_at)
-VALUES ('Creator', 'creator', NOW(), NOW())
+INSERT INTO roles (name, slug)
+VALUES ('Creator', 'creator')
 ON CONFLICT (slug) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS creators (
