@@ -2,13 +2,24 @@ import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Loader2, MousePointerClick, Trophy, Wallet } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 import creatorApi from '@/api/creatorApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const money = (amount: number | string) => `KSh ${Number(amount || 0).toLocaleString()}`;
+const MIN_WITHDRAWAL_AMOUNT = 50;
+const WITHDRAWAL_FEE_TIERS = [
+  { min: 50, max: 1500, fee: 21 },
+  { min: 1501, max: 19999.99, fee: 45 },
+  { min: 20000, max: Number.POSITIVE_INFINITY, fee: 63 }
+] as const;
+const getWithdrawalFee = (amount: number) => {
+  if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) return 0;
+  return WITHDRAWAL_FEE_TIERS.find(({ min, max }) => amount >= min && amount <= max)?.fee || 0;
+};
+type AnalysisPeriod = 'daily' | 'weekly' | 'monthly';
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
@@ -17,10 +28,11 @@ export default function CreatorDashboard() {
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>('monthly');
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (period: AnalysisPeriod = analysisPeriod) => {
     const [dashboardData, referralData] = await Promise.all([
-      creatorApi.getDashboard(),
+      creatorApi.getDashboard(period),
       creatorApi.getReferralDashboard()
     ]);
     setDashboard(dashboardData);
@@ -34,7 +46,7 @@ export default function CreatorDashboard() {
         navigate('/creator/login');
       })
       .finally(() => setLoading(false));
-  }, [navigate]);
+  }, [navigate, analysisPeriod]);
 
   const copy = async (value: string) => {
     await navigator.clipboard.writeText(value);
@@ -43,8 +55,15 @@ export default function CreatorDashboard() {
 
   const handleWithdrawal = async () => {
     const amount = Number(withdrawalAmount);
-    if (!Number.isFinite(amount) || amount < 50) {
+    const withdrawalFee = getWithdrawalFee(amount);
+    const totalDeduction = amount + withdrawalFee;
+    const balance = Number(dashboard?.creator?.balance || 0);
+    if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) {
       toast.error('Minimum withdrawal is KSh 50.');
+      return;
+    }
+    if (balance < totalDeduction) {
+      toast.error(`Your balance must cover the withdrawal and KSh ${withdrawalFee} charge.`);
       return;
     }
 
@@ -53,7 +72,7 @@ export default function CreatorDashboard() {
       await creatorApi.requestWithdrawal(amount);
       toast.success('Withdrawal request sent.');
       setWithdrawalAmount('');
-      await loadDashboard();
+      await loadDashboard(analysisPeriod);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || error?.message || 'Could not request withdrawal.');
     } finally {
@@ -61,12 +80,13 @@ export default function CreatorDashboard() {
     }
   };
 
-  const chartData = useMemo(() => (dashboard?.monthly || []).map((row: any) => ({
-    month: row.month,
+  const chartData = useMemo(() => (dashboard?.analysis || dashboard?.monthly || []).map((row: any) => ({
+    period: row.period || row.month,
     sales: Number(row.sales || 0),
+    salesValue: Number(row.sales_value || row.salesValue || 0),
     earnings: Number(row.earnings || 0),
     clicks: Number(row.clicks || 0)
-  })), [dashboard?.monthly]);
+  })), [dashboard?.analysis, dashboard?.monthly]);
 
   if (loading) {
     return (
@@ -78,10 +98,14 @@ export default function CreatorDashboard() {
 
   const creator = dashboard?.creator || {};
   const referralLink = `${window.location.origin}/seller/register?ref=${referral?.referralCode || ''}`;
+  const requestedAmount = Number(withdrawalAmount || 0);
+  const withdrawalFee = getWithdrawalFee(requestedAmount);
+  const totalDeduction = requestedAmount >= MIN_WITHDRAWAL_AMOUNT ? requestedAmount + withdrawalFee : 0;
+  const hasEnoughBalance = Number(creator.balance || 0) >= totalDeduction;
 
   return (
     <main className="min-h-screen bg-black px-4 py-6 text-white">
-      <div className="mx-auto max-w-6xl space-y-5">
+      <div className="space-y-5">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Creator dashboard</p>
@@ -99,17 +123,46 @@ export default function CreatorDashboard() {
 
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-            <h2 className="text-xl font-black">Monthly analysis</h2>
-            <div className="mt-4 h-72">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-black">Creator analysis</h2>
+              <div className="grid grid-cols-3 rounded-2xl border border-white/10 bg-black/30 p-1 text-xs font-black">
+                {(['daily', 'weekly', 'monthly'] as AnalysisPeriod[]).map((period) => (
+                  <button
+                    key={period}
+                    type="button"
+                    onClick={() => setAnalysisPeriod(period)}
+                    className={`rounded-xl px-3 py-2 capitalize transition ${analysisPeriod === period ? 'bg-yellow-400 text-black' : 'text-white/50 hover:text-white'}`}
+                  >
+                    {period}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                  <XAxis dataKey="month" stroke="rgba(255,255,255,0.45)" fontSize={11} />
+                  <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" fontSize={11} />
                   <YAxis stroke="rgba(255,255,255,0.45)" fontSize={11} />
                   <Tooltip contentStyle={{ background: '#050505', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }} />
                   <Bar dataKey="clicks" fill="#facc15" radius={[6, 6, 0, 0]} />
                   <Bar dataKey="sales" fill="#22c55e" radius={[6, 6, 0, 0]} />
                 </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 h-56 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-white/40">Sales value</p>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+                  <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" fontSize={11} />
+                  <YAxis stroke="rgba(255,255,255,0.45)" fontSize={11} tickFormatter={(value) => `${Number(value) / 1000}k`} />
+                  <Tooltip
+                    formatter={(value) => money(value as number)}
+                    contentStyle={{ background: '#050505', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }}
+                  />
+                  <Line type="monotone" dataKey="salesValue" stroke="#38bdf8" strokeWidth={3} dot={{ r: 3 }} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -123,13 +176,29 @@ export default function CreatorDashboard() {
             <div className="mt-4 space-y-3">
               <Input
                 type="number"
-                min={50}
+                min={MIN_WITHDRAWAL_AMOUNT}
                 value={withdrawalAmount}
                 onChange={(event) => setWithdrawalAmount(event.target.value)}
                 placeholder="Amount in KSh"
                 className="h-11 border-white/10 bg-black/40 text-white"
               />
-              <Button onClick={handleWithdrawal} disabled={withdrawing} className="h-11 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300">
+              {requestedAmount >= MIN_WITHDRAWAL_AMOUNT && (
+                <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-3 text-xs font-bold">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-white/55">Withdrawal charge</span>
+                    <span>{money(withdrawalFee)}</span>
+                  </div>
+                  <div className="mt-2 flex justify-between gap-3">
+                    <span className="text-white/55">Total deducted</span>
+                    <span className={hasEnoughBalance ? 'text-yellow-100' : 'text-red-300'}>{money(totalDeduction)}</span>
+                  </div>
+                </div>
+              )}
+              <Button
+                onClick={handleWithdrawal}
+                disabled={withdrawing || requestedAmount < MIN_WITHDRAWAL_AMOUNT || !hasEnoughBalance}
+                className="h-11 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 {withdrawing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Withdraw to M-Pesa'}
               </Button>
             </div>

@@ -13,6 +13,11 @@ const INVITE_EXPIRY_DAYS = 14;
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 const roundMoney = (amount) => Math.round(Number(amount || 0) * 100) / 100;
+const CREATOR_ANALYSIS_PERIODS = {
+  daily: { unit: 'day', interval: '30 days', labelFormat: 'YYYY-MM-DD' },
+  weekly: { unit: 'week', interval: '12 weeks', labelFormat: 'IYYY "W"IW' },
+  monthly: { unit: 'month', interval: '12 months', labelFormat: 'YYYY-MM' }
+};
 
 class CreatorService {
   static async findByUserId(userId, client = pool) {
@@ -468,7 +473,16 @@ class CreatorService {
     return rows[0] || null;
   }
 
-  static async getDashboard(creatorId) {
+  static getAnalysisPeriod(period) {
+    const normalized = String(period || 'monthly').trim().toLowerCase();
+    return {
+      key: CREATOR_ANALYSIS_PERIODS[normalized] ? normalized : 'monthly',
+      ...CREATOR_ANALYSIS_PERIODS[normalized in CREATOR_ANALYSIS_PERIODS ? normalized : 'monthly']
+    };
+  }
+
+  static async getDashboard(creatorId, period = 'monthly') {
+    const analysisPeriod = this.getAnalysisPeriod(period);
     const { rows: creatorRows } = await pool.query(`SELECT * FROM creators WHERE id = $1`, [creatorId]);
     const creator = creatorRows[0];
     if (!creator) throw new Error('Creator profile not found.');
@@ -503,42 +517,48 @@ class CreatorService {
       [creatorId]
     );
 
-    const { rows: monthly } = await pool.query(
-      `SELECT month,
+    const { rows: analysis } = await pool.query(
+      `SELECT TO_CHAR(period_start, $2) AS period,
+              period_start,
               SUM(sales_count)::int AS sales,
+              SUM(sales_value)::numeric AS sales_value,
               SUM(earnings)::numeric AS earnings,
               SUM(clicks)::int AS clicks
        FROM (
-         SELECT TO_CHAR(ce.created_at, 'YYYY-MM') AS month,
+         SELECT DATE_TRUNC('${analysisPeriod.unit}', ce.created_at) AS period_start,
                 COUNT(*) AS sales_count,
+                COALESCE(SUM(po.total_amount), 0) AS sales_value,
                 COALESCE(SUM(ce.amount), 0) AS earnings,
                 0 AS clicks
          FROM creator_earnings ce
+         JOIN product_orders po ON po.id = ce.order_id
          WHERE ce.creator_id = $1
-           AND ce.created_at >= NOW() - INTERVAL '12 months'
-         GROUP BY TO_CHAR(ce.created_at, 'YYYY-MM')
+           AND ce.created_at >= NOW() - INTERVAL '${analysisPeriod.interval}'
+         GROUP BY DATE_TRUNC('${analysisPeriod.unit}', ce.created_at)
          UNION ALL
-         SELECT TO_CHAR(cre.created_at, 'YYYY-MM') AS month,
+         SELECT DATE_TRUNC('${analysisPeriod.unit}', cre.created_at) AS period_start,
                 0 AS sales_count,
+                0 AS sales_value,
                 COALESCE(SUM(cre.amount), 0) AS earnings,
                 0 AS clicks
          FROM creator_referral_earnings cre
          WHERE cre.referrer_creator_id = $1
-           AND cre.created_at >= NOW() - INTERVAL '12 months'
-         GROUP BY TO_CHAR(cre.created_at, 'YYYY-MM')
+           AND cre.created_at >= NOW() - INTERVAL '${analysisPeriod.interval}'
+         GROUP BY DATE_TRUNC('${analysisPeriod.unit}', cre.created_at)
          UNION ALL
-         SELECT TO_CHAR(clc.created_at, 'YYYY-MM') AS month,
+         SELECT DATE_TRUNC('${analysisPeriod.unit}', clc.created_at) AS period_start,
                 0 AS sales_count,
+                0 AS sales_value,
                 0 AS earnings,
                 COUNT(*) AS clicks
          FROM creator_link_clicks clc
          WHERE clc.creator_id = $1
-           AND clc.created_at >= NOW() - INTERVAL '12 months'
-         GROUP BY TO_CHAR(clc.created_at, 'YYYY-MM')
+           AND clc.created_at >= NOW() - INTERVAL '${analysisPeriod.interval}'
+         GROUP BY DATE_TRUNC('${analysisPeriod.unit}', clc.created_at)
        ) series
-       GROUP BY month
-       ORDER BY month`,
-      [creatorId]
+       GROUP BY period_start
+       ORDER BY period_start`,
+      [creatorId, analysisPeriod.labelFormat]
     );
 
     const { rows: leaderboard } = await pool.query(
@@ -575,7 +595,9 @@ class CreatorService {
       creator,
       shops,
       earnings,
-      monthly,
+      analysis,
+      analysisPeriod: analysisPeriod.key,
+      monthly: analysis,
       leaderboard,
       withdrawals,
       linkClicks: Number.parseInt(clickRows[0]?.link_clicks || 0, 10)
