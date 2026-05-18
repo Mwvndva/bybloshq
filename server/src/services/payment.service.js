@@ -11,6 +11,7 @@ import PaydProviderClient from '../providers/PaydProviderClient.js';
 import PaystackProviderClient from '../providers/PaystackProviderClient.js';
 import LogisticsQuoteService from './logisticsQuote.service.js';
 import LogisticsRequestService from './logisticsRequest.service.js';
+import CreatorService from './creator.service.js';
 import Fees from '../config/fees.js';
 
 const roundMoney = (amount) => Math.round(Number(amount) * 100) / 100;
@@ -1478,6 +1479,13 @@ export class PaymentService {
 
         if (product.status !== 'available') throw new Error('Product not available');
 
+        const creatorCode = metadata.creator_code || metadata.creatorCode || metadata.creator;
+        const creatorAttribution = await CreatorService.resolveAttribution({
+            code: creatorCode,
+            sellerId: Number.parseInt(product.seller_id, 10),
+            productSubtotal
+        });
+
         // 4. Create Order (PIN-02: UNIFIED ORDER CONTEXT)
         const provider = this.provider;
         const orderData = {
@@ -1501,6 +1509,7 @@ export class PaymentService {
                 is_digital: product.is_digital,
                 product_id: service.id,
                 product_name: product.name,
+                creator_attribution: creatorAttribution,
                 pricing: {
                     ...(metadata.pricing || {}),
                     product_subtotal: productSubtotal,
@@ -1509,9 +1518,11 @@ export class PaymentService {
                     buyer_service_charge: productServiceCharge,
                     product_service_charge_rate: PRODUCT_SERVICE_CHARGE_RATE,
                     product_service_charge: productServiceCharge,
+                    creator_attribution: creatorAttribution,
                     payment_base_total: paymentBaseTotal,
                     payable_total: payableTotal,
                     seller_payout_base: productSubtotal,
+                    creator_commission_amount: creatorAttribution?.commission_amount || 0,
                     seller_payout_excludes_delivery_fee: true
                 },
                 delivery: {

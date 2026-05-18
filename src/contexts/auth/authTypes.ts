@@ -1,4 +1,4 @@
-export type UserRole = 'buyer' | 'seller' | 'admin';
+export type UserRole = 'buyer' | 'seller' | 'admin' | 'creator';
 
 interface BaseUser {
   id: number;
@@ -45,8 +45,20 @@ export interface SellerProfile extends BaseUser {
 }
 
 export interface AdminProfile extends BaseUser {}
+export interface CreatorProfile extends BaseUser {
+  firstName: string;
+  lastName: string;
+  mpesaNumber: string;
+  instagramLink?: string;
+  tiktokLink?: string;
+  balance?: number;
+  totalSales?: number;
+  totalEarnings?: number;
+  referralCode?: string;
+  totalReferralEarnings?: number;
+}
 
-export type UserProfile = BuyerProfile | SellerProfile | AdminProfile;
+export type UserProfile = BuyerProfile | SellerProfile | AdminProfile | CreatorProfile;
 
 export interface GlobalUser {
   role: UserRole;

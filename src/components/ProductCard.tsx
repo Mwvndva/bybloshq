@@ -353,6 +353,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       const paymentDeliveryFeeEstimate = wantsDoorDelivery ? Number(doorDeliverySelection?.quote?.feeAmount || 0) : 0;
       const paymentEstimate = calculateBuyerPayableTotal(product.price, paymentDeliveryFeeEstimate);
       const checkoutToken = getCheckoutAttemptToken();
+      const creatorCode = new URLSearchParams(window.location.search).get('creator') || undefined;
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
         mobilePayment: buyerDetails.mobilePayment,
@@ -393,6 +394,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           service_location: activeBooking.location,
           service_requirements: activeBooking.serviceRequirements,
           buyer_location: activeBooking.buyerLocation,
+          creator_code: creatorCode,
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
           delivery: wantsDoorDelivery ? {
             doorDelivery: true,
@@ -408,6 +410,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           client_checkout_token: checkoutToken
         } : {
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
+          creator_code: creatorCode,
           delivery: wantsDoorDelivery ? {
             doorDelivery: true,
             door_delivery: true,

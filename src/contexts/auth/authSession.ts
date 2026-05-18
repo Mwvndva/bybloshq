@@ -11,7 +11,7 @@ export const clearRoleSession = (role: UserRole): void => {
 };
 
 export const clearRoleSessionMarkers = (): void => {
-  (['buyer', 'seller', 'admin'] as UserRole[]).forEach(role => {
+  (['buyer', 'seller', 'admin', 'creator'] as UserRole[]).forEach(role => {
     localStorage.removeItem(`${role}SessionActive`);
     localStorage.removeItem(`${role}Token`);
   });

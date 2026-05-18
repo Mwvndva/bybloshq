@@ -36,7 +36,7 @@ export function useAuthActions({
     try {
       const api = getApiForRole(role);
       const response = await api.login({ email, password });
-      const profileData = role === 'buyer' ? response.buyer : response.seller;
+      const profileData = role === 'buyer' ? response.buyer : role === 'creator' ? response.creator : response.seller;
 
       setUser({
         role,

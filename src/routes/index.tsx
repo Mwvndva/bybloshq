@@ -13,6 +13,9 @@ const VerifyEmail = safeLazy(() => import('@/pages/auth/VerifyEmail'));
 const MzigoLogin = safeLazy(() => import('@/pages/logistics/MzigoLoginPage'));
 const MzigoDashboard = safeLazy(() => import('@/pages/logistics/MzigoDashboardPage'));
 const TrackingPage = safeLazy(() => import('@/pages/TrackingPage'));
+const CreatorLogin = safeLazy(() => import('@/pages/creator/CreatorLogin'));
+const CreatorRegister = safeLazy(() => import('@/pages/creator/CreatorRegister'));
+const CreatorDashboard = safeLazy(() => import('@/pages/creator/CreatorDashboard'));
 
 // Main routes configuration
 export const routes = [
@@ -54,6 +57,30 @@ export const routes = [
     element: (
       <Suspense fallback={<RouteFallback />}>
         <VerifyEmail />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/creator/login',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <CreatorLogin />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/creator/register',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <CreatorRegister />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/creator/dashboard',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <CreatorDashboard />
       </Suspense>
     ),
   },

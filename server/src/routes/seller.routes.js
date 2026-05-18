@@ -5,6 +5,7 @@ import * as sellerController from '../controllers/seller.controller.js';
 import * as productController from '../controllers/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
 import * as orderController from '../controllers/order.controller.js';
+import { inviteCreator, listSellerInvites } from '../controllers/creator.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
 import referralRoutes from './referral_routes.js';
@@ -126,6 +127,10 @@ router.post('/products/upload-digital',
 router.post('/withdrawal-request', createWithdrawal);
 router.get('/withdrawal-requests', getWithdrawals);
 router.get('/withdrawal-requests/:id', getWithdrawalById);
+
+// Creator invites
+router.get('/creator-invites', listSellerInvites);
+router.post('/creator-invites', inviteCreator);
 
 // Referral routes
 router.use('/referral', referralRoutes);

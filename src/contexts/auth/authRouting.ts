@@ -9,6 +9,7 @@ export const getDashboardPath = (role: UserRole): string => `/${role}/dashboard`
 export const getRoleFromRoute = (pathname: string): UserRole | null => {
   if (pathname.startsWith('/buyer')) return 'buyer';
   if (pathname.startsWith('/seller')) return 'seller';
+  if (pathname.startsWith('/creator')) return 'creator';
   if (pathname.startsWith('/admin')) return 'admin';
   return null;
 };

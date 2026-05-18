@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import buyerApi from '@/api/buyerApi';
 import sellerApi from '@/api/sellerApi';
+import creatorApi from '@/api/creatorApi';
 
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams();
@@ -15,7 +16,7 @@ const VerifyEmail = () => {
 
     const token = searchParams.get('token');
     const email = searchParams.get('email');
-    const type = searchParams.get('type') as 'buyer' | 'seller' | null;
+    const type = searchParams.get('type') as 'buyer' | 'seller' | 'creator' | null;
 
     useEffect(() => {
         const verify = async () => {
@@ -36,6 +37,8 @@ const VerifyEmail = () => {
                 let result;
                 if (type === 'seller') {
                     result = await sellerApi.verifyEmail(email, token);
+                } else if (type === 'creator') {
+                    result = await creatorApi.verifyEmail(token, email);
                 } else {
                     result = await buyerApi.verifyEmail(email, token);
                 }
@@ -56,7 +59,7 @@ const VerifyEmail = () => {
     const [resending, setResending] = useState(false);
 
     const handleBackToLogin = () => {
-        const loginPath = type === 'seller' ? '/seller/login' : '/buyer/login';
+        const loginPath = type === 'seller' ? '/seller/login' : type === 'creator' ? '/creator/login' : '/buyer/login';
         navigate(loginPath);
     };
 
@@ -66,6 +69,8 @@ const VerifyEmail = () => {
         try {
             if (type === 'seller') {
                 await sellerApi.resendVerification(email);
+            } else if (type === 'creator') {
+                await creatorApi.resendVerification(email);
             } else {
                 await buyerApi.resendVerification(email);
             }

@@ -196,6 +196,14 @@ class AuthService {
             case 'admin':
                 if (user.role === 'admin') profile = { id: user.id, email: user.email, role: 'admin' };
                 break;
+            case 'creator': {
+                const creatorResult = await pool.query(
+                    `SELECT * FROM creators WHERE user_id = $1 AND status = 'active' LIMIT 1`,
+                    [user.id]
+                );
+                profile = creatorResult.rows[0] || null;
+                break;
+            }
             case 'marketing':
                 // Special check for marketing admin email if defined in env
                 const MARKETING_EMAIL = process.env.MARKETING_EMAIL || 'adminmarketing@bybloshq.space';
