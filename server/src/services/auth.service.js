@@ -161,6 +161,21 @@ class AuthService {
                 }
             }
 
+            // CASE 3: An existing buyer/seller/admin accessing the CREATOR portal
+            // They can if they have accepted a creator invite.
+            if (type === 'creator') {
+                const creatorResult = await pool.query(
+                    `SELECT * FROM creators WHERE user_id = $1 AND status = 'active' LIMIT 1`,
+                    [user.id]
+                );
+                const creatorProfile = creatorResult.rows[0] || null;
+
+                if (creatorProfile) {
+                    const token = signToken(user.id, 'creator');
+                    return { user, profile: creatorProfile, token, crossRole: true };
+                }
+            }
+
             // No cross-role profile found — typed 401 so controller can give clear message
             const err = new Error(`Wrong portal. This account is registered as a ${user.role}.`);
             err.statusCode = 401;

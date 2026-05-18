@@ -65,7 +65,9 @@ export const register = async (req, res, next) => {
     const result = await CreatorService.registerFromInvite(req.body);
     res.status(201).json({
       status: 'success',
-      message: 'Creator account created. Please verify your email before logging in.',
+      message: result.status === 'created'
+        ? 'Creator access added. You can now log in.'
+        : 'Creator account created. Please verify your email before logging in.',
       data: result
     });
   } catch (error) {

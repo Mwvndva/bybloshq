@@ -42,7 +42,13 @@ export default function CreatorRegister() {
     event.preventDefault();
     setLoading(true);
     try {
-      await creatorApi.register({ token, ...form, referralCode });
+      const result = await creatorApi.register({ token, ...form, referralCode });
+      if (result?.data?.status === 'created') {
+        toast.success('Creator access added. You can now log in.');
+        navigate('/creator/login');
+        return;
+      }
+
       toast.success('Account created. Check your email to verify it.');
       navigate(`/verify-email?email=${encodeURIComponent(form.email)}&type=creator`);
     } catch (error: any) {
