@@ -62,7 +62,9 @@ export const getInvite = async (req, res, next) => {
 
 export const register = async (req, res, next) => {
   try {
-    const result = await CreatorService.registerFromInvite(req.body);
+    const result = req.body.token
+      ? await CreatorService.registerFromInvite(req.body)
+      : await CreatorService.registerDirect(req.body);
     res.status(201).json({
       status: 'success',
       message: result.status === 'created'

@@ -250,6 +250,76 @@ class CreatorService {
     }
   }
 
+  static async registerDirect(data) {
+    const email = normalizeEmail(data.email);
+
+    if (!email || !email.includes('@')) {
+      throw new Error('Enter a valid email address.');
+    }
+    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber) {
+      throw new Error('First name, last name, email, M-Pesa number, and password are required.');
+    }
+
+    const existingCreator = await this.findByEmail(email);
+    if (existingCreator) throw new Error('A creator account already exists for this email.');
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      let user = await User.findByEmail(email);
+      if (!user) {
+        user = await User.create({ email, password: data.password, role: 'creator', is_verified: false }, client);
+      } else {
+        const isPasswordCorrect = await User.verifyPassword(data.password, user.password_hash);
+        if (!isPasswordCorrect) {
+          throw new Error('This email already has a Byblos account. Enter that account password to add creator access.');
+        }
+
+        await client.query(
+          `INSERT INTO user_roles (user_id, role_id)
+           SELECT $1, id FROM roles WHERE slug = 'creator'
+           ON CONFLICT DO NOTHING`,
+          [user.id]
+        );
+      }
+
+      const referredBy = data.referralCode
+        ? await this.findCreatorByReferralCode(data.referralCode, client)
+        : null;
+
+      await client.query(
+        `INSERT INTO creators
+           (user_id, first_name, last_name, email, mpesa_number, instagram_link, tiktok_link, referred_by_creator_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          user.id,
+          String(data.firstName).trim(),
+          String(data.lastName).trim(),
+          email,
+          String(data.mpesaNumber).trim(),
+          data.instagramLink || null,
+          data.tiktokLink || null,
+          referredBy?.id || null
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      if (!user.is_verified) {
+        await AuthService.sendEmailVerification(email, 'creator');
+        return { status: 'pending_verification', email };
+      }
+
+      return { status: 'created', email };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   static async login(email, password) {
     const result = await AuthService.login(email, password, 'creator');
     if (!result) return null;

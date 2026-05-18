@@ -70,17 +70,29 @@ export default function CreatorRegister() {
     <main className="min-h-screen bg-black px-4 py-8 text-white">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-5xl items-center gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="space-y-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Creator invite</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">
+            {token ? 'Creator invite' : 'Byblos creators'}
+          </p>
           <h1 className="text-4xl font-black tracking-tight">Earn when your audience buys safely.</h1>
           <p className="text-sm font-medium leading-6 text-white/55">
-            {invite ? `${invite.shopName} invited you to sell through Byblos.` : 'Accept your creator invite and get your tracked shop link.'}
+            {invite
+              ? `${invite.shopName} invited you to sell through Byblos.`
+              : 'Create a creator account, invite sellers with your link, and earn when their products sell.'}
           </p>
         </section>
 
         <form onSubmit={handleSubmit} className="grid gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-5 sm:grid-cols-2">
           <Input value={form.firstName} onChange={(e) => updateForm('firstName', e.target.value)} placeholder="First name" className="h-11 border-white/10 bg-black/40" required />
           <Input value={form.lastName} onChange={(e) => updateForm('lastName', e.target.value)} placeholder="Last name" className="h-11 border-white/10 bg-black/40" required />
-          <Input value={form.email} readOnly placeholder="Email" className="h-11 border-white/10 bg-black/40 text-white/70 sm:col-span-2" required />
+          <Input
+            value={form.email}
+            readOnly={Boolean(token)}
+            onChange={(e) => updateForm('email', e.target.value)}
+            type="email"
+            placeholder="Email"
+            className="h-11 border-white/10 bg-black/40 text-white/70 sm:col-span-2"
+            required
+          />
           <Input value={form.mpesaNumber} onChange={(e) => updateForm('mpesaNumber', e.target.value)} placeholder="M-Pesa number" className="h-11 border-white/10 bg-black/40 sm:col-span-2" required />
           <Input value={form.instagramLink} onChange={(e) => updateForm('instagramLink', e.target.value)} placeholder="Instagram link" className="h-11 border-white/10 bg-black/40" />
           <Input value={form.tiktokLink} onChange={(e) => updateForm('tiktokLink', e.target.value)} placeholder="TikTok link" className="h-11 border-white/10 bg-black/40" />
@@ -105,7 +117,7 @@ export default function CreatorRegister() {
               </div>
             </div>
           )}
-          <Button disabled={loading || !token} className="h-11 bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:col-span-2">
+          <Button disabled={loading} className="h-11 bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:col-span-2">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create creator account'}
           </Button>
         </form>
