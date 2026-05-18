@@ -3,6 +3,7 @@ import type { Theme } from '@/api/sellerApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { BannerUpload } from '../../BannerUpload';
 import { BusinessPhotoUpload } from '../../BusinessPhotoUpload';
 import ReferralPanel from '../../ReferralPanel';
 import ShopLocationPicker from '../../ShopLocationPicker';
@@ -102,6 +103,13 @@ export function SettingsTab({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:col-span-2">
+              <BannerUpload
+                currentBannerUrl={sellerProfile?.bannerImage}
+                onBannerUploaded={() => undefined}
+              />
+            </div>
+
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Shop Name</p>
               {isEditing ? (
