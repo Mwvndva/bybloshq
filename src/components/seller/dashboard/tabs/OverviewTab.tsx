@@ -1,4 +1,4 @@
-import { Clock, Link as LinkIcon, Package, ShoppingBag, Users, Wallet } from 'lucide-react';
+import { BadgeDollarSign, Clock, Link as LinkIcon, Package, ShoppingBag, UserRoundCheck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,8 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const overviewCards = [
     { label: 'Live products', value: Number(analytics.totalProducts || 0).toLocaleString(), icon: Package },
     { label: 'Order value', value: formatCurrency(analytics.totalSales || 0), icon: ShoppingBag },
-    { label: 'Balance', value: formatCurrency(analytics.balance || 0), icon: Wallet },
-    { label: 'Clients', value: Number(analytics.clientCount || 0).toLocaleString(), icon: Users }
+    { label: 'Creator sales', value: formatCurrency(analytics.creatorGeneratedSales || 0), icon: BadgeDollarSign },
+    { label: 'Creators', value: Number(analytics.creatorCount || 0).toLocaleString(), icon: UserRoundCheck }
   ];
 
   return (
