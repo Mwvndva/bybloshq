@@ -122,6 +122,19 @@ const getAllCreators = async (req, res, next) => {
   }
 };
 
+const deleteCreator = async (req, res, next) => {
+  try {
+    const result = await AdminService.deleteCreator(req.params.id);
+    res.status(200).json({
+      status: 'success',
+      message: 'Creator account deleted. Earnings and sales history were preserved for audit.',
+      data: result
+    });
+  } catch (error) {
+    next(new AppError(error.message || 'Failed to delete creator account', error.statusCode || 500));
+  }
+};
+
 const getSellerById = async (req, res, next) => {
   try {
     const seller = await AdminService.getSellerById(req.params.id);
@@ -878,6 +891,7 @@ export {
   getDashboardStats,
   getAllSellers,
   getAllCreators,
+  deleteCreator,
   getSellerById,
   updateSellerStatus,
   getAllBuyers,

@@ -54,6 +54,7 @@ router.patch('/sellers/:id/status', adminController.updateSellerStatus);
 
 // Creator management
 router.get('/creators', adminController.getAllCreators);
+router.delete('/creators/:id', adminController.deleteCreator);
 
 // Buyer management
 router.get('/buyers', adminController.getAllBuyers);

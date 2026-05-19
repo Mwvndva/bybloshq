@@ -9,7 +9,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, Percent, TrendingUp, Lock, Unlock, Users2, Mail, Instagram, Facebook, Music2, Globe, Heart } from 'lucide-react';
+import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, Percent, TrendingUp, Lock, Unlock, Users2, Mail, Instagram, Facebook, Music2, Globe, Heart, Trash2 } from 'lucide-react';
 import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -637,6 +637,24 @@ const NewAdminDashboard = () => {
     }
   };
 
+  const handleDeleteCreator = async (creatorId: string, creatorName?: string) => {
+    if (!window.confirm(`Delete ${creatorName || 'this creator'}'s account? Their earnings and sales history will be preserved for audit.`)) {
+      return;
+    }
+
+    try {
+      await adminApi.deleteCreator(creatorId);
+      toast.success('Creator account deleted. History was preserved.');
+      setDashboardState(prev => ({
+        ...prev,
+        creators: prev.creators.filter(creator => String(creator.id) !== String(creatorId))
+      }));
+    } catch (error) {
+      console.error('Error deleting creator:', error);
+      toast.error((error as any)?.response?.data?.message || 'Failed to delete creator account');
+    }
+  };
+
   // Handle toggling buyer status (active/inactive)
   const handleToggleBuyerStatus = async (buyerId: string, newStatus: 'active' | 'inactive') => {
     try {
@@ -887,6 +905,7 @@ const NewAdminDashboard = () => {
                           <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden xl:table-cell">Linked Shops</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Performance</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 text-right">Earnings</th>
+                          <th className="px-5 md:px-8 py-4 md:py-6 text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
@@ -923,6 +942,18 @@ const NewAdminDashboard = () => {
                             <td className="px-5 md:px-8 py-4 md:py-6 text-right">
                               <p className="text-sm md:text-lg font-black text-white tracking-tighter tabular-nums">KSh {creator.totalIncome.toLocaleString()}</p>
                               <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">Balance KSh {creator.balance.toLocaleString()}</p>
+                            </td>
+                            <td className="px-5 md:px-8 py-4 md:py-6 text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteCreator(creator.id, creator.name)}
+                                className="h-10 w-10 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-100"
+                                aria-label={`Delete ${creator.name || 'creator'} account`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </td>
                           </tr>
                         ))}
