@@ -146,9 +146,11 @@ function auditSellerExperience() {
 function auditCreatorExperience() {
   check('Creator experience', 'Creators can register by invite or directly', hasAll('server/src/controllers/creator.controller.js', [/registerFromInvite/, /registerDirect/]) && hasAll('src/pages/creator/CreatorRegister.tsx', [/readOnly=\{Boolean\(token\)\}/, /Create creator account/]), 'Creator registration should support both invite and direct signup.');
   check('Creator experience', 'Creators are email verified before login', hasAll('server/src/services/creator.service.js', [/sendEmailVerification\(email,\s*'creator'\)/, /AuthService\.login\(email,\s*password,\s*'creator'\)/]), 'Creator verification/login guard is incomplete.');
+  check('Creator experience', 'Creator auth captures WhatsApp and supports password visibility', hasAll('src/pages/creator/CreatorRegister.tsx', [/whatsappNumber/, /WhatsApp number/, /EyeOff/, /Creator login/]) && hasAll('src/pages/creator/CreatorLogin.tsx', [/showPassword/, /EyeOff/]), 'Creator auth should collect WhatsApp details and expose password visibility controls.');
   check('Creator experience', 'Creator dashboard has leaderboard, clicks, withdrawals, and period analysis', hasAll('src/pages/creator/CreatorDashboard.tsx', [/Top creators/, /Link clicks/, /Withdraw to M-Pesa/, /daily/, /weekly/, /monthly/, /Sales value/]), 'Creator dashboard analytics coverage is incomplete.');
   check('Creator experience', 'Creator referral links invite sellers', hasAll('src/pages/creator/CreatorDashboard.tsx', [/\/seller\/register\?ref=/, /Copy seller link/]), 'Creator seller referral link is missing.');
   check('Creator experience', 'Creator backend tracks clicks, earnings, referrals, and withdrawals', hasAll('server/src/services/creator.service.js', [/recordLinkClick/, /creditCreatorForOrder/, /creditCreatorReferralForSeller/, /createWithdrawalRequest/]), 'Creator backend flow coverage is incomplete.');
+  check('Creator experience', 'Creator sale notifications are wired to WhatsApp', hasAll('server/src/services/creator.service.js', [/notifyCreatorSaleSuccess/, /whatsapp_number/, /sendMessage/]) && migrationIncludes(/ALTER TABLE creators[\s\S]*whatsapp_number/), 'Creator successful-sale WhatsApp notification wiring is missing.');
 }
 
 function auditCheckoutAndPayments() {

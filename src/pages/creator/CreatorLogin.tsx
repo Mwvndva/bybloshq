@@ -1,16 +1,27 @@
 import { useState } from 'react';
 import type React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import creatorApi from '@/api/creatorApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+type ApiError = {
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as ApiError;
+  return apiError?.response?.data?.message || apiError?.message || fallback;
+};
+
 export default function CreatorLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -20,8 +31,8 @@ export default function CreatorLogin() {
       await creatorApi.login(email, password);
       localStorage.setItem('creatorSessionActive', 'true');
       navigate('/creator/dashboard');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message || 'Could not log in.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Could not log in.'));
     } finally {
       setLoading(false);
     }
@@ -37,7 +48,17 @@ export default function CreatorLogin() {
             <p className="mt-2 text-sm font-medium text-white/50">Track your shop links, completed sales, and referral earnings.</p>
           </div>
           <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" className="h-11 border-white/10 bg-black/40" required />
-          <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Password" className="h-11 border-white/10 bg-black/40" required />
+          <div className="relative">
+            <Input value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} placeholder="Password" className="h-11 border-white/10 bg-black/40 pr-12" required />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/45 transition hover:bg-white/10 hover:text-white"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           <Button disabled={loading} className="h-11 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Log in'}
           </Button>

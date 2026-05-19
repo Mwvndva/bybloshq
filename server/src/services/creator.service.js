@@ -7,6 +7,7 @@ import { sendEmail, sendVerificationEmail } from '../shared/utils/email.js';
 import Fees from '../config/fees.js';
 import logger from '../shared/utils/logger.js';
 import payoutService from './payout.service.js';
+import whatsappService from './whatsapp.service.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
 const INVITE_EXPIRY_DAYS = 14;
@@ -167,8 +168,8 @@ class CreatorService {
     if (email !== normalizeEmail(invite.email)) {
       throw new Error('Use the email address that received the invite.');
     }
-    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber) {
-      throw new Error('First name, last name, M-Pesa number, and password are required.');
+    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber || !data.whatsappNumber) {
+      throw new Error('First name, last name, M-Pesa number, WhatsApp number, and password are required.');
     }
 
     const existingCreator = await this.findByEmail(email);
@@ -201,8 +202,8 @@ class CreatorService {
 
       const { rows: creatorRows } = await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, instagram_link, tiktok_link, referred_by_creator_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, instagram_link, tiktok_link, referred_by_creator_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           user.id,
@@ -210,6 +211,7 @@ class CreatorService {
           String(data.lastName).trim(),
           email,
           String(data.mpesaNumber).trim(),
+          String(data.whatsappNumber).trim(),
           data.instagramLink || null,
           data.tiktokLink || null,
           referredBy?.id || null
@@ -256,8 +258,8 @@ class CreatorService {
     if (!email || !email.includes('@')) {
       throw new Error('Enter a valid email address.');
     }
-    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber) {
-      throw new Error('First name, last name, email, M-Pesa number, and password are required.');
+    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber || !data.whatsappNumber) {
+      throw new Error('First name, last name, email, M-Pesa number, WhatsApp number, and password are required.');
     }
 
     const existingCreator = await this.findByEmail(email);
@@ -290,14 +292,15 @@ class CreatorService {
 
       await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, instagram_link, tiktok_link, referred_by_creator_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, instagram_link, tiktok_link, referred_by_creator_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           user.id,
           String(data.firstName).trim(),
           String(data.lastName).trim(),
           email,
           String(data.mpesaNumber).trim(),
+          String(data.whatsappNumber).trim(),
           data.instagramLink || null,
           data.tiktokLink || null,
           referredBy?.id || null
@@ -445,7 +448,53 @@ class CreatorService {
     );
 
     await this.creditCreatorReferral(client, { creatorId: attribution.creator_id, order });
+    await this.notifyCreatorSaleSuccess(client, {
+      creatorId: attribution.creator_id,
+      order,
+      amount
+    });
     return inserted[0];
+  }
+
+  static async notifyCreatorSaleSuccess(client, { creatorId, order, amount }) {
+    const { rows } = await client.query(
+      `SELECT c.first_name,
+              c.whatsapp_number,
+              s.shop_name
+       FROM creators c
+       LEFT JOIN sellers s ON s.id = $2
+       WHERE c.id = $1
+       LIMIT 1`,
+      [creatorId, order.seller_id || null]
+    );
+    const creator = rows[0];
+    if (!creator?.whatsapp_number) return;
+
+    const orderRef = order.order_number || order.orderNumber || `#${order.id}`;
+    const amountText = Number(amount || 0).toLocaleString('en-KE', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    const shopLine = creator.shop_name ? `Shop: ${creator.shop_name}\n` : '';
+    const message = [
+      `Hi ${creator.first_name || 'creator'},`,
+      '',
+      'Your Byblos creator link has generated a successful sale.',
+      `Order: ${orderRef}`,
+      shopLine.trim(),
+      `Creator earning: KSh ${amountText}`,
+      '',
+      'Open your creator dashboard to track your performance and balance.'
+    ].filter(Boolean).join('\n');
+
+    setImmediate(() => {
+      whatsappService.sendMessage(creator.whatsapp_number, message)
+        .catch((error) => logger.warn('Failed to send creator sale WhatsApp notification', {
+          creatorId,
+          orderId: order.id,
+          error: error.message
+        }));
+    });
   }
 
   static async creditCreatorReferral(client, { creatorId, order }) {

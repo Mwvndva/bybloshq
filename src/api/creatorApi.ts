@@ -6,6 +6,7 @@ export interface CreatorRegistrationPayload {
   lastName: string;
   email: string;
   mpesaNumber: string;
+  whatsappNumber: string;
   instagramLink?: string;
   tiktokLink?: string;
   password: string;
