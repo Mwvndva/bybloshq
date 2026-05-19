@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Loader2, MousePointerClick, Trophy, Wallet } from 'lucide-react';
@@ -20,24 +20,76 @@ const getWithdrawalFee = (amount: number) => {
   return WITHDRAWAL_FEE_TIERS.find(({ min, max }) => amount >= min && amount <= max)?.fee || 0;
 };
 type AnalysisPeriod = 'daily' | 'weekly' | 'monthly';
+type ApiError = { response?: { data?: { message?: string } }; message?: string };
+type CreatorProfile = {
+  balance?: number;
+  firstName?: string;
+  mpesaNumber?: string;
+  totalEarnings?: number;
+  totalSales?: number;
+};
+type ShopRequest = { id: number; shop_name?: string; seller_name?: string };
+type LinkedShop = {
+  id: number;
+  shop_name?: string;
+  code?: string;
+  commission_rate?: number | string;
+  sales_count?: number | string;
+  click_count?: number | string;
+  earnings?: number | string;
+};
+type AnalysisRow = {
+  period?: string;
+  month?: string;
+  sales?: number | string;
+  sales_value?: number | string;
+  salesValue?: number | string;
+  earnings?: number | string;
+  clicks?: number | string;
+};
+type WithdrawalRow = { id: number; amount?: number | string; withdrawal_fee?: number | string; status?: string };
+type LeaderboardRow = {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  total_sales?: number | string;
+  total_income?: number | string;
+};
+type DashboardData = {
+  creator?: CreatorProfile;
+  shops?: LinkedShop[];
+  shopRequests?: ShopRequest[];
+  analysis?: AnalysisRow[];
+  monthly?: AnalysisRow[];
+  withdrawals?: WithdrawalRow[];
+  leaderboard?: LeaderboardRow[];
+  linkClicks?: number;
+};
+type ReferralData = { referralCode?: string };
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as ApiError;
+  return apiError?.response?.data?.message || apiError?.message || fallback;
+};
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [referral, setReferral] = useState<any>(null);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [referral, setReferral] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>('monthly');
+  const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
 
-  const loadDashboard = async (period: AnalysisPeriod = analysisPeriod) => {
+  const loadDashboard = useCallback(async (period: AnalysisPeriod = analysisPeriod) => {
     const [dashboardData, referralData] = await Promise.all([
       creatorApi.getDashboard(period),
       creatorApi.getReferralDashboard()
     ]);
     setDashboard(dashboardData);
     setReferral(referralData);
-  };
+  }, [analysisPeriod]);
 
   useEffect(() => {
     loadDashboard()
@@ -46,7 +98,7 @@ export default function CreatorDashboard() {
         navigate('/creator/login');
       })
       .finally(() => setLoading(false));
-  }, [navigate, analysisPeriod]);
+  }, [navigate, analysisPeriod, loadDashboard]);
 
   const copy = async (value: string) => {
     await navigator.clipboard.writeText(value);
@@ -73,14 +125,32 @@ export default function CreatorDashboard() {
       toast.success('Withdrawal request sent.');
       setWithdrawalAmount('');
       await loadDashboard(analysisPeriod);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message || 'Could not request withdrawal.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Could not request withdrawal.'));
     } finally {
       setWithdrawing(false);
     }
   };
 
-  const chartData = useMemo(() => (dashboard?.analysis || dashboard?.monthly || []).map((row: any) => ({
+  const handleShopRequest = async (inviteId: number, action: 'accept' | 'deny') => {
+    setRespondingRequestId(inviteId);
+    try {
+      if (action === 'accept') {
+        await creatorApi.acceptShopRequest(inviteId);
+        toast.success('Shop request accepted.');
+      } else {
+        await creatorApi.denyShopRequest(inviteId);
+        toast.success('Shop request declined.');
+      }
+      await loadDashboard(analysisPeriod);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Could not update shop request.'));
+    } finally {
+      setRespondingRequestId(null);
+    }
+  };
+
+  const chartData = useMemo(() => (dashboard?.analysis || dashboard?.monthly || []).map((row) => ({
     period: row.period || row.month,
     sales: Number(row.sales || 0),
     salesValue: Number(row.sales_value || row.salesValue || 0),
@@ -121,6 +191,76 @@ export default function CreatorDashboard() {
           <Metric label="Link clicks" value={dashboard?.linkClicks || 0} icon={<MousePointerClick className="h-5 w-5 text-yellow-300" />} />
         </section>
 
+        {(dashboard?.shopRequests || []).length > 0 && (
+          <section className="rounded-3xl border border-yellow-400/20 bg-yellow-400/10 p-4">
+            <h2 className="text-xl font-black">Shop requests</h2>
+            <p className="mt-1 text-sm font-medium text-yellow-100/70">Accept a seller request to generate your creator link for that shop.</p>
+            <div className="mt-4 grid gap-3">
+              {(dashboard?.shopRequests || []).map((request) => (
+                <div key={request.id} className="rounded-2xl border border-yellow-400/20 bg-black/30 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-black">{request.shop_name}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                        Invited by {request.seller_name || 'seller'}
+                      </p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Button
+                        type="button"
+                        onClick={() => handleShopRequest(request.id, 'accept')}
+                        disabled={respondingRequestId === request.id}
+                        className="h-9 bg-yellow-400 font-black text-black hover:bg-yellow-300"
+                      >
+                        {respondingRequestId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Accept'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleShopRequest(request.id, 'deny')}
+                        disabled={respondingRequestId === request.id}
+                        className="h-9 border-white/10 bg-transparent text-white hover:bg-white/5"
+                      >
+                        Deny
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+          <h2 className="text-xl font-black">Linked shops</h2>
+          <div className="mt-4 grid gap-3">
+            {(dashboard?.shops || []).length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm font-medium text-white/45">
+                No linked shops yet.
+              </div>
+            ) : (dashboard?.shops || []).map((shop) => {
+              const link = `${window.location.origin}/shop/${shop.shop_name}?creator=${shop.code}`;
+              return (
+                <div key={shop.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-black">{shop.shop_name}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                        {Number(shop.commission_rate || 0.01) * 100}% cut | {shop.sales_count || 0} sales | {shop.click_count || 0} clicks | {money(shop.earnings)}
+                      </p>
+                      <p className="mt-1 break-all text-xs text-yellow-200/80">{link}</p>
+                    </div>
+                    <Button variant="outline" onClick={() => copy(link)} className="border-white/10 bg-transparent text-white hover:bg-white/5">
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy link
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -145,8 +285,8 @@ export default function CreatorDashboard() {
                   <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" fontSize={11} />
                   <YAxis stroke="rgba(255,255,255,0.45)" fontSize={11} />
                   <Tooltip contentStyle={{ background: '#050505', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }} />
-                  <Bar dataKey="clicks" fill="#facc15" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="sales" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="clicks" fill="#facc15" radius={[6, 6, 0, 0]} barSize={12} />
+                  <Bar dataKey="sales" fill="#22c55e" radius={[6, 6, 0, 0]} barSize={12} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -203,7 +343,7 @@ export default function CreatorDashboard() {
               </Button>
             </div>
             <div className="mt-4 space-y-2">
-              {(dashboard?.withdrawals || []).slice(0, 3).map((item: any) => (
+              {(dashboard?.withdrawals || []).slice(0, 3).map((item) => (
                 <div key={item.id} className="rounded-2xl border border-white/10 bg-black/30 p-3 text-xs">
                   <div className="flex justify-between gap-3 font-bold">
                     <span>{money(item.amount)}</span>
@@ -216,32 +356,6 @@ export default function CreatorDashboard() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-          <h2 className="text-xl font-black">Linked shops</h2>
-          <div className="mt-4 grid gap-3">
-            {(dashboard?.shops || []).map((shop: any) => {
-              const link = `${window.location.origin}/shop/${shop.shop_name}?creator=${shop.code}`;
-              return (
-                <div key={shop.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-black">{shop.shop_name}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
-                        {Number(shop.commission_rate || 0.01) * 100}% cut | {shop.sales_count || 0} sales | {shop.click_count || 0} clicks | {money(shop.earnings)}
-                      </p>
-                      <p className="mt-1 break-all text-xs text-yellow-200/80">{link}</p>
-                    </div>
-                    <Button variant="outline" onClick={() => copy(link)} className="border-white/10 bg-transparent text-white hover:bg-white/5">
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy link
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
         <section className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex items-center gap-2">
@@ -249,7 +363,7 @@ export default function CreatorDashboard() {
               <h2 className="text-xl font-black">Top creators</h2>
             </div>
             <div className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10">
-              {(dashboard?.leaderboard || []).map((item: any, index: number) => (
+              {(dashboard?.leaderboard || []).map((item, index: number) => (
                 <div key={item.id} className="flex items-center justify-between gap-3 bg-black/25 p-3">
                   <div>
                     <p className="font-black">#{index + 1} {item.first_name} {item.last_name}</p>

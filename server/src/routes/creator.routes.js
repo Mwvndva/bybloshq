@@ -16,6 +16,8 @@ router.use(protect);
 
 router.get('/profile', creatorController.getProfile);
 router.get('/dashboard', creatorController.getDashboard);
+router.post('/shop-requests/:inviteId/accept', creatorController.acceptShopRequest);
+router.post('/shop-requests/:inviteId/deny', creatorController.denyShopRequest);
 router.get('/referral/dashboard', creatorController.getReferralDashboard);
 router.post('/referral/generate-code', creatorController.generateReferralCode);
 router.post('/withdrawals', creatorController.requestWithdrawal);

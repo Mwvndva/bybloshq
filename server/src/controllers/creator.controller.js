@@ -142,6 +142,7 @@ export const getDashboard = async (req, res, next) => {
       data: {
         creator: sanitizeCreator(dashboard.creator),
         shops: dashboard.shops,
+        shopRequests: dashboard.shopRequests,
         earnings: dashboard.earnings,
         analysis: dashboard.analysis,
         analysisPeriod: dashboard.analysisPeriod,
@@ -151,6 +152,32 @@ export const getDashboard = async (req, res, next) => {
         linkClicks: dashboard.linkClicks
       }
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const acceptShopRequest = async (req, res, next) => {
+  try {
+    const result = await CreatorService.respondToShopRequest({
+      creatorId: req.user.creatorId || req.user.profileId,
+      inviteId: req.params.inviteId,
+      action: 'accept'
+    });
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const denyShopRequest = async (req, res, next) => {
+  try {
+    const result = await CreatorService.respondToShopRequest({
+      creatorId: req.user.creatorId || req.user.profileId,
+      inviteId: req.params.inviteId,
+      action: 'deny'
+    });
+    res.status(200).json({ status: 'success', data: result });
   } catch (error) {
     next(error);
   }
