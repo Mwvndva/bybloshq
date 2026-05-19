@@ -14,6 +14,7 @@ router.post('/resend-verification', authLimiter, creatorController.resendVerific
 
 router.use(protect);
 
+router.post('/logout', creatorController.logout);
 router.get('/profile', creatorController.getProfile);
 router.get('/dashboard', creatorController.getDashboard);
 router.post('/shop-requests/:inviteId/accept', creatorController.acceptShopRequest);

@@ -52,6 +52,9 @@ router.get('/sellers', adminController.getAllSellers);
 router.get('/sellers/:id', adminController.getSellerById);
 router.patch('/sellers/:id/status', adminController.updateSellerStatus);
 
+// Creator management
+router.get('/creators', adminController.getAllCreators);
+
 // Buyer management
 router.get('/buyers', adminController.getAllBuyers);
 router.get('/buyers/:id', adminController.getBuyerById);

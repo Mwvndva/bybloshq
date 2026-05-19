@@ -1,5 +1,7 @@
 import CreatorService from '../services/creator.service.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
+import { getTokenFromRequest, verifyToken } from '../shared/utils/jwt.js';
+import logger from '../shared/utils/logger.js';
 
 const sanitizeCreator = (creator = {}) => ({
   id: creator.id,
@@ -100,6 +102,30 @@ export const login = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+export const logout = async (req, res) => {
+  const token = getTokenFromRequest(req);
+  if (token) {
+    try {
+      const decoded = verifyToken(token);
+      const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
+      await tokenBlacklist.addToken(token, decoded.exp);
+    } catch (err) {
+      logger.debug('[CREATOR_LOGOUT] Could not blacklist token:', err.message);
+    }
+  }
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    expires: new Date(0),
+    path: '/'
+  };
+  res.cookie('jwt', '', cookieOptions);
+  res.cookie('token', '', cookieOptions);
+  res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
 export const verifyEmail = async (req, res, next) => {

@@ -199,6 +199,9 @@ export const adminApi = {
       return {
         totalBuyers: 0,
         totalClients: 0,
+        totalCreators: 0,
+        pendingCreatorRequests: 0,
+        totalCreatorEarnings: 0,
         totalProducts: 0,
         totalOrders: 0,
         totalWishlists: 0,
@@ -282,6 +285,38 @@ export const adminApi = {
       }));
     } catch (error) {
       console.error('Error fetching sellers:', error);
+      return [];
+    }
+  },
+
+  async getCreators() {
+    try {
+      console.log('Fetching creators from API...');
+      const response = await api.get('/admin/creators');
+      const creatorsData = Array.isArray(response.data.data) ? response.data.data : [];
+      return creatorsData.map((creator: any) => ({
+        ...creator,
+        id: String(creator.id || ''),
+        user_id: creator.user_id ? String(creator.user_id) : '',
+        name: creator.name || `${creator.first_name || ''} ${creator.last_name || ''}`.trim() || 'Unnamed Creator',
+        email: String(creator.email || ''),
+        mpesaNumber: String(creator.mpesa_number || ''),
+        whatsappNumber: String(creator.whatsapp_number || ''),
+        instagramLink: creator.instagram_link || '',
+        tiktokLink: creator.tiktok_link || '',
+        balance: Number(creator.balance || 0),
+        totalSales: Number(creator.total_sales || 0),
+        totalEarnings: Number(creator.total_earnings || 0),
+        totalReferralEarnings: Number(creator.total_referral_earnings || 0),
+        totalIncome: Number(creator.total_income || 0),
+        linkedShops: Number(creator.linked_shops || 0),
+        linkClicks: Number(creator.link_clicks || 0),
+        pendingRequests: Number(creator.pending_requests || 0),
+        status: String(creator.status || 'active'),
+        createdAt: creator.created_at || creator.createdAt || new Date().toISOString()
+      }));
+    } catch (error) {
+      console.error('Error fetching creators:', error);
       return [];
     }
   },

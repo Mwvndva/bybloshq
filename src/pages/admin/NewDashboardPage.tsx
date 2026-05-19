@@ -30,6 +30,7 @@ interface DashboardAnalytics {
   totalRevenue?: number;
   totalProducts?: number;
   totalSellers?: number;
+  totalCreators?: number;
   totalBuyers?: number;
   totalClients?: number;
   monthlyGrowth?: {
@@ -43,6 +44,8 @@ interface DashboardAnalytics {
   activeOrders?: number;
   lowStockProducts?: number;
   pendingWithdrawals?: number;
+  pendingCreatorRequests?: number;
+  totalCreatorEarnings?: number;
   userGrowth?: Array<{ name: string; buyers: number; sellers: number }>;
   revenueTrends?: Array<{ name: string; revenue: number; orders: number }>;
   salesTrends?: Array<{ name: string; sales: number }>;
@@ -107,6 +110,26 @@ interface DashboardState {
     location: string;
     createdAt: string;
   }>;
+  creators: Array<{
+    id: string;
+    user_id: string;
+    name: string;
+    email: string;
+    mpesaNumber: string;
+    whatsappNumber: string;
+    instagramLink: string;
+    tiktokLink: string;
+    balance: number;
+    totalSales: number;
+    totalEarnings: number;
+    totalReferralEarnings: number;
+    totalIncome: number;
+    linkedShops: number;
+    linkClicks: number;
+    pendingRequests: number;
+    status: string;
+    createdAt: string;
+  }>;
   buyers: Array<{
     id: string;
     user_id: string;
@@ -168,6 +191,7 @@ const NewAdminDashboard = () => {
       }
     },
     sellers: [],
+    creators: [],
     buyers: [],
     withdrawalRequests: [],
     monthlyMetrics: [],
@@ -196,6 +220,7 @@ const NewAdminDashboard = () => {
         const results = await Promise.allSettled([
           adminApi.getAnalytics(),
           adminApi.getSellers(),
+          adminApi.getCreators(),
           adminApi.getBuyers(),
           adminApi.getWithdrawalRequests(),
           adminApi.getMonthlyMetrics(),
@@ -209,6 +234,7 @@ const NewAdminDashboard = () => {
         const [
           analyticsRes,
           sellersRes,
+          creatorsRes,
           buyersRes,
           withdrawalsRes,
           monthlyRes,
@@ -221,6 +247,7 @@ const NewAdminDashboard = () => {
 
         const analytics = analyticsRes.status === 'fulfilled' ? analyticsRes.value : null;
         const sellers = sellersRes.status === 'fulfilled' ? sellersRes.value : [];
+        const creators = creatorsRes.status === 'fulfilled' ? creatorsRes.value : [];
         const buyers = buyersRes.status === 'fulfilled' ? buyersRes.value : [];
         const withdrawalRequests = withdrawalsRes.status === 'fulfilled' ? withdrawalsRes.value : [];
         const monthlyMetrics = monthlyRes.status === 'fulfilled' ? monthlyRes.value : null;
@@ -231,18 +258,22 @@ const NewAdminDashboard = () => {
         const providerHealth = providerHealthRes.status === 'fulfilled' ? providerHealthRes.value : null;
 
         const totalSellersCount = Array.isArray(sellers) ? sellers.length : 0;
+        const totalCreatorsCount = Array.isArray(creators) ? creators.length : 0;
         const totalBuyersCount = Array.isArray(buyers) ? buyers.length : 0;
 
         const safeAnalytics: DashboardAnalytics = {
           totalRevenue: financialMetrics?.totalSales || 0,
           totalProducts: dashboardStats?.totalProducts || 0,
           totalSellers: dashboardStats?.totalSellers || totalSellersCount,
+          totalCreators: dashboardStats?.totalCreators || totalCreatorsCount,
           totalBuyers: dashboardStats?.totalBuyers || totalBuyersCount,
           totalClients: dashboardStats?.totalClients || 0,
           totalWishlists: dashboardStats?.totalWishlists || 0,
           activeOrders: dashboardStats?.activeOrders || 0,
           lowStockProducts: dashboardStats?.lowStockProducts || 0,
           pendingWithdrawals: dashboardStats?.pendingWithdrawals || 0,
+          pendingCreatorRequests: dashboardStats?.pendingCreatorRequests || 0,
+          totalCreatorEarnings: dashboardStats?.totalCreatorEarnings || 0,
           userGrowth: analytics?.userGrowth || [],
           revenueTrends: analytics?.revenueTrends || [],
           salesTrends: analytics?.salesTrends || [],
@@ -268,6 +299,7 @@ const NewAdminDashboard = () => {
         setDashboardState({
           analytics: safeAnalytics,
           sellers: Array.isArray(sellers) ? sellers : [],
+          creators: Array.isArray(creators) ? creators : [],
           buyers: Array.isArray(buyers) ? buyers : [],
           withdrawalRequests: Array.isArray(withdrawalRequests) ? (withdrawalRequests as WithdrawalRequest[]) : [],
           monthlyMetrics: metricsData,
@@ -357,6 +389,13 @@ const NewAdminDashboard = () => {
       trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.sellers ?? 0)
         ? dashboardState.analytics.monthlyGrowth?.sellers ?? 0
         : null
+    },
+    {
+      title: 'Creators',
+      value: dashboardState.analytics.totalCreators?.toLocaleString() || '0',
+      icon: <UserPlus className="h-4 w-4 text-yellow-500" />,
+      description: `${dashboardState.analytics.pendingCreatorRequests || 0} pending requests`,
+      trend: null
     },
     {
       title: 'Buyers',
@@ -791,6 +830,109 @@ const NewAdminDashboard = () => {
                 <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
                   <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
                     Active Operators: <span className="text-white ml-2 tabular-nums">{dashboardState.sellers?.length || 0}</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Prev</Button>
+                    <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Next</Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+
+            {/* Creators Tab */}
+            <TabsContent value="creators" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <CardHeader className="p-5 md:p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+                  <div>
+                    <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Creator Network</CardTitle>
+                    <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Creator acquisition, shop links, clicks, and earnings performance</CardDescription>
+                  </div>
+                  <div className="relative group w-full md:w-auto">
+                    <div className="absolute -inset-0.5 bg-yellow-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-yellow-500 transition-colors" />
+                    <Input
+                      type="text"
+                      placeholder="Filter creators..."
+                      className="pl-12 w-full md:w-[320px] lg:w-[400px] h-11 md:h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-medium text-sm"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </CardHeader>
+                <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.012] p-5 md:grid-cols-4 md:p-8">
+                  <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/[0.06] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/70">Creators</p>
+                    <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.creators.length.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-2xl border border-lime-500/20 bg-lime-500/[0.06] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-lime-200/70">Creator sales</p>
+                    <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.creators.reduce((sum, creator) => sum + (Number(creator.totalSales) || 0), 0).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.06] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-cyan-200/70">Link clicks</p>
+                    <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.creators.reduce((sum, creator) => sum + (Number(creator.linkClicks) || 0), 0).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200/70">Creator earnings</p>
+                    <p className="mt-3 text-2xl font-black text-white tabular-nums">KSh {dashboardState.creators.reduce((sum, creator) => sum + (Number(creator.totalIncome) || 0), 0).toLocaleString()}</p>
+                  </div>
+                </div>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                        <tr>
+                          <th className="px-5 md:px-8 py-4 md:py-6">Creator Identity</th>
+                          <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Contact</th>
+                          <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden xl:table-cell">Linked Shops</th>
+                          <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Performance</th>
+                          <th className="px-5 md:px-8 py-4 md:py-6 text-right">Earnings</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {dashboardState.creators.filter(creator =>
+                          creator.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          creator.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                        ).map((creator) => (
+                          <tr key={creator.id} className="hover:bg-white/[0.02] transition-all group">
+                            <td className="px-5 md:px-8 py-4 md:py-6">
+                              <div className="flex items-center gap-3 md:gap-5">
+                                <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-yellow-500/30 transition-all shadow-inner">
+                                  <UserPlus className="w-4 h-4 md:w-6 md:h-6 text-gray-500 group-hover:text-yellow-500 transition-all" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm md:text-base font-black text-white tracking-tight truncate">{creator.name}</p>
+                                  <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50 truncate">CID: {String(creator.id).slice(0, 12)}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-8 py-6 hidden lg:table-cell">
+                              <div className="space-y-1">
+                                <p className="text-sm font-bold text-gray-300">{creator.email}</p>
+                                <p className="text-xs text-gray-500 font-medium tabular-nums">{creator.whatsappNumber || creator.mpesaNumber || 'NO CREATOR LINE'}</p>
+                              </div>
+                            </td>
+                            <td className="px-8 py-6 text-center hidden xl:table-cell">
+                              <p className="text-lg font-black text-white tabular-nums">{creator.linkedShops}</p>
+                              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-500">{creator.pendingRequests} pending</p>
+                            </td>
+                            <td className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">
+                              <p className="text-sm font-black text-white tabular-nums">{creator.totalSales} sales</p>
+                              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-500">{creator.linkClicks} clicks</p>
+                            </td>
+                            <td className="px-5 md:px-8 py-4 md:py-6 text-right">
+                              <p className="text-sm md:text-lg font-black text-white tracking-tighter tabular-nums">KSh {creator.totalIncome.toLocaleString()}</p>
+                              <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">Balance KSh {creator.balance.toLocaleString()}</p>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+                <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                  <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                    Active Creators: <span className="text-white ml-2 tabular-nums">{dashboardState.creators.length}</span>
                   </p>
                   <div className="flex gap-2">
                     <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Prev</Button>
