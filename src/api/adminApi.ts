@@ -321,6 +321,16 @@ export const adminApi = {
     }
   },
 
+  async deleteCreator(creatorId: string) {
+    try {
+      const response = await api.delete(`/admin/creators/${creatorId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting creator:', error);
+      throw error;
+    }
+  },
+
   async getSellerById(id: string) {
     try {
       const response = await api.get(`/admin/sellers/${id}`);

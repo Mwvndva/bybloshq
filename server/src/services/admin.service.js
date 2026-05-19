@@ -337,6 +337,108 @@ class AdminService {
     }));
   }
 
+  async deleteCreator(creatorId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const creatorRes = await client.query(
+        `SELECT id, user_id, email
+         FROM creators
+         WHERE id = $1
+         FOR UPDATE`,
+        [creatorId]
+      );
+      if (creatorRes.rows.length === 0) {
+        const error = new Error('Creator not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const creator = creatorRes.rows[0];
+      const userId = creator.user_id;
+      const deletedEmail = `deleted-creator-${creatorId}@bybloshq.local`;
+
+      await client.query(
+        `UPDATE seller_creator_links
+         SET status = 'deleted',
+             updated_at = NOW()
+         WHERE creator_id = $1
+           AND status = 'active'`,
+        [creatorId]
+      );
+
+      await client.query(
+        `UPDATE seller_creator_invites
+         SET status = 'creator_deleted',
+             updated_at = NOW()
+         WHERE accepted_creator_id = $1
+           AND status IN ('pending', 'accepted')`,
+        [creatorId]
+      );
+
+      await client.query(
+        `UPDATE creators
+         SET user_id = NULL,
+             email = $2,
+             mpesa_number = NULL,
+             whatsapp_number = NULL,
+             instagram_link = NULL,
+             tiktok_link = NULL,
+             status = 'deleted',
+             updated_at = NOW()
+         WHERE id = $1`,
+        [creatorId, deletedEmail]
+      );
+
+      if (userId) {
+        const profileRes = await client.query(
+          `SELECT
+             EXISTS(SELECT 1 FROM sellers WHERE user_id = $1) AS has_seller,
+             EXISTS(SELECT 1 FROM buyers WHERE user_id = $1) AS has_buyer`,
+          [userId]
+        );
+        const { has_seller: hasSeller, has_buyer: hasBuyer } = profileRes.rows[0] || {};
+
+        await client.query(
+          `DELETE FROM user_roles
+           WHERE user_id = $1
+             AND role_id = (SELECT id FROM roles WHERE slug = 'creator')`,
+          [userId]
+        );
+
+        if (!hasSeller && !hasBuyer) {
+          await client.query('DELETE FROM users WHERE id = $1', [userId]);
+        } else {
+          const nextRole = hasSeller ? 'seller' : 'buyer';
+          await client.query(
+            `UPDATE users
+             SET role = CASE WHEN role = 'creator' THEN $2 ELSE role END,
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [userId, nextRole]
+          );
+        }
+
+        try {
+          const CacheService = (await import('./cache.service.js')).default;
+          await CacheService.delete(`user:${userId}:cross-roles`);
+        } catch (cacheError) {
+          logger.warn('[ADMIN_DELETE_CREATOR] Failed to invalidate cross-role cache:', cacheError.message);
+        }
+      }
+
+      await client.query('COMMIT');
+      return { deletedCreatorId: Number(creatorId), preservedHistory: true };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error(`Error deleting creator ${creatorId}:`, error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getSellerById(id) {
     // (Copying aggregation logic from controller)
     // Seller Info
