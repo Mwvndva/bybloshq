@@ -1,24 +1,41 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Loader2, X } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Check, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import creatorApi from '@/api/creatorApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+type CreatorInvite = {
+  email?: string;
+  shopName?: string;
+};
+
+type ApiError = {
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as ApiError;
+  return apiError?.response?.data?.message || apiError?.message || fallback;
+};
 
 export default function CreatorRegister() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get('token') || '';
   const referralCode = params.get('ref') || '';
-  const [invite, setInvite] = useState<any>(null);
+  const [invite, setInvite] = useState<CreatorInvite | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     mpesaNumber: '',
+    whatsappNumber: '',
     instagramLink: '',
     tiktokLink: '',
     password: ''
@@ -31,7 +48,7 @@ export default function CreatorRegister() {
         setInvite(data);
         setForm((current) => ({ ...current, email: data.email || '' }));
       })
-      .catch((error) => toast.error(error?.response?.data?.message || 'Creator invite not found.'));
+      .catch((error: unknown) => toast.error(getErrorMessage(error, 'Creator invite not found.')));
   }, [token]);
 
   const updateForm = (key: keyof typeof form, value: string) => {
@@ -59,8 +76,8 @@ export default function CreatorRegister() {
 
       toast.success('Account created. Check your email to verify it.');
       navigate(`/verify-email?email=${encodeURIComponent(form.email)}&type=creator`);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message || 'Could not create creator account.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Could not create creator account.'));
     } finally {
       setLoading(false);
     }
@@ -94,9 +111,20 @@ export default function CreatorRegister() {
             required
           />
           <Input value={form.mpesaNumber} onChange={(e) => updateForm('mpesaNumber', e.target.value)} placeholder="M-Pesa number" className="h-11 border-white/10 bg-black/40 sm:col-span-2" required />
+          <Input value={form.whatsappNumber} onChange={(e) => updateForm('whatsappNumber', e.target.value)} placeholder="WhatsApp number" className="h-11 border-white/10 bg-black/40 sm:col-span-2" required />
           <Input value={form.instagramLink} onChange={(e) => updateForm('instagramLink', e.target.value)} placeholder="Instagram link" className="h-11 border-white/10 bg-black/40" />
           <Input value={form.tiktokLink} onChange={(e) => updateForm('tiktokLink', e.target.value)} placeholder="TikTok link" className="h-11 border-white/10 bg-black/40" />
-          <Input value={form.password} onChange={(e) => updateForm('password', e.target.value)} type="password" placeholder="Password" className="h-11 border-white/10 bg-black/40 sm:col-span-2" required />
+          <div className="relative sm:col-span-2">
+            <Input value={form.password} onChange={(e) => updateForm('password', e.target.value)} type={showPassword ? 'text' : 'password'} placeholder="Password" className="h-11 border-white/10 bg-black/40 pr-12" required />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/45 transition hover:bg-white/10 hover:text-white"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {form.password && (
             <div className="rounded-2xl border border-white/10 bg-black/30 p-3 sm:col-span-2">
               <p className="mb-2 text-xs font-black uppercase tracking-wide text-white/50">Password checklist</p>
@@ -117,9 +145,14 @@ export default function CreatorRegister() {
               </div>
             </div>
           )}
-          <Button disabled={loading} className="h-11 bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:col-span-2">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create creator account'}
-          </Button>
+          <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
+            <Button disabled={loading} className="h-11 bg-yellow-400 font-black text-black hover:bg-yellow-300">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create creator account'}
+            </Button>
+            <Link to="/creator/login" className="inline-flex h-11 items-center justify-center rounded-md border border-white/10 bg-white/[0.03] px-4 text-sm font-black text-white transition hover:bg-white/10">
+              Creator login
+            </Link>
+          </div>
         </form>
       </div>
     </main>

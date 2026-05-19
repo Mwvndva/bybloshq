@@ -8,6 +8,7 @@ const sanitizeCreator = (creator = {}) => ({
   lastName: creator.last_name,
   email: creator.email,
   mpesaNumber: creator.mpesa_number,
+  whatsappNumber: creator.whatsapp_number,
   instagramLink: creator.instagram_link,
   tiktokLink: creator.tiktok_link,
   balance: Number(creator.balance || 0),
