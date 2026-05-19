@@ -32,6 +32,11 @@ export const creatorApi = {
     return { creator: response.data?.data?.creator, ...response.data };
   },
 
+  logout: async () => {
+    const response = await apiClient.post('/creators/logout');
+    return response.data;
+  },
+
   verifyEmail: async (token: string, email: string) => {
     const response = await apiClient.get('/creators/verify-email', {
       params: { token, email }

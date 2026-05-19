@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Loader2, MousePointerClick, Trophy, Wallet } from 'lucide-react';
+import { Copy, Loader2, LogOut, MousePointerClick, Trophy, Wallet } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 import creatorApi from '@/api/creatorApi';
@@ -105,6 +105,17 @@ export default function CreatorDashboard() {
     toast.success('Copied.');
   };
 
+  const handleLogout = async () => {
+    try {
+      await creatorApi.logout();
+    } catch {
+      // The local session should still end if the network request fails.
+    } finally {
+      localStorage.removeItem('creatorSessionActive');
+      navigate('/creator/login', { replace: true });
+    }
+  };
+
   const handleWithdrawal = async () => {
     const amount = Number(withdrawalAmount);
     const withdrawalFee = getWithdrawalFee(amount);
@@ -182,6 +193,16 @@ export default function CreatorDashboard() {
             <h1 className="mt-2 text-3xl font-black tracking-tight">Welcome, {creator.firstName}</h1>
             <p className="mt-1 text-sm font-medium text-white/50">Track clicks, sales, earnings, referrals, and withdrawals.</p>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleLogout}
+            className="h-10 w-full border-white/10 bg-white/[0.03] text-white hover:bg-white/10 sm:w-auto"
+            aria-label="Log out of creator dashboard"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

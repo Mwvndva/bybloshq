@@ -13,6 +13,14 @@ class AdminService {
         WHERE s.user_id IS NOT NULL
       `,
       buyers: 'SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL', // Active registered buyers
+      creators: 'SELECT COUNT(*) FROM creators WHERE user_id IS NOT NULL',
+      creatorPendingRequests: `
+        SELECT COUNT(*)
+        FROM seller_creator_invites
+        WHERE status = 'pending'
+          AND accepted_creator_id IS NOT NULL
+      `,
+      creatorEarnings: 'SELECT COALESCE(SUM(total_earnings + total_referral_earnings), 0) AS count FROM creators',
       clients: 'SELECT COUNT(DISTINCT buyer_id) FROM product_orders WHERE payment_status = \'completed\' AND buyer_id IS NOT NULL',
       orders: 'SELECT COUNT(*) FROM product_orders',
       wishlists: 'SELECT COUNT(*) FROM wishlists',
@@ -43,7 +51,9 @@ class AdminService {
       Object.entries(queries).map(async ([key, query]) => {
         try {
           const res = await pool.query(query);
-          stats[`total_${key}`] = Number.parseInt(res.rows[0].count, 10);
+          stats[`total_${key}`] = key.toLowerCase().includes('earnings')
+            ? Number.parseFloat(res.rows[0].count || 0)
+            : Number.parseInt(res.rows[0].count, 10);
         } catch (e) {
           logger.error(`Failed to count ${key}:`, e);
           stats[`total_${key}`] = 0;
@@ -75,6 +85,9 @@ class AdminService {
     return {
       totalSellers: stats.total_sellers,
       totalBuyers: stats.total_buyers,
+      totalCreators: stats.total_creators,
+      pendingCreatorRequests: stats.total_creatorPendingRequests,
+      totalCreatorEarnings: stats.total_creatorEarnings,
       totalClients: stats.total_clients,
       totalShops: stats.total_sellers,
       totalProducts: stats.total_products,
@@ -279,6 +292,49 @@ class AdminService {
         `;
     const { rows } = await pool.query(query);
     return rows;
+  }
+
+  async getAllCreators() {
+    const query = `
+      SELECT c.id,
+             c.user_id,
+             c.first_name,
+             c.last_name,
+             CONCAT_WS(' ', c.first_name, c.last_name) AS name,
+             c.email,
+             c.mpesa_number,
+             c.whatsapp_number,
+             c.instagram_link,
+             c.tiktok_link,
+             c.balance,
+             c.total_sales,
+             c.total_earnings,
+             c.total_referral_earnings,
+             (c.total_earnings + c.total_referral_earnings) AS total_income,
+             c.status,
+             c.created_at,
+             COUNT(DISTINCT CASE WHEN scl.status = 'active' THEN scl.id END) AS linked_shops,
+             COALESCE(SUM(CASE WHEN scl.status = 'active' THEN scl.click_count ELSE 0 END), 0) AS link_clicks,
+             COUNT(DISTINCT CASE WHEN sci.status = 'pending' THEN sci.id END) AS pending_requests
+      FROM creators c
+      LEFT JOIN seller_creator_links scl ON scl.creator_id = c.id
+      LEFT JOIN seller_creator_invites sci ON sci.accepted_creator_id = c.id
+      WHERE c.user_id IS NOT NULL
+      GROUP BY c.id
+      ORDER BY c.created_at DESC
+    `;
+    const { rows } = await pool.query(query);
+    return rows.map(row => ({
+      ...row,
+      balance: Number.parseFloat(row.balance || 0),
+      total_sales: Number.parseInt(row.total_sales || 0, 10),
+      total_earnings: Number.parseFloat(row.total_earnings || 0),
+      total_referral_earnings: Number.parseFloat(row.total_referral_earnings || 0),
+      total_income: Number.parseFloat(row.total_income || 0),
+      linked_shops: Number.parseInt(row.linked_shops || 0, 10),
+      link_clicks: Number.parseInt(row.link_clicks || 0, 10),
+      pending_requests: Number.parseInt(row.pending_requests || 0, 10)
+    }));
   }
 
   async getSellerById(id) {

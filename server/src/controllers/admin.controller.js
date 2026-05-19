@@ -113,6 +113,15 @@ const getAllSellers = async (req, res, next) => {
   }
 };
 
+const getAllCreators = async (req, res, next) => {
+  try {
+    const creators = await AdminService.getAllCreators();
+    res.status(200).json({ status: 'success', results: creators.length, data: creators });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getSellerById = async (req, res, next) => {
   try {
     const seller = await AdminService.getSellerById(req.params.id);
@@ -868,6 +877,7 @@ export {
   processPendingPayments,
   getDashboardStats,
   getAllSellers,
+  getAllCreators,
   getSellerById,
   updateSellerStatus,
   getAllBuyers,
