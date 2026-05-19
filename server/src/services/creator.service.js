@@ -45,6 +45,33 @@ class CreatorService {
 
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    const seller = await this.getSellerSummary(sellerId);
+    const existingCreator = await this.findByEmail(normalizedEmail);
+
+    if (existingCreator) {
+      const { rows: activeLinks } = await pool.query(
+        `SELECT scl.*,
+                s.shop_name,
+                c.first_name,
+                c.last_name
+         FROM seller_creator_links scl
+         JOIN sellers s ON s.id = scl.seller_id
+         JOIN creators c ON c.id = scl.creator_id
+         WHERE scl.seller_id = $1
+           AND scl.creator_id = $2
+           AND scl.status = 'active'
+         LIMIT 1`,
+        [sellerId, existingCreator.id]
+      );
+      if (activeLinks[0]) {
+        return this.decorateInvite({
+          ...activeLinks[0],
+          email: normalizedEmail,
+          status: 'linked',
+          link_status: activeLinks[0].status
+        });
+      }
+    }
 
     const existing = await pool.query(
       `SELECT id
@@ -59,22 +86,32 @@ class CreatorService {
         `UPDATE seller_creator_invites
          SET invite_token = $2,
              invited_by_user_id = $3,
+             accepted_creator_id = $5,
              expires_at = $4,
              updated_at = NOW()
          WHERE id = $1
          RETURNING *`,
-        [existing.rows[0].id, token, invitedByUserId, expiresAt]
+        [existing.rows[0].id, token, invitedByUserId, expiresAt, existingCreator?.id || null]
       )
       : await pool.query(
         `INSERT INTO seller_creator_invites
-           (seller_id, email, invite_token, invited_by_user_id, expires_at)
-         VALUES ($1, $2, $3, $4, $5)
+           (seller_id, email, invite_token, invited_by_user_id, accepted_creator_id, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
-        [sellerId, normalizedEmail, token, invitedByUserId, expiresAt]
+        [sellerId, normalizedEmail, token, invitedByUserId, existingCreator?.id || null, expiresAt]
       );
 
     const invite = rows[0];
-    const seller = await this.getSellerSummary(sellerId);
+    if (existingCreator) {
+      await this.sendExistingCreatorShopRequestEmail(invite, seller, existingCreator);
+      return this.decorateInvite({
+        ...invite,
+        first_name: existingCreator.first_name,
+        last_name: existingCreator.last_name,
+        shop_name: seller?.shop_name
+      });
+    }
+
     await this.sendCreatorInviteEmail(invite, seller);
     return this.decorateInvite(invite);
   }
@@ -102,6 +139,26 @@ class CreatorService {
           <p>${shopName} wants you to promote their shop and earn from completed sales made through your creator link.</p>
           <p><a href="${inviteUrl}" style="display:inline-block;background:#facc15;color:#111;padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none">Create creator account</a></p>
           <p style="font-size:12px;color:#666">This invite expires in ${INVITE_EXPIRY_DAYS} days.</p>
+        </div>
+      `
+    });
+  }
+
+  static async sendExistingCreatorShopRequestEmail(invite, seller, creator) {
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const dashboardUrl = `${baseUrl}/creator/dashboard`;
+    const shopName = seller?.shop_name || 'a Byblos seller';
+
+    await sendEmail({
+      to: invite.email,
+      subject: `${shopName} wants you to promote their shop`,
+      text: `${shopName} sent you a Byblos creator request. Log in to accept or deny it: ${dashboardUrl}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111;padding:24px">
+          <h2 style="margin:0 0 12px">New shop request on Byblos</h2>
+          <p>Hi ${creator?.first_name || 'creator'}, ${shopName} wants you to promote their shop and earn from completed sales made through your creator link.</p>
+          <p><a href="${dashboardUrl}" style="display:inline-block;background:#facc15;color:#111;padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none">Review request</a></p>
+          <p style="font-size:12px;color:#666">You can accept or deny this request in your creator dashboard.</p>
         </div>
       `
     });
@@ -143,6 +200,72 @@ class CreatorService {
       linkStatus: invite.link_status || null,
       shopUrl: shopPath ? `${baseUrl}${shopPath}` : null
     };
+  }
+
+  static async respondToShopRequest({ creatorId, inviteId, action }) {
+    const normalizedAction = String(action || '').trim().toLowerCase();
+    if (!['accept', 'deny'].includes(normalizedAction)) {
+      throw new Error('Choose accept or deny.');
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `SELECT sci.*, s.shop_name
+         FROM seller_creator_invites sci
+         JOIN sellers s ON s.id = sci.seller_id
+         WHERE sci.id = $1
+           AND sci.accepted_creator_id = $2
+           AND sci.status = 'pending'
+         FOR UPDATE`,
+        [inviteId, creatorId]
+      );
+      const invite = rows[0];
+      if (!invite) throw new Error('Shop request not found or already handled.');
+
+      if (normalizedAction === 'deny') {
+        const denied = await client.query(
+          `UPDATE seller_creator_invites
+           SET status = 'declined', updated_at = NOW()
+           WHERE id = $1
+           RETURNING *`,
+          [invite.id]
+        );
+        await client.query('COMMIT');
+        return { status: 'declined', invite: this.decorateInvite({ ...denied.rows[0], shop_name: invite.shop_name }) };
+      }
+
+      const existing = await client.query(
+        `SELECT id, code FROM seller_creator_links
+         WHERE seller_id = $1 AND creator_id = $2
+         LIMIT 1`,
+        [invite.seller_id, creatorId]
+      );
+      const code = existing.rows[0]?.code || await this.generateLinkCode(client);
+      await client.query(
+        `INSERT INTO seller_creator_links (seller_id, creator_id, code, commission_rate, status)
+         VALUES ($1, $2, $3, $4, 'active')
+         ON CONFLICT (seller_id, creator_id)
+         DO UPDATE SET status = 'active', updated_at = NOW()
+         RETURNING *`,
+        [invite.seller_id, creatorId, code, DEFAULT_CREATOR_COMMISSION_RATE]
+      );
+      const accepted = await client.query(
+        `UPDATE seller_creator_invites
+         SET status = 'accepted', updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [invite.id]
+      );
+      await client.query('COMMIT');
+      return { status: 'accepted', invite: this.decorateInvite({ ...accepted.rows[0], code, shop_name: invite.shop_name }) };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   static async getInviteByToken(token) {
@@ -620,8 +743,25 @@ class CreatorService {
        JOIN sellers s ON s.id = scl.seller_id
        LEFT JOIN creator_earnings ce ON ce.seller_creator_link_id = scl.id
        WHERE scl.creator_id = $1
+         AND scl.status = 'active'
        GROUP BY scl.id, s.shop_name, s.full_name
        ORDER BY scl.created_at DESC`,
+      [creatorId]
+    );
+
+    const { rows: shopRequests } = await pool.query(
+      `SELECT sci.id,
+              sci.email,
+              sci.status,
+              sci.created_at,
+              sci.expires_at,
+              s.shop_name,
+              s.full_name AS seller_name
+       FROM seller_creator_invites sci
+       JOIN sellers s ON s.id = sci.seller_id
+       WHERE sci.accepted_creator_id = $1
+         AND sci.status = 'pending'
+       ORDER BY sci.created_at DESC`,
       [creatorId]
     );
 
@@ -713,6 +853,7 @@ class CreatorService {
     return {
       creator,
       shops,
+      shopRequests,
       earnings,
       analysis,
       analysisPeriod: analysisPeriod.key,
