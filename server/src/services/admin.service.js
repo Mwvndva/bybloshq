@@ -378,10 +378,10 @@ class AdminService {
       );
 
       await client.query(
-        `UPDATE creators
+         `UPDATE creators
          SET user_id = NULL,
              email = $2,
-             mpesa_number = NULL,
+             mpesa_number = CONCAT('deleted-', $1::text),
              whatsapp_number = NULL,
              instagram_link = NULL,
              tiktok_link = NULL,
