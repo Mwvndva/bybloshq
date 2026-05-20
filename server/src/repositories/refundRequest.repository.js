@@ -138,3 +138,53 @@ export async function markRejected({ id, adminNotes, processedBy }) {
   `;
   await query(sql, [adminNotes, processedBy, id]);
 }
+
+// ─── Transactional methods ──────────────────────────────────────────────────
+// Methods below accept an optional `executor` (anything with a
+// `.query(text, params)` method — pg.Pool, pg.PoolClient, or the default
+// wrapped helper). Pass a pg.PoolClient to participate in an
+// externally-managed transaction.
+
+const DEFAULT_EXECUTOR = { query };
+
+/**
+ * SELECT … FOR UPDATE on a single refund request row. Used inside an
+ * admin-approval transaction to serialize concurrent confirm/reject calls
+ * on the same request.
+ *
+ * @param {number|string} id
+ * @param {{query: Function}} [executor]  pg.PoolClient for transactional use.
+ * @returns {Promise<object|undefined>}
+ */
+export async function findByIdForUpdate(id, executor = DEFAULT_EXECUTOR) {
+  const sql = `
+    SELECT rr.*
+    FROM refund_requests rr
+    WHERE rr.id = $1
+    FOR UPDATE
+  `;
+  const { rows } = await executor.query(sql, [id]);
+  return rows[0];
+}
+
+/**
+ * Marks a refund request completed inside an admin-approval transaction.
+ *
+ * @param {object} input
+ * @param {number|string} input.id
+ * @param {string} input.adminNotes
+ * @param {number|null} input.processedBy
+ * @param {{query: Function}} [executor]
+ */
+export async function markCompleted({ id, adminNotes, processedBy }, executor = DEFAULT_EXECUTOR) {
+  const sql = `
+    UPDATE refund_requests
+    SET status = 'completed',
+        admin_notes = $1,
+        processed_by = $2,
+        processed_at = NOW(),
+        updated_at = NOW()
+    WHERE id = $3
+  `;
+  await executor.query(sql, [adminNotes, processedBy, id]);
+}

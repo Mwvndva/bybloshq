@@ -55,3 +55,56 @@ export async function findByIdWithSeller(id) {
   const { rows } = await query(sql, [id]);
   return rows[0];
 }
+
+// ─── Transactional methods ──────────────────────────────────────────────────
+// Pass a pg.PoolClient as `executor` to participate in a caller-managed
+// transaction; defaults to the wrapped module-level query helper.
+
+const DEFAULT_EXECUTOR = { query };
+
+/**
+ * SELECT … FOR UPDATE OF wr on a withdrawal request joined with its
+ * seller's phone + balance. The lock is scoped to the withdrawal row,
+ * not the seller row (admin's optional seller lock is taken
+ * separately via seller.repository.lockById).
+ *
+ * @param {number|string} id
+ * @param {{query: Function}} [executor]
+ * @returns {Promise<object|undefined>}
+ */
+export async function findByIdWithSellerForUpdate(id, executor = DEFAULT_EXECUTOR) {
+  const sql = `
+    SELECT wr.*,
+           s.whatsapp_number AS entity_phone,
+           s.balance AS entity_balance
+    FROM withdrawal_requests wr
+    LEFT JOIN sellers s ON wr.seller_id = s.id
+    WHERE wr.id = $1
+    FOR UPDATE OF wr
+  `;
+  const { rows } = await executor.query(sql, [id]);
+  return rows[0];
+}
+
+/**
+ * Finalizes a withdrawal request (admin override to 'completed' or
+ * 'failed') and merges an admin_override metadata patch.
+ *
+ * @param {object} input
+ * @param {number|string} input.id
+ * @param {string} input.status            'completed' | 'failed'
+ * @param {string} input.processedBy       Format: 'admin:<id>'.
+ * @param {object} input.metadataPatch     JSON-stringified into the merge.
+ * @param {{query: Function}} [executor]
+ */
+export async function markFinalized({ id, status, processedBy, metadataPatch }, executor = DEFAULT_EXECUTOR) {
+  const sql = `
+    UPDATE withdrawal_requests
+    SET status       = $1,
+        processed_at = NOW(),
+        processed_by = $2,
+        metadata     = COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+    WHERE id = $4
+  `;
+  await executor.query(sql, [status, processedBy, JSON.stringify(metadataPatch), id]);
+}

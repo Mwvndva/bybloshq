@@ -104,3 +104,22 @@ export async function recordKnockAndCount(sellerId) {
   const { rows } = await query(sql, [sellerId]);
   return rows[0];
 }
+
+// ─── Transactional methods ──────────────────────────────────────────────────
+// Pass a pg.PoolClient as `executor` to participate in a caller-managed
+// transaction; defaults to the wrapped module-level query helper.
+
+const DEFAULT_EXECUTOR = { query };
+
+/**
+ * Acquires a row-level lock on a seller, returning the id only. Used to
+ * serialize concurrent operations against a seller's balance (e.g. the
+ * admin withdrawal-override refund path).
+ *
+ * @param {number|string} sellerId
+ * @param {{query: Function}} [executor]
+ */
+export async function lockById(sellerId, executor = DEFAULT_EXECUTOR) {
+  const sql = `SELECT id FROM sellers WHERE id = $1 FOR UPDATE`;
+  await executor.query(sql, [sellerId]);
+}
