@@ -1,4 +1,5 @@
 import { pool } from '../shared/db/database.js';
+import * as refundRequestRepository from '../repositories/refundRequest.repository.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
@@ -9,49 +10,24 @@ import eventBus, { AppEvents } from '../events/eventBus.js';
 export const getAllRefundRequests = async (req, res, next) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
+    const parsedPage = parseInt(page, 10);
+    const parsedLimit = parseInt(limit, 10);
+    const offset = (parsedPage - 1) * parsedLimit;
 
-    let query = `
-      SELECT 
-        rr.*,
-        b.id as buyer_id,
-        b.full_name as buyer_name,
-        b.email as buyer_email,
-        b.whatsapp_number as buyer_phone,
-        b.refunds as buyer_current_refunds
-      FROM refund_requests rr
-      JOIN buyers b ON rr.buyer_id = b.id
-    `;
-
-    const queryParams = [];
-
-    if (status) {
-      query += ` WHERE rr.status = $1`;
-      queryParams.push(status);
-    }
-
-    query += ` ORDER BY rr.requested_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-    queryParams.push(limit, offset);
-
-    const result = await pool.query(query, queryParams);
-
-    // Get total count
-    const countQuery = status
-      ? `SELECT COUNT(*) FROM refund_requests WHERE status = $1`
-      : `SELECT COUNT(*) FROM refund_requests`;
-    const countParams = status ? [status] : [];
-    const countResult = await pool.query(countQuery, countParams);
-    const total = parseInt(countResult.rows[0].count);
+    const [requests, total] = await Promise.all([
+      refundRequestRepository.findAllWithBuyer({ status, limit: parsedLimit, offset }),
+      refundRequestRepository.countAll({ status })
+    ]);
 
     res.status(200).json({
       status: 'success',
       data: {
-        requests: result.rows,
+        requests,
         pagination: {
           total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit)
+          page: parsedPage,
+          limit: parsedLimit,
+          pages: Math.ceil(total / parsedLimit)
         }
       }
     });
@@ -67,31 +43,15 @@ export const getAllRefundRequests = async (req, res, next) => {
 export const getRefundRequestById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const request = await refundRequestRepository.findByIdWithBuyer(id);
 
-    const query = `
-      SELECT 
-        rr.*,
-        b.id as buyer_id,
-        b.full_name as buyer_name,
-        b.email as buyer_email,
-        b.whatsapp_number as buyer_phone,
-        b.refunds as buyer_current_refunds
-      FROM refund_requests rr
-      JOIN buyers b ON rr.buyer_id = b.id
-      WHERE rr.id = $1
-    `;
-
-    const result = await pool.query(query, [id]);
-
-    if (result.rows.length === 0) {
+    if (!request) {
       return next(new AppError('Refund request not found', 404));
     }
 
     res.status(200).json({
       status: 'success',
-      data: {
-        request: result.rows[0]
-      }
+      data: { request }
     });
   } catch (error) {
     logger.error('Error fetching refund request:', error);
@@ -229,39 +189,25 @@ export const rejectRefundRequest = async (req, res, next) => {
 
     logger.info(`Admin ${adminId} rejecting refund request ${id}`);
 
-    // Fetch all needed data in ONE query before updating
-    const checkResult = await pool.query(
-      `SELECT rr.status, rr.buyer_id, rr.amount, b.full_name, b.whatsapp_number
-       FROM refund_requests rr
-       JOIN buyers b ON b.id = rr.buyer_id
-       WHERE rr.id = $1`,
-      [id]
-    );
+    const header = await refundRequestRepository.findHeaderById(id);
 
-    if (checkResult.rows.length === 0) {
+    if (!header) {
       return next(new AppError('Refund request not found', 404));
     }
 
-    const { status: currentStatus, buyer_id, amount, full_name, whatsapp_number } = checkResult.rows[0];
+    const { status: currentStatus, buyer_id, amount, full_name, whatsapp_number } = header;
 
     if (currentStatus !== 'pending') {
       return next(new AppError(`Refund request is already ${currentStatus}`, 400));
     }
 
-    // Update refund request status to rejected
-    // Only set processed_by if adminId is a valid number
     const processedBy = typeof adminId === 'number' ? adminId : null;
 
-    await pool.query(
-      `UPDATE refund_requests
-       SET status = 'rejected',
-           admin_notes = $1,
-           processed_by = $2,
-           processed_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $3`,
-      [adminNotes || 'Refund request rejected', processedBy, id]
-    );
+    await refundRequestRepository.markRejected({
+      id,
+      adminNotes: adminNotes || 'Refund request rejected',
+      processedBy
+    });
 
     logger.info(`Refund request ${id} rejected`);
 
