@@ -17,9 +17,8 @@ All backend routes are mounted under `/api` by `server/src/loaders/express.js` a
 | Seller public | `GET /api/sellers/check-shop-name`, `GET /api/sellers/shop/:shopName`, `GET /api/sellers/search`, `GET /api/sellers/:sellerId/products` |
 | Seller protected | `GET /api/sellers/profile`, `PATCH /api/sellers/profile`, `POST /api/sellers/upload-banner`, `POST /api/sellers/upload-business-photo`, `PATCH /api/sellers/theme`, `GET /api/sellers/analytics`, `GET /api/sellers/:id`, `PATCH /api/sellers/products/:id/inventory`, `POST /api/sellers/products/upload-digital`, `POST /api/sellers/withdrawal-request`, `GET /api/sellers/withdrawal-requests`, `GET /api/sellers/withdrawal-requests/:id`, seller referral routes |
 | Public catalog | `GET /api/public/csrf-token`, `GET /api/public/aesthetics`, `GET /api/public/products`, `GET /api/public/products/:id`, `GET /api/public/sellers/active`, `POST /api/public/sellers/:id/knock`, `GET /api/public/sellers/:id/public`, `GET /api/public/services/:productId/availability`, `GET /api/public/orders/:id/status` |
-| Payments | `POST /api/payments/initiate-product`, `POST /api/payments/webhook/payd`, `GET /api/payments/status/:invoiceId` |
-| Payment admin health | `GET /api/payments/health/payd-agent`, `POST /api/payments/health/payd-agent/reset`, `GET /api/payments/health/network` |
-| Payout callbacks | `POST /api/callbacks/payd-payout` |
+| Payments | `POST /api/payments/initiate-product`, `GET /api/payments/status/:invoiceId` |
+| Payment admin health | `GET /api/payments/health/network` |
 | Orders | `GET /api/orders/reference/:reference`, protected `POST /api/orders`, `GET /api/orders/user`, `GET /api/orders/seller`, `GET /api/orders/:id`, `PATCH /api/orders/:id/status`, `PATCH /api/orders/:id/confirm-receipt`, `PATCH /api/orders/:id/cancel`, `PATCH /api/orders/:id/seller-cancel`, `GET /api/orders/:orderId/download/:productId`, `POST /api/orders/location-preview` |
 | Admin | `POST /api/admin/login`, `POST /api/admin/logout`, protected admin dashboards, seller/buyer/product management, payment processing, financial metrics, withdrawal request review |
 | Marketing admin | `POST /api/admin/marketing/login`, protected marketing overview, GMV trend, user growth, product mix, funnel, geography, performers, referrals, activity |
@@ -107,21 +106,10 @@ Critical column contracts:
 
 ### Webhook Contracts
 
-Payment webhooks:
-
-- Endpoint: `POST /api/payments/webhook/payd`
-- Middleware order: `verifyPaydWebhook`, rate limiter, `requirePaydWebhookHmac`, controller.
-- Must use raw body HMAC validation.
-- Must require `x-payd-signature`.
-- Must fail closed for missing signature, invalid signature, malformed JSON, invalid timestamp, replay conflict, or unavailable replay protection.
-- Must accept provider references through the shared `normalizeProviderReference()` helper, including `api_ref`.
-
-Payout callbacks:
-
-- Endpoint: `POST /api/callbacks/payd-payout`
-- Same HMAC and replay protection level as payment webhooks.
-- Must not mutate withdrawal state before webhook authentication and replay protection finish.
-- Must use locked payout state transitions for delayed provider success, failure, refund, and compensation states.
+Payment webhooks and payout callbacks are handled by Paystack — see the
+Paystack-specific webhook routes and HMAC verification in
+`server/src/routes/webhook.routes.js` and the Paystack middleware. The
+previous Payd-specific webhook/callback endpoints have been removed.
 
 Webhook replay protection:
 
@@ -198,7 +186,7 @@ Frontend route guards are not financial security boundaries. Backend auth and ro
 | System | Why it is sensitive | Guard checks |
 | --- | --- | --- |
 | Payment completion | Real money, order state, fulfillment, inventory, fraud evidence | Search for DB amount fallbacks, direct completed writes, ambiguous refs, old handlers |
-| Payd webhook middleware | External write trigger | Verify raw body HMAC, replay dedupe, timestamp, and reference normalization |
+| Paystack webhook middleware | External write trigger | Verify raw body HMAC, replay dedupe, timestamp, and reference normalization |
 | Payout callbacks | Wallet/provider divergence risk | Verify locked state machine, compensation states, callback HMAC, idempotency |
 | Checkout idempotency | Duplicate order/payment risk under retries and Redis outage | Verify mandatory token, DB uniqueness, same-token retry behavior |
 | Inventory reservation/release | Oversell and stuck slot risk | Verify row locks, negative guards, digital skips, service slot `expires_at` cleanup |

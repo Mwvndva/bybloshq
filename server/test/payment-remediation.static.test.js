@@ -92,8 +92,8 @@ test('payment service selects configured payin provider and persists provider pa
   const paymentService = read('src/services/payment.service.js');
   const paymentMethodMigration = read('migrations/20260510070000_allow_paystack_payment_method.sql');
 
-  assert.match(paymentService, /process\.env\.PAYMENT_PROVIDER \|\| 'payd'/);
-  assert.match(paymentService, /this\.paymentProviderClient = this\.provider === 'paystack'[\s\S]*new PaystackProviderClient\(\)[\s\S]*new PaydProviderClient\(\)/);
+  assert.match(paymentService, /process\.env\.PAYMENT_PROVIDER \|\| 'paystack'/);
+  assert.match(paymentService, /this\.paymentProviderClient = new PaystackProviderClient\(\)/);
   assert.match(paymentService, /this\.providerClient = this\.paymentProviderClient/);
   assert.match(paymentService, /payment:\s*\{[\s\S]*method:\s*provider/);
   assert.match(paymentService, /payment_method:\s*provider/);
@@ -402,7 +402,7 @@ test('Paystack production-switch regression plan protects payin, logistics, poll
   assert.match(paymentEvents, /AppEvents\.PAYMENT\.COMPLETED[\s\S]*activateDoorDeliveryAfterPayment/);
   assert.match(paymentEvents, /AppEvents\.PAYMENT\.COMPLETED[\s\S]*activateSellerPickupAfterPayment/);
   assert.match(logisticsService, /payment_not_completed/);
-  assert.match(paymentService, /this\.provider === 'paystack'[\s\S]*new PaystackProviderClient\(\)/);
+  assert.match(paymentService, /this\.paymentProviderClient = new PaystackProviderClient\(\)/);
   assert.match(payoutStateMachine, /providerPayloadIndicatesReversal/);
 });
 

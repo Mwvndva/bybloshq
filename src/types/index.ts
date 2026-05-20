@@ -183,7 +183,7 @@ export interface Address {
   notes?: string;
 }
 
-export type PaymentProvider = 'paystack' | 'payd' | 'mpesa';
+export type PaymentProvider = 'paystack' | 'mpesa';
 
 export interface PaymentMethod {
   id: string;

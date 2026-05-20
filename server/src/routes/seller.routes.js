@@ -53,8 +53,8 @@ const sellerPickupRequestSchema = z.object({
 // Public routes
 router.post('/register', authLimiter, validateSellerRegistration, sellerController.register);
 router.post('/login', authLimiter, validateSellerLogin, sellerController.login);
-router.post('/forgot-password', sellerController.forgotPassword);
-router.post('/reset-password', sellerController.resetPassword);
+router.post('/forgot-password', authLimiter, sellerController.forgotPassword);
+router.post('/reset-password', authLimiter, sellerController.resetPassword);
 router.get('/verify-email', sellerController.verifyEmail);
 router.post('/resend-verification', authLimiter, sellerController.resendVerification);
 router.get('/check-shop-name', sellerController.checkShopNameAvailability);

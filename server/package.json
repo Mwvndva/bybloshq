@@ -9,13 +9,13 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "start": "npm run migrate && node src/index.js",
+    "start": "node src/index.js",
     "dev": "nodemon -r dotenv/config src/index.js",
     "build": "npm install",
     "migrate": "node scripts/migrate.js",
     "migrate:create": "node-pg-migrate create",
     "seed": "node --experimental-json-modules -r dotenv/config scripts/seed-db.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/",
     "lint": "eslint . --ext .js,.ts",
     "format": "prettier --write \"**/*.{js,ts,json,md}\""
   },

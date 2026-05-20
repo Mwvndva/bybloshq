@@ -19,9 +19,7 @@ class ImageService {
             cloudName !== 'your_cloud_name' &&
             apiKey !== 'your_api_key');
 
-        if (!fs.existsSync(this.uploadDir)) {
-            fs.mkdirSync(this.uploadDir, { recursive: true });
-        }
+        fs.mkdirSync(this.uploadDir, { recursive: true });
 
         if (this.useCloudinary) {
             logger.info('☁️ ImageService: Cloudinary integration ACTIVE');

@@ -7,7 +7,6 @@ import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import { normalizeProviderPaymentStatus } from '../shared/utils/paymentStatusNormalizer.js';
 import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
-import PaydProviderClient from '../providers/PaydProviderClient.js';
 import PaystackProviderClient from '../providers/PaystackProviderClient.js';
 import LogisticsQuoteService from './logisticsQuote.service.js';
 import LogisticsRequestService from './logisticsRequest.service.js';
@@ -89,15 +88,13 @@ const isSellerPickupFeePayment = (metadata = {}) => {
 };
 
 const resolvePaymentProvider = () => {
-    const provider = String(process.env.PAYMENT_PROVIDER || 'payd').trim().toLowerCase();
-    if (provider === 'paystack' || provider === 'payd') {
-        return provider;
+    const provider = String(process.env.PAYMENT_PROVIDER || 'paystack').trim().toLowerCase();
+    if (provider !== 'paystack') {
+        logger.warn('[PAYMENT-INIT] Only paystack is supported; ignoring configured value', {
+            configuredProvider: provider
+        });
     }
-
-    logger.warn('[PAYMENT-INIT] Unsupported PAYMENT_PROVIDER configured; falling back to payd', {
-        configuredProvider: provider
-    });
-    return 'payd';
+    return 'paystack';
 };
 
 const extractPickupLocation = (location = {}) => ({
@@ -122,9 +119,7 @@ const ACTIVE_PICKUP_STATUSES = new Set(['pending', 'assigned', 'started', 'picke
 export class PaymentService {
     constructor() {
         this.provider = resolvePaymentProvider();
-        this.paymentProviderClient = this.provider === 'paystack'
-            ? new PaystackProviderClient()
-            : new PaydProviderClient();
+        this.paymentProviderClient = new PaystackProviderClient();
         this.providerClient = this.paymentProviderClient;
         this.baseUrl = this.paymentProviderClient.baseUrl;
         this.httpsAgent = this.paymentProviderClient.httpsAgent;
@@ -711,9 +706,6 @@ export class PaymentService {
     _handleProviderError(error) {
         if (typeof this.providerClient._handlePaystackError === 'function') {
             return this.providerClient._handlePaystackError(error);
-        }
-        if (typeof this.providerClient._handlePaydError === 'function') {
-            return this.providerClient._handlePaydError(error);
         }
         return error;
     }

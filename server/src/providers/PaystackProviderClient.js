@@ -24,8 +24,9 @@ class PaystackProviderClient {
 
         try {
             dns.setDefaultResultOrder('ipv4first');
-            const dnsServers = process.env.DNS_SERVERS ? process.env.DNS_SERVERS.split(',') : ['8.8.8.8', '8.8.4.4', '1.1.1.1'];
-            dns.setServers(dnsServers);
+            if (process.env.DNS_SERVERS) {
+                dns.setServers(process.env.DNS_SERVERS.split(','));
+            }
         } catch (error) {
             logger.warn('[PAYSTACK-INIT] DNS setup failed:', error.message);
         }
@@ -111,7 +112,10 @@ class PaystackProviderClient {
 
             const normalizedPhone = this.normalizePhoneForCharge(phone || phone_number);
             const paystackAmount = this._toPaystackAmount(amount);
-            const chargeEmail = email || process.env.PAYSTACK_DEFAULT_EMAIL || 'payments@bybloshq.space';
+            const chargeEmail = email || process.env.PAYSTACK_DEFAULT_EMAIL;
+            if (!chargeEmail) {
+                throw new Error('Paystack charge requires an email; pass `email` or set PAYSTACK_DEFAULT_EMAIL.');
+            }
             const payload = {
                 email: chargeEmail,
                 amount: paystackAmount,

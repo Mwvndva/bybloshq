@@ -96,9 +96,9 @@ dist
 
 # Gatsby files
 .cache/
-public
-!src/api/public/
-!src/api/public/**
+# Vite serves the public/ folder as static assets. Only the auto-generated
+# sitemap is excluded; hand-written assets like gtag-init.js are tracked.
+public/sitemap.xml
 
 # vuepress build output
 .vuepress/dist
@@ -133,6 +133,7 @@ public
 
 # Byblos Specific
 outputs/
+tmp/
 scripts/dev/
 baileys_auth_info/
 uploads/
@@ -140,3 +141,6 @@ tsc_errors.txt
 remove_console_logs.ps1
 frontend.nginx.conf
 nginx.conf
+debug_log.txt
+*.tsbuildinfo
+.audit-baseline.md
