@@ -12,7 +12,7 @@
 import CoreOrderService from '../core/CoreOrderService.js';
 import Order from '../models/order.model.js';
 import logger from '../shared/utils/logger.js';
-import { pool } from '../shared/db/database.js';
+import * as digitalDownloadRepository from '../repositories/digitalDownload.repository.js';
 import path from 'path';
 import fs from 'fs/promises';
 import { sanitizeOrder } from '../shared/utils/sanitize.js';
@@ -364,34 +364,19 @@ export const downloadDigitalProduct = async (req, res) => {
         const { orderId, productId } = req.params;
         const buyerProfileId = req.user.buyerId;
 
-        // 1. Simple query to verify ownership and payment status
-        const verifyQuery = `
-            SELECT 
-                po.id as order_id, 
-                p.id as product_id, 
-                p.name as product_name,
-                p.digital_file_path, 
-                p.digital_file_name
-            FROM product_orders po
-            JOIN order_items oi ON po.id = oi.order_id
-            JOIN products p ON oi.product_id = p.id
-            WHERE po.id = $1 
-              AND po.buyer_id = $2 
-              AND oi.product_id = $3
-              AND po.payment_status = 'completed'
-              AND (p.product_type = 'digital' OR p.is_digital = true)
-        `;
+        // 1. Verify ownership and payment status before serving the file
+        const data = await digitalDownloadRepository.findVerifiedDigitalItem({
+            orderId,
+            buyerId: buyerProfileId,
+            productId
+        });
 
-        const { rows } = await pool.query(verifyQuery, [orderId, buyerProfileId, productId]);
-
-        if (rows.length === 0) {
+        if (!data) {
             return res.status(404).json({
                 status: 'error',
                 message: 'Digital product not found in this completed order'
             });
         }
-
-        const data = rows[0];
 
         const digitalFilePath = data.digital_file_path;
 
