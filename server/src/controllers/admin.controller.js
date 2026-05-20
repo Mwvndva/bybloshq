@@ -9,6 +9,7 @@ import * as buyerRepository from '../repositories/buyer.repository.js';
 import * as adminProductRepository from '../repositories/adminProduct.repository.js';
 import * as adminMetricsRepository from '../repositories/adminMetrics.repository.js';
 import * as withdrawalRequestRepository from '../repositories/withdrawalRequest.repository.js';
+import * as sellerRepository from '../repositories/seller.repository.js';
 import payoutService from '../services/payout.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import logger from '../shared/utils/logger.js';
@@ -479,16 +480,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
     try {
       await client.query('BEGIN');
 
-      const { rows: [lockedRequest] } = await client.query(
-        `SELECT wr.*,
-                    s.whatsapp_number AS entity_phone,
-                    s.balance AS entity_balance
-             FROM withdrawal_requests wr
-             LEFT JOIN sellers s ON wr.seller_id = s.id
-             WHERE wr.id = $1
-             FOR UPDATE OF wr`,
-        [id]
-      );
+      const lockedRequest = await withdrawalRequestRepository.findByIdWithSellerForUpdate(id, client);
 
       if (!lockedRequest) throw new Error('Withdrawal request not found');
       if (['completed', 'failed'].includes(lockedRequest.status)) {
@@ -496,25 +488,17 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
       }
 
       if (status === 'failed' && lockedRequest.seller_id) {
-        await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [lockedRequest.seller_id]);
+        await sellerRepository.lockById(lockedRequest.seller_id, client);
       }
 
       request = lockedRequest;
 
-      await client.query(
-        `UPDATE withdrawal_requests
-                 SET status       = $1,
-                     processed_at = NOW(),
-                     processed_by = $2,
-                     metadata     = COALESCE(metadata, '{}'::jsonb) || $3::jsonb
-                 WHERE id = $4`,
-        [
-          status,
-          `admin:${req.user.id}`,
-          JSON.stringify({ admin_override: { reason, timestamp: new Date(), admin_id: req.user.id } }),
-          id
-        ]
-      );
+      await withdrawalRequestRepository.markFinalized({
+        id,
+        status,
+        processedBy: `admin:${req.user.id}`,
+        metadataPatch: { admin_override: { reason, timestamp: new Date(), admin_id: req.user.id } }
+      }, client);
 
       // If admin marks as failed → refund balance (it was deducted at creation)
       let newBalance = null;

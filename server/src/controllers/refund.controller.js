@@ -1,5 +1,6 @@
 import { pool } from '../shared/db/database.js';
 import * as refundRequestRepository from '../repositories/refundRequest.repository.js';
+import * as buyerRepository from '../repositories/buyer.repository.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
@@ -77,20 +78,12 @@ export const confirmRefundRequest = async (req, res, next) => {
     await client.query('BEGIN');
 
     // Lock the refund request row
-    const requestResult = await client.query(
-      `SELECT rr.*
-       FROM refund_requests rr
-       WHERE rr.id = $1
-       FOR UPDATE`,
-      [id]
-    );
+    const request = await refundRequestRepository.findByIdForUpdate(id, client);
 
-    if (requestResult.rows.length === 0) {
+    if (!request) {
       await client.query('ROLLBACK');
       return next(new AppError('Refund request not found', 404));
     }
-
-    const request = requestResult.rows[0];
 
     // Check status before acquiring the buyer lock (fast check)
     if (request.status !== 'pending') {
@@ -100,17 +93,13 @@ export const confirmRefundRequest = async (req, res, next) => {
 
     // Lock the buyer row SEPARATELY to serialize concurrent refund processing
     // for the same buyer across different refund requests
-    const buyerResult = await client.query(
-      `SELECT id, refunds, full_name, whatsapp_number FROM buyers WHERE id = $1 FOR UPDATE`,
-      [request.buyer_id]
-    );
+    const buyer = await buyerRepository.findRefundColumnsByIdForUpdate(request.buyer_id, client);
 
-    if (buyerResult.rows.length === 0) {
+    if (!buyer) {
       await client.query('ROLLBACK');
       return next(new AppError('Buyer account not found', 404));
     }
 
-    const buyer = buyerResult.rows[0];
     const buyerRefunds = parseFloat(buyer.refunds || 0);
     const requestAmount = parseFloat(request.amount);
 
@@ -119,29 +108,19 @@ export const confirmRefundRequest = async (req, res, next) => {
       return next(new AppError('Buyer does not have sufficient refund balance', 400));
     }
 
-    // Update refund request status to completed
     // Only set processed_by if adminId is a valid number
     const processedBy = typeof adminId === 'number' ? adminId : null;
 
-    await client.query(
-      `UPDATE refund_requests
-       SET status = 'completed',
-           admin_notes = $1,
-           processed_by = $2,
-           processed_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $3`,
-      [adminNotes || 'Refund processed successfully', processedBy, id]
-    );
+    await refundRequestRepository.markCompleted({
+      id,
+      adminNotes: adminNotes || 'Refund processed successfully',
+      processedBy
+    }, client);
 
-    // Deduct amount from buyer's refunds
-    await client.query(
-      `UPDATE buyers
-       SET refunds = GREATEST(refunds - $1, 0),
-           updated_at = NOW()
-       WHERE id = $2`,
-      [requestAmount, request.buyer_id]
-    );
+    await buyerRepository.decrementRefundBalance({
+      buyerId: request.buyer_id,
+      amount: requestAmount
+    }, client);
 
     const approvedEvent = await eventBus.enqueueInTransaction(client, AppEvents.REFUND.APPROVED, {
       eventId: `refund.approved:${id}`,
