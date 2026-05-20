@@ -3,7 +3,7 @@
  * Read-only analytics endpoints for the marketing admin dashboard.
  * All queries are optimised for read performance — no writes happen here.
  */
-import { pool } from '../shared/db/database.js'
+import * as marketingAnalyticsRepository from '../repositories/marketingAnalytics.repository.js'
 import { AppError } from '../shared/utils/errorHandler.js'
 import logger from '../shared/utils/logger.js'
 import AuthService from '../services/auth.service.js'
@@ -53,44 +53,7 @@ export const marketingLogin = async (req, res, next) => {
  */
 export const getOverview = async (req, res, next) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT
-        -- Platform totals
-        (SELECT COUNT(*)  FROM sellers WHERE is_active = true)                          AS total_sellers,
-        (SELECT COUNT(*)  FROM buyers  WHERE user_id IS NOT NULL)                       AS total_buyers,
-        (SELECT COUNT(*)  FROM products WHERE status = 'available')                       AS active_products,
-
-        -- GMV and revenue
-        (SELECT COALESCE(SUM(total_amount), 0)
-           FROM product_orders WHERE payment_status = 'completed')                      AS total_gmv,
-        (SELECT COALESCE(SUM(platform_fee_amount), 0)
-           FROM product_orders WHERE payment_status = 'completed')                      AS total_revenue,
-
-        -- Orders
-        (SELECT COUNT(*) FROM product_orders WHERE payment_status = 'completed')        AS completed_orders,
-        (SELECT COUNT(*) FROM product_orders WHERE status = 'CANCELLED')                AS cancelled_orders,
-        (SELECT COUNT(*) FROM product_orders)                                           AS total_orders,
-
-        -- This month snapshot
-        (SELECT COUNT(*) FROM sellers
-           WHERE created_at >= date_trunc('month', CURRENT_DATE))                       AS new_sellers_this_month,
-        (SELECT COUNT(*) FROM buyers
-           WHERE created_at >= date_trunc('month', CURRENT_DATE))                       AS new_buyers_this_month,
-        (SELECT COALESCE(SUM(total_amount), 0) FROM product_orders
-           WHERE payment_status = 'completed'
-             AND paid_at >= date_trunc('month', CURRENT_DATE))                          AS gmv_this_month,
-
-        -- Wishlist engagement
-        (SELECT COUNT(*) FROM wishlists)                                                AS total_wishlists,
-
-        -- Refund rate
-        (SELECT COALESCE(SUM(amount), 0) FROM refund_requests WHERE status = 'completed') AS total_refunded,
-
-        -- Referral rewards paid out
-        (SELECT COALESCE(SUM(reward_amount), 0) FROM referral_earnings_log)            AS total_referral_rewards
-    `)
-
-    const d = rows[0]
+    const d = await marketingAnalyticsRepository.findOverviewStats()
 
     // Calculate derived metrics
     const cancellationRate = d.total_orders > 0
@@ -136,30 +99,7 @@ export const getOverview = async (req, res, next) => {
 export const getGmvTrend = async (req, res, next) => {
   try {
     const months = Math.min(Number.parseInt(req.query.months) || 12, 24)
-
-    const { rows } = await pool.query(`
-      WITH month_series AS (
-        SELECT generate_series(
-          date_trunc('month', CURRENT_DATE) - (($1 - 1) || ' months')::interval,
-          date_trunc('month', CURRENT_DATE),
-          '1 month'::interval
-        ) AS month
-      )
-      SELECT
-        TO_CHAR(ms.month, 'YYYY-MM')                                           AS month,
-        TO_CHAR(ms.month, 'Mon YY')                                            AS label,
-        COALESCE(SUM(o.total_amount), 0)                                       AS gmv,
-        COALESCE(SUM(o.platform_fee_amount), 0)                                AS revenue,
-        COALESCE(SUM(o.seller_payout_amount), 0)                               AS seller_payouts,
-        COUNT(o.id)                                                            AS order_count,
-        COALESCE(AVG(o.total_amount), 0)                                       AS avg_order_value
-      FROM month_series ms
-      LEFT JOIN product_orders o
-        ON date_trunc('month', o.paid_at) = ms.month
-        AND o.payment_status = 'completed'
-      GROUP BY ms.month
-      ORDER BY ms.month ASC
-    `, [months])
+    const rows = await marketingAnalyticsRepository.findGmvTrend({ months })
 
     res.status(200).json({
       status: 'success',
@@ -187,26 +127,7 @@ export const getGmvTrend = async (req, res, next) => {
 export const getUserGrowth = async (req, res, next) => {
   try {
     const months = Math.min(Number.parseInt(req.query.months) || 12, 24)
-
-    const { rows } = await pool.query(`
-      WITH month_series AS (
-        SELECT generate_series(
-          date_trunc('month', CURRENT_DATE) - (($1 - 1) || ' months')::interval,
-          date_trunc('month', CURRENT_DATE),
-          '1 month'::interval
-        ) AS month
-      )
-      SELECT
-        TO_CHAR(ms.month, 'YYYY-MM')  AS month,
-        TO_CHAR(ms.month, 'Mon YY')   AS label,
-        COUNT(DISTINCT s.id)          AS new_sellers,
-        COUNT(DISTINCT b.id)          AS new_buyers
-      FROM month_series ms
-      LEFT JOIN sellers s ON date_trunc('month', s.created_at) = ms.month
-      LEFT JOIN buyers  b ON date_trunc('month', b.created_at) = ms.month
-      GROUP BY ms.month
-      ORDER BY ms.month ASC
-    `, [months])
+    const rows = await marketingAnalyticsRepository.findUserGrowth({ months })
 
     res.status(200).json({
       status: 'success',
@@ -232,38 +153,19 @@ export const getUserGrowth = async (req, res, next) => {
 export const getProductMix = async (req, res, next) => {
   try {
     const [typeRows, aestheticRows] = await Promise.all([
-      pool.query(`
-        SELECT
-          product_type,
-          COUNT(*) AS count,
-          COALESCE(SUM(oi.subtotal), 0) AS total_revenue
-        FROM products p
-        LEFT JOIN order_items oi ON oi.product_id = p.id
-        LEFT JOIN product_orders po ON oi.order_id = po.id AND po.payment_status = 'completed'
-        WHERE p.status IN ('available', 'sold')
-        GROUP BY product_type
-        ORDER BY count DESC
-      `),
-      pool.query(`
-        SELECT
-          COALESCE(aesthetic, 'uncategorised') AS aesthetic,
-          COUNT(*) AS product_count
-        FROM products
-        GROUP BY aesthetic
-        ORDER BY product_count DESC
-        LIMIT 8
-      `)
+      marketingAnalyticsRepository.findProductTypeMix(),
+      marketingAnalyticsRepository.findAestheticMix()
     ])
 
     res.status(200).json({
       status: 'success',
       data: {
-        productTypes: typeRows.rows.map(r => ({
+        productTypes: typeRows.map(r => ({
           type: r.product_type,
           count: Number.parseInt(r.count),
           totalRevenue: Number.parseFloat(r.total_revenue)
         })),
-        aesthetics: aestheticRows.rows.map(r => ({
+        aesthetics: aestheticRows.map(r => ({
           aesthetic: r.aesthetic,
           productCount: Number.parseInt(r.product_count)
         }))
@@ -282,25 +184,10 @@ export const getProductMix = async (req, res, next) => {
  */
 export const getOrderFunnel = async (req, res, next) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT
-        status,
-        COUNT(*) AS count,
-        COALESCE(SUM(total_amount), 0) AS total_value
-      FROM product_orders
-      GROUP BY status
-      ORDER BY count DESC
-    `)
-
-    // Also get payment status breakdown
-    const { rows: paymentRows } = await pool.query(`
-      SELECT
-        payment_status,
-        COUNT(*) AS count,
-        COALESCE(SUM(total_amount), 0) AS total_value
-      FROM product_orders
-      GROUP BY payment_status
-    `)
+    const [rows, paymentRows] = await Promise.all([
+      marketingAnalyticsRepository.findOrderStatusFunnel(),
+      marketingAnalyticsRepository.findPaymentStatusFunnel()
+    ])
 
     res.status(200).json({
       status: 'success',
@@ -331,46 +218,17 @@ export const getOrderFunnel = async (req, res, next) => {
 export const getGeography = async (req, res, next) => {
   try {
     const [buyerLocations, sellerLocations, gmvLocations] = await Promise.all([
-      pool.query(`
-        SELECT
-          COALESCE(NULLIF(TRIM(city), ''), 'Unknown City') AS location,
-          COUNT(*) AS buyer_count
-        FROM buyers
-        GROUP BY 1
-        ORDER BY buyer_count DESC
-        LIMIT 10
-      `),
-      pool.query(`
-        SELECT
-          COALESCE(NULLIF(TRIM(city), ''), 'Unknown City') AS location,
-          COUNT(*) AS seller_count,
-          COALESCE(SUM(total_sales), 0) AS location_gmv
-        FROM sellers
-        WHERE is_active = true
-        GROUP BY 1
-        ORDER BY seller_count DESC
-        LIMIT 10
-      `),
-      pool.query(`
-        SELECT
-          COALESCE(NULLIF(TRIM(s.city), ''), 'Unknown City') AS location,
-          COALESCE(SUM(o.total_amount), 0) AS gmv,
-          COUNT(o.id) AS order_count
-        FROM product_orders o
-        JOIN sellers s ON o.seller_id = s.id
-        WHERE o.payment_status = 'completed'
-        GROUP BY 1
-        ORDER BY gmv DESC
-        LIMIT 10
-      `)
+      marketingAnalyticsRepository.findBuyerLocations(),
+      marketingAnalyticsRepository.findSellerLocations(),
+      marketingAnalyticsRepository.findGmvLocations()
     ])
 
     res.status(200).json({
       status: 'success',
       data: {
-        topBuyerRegions: buyerLocations.rows.map(r => ({ location: r.location, count: Number.parseInt(r.buyer_count) })),
-        topSellerRegions: sellerLocations.rows.map(r => ({ location: r.location, count: Number.parseInt(r.seller_count), gmv: Number.parseFloat(r.location_gmv) })),
-        topGmvRegions: gmvLocations.rows.map(r => ({ location: r.location, gmv: Number.parseFloat(r.gmv), orderCount: Number.parseInt(r.order_count) }))
+        topBuyerRegions: buyerLocations.map(r => ({ location: r.location, count: Number.parseInt(r.buyer_count) })),
+        topSellerRegions: sellerLocations.map(r => ({ location: r.location, count: Number.parseInt(r.seller_count), gmv: Number.parseFloat(r.location_gmv) })),
+        topGmvRegions: gmvLocations.map(r => ({ location: r.location, gmv: Number.parseFloat(r.gmv), orderCount: Number.parseInt(r.order_count) }))
       }
     })
   } catch (err) {
@@ -387,55 +245,15 @@ export const getGeography = async (req, res, next) => {
 export const getTopPerformers = async (req, res, next) => {
   try {
     const [topSellers, topProducts, topWishlisted] = await Promise.all([
-      pool.query(`
-        SELECT
-          s.id,
-          s.shop_name,
-          s.location,
-          s.total_sales,
-          s.client_count,
-          COUNT(DISTINCT o.id) AS order_count
-        FROM sellers s
-        LEFT JOIN product_orders o ON o.seller_id = s.id AND o.payment_status = 'completed'
-        WHERE s.is_active = true
-        GROUP BY s.id
-        ORDER BY s.total_sales DESC
-        LIMIT 10
-      `),
-      pool.query(`
-        SELECT
-          p.id,
-          p.name,
-          p.product_type,
-          p.aesthetic,
-          COALESCE(SUM(oi.subtotal), 0) AS total_revenue,
-          COALESCE(SUM(oi.quantity), 0) AS units_sold
-        FROM products p
-        JOIN order_items oi ON oi.product_id = p.id
-        JOIN product_orders po ON oi.order_id = po.id AND po.payment_status = 'completed'
-        GROUP BY p.id
-        ORDER BY total_revenue DESC
-        LIMIT 10
-      `),
-      pool.query(`
-        SELECT
-          p.id,
-          p.name,
-          p.product_type,
-          p.price,
-          COUNT(w.id) AS wishlist_count
-        FROM products p
-        JOIN wishlists w ON w.product_id = p.id
-        GROUP BY p.id
-        ORDER BY wishlist_count DESC
-        LIMIT 10
-      `)
+      marketingAnalyticsRepository.findTopSellers(),
+      marketingAnalyticsRepository.findTopProducts(),
+      marketingAnalyticsRepository.findTopWishlisted()
     ])
 
     res.status(200).json({
       status: 'success',
       data: {
-        topSellers: topSellers.rows.map(r => ({
+        topSellers: topSellers.map(r => ({
           id: r.id,
           shopName: r.shop_name,
           location: r.location,
@@ -443,7 +261,7 @@ export const getTopPerformers = async (req, res, next) => {
           clientCount: Number.parseInt(r.client_count),
           orderCount: Number.parseInt(r.order_count)
         })),
-        topProducts: topProducts.rows.map(r => ({
+        topProducts: topProducts.map(r => ({
           id: r.id,
           name: r.name,
           productType: r.product_type,
@@ -451,7 +269,7 @@ export const getTopPerformers = async (req, res, next) => {
           totalRevenue: Number.parseFloat(r.total_revenue),
           unitsSold: Number.parseInt(r.units_sold)
         })),
-        topWishlisted: topWishlisted.rows.map(r => ({
+        topWishlisted: topWishlisted.map(r => ({
           id: r.id,
           name: r.name,
           productType: r.product_type,
@@ -473,47 +291,16 @@ export const getTopPerformers = async (req, res, next) => {
  */
 export const getReferralPerformance = async (req, res, next) => {
   try {
-    const [monthlyRewards, topReferrers] = await Promise.all([
-      pool.query(`
-        SELECT
-          period_year,
-          period_month,
-          TO_CHAR(TO_DATE(period_month::text, 'MM'), 'Mon') || ' ' || period_year AS label,
-          COUNT(DISTINCT referrer_seller_id) AS active_referrers,
-          COUNT(*) AS referral_pairs,
-          COALESCE(SUM(reward_amount), 0) AS total_rewards,
-          COALESCE(SUM(referred_gmv), 0)  AS referred_gmv
-        FROM referral_earnings_log
-        GROUP BY period_year, period_month
-        ORDER BY period_year DESC, period_month DESC
-        LIMIT 12
-      `),
-      pool.query(`
-        SELECT
-          s.shop_name,
-          s.location,
-          COUNT(DISTINCT rel.referred_seller_id) AS referrals_made,
-          COALESCE(SUM(rel.reward_amount), 0)    AS total_earned
-        FROM referral_earnings_log rel
-        JOIN sellers s ON s.id = rel.referrer_seller_id
-        GROUP BY s.id
-        ORDER BY total_earned DESC
-        LIMIT 10
-      `)
+    const [monthlyRewards, topReferrers, referralStats] = await Promise.all([
+      marketingAnalyticsRepository.findMonthlyReferralRewards(),
+      marketingAnalyticsRepository.findTopReferrers(),
+      marketingAnalyticsRepository.findReferralStats()
     ])
-
-    // Total active sellers with referral codes
-    const { rows: referralStats } = await pool.query(`
-      SELECT
-        COUNT(*) FILTER (WHERE referral_code IS NOT NULL) AS sellers_with_codes,
-        COUNT(*) FILTER (WHERE referred_by_seller_id IS NOT NULL) AS referred_sellers
-      FROM sellers
-    `)
 
     res.status(200).json({
       status: 'success',
       data: {
-        monthlyRewards: monthlyRewards.rows.map(r => ({
+        monthlyRewards: monthlyRewards.map(r => ({
           label: r.label,
           year: r.period_year,
           month: r.period_month,
@@ -522,14 +309,14 @@ export const getReferralPerformance = async (req, res, next) => {
           totalRewards: Number.parseFloat(r.total_rewards),
           referredGmv: Number.parseFloat(r.referred_gmv)
         })).reverse(),
-        topReferrers: topReferrers.rows.map(r => ({
+        topReferrers: topReferrers.map(r => ({
           shopName: r.shop_name,
           location: r.location,
           referralsMade: Number.parseInt(r.referrals_made),
           totalEarned: Number.parseFloat(r.total_earned)
         })),
-        sellersWithCodes: Number.parseInt(referralStats[0]?.sellers_with_codes || 0),
-        referredSellers: Number.parseInt(referralStats[0]?.referred_sellers || 0)
+        sellersWithCodes: Number.parseInt(referralStats?.sellers_with_codes || 0),
+        referredSellers: Number.parseInt(referralStats?.referred_sellers || 0)
       }
     })
   } catch (err) {
@@ -546,46 +333,7 @@ export const getReferralPerformance = async (req, res, next) => {
 export const getRecentActivity = async (req, res, next) => {
   try {
     const limit = Math.min(Number.parseInt(req.query.limit) || 20, 50)
-
-    const { rows } = await pool.query(`
-      (
-        SELECT
-          'order' AS type,
-          o.created_at AS timestamp,
-          'New order: KSh ' || o.total_amount || ' from ' || s.shop_name AS description,
-          o.total_amount AS value
-        FROM product_orders o
-        JOIN sellers s ON o.seller_id = s.id
-        WHERE o.payment_status = 'completed'
-        ORDER BY o.created_at DESC
-        LIMIT $1
-      )
-      UNION ALL
-      (
-        SELECT
-          'seller' AS type,
-          s.created_at AS timestamp,
-          'New seller: ' || s.shop_name || ' (' || COALESCE(s.location, 'Nairobi') || ')' AS description,
-          NULL AS value
-        FROM sellers s
-        ORDER BY s.created_at DESC
-        LIMIT $1
-      )
-      UNION ALL
-      (
-        SELECT
-          'buyer' AS type,
-          b.created_at AS timestamp,
-          'New buyer registered in ' || COALESCE(b.location, 'Nairobi') AS description,
-          NULL AS value
-        FROM buyers b
-        WHERE b.user_id IS NOT NULL
-        ORDER BY b.created_at DESC
-        LIMIT $1
-      )
-      ORDER BY timestamp DESC
-      LIMIT $1
-    `, [limit])
+    const rows = await marketingAnalyticsRepository.findRecentActivity({ limit })
 
     res.status(200).json({
       status: 'success',
@@ -600,6 +348,3 @@ export const getRecentActivity = async (req, res, next) => {
     next(err)
   }
 }
-
-
-
