@@ -17,6 +17,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { sanitizeOrder } from '../shared/utils/sanitize.js';
 import paymentService from '../services/payment.service.js';
+import OrderHubDropoffService from '../services/orderHubDropoff.service.js';
 
 const OrderService = CoreOrderService;
 
@@ -161,7 +162,7 @@ export const selectHubDropoff = async (req, res) => {
             return res.status(403).json({ status: 'error', message: 'Seller profile is required' });
         }
 
-        const updatedOrder = await OrderService.selectHubDropoff(req.params.id, sellerId);
+        const updatedOrder = await OrderHubDropoffService.selectHubDropoff(req.params.id, sellerId);
         res.status(200).json({
             status: 'success',
             message: 'Hub drop-off selected. Drop the package at the hub within 24 hours.',
@@ -183,7 +184,7 @@ export const markDroppedAtHub = async (req, res) => {
             return res.status(403).json({ status: 'error', message: 'Seller profile is required' });
         }
 
-        const updatedOrder = await OrderService.markDroppedAtHub(req.params.id, sellerId);
+        const updatedOrder = await OrderHubDropoffService.markDroppedAtHub(req.params.id, sellerId);
         res.status(200).json({
             status: 'success',
             message: 'Package marked as dropped at the hub.',
