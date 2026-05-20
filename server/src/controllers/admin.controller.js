@@ -4,6 +4,11 @@ import { AppError } from '../shared/utils/errorHandler.js';
 import AdminService from '../services/admin.service.js';
 import AuthService from '../services/auth.service.js';
 import { pool } from '../shared/db/database.js';
+import * as userRepository from '../repositories/user.repository.js';
+import * as buyerRepository from '../repositories/buyer.repository.js';
+import * as adminProductRepository from '../repositories/adminProduct.repository.js';
+import * as adminMetricsRepository from '../repositories/adminMetrics.repository.js';
+import * as withdrawalRequestRepository from '../repositories/withdrawalRequest.repository.js';
 import payoutService from '../services/payout.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import logger from '../shared/utils/logger.js';
@@ -61,8 +66,7 @@ const adminLogin = async (req, res, next) => {
 const getMe = async (req, res, next) => {
   try {
     // req.user is set by the protect middleware
-    const result = await pool.query('SELECT id, email, role, created_at FROM users WHERE id = $1', [req.user.id]);
-    const user = result.rows[0];
+    const user = await userRepository.findByIdMinimal(req.user.id);
 
     if (!user) {
       return next(new AppError('User not found', 404));
@@ -159,46 +163,16 @@ const updateSellerStatus = async (req, res, next) => {
 // Products management
 const getAllProducts = async (req, res, next) => {
   try {
-    // First, let's check the structure of the products table
-    const columnsResult = await pool.query(
-      `SELECT column_name, data_type 
-       FROM information_schema.columns 
-       WHERE table_name = 'products'`
-    );
-
-    // Get available columns
-    const availableColumns = columnsResult.rows.map(row => row.column_name);
-
-    // Build the query based on available columns
+    const availableColumns = await adminProductRepository.findProductColumnNames();
     const hasStock = availableColumns.includes('stock');
     const hasStatus = availableColumns.includes('status');
 
-    // Build the select fields
-    const selectFields = [
-      'p.id',
-      'p.name',
-      'p.description',
-      'p.price',
-      'p.created_at',
-      's.full_name as seller_name'
-    ];
-
-    if (hasStock) selectFields.push('p.stock');
-    if (hasStatus) selectFields.push('p.status');
-
-    const query = `
-      SELECT ${selectFields.join(', ')}
-      FROM products p
-      LEFT JOIN sellers s ON p.seller_id = s.id
-      ORDER BY p.created_at DESC
-    `;
-
-    const result = await pool.query(query);
+    const rows = await adminProductRepository.findAllWithSeller({ hasStock, hasStatus });
 
     res.status(200).json({
       status: 'success',
-      results: result.rows.length,
-      data: result.rows.map(product => ({
+      results: rows.length,
+      data: rows.map(product => ({
         ...product,
         stock: hasStock ? (product.stock || 0) : 0,
         status: hasStatus ? (product.status || 'available') : 'available',
@@ -220,47 +194,16 @@ const getSellerProducts = async (req, res, next) => {
   try {
     const { sellerId } = req.params;
 
-    // First, check the structure of the products table
-    const columnsResult = await pool.query(
-      `SELECT column_name, data_type 
-       FROM information_schema.columns 
-       WHERE table_name = 'products'`
-    );
-
-    // Get available columns
-    const availableColumns = columnsResult.rows.map(row => row.column_name);
-
-    // Build the query based on available columns
+    const availableColumns = await adminProductRepository.findProductColumnNames();
     const hasStock = availableColumns.includes('stock');
     const hasStatus = availableColumns.includes('status');
 
-    // Build the select fields
-    const selectFields = [
-      'p.id',
-      'p.name',
-      'p.description',
-      'p.price',
-      'p.created_at',
-      's.full_name as seller_name'
-    ];
-
-    if (hasStock) selectFields.push('p.stock');
-    if (hasStatus) selectFields.push('p.status');
-
-    const query = `
-      SELECT ${selectFields.join(', ')}
-      FROM products p
-      LEFT JOIN sellers s ON p.seller_id = s.id
-      WHERE p.seller_id = $1
-      ORDER BY p.created_at DESC
-    `;
-
-    const result = await pool.query(query, [sellerId]);
+    const rows = await adminProductRepository.findBySellerWithSeller({ sellerId, hasStock, hasStatus });
 
     res.status(200).json({
       status: 'success',
-      results: result.rows.length,
-      data: result.rows.map(product => ({
+      results: rows.length,
+      data: rows.map(product => ({
         ...product,
         stock: hasStock ? (product.stock || 0) : 0,
         status: hasStatus ? (product.status || 'available') : 'available',
@@ -291,55 +234,9 @@ const getMonthlyMetrics = async (req, res, next) => {
   try {
     console.log('Fetching monthly metrics...');
 
-    // Query to get metrics for the last 12 months
-    const query = `
-      WITH months AS (
-        SELECT 
-          DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months' + (n || ' months')::interval) AS month
-        FROM generate_series(0, 11) n
-      ),
-      seller_counts AS (
-        SELECT 
-          DATE_TRUNC('month', created_at) AS month,
-          COUNT(*) AS seller_count
-        FROM sellers
-        WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
-        GROUP BY DATE_TRUNC('month', created_at)
-      ),
-      product_counts AS (
-        SELECT 
-          DATE_TRUNC('month', created_at) AS month,
-          COUNT(*) AS product_count
-        FROM products
-        WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
-        GROUP BY DATE_TRUNC('month', created_at)
-      ),
-      buyer_counts AS (
-        SELECT 
-          DATE_TRUNC('month', created_at) AS month,
-          COUNT(*) AS buyer_count
-        FROM buyers
-        WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months')
-        GROUP BY DATE_TRUNC('month', created_at)
-      )
-      SELECT 
-        TO_CHAR(m.month, 'YYYY-MM-DD') AS month,
-        COALESCE(sc.seller_count, 0) AS seller_count,
-        COALESCE(pc.product_count, 0) AS product_count,
-        COALESCE(bc.buyer_count, 0) AS buyer_count
-      FROM months m
-      LEFT JOIN seller_counts sc ON sc.month = m.month
-      LEFT JOIN product_counts pc ON pc.month = m.month
-      LEFT JOIN buyer_counts bc ON bc.month = m.month
-      ORDER BY m.month ASC;
-    `;
+    const rows = await adminMetricsRepository.findMonthlyEntityCounts();
 
-    console.log('Executing metrics query...');
-    const result = await pool.query(query);
-    console.log('Metrics query result rows:', result.rows);
-
-    // Format the response
-    const monthlyMetrics = result.rows.map(row => ({
+    const monthlyMetrics = rows.map(row => ({
       month: row.month,
       seller_count: Number.parseInt(row.seller_count) || 0,
       product_count: Number.parseInt(row.product_count) || 0,
@@ -392,27 +289,10 @@ const processPendingPayments = async (req, res, next) => {
 // Get all buyers
 const getAllBuyers = async (req, res, next) => {
   try {
-    const query = `
-      SELECT 
-        id,
-        user_id,
-        full_name as name,
-        email,
-        mobile_payment as phone,
-        whatsapp_number,
-        status,
-        city,
-        location,
-        created_at
-      FROM buyers 
-      WHERE user_id IS NOT NULL
-      ORDER BY created_at DESC
-    `;
-
-    const result = await pool.query(query);
+    const rows = await buyerRepository.findAllForAdmin();
 
     // Process the rows to include default values for city and location
-    const buyers = result.rows.map(buyer => ({
+    const buyers = rows.map(buyer => ({
       ...buyer,
       city: buyer.city || 'N/A',
       location: buyer.location || 'N/A',
@@ -434,31 +314,15 @@ const getAllBuyers = async (req, res, next) => {
 const getBuyerById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const buyer = await buyerRepository.findByIdForAdmin(id);
 
-    const query = `
-      SELECT 
-        id,
-        full_name as name,
-        email,
-        mobile_payment as phone,
-        whatsapp_number,
-        status,
-        city,
-        location,
-        created_at
-      FROM buyers 
-      WHERE id = $1
-    `;
-
-    const result = await pool.query(query, [id]);
-
-    if (result.rows.length === 0) {
+    if (!buyer) {
       return next(new AppError('Buyer not found', 404));
     }
 
     res.status(200).json({
       status: 'success',
-      data: result.rows[0]
+      data: buyer
     });
   } catch (error) {
     console.error('Error fetching buyer:', error);
@@ -501,29 +365,7 @@ const deleteUser = async (req, res, next) => {
 const getAllWithdrawalRequests = async (req, res, next) => {
   try {
     const { status } = req.query;
-    const params = [];
-    const where = status ? `WHERE wr.status = $${params.push(status)}` : '';
-
-    const { rows } = await pool.query(
-      `SELECT
-                wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name, wr.status,
-                wr.provider_reference, wr.created_at, wr.processed_at,
-                wr.processed_by, wr.metadata, wr.seller_id,
-                CASE
-                    WHEN wr.seller_id IS NOT NULL THEN 'seller'
-                    ELSE 'unknown'
-                END AS entity_type,
-                COALESCE(NULLIF(s.shop_name, ''), NULLIF(s.full_name, ''), NULLIF(wr.mpesa_name, ''), 'Seller') AS entity_name,
-                s.email AS entity_email,
-                s.whatsapp_number AS entity_phone,
-                s.balance AS current_balance
-             FROM withdrawal_requests wr
-             LEFT JOIN sellers s ON wr.seller_id = s.id
-             ${where}
-             ORDER BY wr.created_at DESC
-             LIMIT 500`,
-      params
-    );
+    const rows = await withdrawalRequestRepository.findAllWithSeller({ status });
 
     res.status(200).json({
       status: 'success',
@@ -624,15 +466,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
       return next(new AppError('Admin override status must be "completed" or "failed"', 400));
     }
 
-    let { rows: [request] } = await pool.query(
-      `SELECT wr.*, 
-                    s.whatsapp_number AS entity_phone,
-                    s.balance AS entity_balance
-             FROM withdrawal_requests wr
-             LEFT JOIN sellers s ON wr.seller_id = s.id
-             WHERE wr.id = $1`,
-      [id]
-    );
+    let request = await withdrawalRequestRepository.findByIdWithSeller(id);
 
     if (!request) return next(new AppError('Withdrawal request not found', 404));
 
@@ -736,48 +570,19 @@ const getFinancialMetrics = async (req, res, next) => {
   try {
     console.log('Fetching financial metrics...');
 
-    // Get total sales from all completed orders
-    const salesQuery = await pool.query(`
-      SELECT 
-        COALESCE(SUM(total_amount), 0) as total_sales,
-        COUNT(*) as total_orders
-      FROM product_orders
-      WHERE payment_status = 'completed'
-        AND status::text NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
-    `);
+    const [salesRow, commissionRow, refundsRow, pendingRefundsRow] = await Promise.all([
+      adminMetricsRepository.findTotalSales(),
+      adminMetricsRepository.findTotalCommission(),
+      adminMetricsRepository.findCompletedRefundsTotal(),
+      adminMetricsRepository.findPendingRefundsTotal()
+    ]);
 
-    // Get total commission (platform_fee_amount)
-    const commissionQuery = await pool.query(`
-      SELECT 
-        COALESCE(SUM(platform_fee_amount), 0) as total_commission
-      FROM product_orders
-      WHERE payment_status = 'completed'
-        AND status::text NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
-    `);
-
-    // Get total refunds made
-    const refundsQuery = await pool.query(`
-      SELECT 
-        COALESCE(SUM(amount), 0) as total_refunds,
-        COUNT(*) as total_refund_requests
-      FROM refund_requests
-      WHERE status = 'completed'
-    `);
-
-    // Get pending refunds
-    const pendingRefundsQuery = await pool.query(`
-      SELECT 
-        COALESCE(SUM(refunds), 0) as pending_refunds
-      FROM buyers
-      WHERE refunds > 0
-    `);
-
-    const totalSales = parseFloat(salesQuery.rows[0].total_sales) || 0;
-    const totalOrders = Number.parseInt(salesQuery.rows[0].total_orders) || 0;
-    const totalCommission = parseFloat(commissionQuery.rows[0].total_commission) || 0;
-    const totalRefunds = parseFloat(refundsQuery.rows[0].total_refunds) || 0;
-    const totalRefundRequests = Number.parseInt(refundsQuery.rows[0].total_refund_requests) || 0;
-    const pendingRefunds = parseFloat(pendingRefundsQuery.rows[0].pending_refunds) || 0;
+    const totalSales = parseFloat(salesRow.total_sales) || 0;
+    const totalOrders = Number.parseInt(salesRow.total_orders) || 0;
+    const totalCommission = parseFloat(commissionRow.total_commission) || 0;
+    const totalRefunds = parseFloat(refundsRow.total_refunds) || 0;
+    const totalRefundRequests = Number.parseInt(refundsRow.total_refund_requests) || 0;
+    const pendingRefunds = parseFloat(pendingRefundsRow.pending_refunds) || 0;
 
     res.status(200).json({
       status: 'success',
@@ -802,47 +607,9 @@ const getMonthlyFinancialData = async (req, res, next) => {
   try {
     console.log('Fetching monthly financial data...');
 
-    // Get monthly sales, commission, and refunds for the last 12 months
-    const query = `
-      WITH monthly_dates AS (
-        SELECT 
-          date_trunc('month', CURRENT_DATE - (n || ' months')::interval) AS month
-        FROM generate_series(0, 11) n
-      ),
-      monthly_sales AS (
-        SELECT 
-          date_trunc('month', created_at) AS month,
-          COALESCE(SUM(total_amount), 0) AS sales,
-          COALESCE(SUM(platform_fee_amount), 0) AS commission
-        FROM product_orders
-        WHERE payment_status = 'completed'
-          AND status::text NOT IN ('CANCELLED', 'FAILED', 'EXPIRED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED')
-          AND created_at >= CURRENT_DATE - interval '12 months'
-        GROUP BY date_trunc('month', created_at)
-      ),
-      monthly_refunds AS (
-        SELECT 
-          date_trunc('month', processed_at) AS month,
-          COALESCE(SUM(amount), 0) AS refunds
-        FROM refund_requests
-        WHERE status = 'completed'
-          AND processed_at >= CURRENT_DATE - interval '12 months'
-        GROUP BY date_trunc('month', processed_at)
-      )
-      SELECT 
-        md.month,
-        COALESCE(ms.sales, 0) AS sales,
-        COALESCE(ms.commission, 0) AS commission,
-        COALESCE(mr.refunds, 0) AS refunds
-      FROM monthly_dates md
-      LEFT JOIN monthly_sales ms ON md.month = ms.month
-      LEFT JOIN monthly_refunds mr ON md.month = mr.month
-      ORDER BY md.month ASC
-    `;
+    const rows = await adminMetricsRepository.findMonthlyFinancials();
 
-    const result = await pool.query(query);
-
-    const monthlyData = result.rows.map(row => ({
+    const monthlyData = rows.map(row => ({
       month: row.month,
       sales: parseFloat(row.sales) || 0,
       commission: parseFloat(row.commission) || 0,
