@@ -3,7 +3,7 @@ import Buyer from '../models/buyer.model.js';
 import User from '../models/user.model.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 import { sanitizeBuyer, sanitizeOrder } from '../shared/utils/sanitize.js';
-import { pool } from '../shared/db/database.js';
+import * as refundRequestRepository from '../repositories/refundRequest.repository.js';
 import logger from '../shared/utils/logger.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
@@ -491,21 +491,13 @@ export const checkBuyerByPhone = async (req, res, next) => {
 export const getPendingRefundRequests = async (req, res, next) => {
   try {
     const buyerId = req.user.buyerId;
-
-    const query = `
-      SELECT id, amount, status, requested_at
-      FROM refund_requests
-      WHERE buyer_id = $1 AND status = 'pending'
-      ORDER BY requested_at DESC
-    `;
-
-    const result = await pool.query(query, [buyerId]);
+    const pendingRequests = await refundRequestRepository.findPendingByBuyerId(buyerId);
 
     res.status(200).json({
       status: 'success',
       data: {
-        pendingRequests: result.rows,
-        hasPending: result.rows.length > 0
+        pendingRequests,
+        hasPending: pendingRequests.length > 0
       }
     });
   } catch (error) {
@@ -548,28 +540,20 @@ export const requestRefund = async (req, res, next) => {
       email: buyer.email
     });
 
-    // Create refund request
-    const query = `
-      INSERT INTO refund_requests (
-        buyer_id, amount, status, payment_method, payment_details
-      ) VALUES ($1, $2, 'pending', $3, $4)
-      RETURNING *
-    `;
-
-    const result = await pool.query(query, [
+    const created = await refundRequestRepository.createForBuyer({
       buyerId,
       amount,
       paymentMethod,
-      paymentDetailsJson
-    ]);
+      paymentDetails: paymentDetailsJson
+    });
 
-    logger.info('Refund request created:', result.rows[0].id);
+    logger.info('Refund request created:', created.id);
 
     res.status(201).json({
       status: 'success',
       message: 'Refund request submitted successfully',
       data: {
-        requestId: result.rows[0].id
+        requestId: created.id
       }
     });
   } catch (error) {
