@@ -1,7 +1,8 @@
-import { pool } from '../shared/db/database.js';
-
 import cacheService from '../services/cache.service.js';
 import paymentService from '../services/payment.service.js';
+import * as publicCatalogRepository from '../repositories/publicCatalog.repository.js';
+import * as sellerRepository from '../repositories/seller.repository.js';
+import * as publicOrderStatusRepository from '../repositories/publicOrderStatus.repository.js';
 import { sanitizePublicProduct, sanitizePublicSeller } from '../shared/utils/sanitize.js';
 
 const PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS = 15000;
@@ -13,33 +14,6 @@ const PAYMENT_FAILURE_STATUSES = new Set([
   'payment_mapping_failed',
   'compensation_required'
 ]);
-
-const ORDER_STATUS_QUERY = `
-  SELECT po.id,
-         po.order_number,
-         po.status,
-         po.payment_status,
-         po.buyer_id,
-         po.buyer_email,
-         po.metadata AS order_metadata,
-         p.id AS payment_id,
-         p.status AS payment_record_status,
-         p.provider_reference,
-         p.api_ref,
-         p.metadata AS payment_metadata
-  FROM product_orders po
-  LEFT JOIN LATERAL (
-    SELECT *
-    FROM payments p
-    WHERE p.metadata->>'order_id' = po.id::text
-       OR p.invoice_id = po.id::text
-    ORDER BY p.created_at DESC, p.id DESC
-    LIMIT 1
-  ) p ON true
-  WHERE po.order_number = $1
-     OR po.id::text = $1
-  LIMIT 1
-`;
 
 function parseJson(value, fallback = {}) {
   if (!value) return fallback;
@@ -64,11 +38,6 @@ function extractPublicPaymentFailureReason(row) {
     || null;
 }
 
-async function loadOrderStatusRow(identifier) {
-  const { rows } = await pool.query(ORDER_STATUS_QUERY, [String(identifier)]);
-  return rows[0] || null;
-}
-
 async function syncPendingPaymentFromProvider(row) {
   const paymentStatus = String(row.payment_record_status || row.payment_status || '').toLowerCase();
   if (!row.payment_id || paymentStatus !== 'pending') {
@@ -86,16 +55,10 @@ async function syncPendingPaymentFromProvider(row) {
     return row;
   }
 
-  await pool.query(
-    `UPDATE payments
-     SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-         updated_at = NOW()
-     WHERE id = $1`,
-    [
-      row.payment_id,
-      JSON.stringify({ public_status_checked_at: new Date().toISOString() })
-    ]
-  );
+  await publicOrderStatusRepository.mergePaymentMetadata({
+    paymentId: row.payment_id,
+    metadataPatch: { public_status_checked_at: new Date().toISOString() }
+  });
 
   try {
     const providerStatus = await paymentService.checkTransactionStatus(reference);
@@ -113,29 +76,23 @@ async function syncPendingPaymentFromProvider(row) {
         source: 'public_order_status_poll'
       });
 
-      return await loadOrderStatusRow(row.order_number) || row;
+      return await publicOrderStatusRepository.findStatusByIdentifier(row.order_number) || row;
     }
 
-    await pool.query(
-      `UPDATE payments
-       SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-           updated_at = NOW()
-       WHERE id = $1`,
-      [
-        row.payment_id,
-        JSON.stringify({
-          public_status_provider_snapshot: {
-            status: normalizedStatus || null,
-            checked_at: new Date().toISOString()
-          }
-        })
-      ]
-    );
+    await publicOrderStatusRepository.mergePaymentMetadata({
+      paymentId: row.payment_id,
+      metadataPatch: {
+        public_status_provider_snapshot: {
+          status: normalizedStatus || null,
+          checked_at: new Date().toISOString()
+        }
+      }
+    });
   } catch (error) {
     console.warn('[PublicOrderStatus] Provider status sync failed:', error.message);
   }
 
-  return await loadOrderStatusRow(row.order_number) || row;
+  return await publicOrderStatusRepository.findStatusByIdentifier(row.order_number) || row;
 }
 
 // Get all products (public)
@@ -152,66 +109,16 @@ export const getProducts = async (req, res) => {
     // 2. Try to get from Cache
     const cachedData = await cacheService.get(cacheKey);
     if (cachedData) {
-      // Return cached response
       return res.status(200).json(cachedData);
     }
 
-    // TODO: move filtering logic to ProductModel later when it expands
-    // For now we use the raw query builder style if filters exist, or the model for simple fetch
-    // Actually, let's keep the controller logic but UPDATE query to include location fields
-
-    let query = `
-      SELECT p.*,
-             COUNT(*) OVER() AS total_count,
-             p.is_digital as "isDigital",
-             p.digital_file_name as "digitalFileName",
-             s.id as seller_id,
-             s.shop_name as seller_shop_name,
-             s.city as seller_city,
-             s.location as seller_location,
-             s.physical_address as physical_address,
-             s.latitude as latitude,
-             s.longitude as longitude,
-             s.avatar_url as seller_avatar_url,
-             s.bio as seller_bio,
-             s.theme as seller_theme,
-             s.created_at as seller_created_at,
-             s.updated_at as seller_updated_at
-      FROM products p
-      JOIN sellers s ON p.seller_id = s.id
-      WHERE p.status = $1
-    `;
-
-    const queryParams = ['available']; // Only show available products
-    let paramCount = 2; // Start from 2 since we already have one parameter
-
-    // Add aesthetic filter if provided
-    if (aesthetic && aesthetic !== 'all') {
-      query += ` AND p.aesthetic = $${paramCount++}`;
-      queryParams.push(aesthetic);
-    }
-
-    // Add city filter if provided
-    if (city) {
-      query += ` AND LOWER(s.city) = LOWER($${paramCount++})`;
-      queryParams.push(city);
-
-      // Add location filter if provided and city is also provided
-      // Use LIKE for partial matching to allow flexible location search
-      if (location) {
-        query += ` AND LOWER(s.location) LIKE LOWER($${paramCount++})`;
-        queryParams.push(`%${location}%`);
-      }
-    }
-
-    query += ` ORDER BY p.created_at DESC, p.id DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
-    queryParams.push(limitNum, offset);
-
-    const result = await pool.query(query, queryParams);
-    const total = Number.parseInt(result.rows[0]?.total_count || 0, 10);
+    const rows = await publicCatalogRepository.findActiveProductsWithSeller({
+      aesthetic, city, location, limit: limitNum, offset
+    });
+    const total = Number.parseInt(rows[0]?.total_count || 0, 10);
 
     // Transform results to use sanitization DTOs
-    const sanitizedProducts = result.rows.map(row => {
+    const sanitizedProducts = rows.map(row => {
       const product = sanitizePublicProduct(row);
 
       // Inject nested seller info (also sanitized)
@@ -268,37 +175,23 @@ export const getProducts = async (req, res) => {
 export const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const row = await publicCatalogRepository.findProductByIdWithSeller(id);
 
-    const result = await pool.query(
-      `SELECT p.*,
-              s.shop_name,
-              s.city as seller_city,
-              s.location as seller_location,
-              s.theme as seller_theme,
-              s.physical_address,
-              s.latitude,
-              s.longitude
-       FROM products p
-       JOIN sellers s ON p.seller_id = s.id
-       WHERE p.id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
+    if (!row) {
       return res.status(404).json({
         status: 'error',
         message: 'Product not found'
       });
     }
 
-    const product = sanitizePublicProduct(result.rows[0]);
+    const product = sanitizePublicProduct(row);
     product.seller = sanitizePublicSeller({
-      ...result.rows[0],
-      shopName: result.rows[0].shop_name,
-      city: result.rows[0].seller_city,
-      location: result.rows[0].seller_location,
-      theme: result.rows[0].seller_theme,
-      physicalAddress: result.rows[0].physical_address
+      ...row,
+      shopName: row.shop_name,
+      city: row.seller_city,
+      location: row.seller_location,
+      theme: row.seller_theme,
+      physicalAddress: row.physical_address
     });
 
     res.status(200).json({
@@ -322,8 +215,7 @@ export const getAesthetics = async (req, res) => {
     const cachedData = await cacheService.get(cacheKey);
     if (cachedData) return res.status(200).json(cachedData);
 
-    const result = await pool.query('SELECT DISTINCT aesthetic FROM products WHERE status = $1', ['available']);
-    const aesthetics = result.rows.map(row => row.aesthetic).filter(Boolean);
+    const aesthetics = await publicCatalogRepository.findDistinctAestheticsForAvailable();
 
     const responseData = {
       status: 'success',
@@ -349,16 +241,9 @@ export const getAesthetics = async (req, res) => {
 export const getSellerPublicInfo = async (req, res) => {
   try {
     const { id } = req.params;
+    const seller = await sellerRepository.findPublicById(id);
 
-    // Only select columns that exist in the sellers table
-    const result = await pool.query(
-      `SELECT id, shop_name, city, location, theme, created_at, updated_at
-       FROM sellers 
-       WHERE id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
+    if (!seller) {
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
@@ -368,7 +253,7 @@ export const getSellerPublicInfo = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        seller: sanitizePublicSeller(result.rows[0])
+        seller: sanitizePublicSeller(seller)
       }
     });
   } catch (error) {
@@ -380,6 +265,7 @@ export const getSellerPublicInfo = async (req, res) => {
     });
   }
 };
+
 // Get all active sellers with wishlist count
 export const getSellers = async (req, res) => {
   try {
@@ -390,41 +276,10 @@ export const getSellers = async (req, res) => {
     const cachedData = await cacheService.get(cacheKey);
     if (cachedData) return res.status(200).json(cachedData);
 
-    const query = `
-      SELECT 
-        s.id, 
-        s.full_name, 
-        s.shop_name, 
-        s.banner_image,
-        s.avatar_url,
-        s.bio,
-        s.theme,
-        s.physical_address,
-        s.latitude,
-        s.longitude,
-        s.client_count,
-        s.created_at,
-        COALESCE(k.knock_count, 0) AS knock_count,
-        COUNT(*) OVER() AS total_count,
-        COUNT(w.id) as total_wishlist_count
-      FROM sellers s
-      LEFT JOIN products p ON s.id = p.seller_id
-      LEFT JOIN wishlists w ON p.id = w.product_id
-      LEFT JOIN LATERAL (
-        SELECT COUNT(*)::int AS knock_count
-        FROM seller_knocks sk
-        WHERE sk.seller_id = s.id
-          AND sk.created_at >= NOW() - INTERVAL '24 hours'
-      ) k ON true
-      GROUP BY s.id, k.knock_count
-      ORDER BY total_wishlist_count DESC, s.id ASC
-      LIMIT $1 OFFSET $2
-    `;
+    const rows = await sellerRepository.findActiveWithStats({ limit: pageSize, offset });
+    const total = parseInt(rows[0]?.total_count || '0', 10);
 
-    const result = await pool.query(query, [pageSize, offset]);
-    const total = parseInt(result.rows[0]?.total_count || '0', 10);
-
-    const sellers = result.rows.map(row => ({
+    const sellers = rows.map(row => ({
       id: row.id,
       shopName: row.shop_name,
       shopLink: row.shop_name, // Use shop_name as the link slug
@@ -486,27 +341,9 @@ export const knockSeller = async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      `WITH target AS (
-         SELECT id FROM sellers WHERE id = $1
-       ),
-       inserted AS (
-         INSERT INTO seller_knocks (seller_id)
-         SELECT id FROM target
-         RETURNING seller_id
-       )
-       SELECT
-         EXISTS(SELECT 1 FROM target) AS seller_exists,
-         (
-           SELECT COUNT(*)::int
-           FROM seller_knocks
-           WHERE seller_id = $1
-             AND created_at >= NOW() - INTERVAL '24 hours'
-         ) AS knock_count`,
-      [sellerId]
-    );
+    const result = await sellerRepository.recordKnockAndCount(sellerId);
 
-    if (!result.rows[0]?.seller_exists) {
+    if (!result?.seller_exists) {
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
@@ -517,7 +354,7 @@ export const knockSeller = async (req, res) => {
       status: 'success',
       data: {
         sellerId,
-        knockCount: Number.parseInt(result.rows[0].knock_count || '0', 10)
+        knockCount: Number.parseInt(result.knock_count || '0', 10)
       }
     });
   } catch (error) {
@@ -540,22 +377,7 @@ export const getServiceAvailability = async (req, res) => {
     }
 
     // Get all booked/reserved (non-expired) slots for this service on this date
-    const { rows } = await pool.query(
-      `SELECT 
-         time_slot,
-         status,
-         CASE 
-           WHEN status = 'BOOKED' THEN true
-           WHEN status = 'RESERVED' AND expires_at > NOW() THEN true
-           ELSE false
-         END as is_unavailable
-       FROM service_slots
-       WHERE service_id = $1
-         AND DATE(time_slot AT TIME ZONE 'Africa/Nairobi') = $2::date
-         AND (status = 'BOOKED' OR (status = 'RESERVED' AND expires_at > NOW()))
-       ORDER BY time_slot ASC, id ASC`,
-      [productId, date]
-    );
+    const rows = await publicCatalogRepository.findUnavailableServiceSlots({ productId, date });
 
     const unavailableSlots = rows
       .filter(r => r.is_unavailable)
@@ -575,7 +397,7 @@ export const getOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
 
-    let order = await loadOrderStatusRow(id);
+    let order = await publicOrderStatusRepository.findStatusByIdentifier(id);
     if (!order) {
       return res.status(404).json({
         status: 'error',
@@ -604,5 +426,3 @@ export const getOrderStatus = async (req, res) => {
     });
   }
 };
-
-
