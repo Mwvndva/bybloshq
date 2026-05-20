@@ -4,6 +4,7 @@
  */
 import express from 'express'
 import { protectMarketing } from '../middleware/marketingAuth.js'
+import { authLimiter } from '../middleware/authRateLimiter.js'
 import {
     marketingLogin,
     getOverview,
@@ -20,7 +21,7 @@ import {
 const router = express.Router()
 
 // Public: login only
-router.post('/login', marketingLogin)
+router.post('/login', authLimiter, marketingLogin)
 
 // All remaining routes require marketing JWT
 router.use(protectMarketing)

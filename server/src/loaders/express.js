@@ -8,7 +8,6 @@ import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import path from 'path';
-import { existsSync } from 'fs';
 import { mkdir } from 'fs/promises';
 
 import logger from '../shared/utils/logger.js';
@@ -28,10 +27,7 @@ export default async (app) => {
 
     // 2. Static Files & Uploads Dir
     const uploadsDir = path.join(process.cwd(), 'uploads');
-    if (!existsSync(uploadsDir)) {
-        await mkdir(uploadsDir, { recursive: true });
-        logger.info('Uploads directory created');
-    }
+    await mkdir(uploadsDir, { recursive: true });
     app.use('/uploads', express.static(uploadsDir, {
         setHeaders: (res, filePath) => {
             if (/\.(jpg|jpeg|png|webp)$/.test(filePath)) {
@@ -123,13 +119,16 @@ export default async (app) => {
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
 
-    // Update Helmet for CSP
+    // Helmet CSP for API responses. The real frontend CSP lives in
+    // nginx/production.nginx.conf; this layer is defense-in-depth and
+    // does not need 'unsafe-inline' since JSON responses contain no
+    // executable inline script.
     app.use(
         helmet({
             contentSecurityPolicy: {
                 directives: {
                     defaultSrc: ["'self'"],
-                    scriptSrc: ["'self'", "'unsafe-inline'"],
+                    scriptSrc: ["'self'"],
                     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                     imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://wa.me", "https://*.whatsapp.net"],
                     fontSrc: ["'self'", "https://fonts.gstatic.com"],

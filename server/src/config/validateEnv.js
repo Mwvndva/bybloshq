@@ -130,6 +130,10 @@ export function validateEnvironment() {
 
     const hasEmail = !!(process.env.EMAIL_HOST || process.env.SMTP_HOST);
     if (!hasEmail) {
+        if (isProduction) {
+            console.error('CRITICAL: EMAIL_HOST or SMTP_HOST must be set in production');
+            process.exit(1);
+        }
         console.warn('Email is not configured (EMAIL_HOST or SMTP_HOST required for email notifications)');
     } else {
         console.log(`Email configured via ${process.env.EMAIL_HOST ? 'EMAIL_HOST' : 'SMTP_HOST'}`);

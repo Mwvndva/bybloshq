@@ -111,7 +111,10 @@ export default defineConfig(({ command, mode }) => {
     },
     test: {
       include: ['src/**/*.{test,spec}.{ts,tsx}', 'src/**/*.integration.test.{ts,tsx}'],
-      exclude: ['node_modules/**', 'dist/**', 'server/**'],
+      exclude: ['node_modules/**', 'dist/**', 'server/**', 'e2e/**'],
+      environment: 'jsdom',
+      setupFiles: ['./vitest.setup.ts'],
+      globals: false,
     },
   };
 });

@@ -65,17 +65,33 @@ const createTransporter = () => {
 // Transporter will be lazily initialized in sendEmail
 let transporter;
 
-// Read email templates
+// Email templates are read once per name and cached for the lifetime of the
+// process. EJS templates are not user-uploaded, so cache invalidation isn't
+// needed.
+const templateCache = new Map();
 const readTemplate = async (templateName, data) => {
-  const candidatePaths = [
-    join(__dirname, `../../email-templates/${templateName}.ejs`),
-    join(__dirname, `../../../email-templates/${templateName}.ejs`)
-  ];
-  const templatePath = candidatePaths.find(path => fs.existsSync(path));
-  if (!templatePath) {
-    throw new Error(`Email template not found: ${templateName}`);
+  let template = templateCache.get(templateName);
+  if (!template) {
+    const candidatePaths = [
+      join(__dirname, `../../email-templates/${templateName}.ejs`),
+      join(__dirname, `../../../email-templates/${templateName}.ejs`)
+    ];
+    let templatePath = null;
+    for (const candidate of candidatePaths) {
+      try {
+        await fs.promises.access(candidate);
+        templatePath = candidate;
+        break;
+      } catch {
+        // try next candidate
+      }
+    }
+    if (!templatePath) {
+      throw new Error(`Email template not found: ${templateName}`);
+    }
+    template = await fs.promises.readFile(templatePath, 'utf-8');
+    templateCache.set(templateName, template);
   }
-  const template = fs.readFileSync(templatePath, 'utf-8');
   return ejs.render(template, data);
 };
 

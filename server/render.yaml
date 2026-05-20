@@ -1,8 +1,9 @@
 services:
   - type: web
     name: byblos-atelier-api
-    env: node
+    runtime: node
     buildCommand: npm run build
+    preDeployCommand: npm run migrate
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -33,4 +34,6 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 24h
+    # Free plan suspends after 15 min of inactivity. Upgrade to `standard` (or
+    # higher) for production traffic — change requires billing approval.
     plan: free

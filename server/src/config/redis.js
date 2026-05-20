@@ -13,6 +13,10 @@ try {
     console.warn('[Redis] ioredis unavailable; using in-memory no-op Redis fallback', error.message);
 }
 
+// FIFO-evicted in-memory fallback when ioredis is unavailable. Without a cap
+// the Map grows unbounded; under sustained load that's an OOM risk.
+const FALLBACK_MAX_KEYS = Number(process.env.REDIS_FALLBACK_MAX_KEYS) || 5000;
+
 const createFallbackRedisClient = () => {
     const store = new Map();
     const expirations = new Map();
@@ -21,6 +25,14 @@ const createFallbackRedisClient = () => {
         if (expiresAt && expiresAt <= Date.now()) {
             store.delete(key);
             expirations.delete(key);
+        }
+    };
+    const evictIfFull = () => {
+        while (store.size >= FALLBACK_MAX_KEYS) {
+            const oldestKey = store.keys().next().value;
+            if (oldestKey === undefined) break;
+            store.delete(oldestKey);
+            expirations.delete(oldestKey);
         }
     };
     const setExpiryFromArgs = (key, args) => {
@@ -40,6 +52,7 @@ const createFallbackRedisClient = () => {
             cleanup(key);
             const nx = args.some(arg => String(arg).toUpperCase() === 'NX');
             if (nx && store.has(key)) return null;
+            if (!store.has(key)) evictIfFull();
             store.set(key, value);
             setExpiryFromArgs(key, args);
             return 'OK';
