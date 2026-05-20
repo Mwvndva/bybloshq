@@ -2,9 +2,9 @@
 'use strict';
 
 import ReferralService from '../services/referral.service.js';
+import * as sellerRepository from '../repositories/seller.repository.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 import logger from '../shared/utils/logger.js';
-import { pool } from '../shared/db/database.js';
 
 /**
  * GET /api/v1/sellers/referral/dashboard
@@ -51,14 +51,11 @@ export const generateCode = async (req, res, next) => {
 
 
         // Check if seller already has a code — if so, return it directly
-        const sellerResult = await pool.query(
-            'SELECT referral_code, total_sales FROM sellers WHERE id = $1',
-            [sellerId]
-        );
+        const sellerRow = await sellerRepository.findReferralInfoById(sellerId);
 
-        if (sellerResult.rowCount === 0) return next(new AppError('Seller not found', 404));
+        if (!sellerRow) return next(new AppError('Seller not found', 404));
 
-        const { referral_code, total_sales } = sellerResult.rows[0];
+        const { referral_code, total_sales } = sellerRow;
 
         // Let the service handle the business logic (sales lock, code generation, etc.)
         // the generateReferralCode method will throw if rules are not met.
