@@ -123,6 +123,7 @@ export const sanitizeSeller = (seller) => {
         instagramLink: s.instagramLink || s.instagram_link,
         tiktokLink: s.tiktokLink || s.tiktok_link,
         facebookLink: s.facebookLink || s.facebook_link,
+        creatorCommissionRate: Number.parseFloat(s.creatorCommissionRate || s.creator_commission_rate || 0.01),
         hasPhysicalShop: !!(s.physicalAddress || s.physical_address),
         is_verified: !!(s.is_verified || s.isVerified),
         clientCount: Number.parseInt(s.clientCount || s.client_count || 0),

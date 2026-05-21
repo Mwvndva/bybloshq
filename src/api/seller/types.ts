@@ -36,6 +36,8 @@ export interface Seller {
   instagramLink?: string;
   tiktokLink?: string;
   facebookLink?: string;
+  creatorCommissionRate?: number;
+  creator_commission_rate?: number;
   is_verified: boolean;
   clientCount?: number;
   client_count?: number;
@@ -151,6 +153,7 @@ export interface UpdateSellerProfileInput {
   facebookLink?: string;
   bio?: string;
   avatarUrl?: string | null;
+  creatorCommissionRate?: number;
 }
 
 export interface OrdersAnalytics {

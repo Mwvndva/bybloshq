@@ -37,7 +37,8 @@ const buildInitialFormData = (sellerProfile: any): SellerSettingsFormData => {
     tiktokLink: sellerProfile?.tiktokLink || '',
     facebookLink: sellerProfile?.facebookLink || '',
     whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || '',
-    bio: sellerProfile?.bio || ''
+    bio: sellerProfile?.bio || '',
+    creatorCommissionRate: Number(sellerProfile?.creatorCommissionRate || 0.01) * 100
   };
 };
 
@@ -233,6 +234,16 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
       return;
     }
 
+    const creatorCommissionRate = Number(formData.creatorCommissionRate);
+    if (!Number.isFinite(creatorCommissionRate) || creatorCommissionRate < 1 || creatorCommissionRate > 100) {
+      toast({
+        title: 'Error',
+        description: 'Creator commission must be between 1% and 100%',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -247,6 +258,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
         facebookLink: formData.facebookLink,
         whatsappNumber: formData.whatsappNumber,
         bio: formData.bio.trim(),
+        creatorCommissionRate: creatorCommissionRate / 100,
         latitude: formData.latitude,
         longitude: formData.longitude
       };

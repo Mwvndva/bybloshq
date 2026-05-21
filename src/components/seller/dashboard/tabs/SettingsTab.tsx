@@ -93,6 +93,8 @@ export function SettingsTab({
     toast.success('Creator link copied.');
   };
 
+  const creatorCommissionLabel = `${Number(formData.creatorCommissionRate || 1).toFixed(2).replace(/\.?0+$/, '')}%`;
+
   return (
     <div className="w-full space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -432,9 +434,50 @@ export function SettingsTab({
             <div>
               <h3 className="text-xl font-black text-white">Invite Creators</h3>
               <p className="text-gray-400 text-xs sm:text-sm">
-                Give influencers a creator link for your shop. They earn 1% after completed sales.
+                Give influencers a creator link for your shop. They earn your chosen commission after completed sales.
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.06] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-300/80">Creator commission</p>
+              <h4 className="mt-1 text-lg font-black text-white">{creatorCommissionLabel} per completed sale</h4>
+              <p className="mt-1 text-xs font-medium text-white/50 sm:text-sm">
+                This is the cut creators earn from sales they bring to your shop. Default is 1%; you can raise it before inviting creators.
+              </p>
+            </div>
+            {isEditing ? (
+              <div className="w-full sm:w-44">
+                <label className="mb-1 block text-xs font-semibold text-white/55" htmlFor="creatorCommissionRate">
+                  Commission %
+                </label>
+                <Input
+                  id="creatorCommissionRate"
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="0.5"
+                  value={formData.creatorCommissionRate}
+                  onChange={(event) => setFormData(prev => ({
+                    ...prev,
+                    creatorCommissionRate: Number(event.target.value)
+                  }))}
+                  className="h-10 border-white/10 bg-black/30 text-white placeholder:text-white/35"
+                />
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={toggleEdit}
+                variant="outline"
+                className="h-10 border-white/10 bg-transparent text-white hover:bg-white/5"
+              >
+                Set Commission
+              </Button>
+            )}
           </div>
         </div>
 
@@ -471,7 +514,7 @@ export function SettingsTab({
                     </p>
                     <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
                       {invite.status}
-                      {invite.code ? ` · ${Number(invite.commissionRate || 0.01) * 100}% creator cut` : ''}
+                      {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% creator cut` : ''}
                     </p>
                     {invite.shopUrl && (
                       <p className="mt-1 truncate text-xs text-yellow-200/80">{invite.shopUrl}</p>

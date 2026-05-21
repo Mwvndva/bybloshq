@@ -84,4 +84,5 @@ export interface SellerSettingsFormData {
   facebookLink: string;
   whatsappNumber: string;
   bio: string;
+  creatorCommissionRate: number;
 }
