@@ -50,6 +50,7 @@ export const findSellerByUserId = async (userId) => {
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
+      creator_commission_rate AS "creatorCommissionRate",
       physical_address AS "physicalAddress",
       latitude,
       longitude,
@@ -83,6 +84,7 @@ export const findSellerByShopName = async (shopName) => {
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
+      creator_commission_rate AS "creatorCommissionRate",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
@@ -131,6 +133,7 @@ export const findSellerById = async (id) => {
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
+      creator_commission_rate AS "creatorCommissionRate",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
@@ -155,7 +158,7 @@ export const updateSeller = async (id, updates) => {
     throw new Error('Seller ID is required for update');
   }
 
-  const { fullName, shopName, email, whatsappNumber, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link, tiktokLink, tiktok_link, facebookLink, facebook_link } = updates || {};
+  const { fullName, shopName, email, whatsappNumber, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link, tiktokLink, tiktok_link, facebookLink, facebook_link, creatorCommissionRate, creator_commission_rate } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -253,6 +256,17 @@ export const updateSeller = async (id, updates) => {
     values.push(avatarUrlToUpdate || null);
   }
 
+  const creatorCommissionRateToUpdate = creatorCommissionRate !== undefined ? creatorCommissionRate : creator_commission_rate;
+  if (creatorCommissionRateToUpdate !== undefined) {
+    const normalizedRate = Number(creatorCommissionRateToUpdate);
+    if (!Number.isFinite(normalizedRate) || normalizedRate < 0.01 || normalizedRate > 1) {
+      throw new Error('Creator commission must be between 1% and 100%');
+    }
+    paramCount++;
+    updatesList.push(`creator_commission_rate = $${paramCount}`);
+    values.push(normalizedRate);
+  }
+
   // Handle physical shop fields. If no physical address, coordinates MUST be null (not Nairobi sentinel)
   const hasShop = !!updates.physicalAddress;
   const lat = hasShop ? parseFloat(updates.latitude || 0) : null;
@@ -301,6 +315,7 @@ export const updateSeller = async (id, updates) => {
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
+      creator_commission_rate AS "creatorCommissionRate",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,

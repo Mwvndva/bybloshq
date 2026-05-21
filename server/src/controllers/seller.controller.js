@@ -326,6 +326,21 @@ export const updateProfile = async (req, res) => {
       delete req.body.avatar_url;
     }
 
+    if (req.body.creatorCommissionRate !== undefined || req.body.creator_commission_rate !== undefined) {
+      const rawRate = req.body.creatorCommissionRate ?? req.body.creator_commission_rate;
+      const normalizedRate = Number(rawRate);
+
+      if (!Number.isFinite(normalizedRate) || normalizedRate < 0.01 || normalizedRate > 1) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Creator commission must be between 1% and 100%'
+        });
+      }
+
+      req.body.creatorCommissionRate = normalizedRate;
+      delete req.body.creator_commission_rate;
+    }
+
     if (req.body.shopName) {
       const shopNameRegex = /^[a-zA-Z0-9._-]+$/;
       const shopName = req.body.shopName;
@@ -355,6 +370,17 @@ export const updateProfile = async (req, res) => {
     const seller = await updateSeller(sellerId, req.body);
     if (!seller) {
       return res.status(500).json({ status: 'error', message: 'Failed to update profile' });
+    }
+
+    if (req.body.creatorCommissionRate !== undefined) {
+      await query(
+        `UPDATE seller_creator_links
+         SET commission_rate = $1,
+             updated_at = NOW()
+         WHERE seller_id = $2
+           AND status = 'active'`,
+        [req.body.creatorCommissionRate, sellerId]
+      );
     }
 
     // Invalidate auth cache so next request gets fresh seller data

@@ -14,6 +14,11 @@ const INVITE_EXPIRY_DAYS = 14;
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 const roundMoney = (amount) => Math.round(Number(amount || 0) * 100) / 100;
+const normalizeCommissionRate = (rate) => {
+  const numericRate = Number(rate);
+  if (!Number.isFinite(numericRate)) return DEFAULT_CREATOR_COMMISSION_RATE;
+  return Math.min(1, Math.max(DEFAULT_CREATOR_COMMISSION_RATE, numericRate));
+};
 const CREATOR_ANALYSIS_PERIODS = {
   daily: { unit: 'day', interval: '30 days', labelFormat: 'YYYY-MM-DD' },
   weekly: { unit: 'week', interval: '12 weeks', labelFormat: 'IYYY "W"IW' },
@@ -108,17 +113,21 @@ class CreatorService {
         ...invite,
         first_name: existingCreator.first_name,
         last_name: existingCreator.last_name,
-        shop_name: seller?.shop_name
+        shop_name: seller?.shop_name,
+        seller_creator_commission_rate: seller?.creator_commission_rate
       });
     }
 
     await this.sendCreatorInviteEmail(invite, seller);
-    return this.decorateInvite(invite);
+    return this.decorateInvite({
+      ...invite,
+      seller_creator_commission_rate: seller?.creator_commission_rate
+    });
   }
 
   static async getSellerSummary(sellerId, client = pool) {
     const { rows } = await client.query(
-      `SELECT id, shop_name, full_name, email FROM sellers WHERE id = $1 LIMIT 1`,
+      `SELECT id, shop_name, full_name, email, creator_commission_rate FROM sellers WHERE id = $1 LIMIT 1`,
       [sellerId]
     );
     return rows[0] || null;
@@ -172,6 +181,7 @@ class CreatorService {
               c.last_name,
               scl.code,
               scl.commission_rate,
+              s.creator_commission_rate AS seller_creator_commission_rate,
               scl.status AS link_status
        FROM seller_creator_invites sci
        JOIN sellers s ON s.id = sci.seller_id
@@ -196,7 +206,7 @@ class CreatorService {
       createdAt: invite.created_at,
       creatorName: invite.first_name ? `${invite.first_name} ${invite.last_name || ''}`.trim() : null,
       code: invite.code || null,
-      commissionRate: Number(invite.commission_rate || DEFAULT_CREATOR_COMMISSION_RATE),
+      commissionRate: normalizeCommissionRate(invite.commission_rate || invite.seller_creator_commission_rate),
       linkStatus: invite.link_status || null,
       shopUrl: shopPath ? `${baseUrl}${shopPath}` : null
     };
@@ -212,7 +222,7 @@ class CreatorService {
     try {
       await client.query('BEGIN');
       const { rows } = await client.query(
-        `SELECT sci.*, s.shop_name
+        `SELECT sci.*, s.shop_name, s.creator_commission_rate
          FROM seller_creator_invites sci
          JOIN sellers s ON s.id = sci.seller_id
          WHERE sci.id = $1
@@ -243,13 +253,16 @@ class CreatorService {
         [invite.seller_id, creatorId]
       );
       const code = existing.rows[0]?.code || await this.generateLinkCode(client);
+      const commissionRate = normalizeCommissionRate(invite.creator_commission_rate);
       await client.query(
         `INSERT INTO seller_creator_links (seller_id, creator_id, code, commission_rate, status)
          VALUES ($1, $2, $3, $4, 'active')
          ON CONFLICT (seller_id, creator_id)
-         DO UPDATE SET status = 'active', updated_at = NOW()
+         DO UPDATE SET commission_rate = EXCLUDED.commission_rate,
+                       status = 'active',
+                       updated_at = NOW()
          RETURNING *`,
-        [invite.seller_id, creatorId, code, DEFAULT_CREATOR_COMMISSION_RATE]
+        [invite.seller_id, creatorId, code, commissionRate]
       );
       const accepted = await client.query(
         `UPDATE seller_creator_invites
@@ -259,7 +272,7 @@ class CreatorService {
         [invite.id]
       );
       await client.query('COMMIT');
-      return { status: 'accepted', invite: this.decorateInvite({ ...accepted.rows[0], code, shop_name: invite.shop_name }) };
+      return { status: 'accepted', invite: this.decorateInvite({ ...accepted.rows[0], code, shop_name: invite.shop_name, commission_rate: commissionRate }) };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -270,7 +283,7 @@ class CreatorService {
 
   static async getInviteByToken(token) {
     const { rows } = await pool.query(
-      `SELECT sci.*, s.shop_name, s.full_name AS seller_name
+      `SELECT sci.*, s.shop_name, s.full_name AS seller_name, s.creator_commission_rate
        FROM seller_creator_invites sci
        JOIN sellers s ON s.id = sci.seller_id
        WHERE sci.invite_token = $1
@@ -343,13 +356,16 @@ class CreatorService {
       const creator = creatorRows[0];
 
       const code = await this.generateLinkCode(client);
+      const commissionRate = normalizeCommissionRate(invite.creator_commission_rate);
       await client.query(
         `INSERT INTO seller_creator_links (seller_id, creator_id, code, commission_rate)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (seller_id, creator_id)
-         DO UPDATE SET status = 'active', updated_at = NOW()
+         DO UPDATE SET commission_rate = EXCLUDED.commission_rate,
+                       status = 'active',
+                       updated_at = NOW()
          RETURNING *`,
-        [invite.seller_id, creator.id, code, DEFAULT_CREATOR_COMMISSION_RATE]
+        [invite.seller_id, creator.id, code, commissionRate]
       );
 
       await client.query(
