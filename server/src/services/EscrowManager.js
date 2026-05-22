@@ -12,6 +12,12 @@ class EscrowManager {
      */
     async releaseFunds(client, order, source = 'System') {
         const orderId = order.id;
+        const orderStatus = String(order.status || '').toUpperCase();
+
+        if (orderStatus !== 'COMPLETED') {
+            logger.warn(`[EscrowManager] Escrow release blocked for Order ${orderId}; order status is ${orderStatus || 'unknown'}.`);
+            return { success: false, reason: 'order_not_completed' };
+        }
 
         // 1. Fetch or resolve payment ID
         const paymentResult = await client.query(

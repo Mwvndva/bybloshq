@@ -418,6 +418,7 @@ test('escrow release credits seller exactly once behind payout idempotency gate'
     const order = {
         id: 801,
         order_number: 'BYB-801',
+        status: 'COMPLETED',
         seller_id: 77,
         seller_payout_amount: '99.00',
         platform_fee_amount: '1.00',
@@ -461,6 +462,7 @@ test('escrow release rolls back if seller financial metrics cannot be updated', 
     const order = {
         id: 803,
         order_number: 'BYB-803',
+        status: 'COMPLETED',
         seller_id: 404,
         seller_payout_amount: '50.00',
         platform_fee_amount: '1.00',
@@ -481,11 +483,32 @@ test('escrow release rolls back if seller financial metrics cannot be updated', 
     assert.equal(indexOfQuery(client, /UPDATE product_orders/), -1);
 });
 
+test('escrow release refuses orders that are not completed', async () => {
+    const { EscrowManager } = await runtime();
+    const order = {
+        id: 804,
+        order_number: 'BYB-804',
+        status: 'PAID',
+        seller_id: 77,
+        seller_payout_amount: '99.00',
+        platform_fee_amount: '1.00',
+        total_amount: '100.00'
+    };
+    const client = new FakeClient([]);
+
+    const result = await EscrowManager.releaseFunds(client, order, 'critical-test');
+
+    assert.deepEqual(result, { success: false, reason: 'order_not_completed' });
+    assert.equal(indexOfQuery(client, /INSERT INTO payouts/), -1);
+    assert.equal(indexOfQuery(client, /UPDATE sellers/), -1);
+});
+
 test('escrow release is held when delivery logistics failed or needs admin review', async () => {
     const { EscrowManager } = await runtime();
     const order = {
         id: 802,
         order_number: 'BYB-802',
+        status: 'COMPLETED',
         seller_id: 77,
         seller_payout_amount: '99.00',
         platform_fee_amount: '1.00',

@@ -450,14 +450,18 @@ class AdminService {
     // Metrics
     const metricsRes = await pool.query(`
             SELECT 
-                COUNT(*) as total_orders,
-                COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN total_amount ELSE 0 END), 0) as total_sales,
-                COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN platform_fee_amount ELSE 0 END), 0) as total_commission,
-                COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN seller_payout_amount ELSE 0 END), 0) as net_sales,
-                COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
-                COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_orders,
-                COUNT(CASE WHEN status = 'CANCELLED' THEN 1 END) as cancelled_orders
-            FROM product_orders WHERE seller_id = $1
+                COUNT(po.*) as total_orders,
+                COALESCE(SUM(CASE WHEN p.id IS NOT NULL THEN po.total_amount ELSE 0 END), 0) as total_sales,
+                COALESCE(SUM(CASE WHEN p.id IS NOT NULL THEN po.platform_fee_amount ELSE 0 END), 0) as total_commission,
+                COALESCE(SUM(CASE WHEN p.id IS NOT NULL THEN po.seller_payout_amount ELSE 0 END), 0) as net_sales,
+                COUNT(CASE WHEN po.status = 'PENDING' THEN 1 END) as pending_orders,
+                COUNT(CASE WHEN po.status = 'COMPLETED' THEN 1 END) as completed_orders,
+                COUNT(CASE WHEN po.status = 'CANCELLED' THEN 1 END) as cancelled_orders
+            FROM product_orders po
+            LEFT JOIN payouts p
+              ON p.order_id = po.id
+             AND p.status = 'completed'
+            WHERE po.seller_id = $1
         `, [id]);
 
     const productCountRes = await pool.query('SELECT COUNT(*) as total FROM products WHERE seller_id = $1', [id]);
