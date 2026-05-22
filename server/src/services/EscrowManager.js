@@ -74,6 +74,11 @@ class EscrowManager {
         const platformFeeAmount = this.calculatePlatformRetainedAmount(order, totalAmount, sellerPayoutAmount);
         const sellerId = order.seller_id ?? order.sellerId;
 
+        if (!sellerId) {
+            logger.error(`[EscrowManager] Missing seller_id for Order ${orderId}. Aborting escrow release.`);
+            return { success: false, reason: 'missing_seller_id' };
+        }
+
         if (sellerPayoutAmount <= 0) {
             logger.warn(`[EscrowManager] Non-positive payout (${sellerPayoutAmount}) for Order ${orderId}. Skipping wallet credit.`);
             return { success: true };
@@ -97,15 +102,21 @@ class EscrowManager {
         }
 
         // 4. Update Seller Wallet exactly once after the payout idempotency gate wins.
-        await client.query(
+        const { rows: updatedSellers } = await client.query(
             `UPDATE sellers
-             SET balance     = balance     + $1,
-                 net_revenue = net_revenue + $1,
-                 total_sales = total_sales + $2,
+             SET balance     = COALESCE(balance, 0)     + $1,
+                 net_revenue = COALESCE(net_revenue, 0) + $1,
+                 total_sales = COALESCE(total_sales, 0) + $2,
                  updated_at  = NOW()
-             WHERE id = $3`,
+             WHERE id = $3
+             RETURNING balance, net_revenue, total_sales`,
             [sellerPayoutAmount, totalAmount, sellerId],
         );
+
+        if (updatedSellers.length === 0) {
+            logger.error(`[EscrowManager] Seller ${sellerId} not found while releasing escrow for Order ${orderId}. Rolling back payout.`);
+            throw new Error(`Seller ${sellerId} not found for escrow release`);
+        }
 
         await CreatorService.creditCreatorForOrder(client, { order, paymentId });
         await CreatorService.creditCreatorReferralForSeller(client, { order });

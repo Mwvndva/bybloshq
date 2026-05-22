@@ -292,16 +292,20 @@ test('EscrowManager remains isolated behind buyer confirmation release callers',
   const inventoryService = read('src/services/inventoryReservation.service.js');
   const fulfillmentTransition = read('src/services/orderFulfillmentTransition.service.js');
   const payoutCallbackStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+  const escrowManager = read('src/services/EscrowManager.js');
 
-  assert.deepEqual(escrowImporters, ['order.service.js']);
+  assert.deepEqual(escrowImporters, ['order.service.js', 'orderFulfillmentTransition.service.js']);
   assert.match(orderService, /escrowManager\.releaseFunds\(client,\s*order,\s*'OrderService'\)/);
   assert.doesNotMatch(deadlineService, /EscrowManager|escrowManager|releaseFunds/);
   assert.doesNotMatch(inventoryService, /EscrowManager|escrowManager|releaseFunds/);
-  assert.doesNotMatch(fulfillmentTransition, /EscrowManager|escrowManager|releaseFunds/);
+  assert.match(fulfillmentTransition, /escrowManager\.releaseFunds\(client,\s*completedOrder,\s*'DigitalFulfillment'\)/);
   assert.doesNotMatch(payoutCallbackStateMachine, /EscrowManager|escrowManager|releaseFunds/);
   assert.match(orderService, /nonConfirmableStatuses/);
   assert.match(orderService, /deliveryStatus === 'delivered' \|\| deliveryStatus === 'completed'/);
   assert.doesNotMatch(orderService, /!canConfirmReceipt && order\.status === OrderStatus\.FULFILLING/);
+  assert.match(escrowManager, /COALESCE\(balance, 0\)\s+\+\s+\$1/);
+  assert.match(escrowManager, /RETURNING balance, net_revenue, total_sales/);
+  assert.match(escrowManager, /Seller \$\{sellerId\} not found for escrow release/);
   assert.match(ordersSectionUtils, /terminalStatuses/);
   assert.match(ordersSectionUtils, /deliveryStatus === 'delivered' \|\| deliveryStatus === 'completed'/);
 });

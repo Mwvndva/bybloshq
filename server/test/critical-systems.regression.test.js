@@ -427,7 +427,11 @@ test('escrow release credits seller exactly once behind payout idempotency gate'
         respond(text => /SELECT id FROM payments/.test(text), [{ id: 601 }]),
         respond(text => /FROM logistics_requests lr/.test(text), []),
         respond(text => /INSERT INTO payouts/.test(text) && /ON CONFLICT \(order_id\) DO NOTHING/.test(text), [{ id: 901 }]),
-        respond(text => /UPDATE sellers/.test(text), []),
+        respond(text => /UPDATE sellers/.test(text), [{
+            balance: '99.00',
+            net_revenue: '99.00',
+            total_sales: '100.00'
+        }]),
         respond(text => /UPDATE product_orders/.test(text), [])
     ]);
 
@@ -437,6 +441,8 @@ test('escrow release credits seller exactly once behind payout idempotency gate'
     assert.ok(indexOfQuery(client, /INSERT INTO payouts/) < indexOfQuery(client, /UPDATE sellers/));
     assert.ok(indexOfQuery(client, /UPDATE sellers/) < indexOfQuery(client, /UPDATE product_orders/));
     assert.deepEqual(client.queries[indexOfQuery(client, /UPDATE sellers/)].params, [99, 100, 77]);
+    assert.match(client.queries[indexOfQuery(client, /UPDATE sellers/)].text, /COALESCE\(balance, 0\)\s+\+\s+\$1/);
+    assert.match(client.queries[indexOfQuery(client, /UPDATE sellers/)].text, /RETURNING balance, net_revenue, total_sales/);
 
     const duplicateClient = new FakeClient([
         respond(text => /SELECT id FROM payments/.test(text), [{ id: 601 }]),
@@ -448,6 +454,31 @@ test('escrow release credits seller exactly once behind payout idempotency gate'
 
     assert.deepEqual(duplicate, { success: true, alreadyReleased: true });
     assert.equal(indexOfQuery(duplicateClient, /UPDATE sellers/), -1);
+});
+
+test('escrow release rolls back if seller financial metrics cannot be updated', async () => {
+    const { EscrowManager } = await runtime();
+    const order = {
+        id: 803,
+        order_number: 'BYB-803',
+        seller_id: 404,
+        seller_payout_amount: '50.00',
+        platform_fee_amount: '1.00',
+        total_amount: '51.00'
+    };
+    const client = new FakeClient([
+        respond(text => /SELECT id FROM payments/.test(text), [{ id: 603 }]),
+        respond(text => /FROM logistics_requests lr/.test(text), []),
+        respond(text => /INSERT INTO payouts/.test(text) && /ON CONFLICT \(order_id\) DO NOTHING/.test(text), [{ id: 903 }]),
+        respond(text => /UPDATE sellers/.test(text), [])
+    ]);
+
+    await assert.rejects(
+        () => EscrowManager.releaseFunds(client, order, 'critical-test'),
+        /Seller 404 not found for escrow release/
+    );
+
+    assert.equal(indexOfQuery(client, /UPDATE product_orders/), -1);
 });
 
 test('escrow release is held when delivery logistics failed or needs admin review', async () => {
