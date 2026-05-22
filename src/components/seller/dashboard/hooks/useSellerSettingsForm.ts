@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { checkShopNameAvailability, sellerApi } from '@/api/sellerApi';
 import type { SellerSettingsFormData } from '../types';
+import type { LocationCoordinates } from '@/lib/location';
 
 const cities = {
   'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
@@ -115,7 +116,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     }));
   }, []);
 
-  const handleShopLocationChange = useCallback((address: string, coordinates: { lat: number; lng: number } | null) => {
+  const handleShopLocationChange = useCallback((address: string, coordinates: LocationCoordinates | null) => {
     setFormData(prev => ({
       ...prev,
       physicalAddress: address,

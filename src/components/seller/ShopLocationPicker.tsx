@@ -1,9 +1,10 @@
 import LocationPicker from '../common/LocationPicker';
+import type { LocationCoordinates } from '@/lib/location';
 
 interface ShopLocationPickerProps {
     initialAddress?: string;
-    initialCoordinates?: { lat: number; lng: number } | null;
-    onLocationChange: (address: string, coordinates: { lat: number; lng: number } | null) => void;
+    initialCoordinates?: LocationCoordinates | null;
+    onLocationChange: (address: string, coordinates: LocationCoordinates | null) => void;
 }
 
 export default function ShopLocationPicker({ initialAddress = '', initialCoordinates = null, onLocationChange }: ShopLocationPickerProps) {

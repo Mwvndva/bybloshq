@@ -13,6 +13,14 @@ import { Calendar as CalendarIcon, Clock, MapPin, Edit2, Loader2 } from 'lucide-
 import { useBuyerAuth, useGlobalAuth } from '@/contexts/GlobalAuthContext';
 import LocationPicker from './common/LocationPicker';
 import { toast } from 'sonner';
+import {
+    createOptionalBuyerLocation,
+    hasPreciseLocation,
+    toBuyerLocationPayload,
+    type BuyerLocationPayload,
+    type LocationCoordinates,
+    type OptionalBuyerLocation
+} from '@/lib/location';
 
 interface ServiceBookingModalProps {
     product: Product;
@@ -24,9 +32,9 @@ interface ServiceBookingModalProps {
         location: string;
         locationType?: string;
         serviceRequirements?: string;
-        buyerLocation?: { lat: number; lng: number; address: string } | null
+        buyerLocation?: BuyerLocationPayload | null
     }) => void;
-    initialBuyerLocation?: { lat: number; lng: number; address: string } | null;
+    initialBuyerLocation?: BuyerLocationPayload | null;
 }
 
 export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initialBuyerLocation = null }: ServiceBookingModalProps) {
@@ -42,7 +50,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     const { updateProfile } = useGlobalAuth();
 
     const [isChangingLocation, setIsChangingLocation] = useState(false);
-    const [buyerLocation, setBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+    const [buyerLocation, setBuyerLocation] = useState<OptionalBuyerLocation | null>(null);
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
     const serviceOptions = product.service_options || (product as any).serviceOptions || {};
 
@@ -121,14 +129,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         return false;
     };
 
-    const handleLocationPickerChange = (address: string, coords: { lat: number; lng: number } | null) => {
-        const newLoc = {
-            lat: coords?.lat || 0,
-            lng: coords?.lng || 0,
-            address: address
-        };
+    const handleLocationPickerChange = (address: string, coords: LocationCoordinates | null) => {
+        const newLoc = createOptionalBuyerLocation(address, coords);
 
-        if (isShopless && (!newLoc.lat || !newLoc.lng)) {
+        if (isShopless && !hasPreciseLocation(newLoc)) {
             toast.error('Search Precise Location', {
                 description: 'Please select a suggested location from the map to ensure we can reach you.'
             });
@@ -152,10 +156,22 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
         setIsUpdatingProfile(true);
         try {
+            const preciseLocation = toBuyerLocationPayload(buyerLocation.address, {
+                lat: buyerLocation.lat,
+                lng: buyerLocation.lng
+            });
+
+            if (!preciseLocation) {
+                toast.error('Search Precise Location', {
+                    description: 'Please select a suggested location from the map to ensure we can reach you.'
+                });
+                return;
+            }
+
             await updateProfile({
-                fullAddress: buyerLocation.address,
-                latitude: buyerLocation.lat,
-                longitude: buyerLocation.lng
+                fullAddress: preciseLocation.address,
+                latitude: preciseLocation.lat,
+                longitude: preciseLocation.lng
             } as any, 'buyer');
             setIsChangingLocation(false);
             toast.success('Location updated', {
@@ -175,23 +191,23 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         const finalLocation = isShopless ? (buyerLocation?.address || null) : location;
 
         if (date && time && isLocationValid() && finalLocation) {
+            const preciseBuyerLocation = isShopless
+                ? toBuyerLocationPayload(finalLocation, { lat: buyerLocation?.lat, lng: buyerLocation?.lng })
+                : null;
+
             onConfirm({
                 date,
                 time,
                 location: finalLocation,
                 serviceRequirements: serviceRequirements.trim() || '',
-                buyerLocation: isShopless ? {
-                    lat: buyerLocation?.lat || 0,
-                    lng: buyerLocation?.lng || 0,
-                    address: finalLocation
-                } : null
+                buyerLocation: preciseBuyerLocation
             });
         }
     };
 
     const isLocationValid = () => {
         if (isShopless) {
-            return !!buyerLocation?.address && !!buyerLocation?.lat && !!buyerLocation?.lng;
+            return hasPreciseLocation(buyerLocation);
         }
         return !!location;
     };
@@ -204,7 +220,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         if (!isLocationValid()) {
             if (isShopless) {
                 if (!buyerLocation?.address) return 'Please set your location';
-                if (!buyerLocation?.lat || !buyerLocation?.lng) return 'Please select a specific location from suggestions';
+                if (!hasPreciseLocation(buyerLocation)) return 'Please select a specific location from suggestions';
             }
             if (isSellerVisits) return 'Please enter your address';
             return 'Please select a location';
@@ -394,7 +410,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                     <div className="flex-1 overflow-y-auto px-6 py-4 no-scrollbar">
                         <LocationPicker
                             initialAddress={buyerLocation?.address}
-                            initialCoordinates={buyerLocation ? { lat: buyerLocation.lat, lng: buyerLocation.lng } : null}
+                            initialCoordinates={hasPreciseLocation(buyerLocation) ? { lat: buyerLocation.lat, lng: buyerLocation.lng } : null}
                             onLocationChange={handleLocationPickerChange}
                             label="Search Address"
                             autoPopulate={false}

@@ -4,6 +4,7 @@ import { PaymentStatusModal } from '@/components/PaymentStatusModal';
 import { ServiceBookingModal } from '@/components/ServiceBookingModal';
 import type { Product } from '@/types';
 import type { Theme } from './productCardUtils';
+import type { BuyerLocationPayload } from '@/lib/location';
 
 interface ProductCardModalsProps {
   product: Product;
@@ -16,7 +17,7 @@ interface ProductCardModalsProps {
   isProcessingPurchase: boolean;
   currentPhone: string;
   initialBuyerData?: { fullName?: string; email?: string; city?: string; location?: string };
-  initialBuyerLocation: { lat: number; lng: number; address: string } | null;
+  initialBuyerLocation: BuyerLocationPayload | null;
   shouldSkipSave: boolean;
   isPhysicalProduct: boolean;
   paymentModalData: {
@@ -37,7 +38,7 @@ interface ProductCardModalsProps {
     time: string;
     location: string;
     locationType?: string;
-    buyerLocation?: { lat: number; lng: number; address: string } | null;
+    buyerLocation?: BuyerLocationPayload | null;
   }) => Promise<void>;
 }
 

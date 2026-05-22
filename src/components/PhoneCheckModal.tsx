@@ -7,6 +7,13 @@ import { Phone, Loader2, MapPin, Truck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import LocationPicker from '@/components/common/LocationPicker';
 import apiClient from '@/lib/apiClient';
+import {
+  createOptionalBuyerLocation,
+  hasPreciseLocation,
+  toBuyerLocationPayload,
+  type BuyerLocationPayload,
+  type OptionalBuyerLocation
+} from '@/lib/location';
 
 const PRODUCT_SERVICE_CHARGE_RATE = 0.02;
 const calculateProductServiceCharge = (amount: number) => Math.ceil(amount * PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
@@ -16,9 +23,9 @@ const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 0) => {
 
 export interface DoorDeliverySelection {
   doorDelivery: boolean;
-  address?: string;
-  lat?: number;
-  lng?: number;
+  address?: BuyerLocationPayload['address'];
+  lat?: BuyerLocationPayload['lat'];
+  lng?: BuyerLocationPayload['lng'];
   quote?: {
     feeAmount: number;
     distanceKm: number;
@@ -52,7 +59,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [doorDeliveryEnabled, setDoorDeliveryEnabled] = useState(false);
-  const [deliveryLocation, setDeliveryLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
+  const [deliveryLocation, setDeliveryLocation] = useState<OptionalBuyerLocation>({
     address: '',
     lat: null,
     lng: null
@@ -91,7 +98,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       return;
     }
 
-    if (deliveryLocation.lat === null || deliveryLocation.lng === null) {
+    if (!hasPreciseLocation(deliveryLocation)) {
       setDeliveryQuote(null);
       setQuoteError('');
       return;
@@ -156,9 +163,13 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
     }
 
     const wantsDoorDelivery = canUseDoorDelivery && doorDeliveryEnabled;
+    const preciseDeliveryLocation = toBuyerLocationPayload(deliveryLocation.address, {
+      lat: deliveryLocation.lat,
+      lng: deliveryLocation.lng
+    });
 
     if (wantsDoorDelivery) {
-      if (!deliveryLocation.address.trim() || deliveryLocation.lat === null || deliveryLocation.lng === null) {
+      if (!preciseDeliveryLocation) {
         setError('Please pin your delivery location and enter the full address');
         return;
       }
@@ -176,9 +187,9 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 
     onPhoneSubmit(phone.trim(), wantsDoorDelivery ? {
       doorDelivery: true,
-      address: deliveryLocation.address.trim(),
-      lat: deliveryLocation.lat ?? undefined,
-      lng: deliveryLocation.lng ?? undefined,
+      address: preciseDeliveryLocation?.address,
+      lat: preciseDeliveryLocation?.lat,
+      lng: preciseDeliveryLocation?.lng,
       quote: deliveryQuote ?? undefined
     } : { doorDelivery: false });
   };
@@ -265,11 +276,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                               placeholder="Search delivery location..."
                               autoPopulate
                               onLocationChange={(address, coordinates) => {
-                                setDeliveryLocation({
-                                  address,
-                                  lat: coordinates?.lat ?? null,
-                                  lng: coordinates?.lng ?? null
-                                });
+                                setDeliveryLocation(createOptionalBuyerLocation(address, coordinates));
                               }}
                               className="[&_label]:!text-white [&_p]:!text-white/65 [&_input]:!bg-[#050505] [&_input]:!text-white [&_input]:!border-white/15 [&_input::placeholder]:!text-white/40"
                             />

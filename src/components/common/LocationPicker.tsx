@@ -8,6 +8,12 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
+import {
+    DEFAULT_MAP_CENTER,
+    createLocationSelection,
+    normalizeCoordinates,
+    type LocationCoordinates
+} from '@/lib/location';
 
 // Fix Leaflet marker icon issue
 if (typeof window !== 'undefined') {
@@ -43,8 +49,8 @@ function MapFlyTo({ position }: { position: [number, number] | null }) {
 
 interface LocationPickerProps {
     initialAddress?: string;
-    initialCoordinates?: { lat: number; lng: number } | null;
-    onLocationChange: (address: string, coordinates: { lat: number; lng: number } | null) => void;
+    initialCoordinates?: LocationCoordinates | null;
+    onLocationChange: (address: string, coordinates: LocationCoordinates | null) => void;
     placeholder?: string;
     label?: string;
     detailedLabel?: string;
@@ -64,9 +70,10 @@ export default function LocationPicker({
     autoPopulate = true,
     initialValue = ''
 }: LocationPickerProps) {
+    const normalizedInitialCoordinates = normalizeCoordinates(initialCoordinates);
     const [address, setAddress] = useState(initialAddress);
-    const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(initialCoordinates ? [initialCoordinates.lat, initialCoordinates.lng] : null);
-    const [center, setCenter] = useState<[number, number]>(initialCoordinates ? [initialCoordinates.lat, initialCoordinates.lng] : [-1.2921, 36.8219]); // Default Nairobi
+    const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(normalizedInitialCoordinates ? [normalizedInitialCoordinates.lat, normalizedInitialCoordinates.lng] : null);
+    const [center, setCenter] = useState<[number, number]>(normalizedInitialCoordinates ? [normalizedInitialCoordinates.lat, normalizedInitialCoordinates.lng] : [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]);
     const [searchQuery, setSearchQuery] = useState(initialValue);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -86,9 +93,10 @@ export default function LocationPicker({
         if (initialAddress && initialAddress !== address) {
             setAddress(initialAddress);
         }
-        if (initialCoordinates) {
-            if (!markerPosition || initialCoordinates.lat !== markerPosition[0] || initialCoordinates.lng !== markerPosition[1]) {
-                const newPos: [number, number] = [initialCoordinates.lat, initialCoordinates.lng];
+        const nextInitialCoordinates = normalizeCoordinates(initialCoordinates);
+        if (nextInitialCoordinates) {
+            if (!markerPosition || nextInitialCoordinates.lat !== markerPosition[0] || nextInitialCoordinates.lng !== markerPosition[1]) {
+                const newPos: [number, number] = [nextInitialCoordinates.lat, nextInitialCoordinates.lng];
                 setMarkerPosition(newPos);
                 setCenter(newPos);
             }
@@ -103,7 +111,14 @@ export default function LocationPicker({
 
         setIsSearching(true);
         try {
-            const response = await axios.get<any[]>(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&headers=${encodeURIComponent('User-Agent: ByblosHQ/1.0')}`);
+            const response = await axios.get<any[]>('https://nominatim.openstreetmap.org/search', {
+                params: {
+                    format: 'json',
+                    q: query,
+                    countrycodes: 'ke',
+                    limit: 8
+                }
+            });
             setSearchResults(response.data);
             setShowResults(true);
         } catch (error) {
@@ -147,20 +162,25 @@ export default function LocationPicker({
             setAddress(result.display_name);
         }
 
-        onLocationChange(finalDetailedAddress, { lat, lng: lon });
+        const selection = createLocationSelection(finalDetailedAddress, { lat, lng: lon });
+        onLocationChange(selection.address, selection.coordinates);
     };
 
     const handleManualAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newAddress = e.target.value;
         setAddress(newAddress);
-        const coords = markerPosition ? { lat: markerPosition[0], lng: markerPosition[1] } : null;
-        onLocationChange(newAddress, coords);
+        const selection = createLocationSelection(
+            newAddress,
+            markerPosition ? { lat: markerPosition[0], lng: markerPosition[1] } : null
+        );
+        onLocationChange(selection.address, selection.coordinates);
     };
 
     const handleMapClick = (lat: number, lng: number) => {
         const newPos: [number, number] = [lat, lng];
         setMarkerPosition(newPos);
-        onLocationChange(address, { lat, lng });
+        const selection = createLocationSelection(address, { lat, lng });
+        onLocationChange(selection.address, selection.coordinates);
     }
 
     return (

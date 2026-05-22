@@ -16,6 +16,7 @@ import { ProductCardMedia } from '@/components/product-card/ProductCardMedia';
 import { ProductCardModals } from '@/components/product-card/ProductCardModals';
 import { createCheckoutAttemptToken, getProductFlags, getThemeClasses, normalizePhone, type Theme } from '@/components/product-card/productCardUtils';
 import type { DoorDeliverySelection } from '@/components/PhoneCheckModal';
+import { toBuyerLocationPayload, type BuyerLocationPayload } from '@/lib/location';
 
 const PRODUCT_SERVICE_CHARGE_RATE = 0.02;
 const calculateProductServiceCharge = (amount: number) => Math.ceil(amount * PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
@@ -52,7 +53,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [initialBuyerData, setInitialBuyerData] = useState<{ fullName?: string; email?: string; city?: string; location?: string } | undefined>(undefined);
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
-  const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [initialBuyerLocation, setInitialBuyerLocation] = useState<BuyerLocationPayload | null>(null);
 
   const { isDigital, isService, isPhysical, isHybrid, isOutOfStock, isSold } = getProductFlags(product);
 
@@ -154,7 +155,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     location: string;
     locationType?: string;
     serviceRequirements?: string;
-    buyerLocation?: { lat: number; lng: number; address: string } | null
+    buyerLocation?: BuyerLocationPayload | null
   }) => {
     setBookingData(data);
     setIsBookingModalOpen(false);
@@ -350,6 +351,28 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         buyerLocation: activeBooking?.buyerLocation
       });
       const wantsDoorDelivery = isPhysical && doorDeliverySelection?.doorDelivery === true;
+      const doorDeliveryLocation = wantsDoorDelivery
+        ? toBuyerLocationPayload(doorDeliverySelection?.address, {
+          lat: doorDeliverySelection?.lat,
+          lng: doorDeliverySelection?.lng
+        })
+        : null;
+      const cityLocationFallback = buyerDetails.city && buyerDetails.location
+        ? toBuyerLocationPayload(`${buyerDetails.city}, ${buyerDetails.location}`, {
+          lat: (buyerDetails as any).latitude,
+          lng: (buyerDetails as any).longitude
+        })
+        : null;
+
+      if (wantsDoorDelivery && !doorDeliveryLocation) {
+        toast({
+          title: 'Delivery Location Required',
+          description: 'Please pin your delivery location and enter the full address.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const paymentDeliveryFeeEstimate = wantsDoorDelivery ? Number(doorDeliverySelection?.quote?.feeAmount || 0) : 0;
       const paymentEstimate = calculateBuyerPayableTotal(product.price, paymentDeliveryFeeEstimate);
       const checkoutToken = getCheckoutAttemptToken();
@@ -369,21 +392,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         clientCheckoutToken: checkoutToken,
         // Provide structured buyerLocation if it came from booking/map
         // root city/location fields are deprecated and ignored by backend
-        buyerLocation: wantsDoorDelivery ? {
-          address: doorDeliverySelection?.address,
-          lat: doorDeliverySelection?.lat,
-          lng: doorDeliverySelection?.lng
-        } : activeBooking?.buyerLocation || (buyerDetails.city && buyerDetails.location ? {
-          address: `${buyerDetails.city}, ${buyerDetails.location}`,
-          lat: (buyerDetails as any).latitude || 0,
-          lng: (buyerDetails as any).longitude || 0
-        } : undefined),
+        buyerLocation: doorDeliveryLocation || activeBooking?.buyerLocation || cityLocationFallback || undefined,
         delivery: wantsDoorDelivery ? {
           doorDelivery: true,
           deliveryMode: 'DOOR_DELIVERY',
-          address: doorDeliverySelection?.address,
-          latitude: doorDeliverySelection?.lat,
-          longitude: doorDeliverySelection?.lng,
+          address: doorDeliveryLocation?.address,
+          latitude: doorDeliveryLocation?.lat,
+          longitude: doorDeliveryLocation?.lng,
           frontendQuote: doorDeliverySelection?.quote
         } : {
           doorDelivery: false
@@ -400,11 +415,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             doorDelivery: true,
             door_delivery: true,
             delivery_mode: 'DOOR_DELIVERY',
-            buyerDeliveryLocation: {
-              address: doorDeliverySelection?.address,
-              lat: doorDeliverySelection?.lat,
-              lng: doorDeliverySelection?.lng
-            },
+            buyerDeliveryLocation: doorDeliveryLocation,
             frontendQuote: doorDeliverySelection?.quote
           } : { doorDelivery: false },
           client_checkout_token: checkoutToken
@@ -415,11 +426,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             doorDelivery: true,
             door_delivery: true,
             delivery_mode: 'DOOR_DELIVERY',
-            buyerDeliveryLocation: {
-              address: doorDeliverySelection?.address,
-              lat: doorDeliverySelection?.lat,
-              lng: doorDeliverySelection?.lng
-            },
+            buyerDeliveryLocation: doorDeliveryLocation,
             frontendQuote: doorDeliverySelection?.quote
           } : { doorDelivery: false },
           client_checkout_token: checkoutToken
