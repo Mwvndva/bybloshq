@@ -14,7 +14,8 @@ import {
   getPaymentStatusBadge,
   getStatusBadge,
   glassCardStyle,
-  isDigitalOrder
+  isDigitalOrder,
+  isPaidOrder
 } from './ordersSectionUtils';
 
 interface BuyerOrderCardProps {
@@ -166,7 +167,7 @@ export function BuyerOrderCard({
               </Button>
             )}
 
-            {order.status === 'COMPLETED' && isDigitalOrder(order) && (
+            {isPaidOrder(order) && isDigitalOrder(order) && (
               <Button
                 size="sm"
                 className="flex-1 sm:flex-none bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-xs sm:text-sm gap-1.5"

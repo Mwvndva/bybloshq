@@ -12,7 +12,7 @@ import type { Order } from '@/types/order';
 import { BuyerOrderCard } from './BuyerOrderCard';
 import { BuyerOrderDialogs } from './BuyerOrderDialogs';
 import { OrdersLoadingState } from './OrdersLoadingState';
-import { isDigitalOrder } from './ordersSectionUtils';
+import { isDigitalOrder, isDigitalOrderItem } from './ordersSectionUtils';
 
 const updateSellerClientCountInCache = (queryClient: ReturnType<typeof useQueryClient>, sellerId: string, clientCount: number) => {
   queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
@@ -78,7 +78,7 @@ export default function OrdersSection() {
   }, [fetchOrders]);
 
   const handleDownload = async (order: Order) => {
-    const digitalItem = order.items?.find((item: any) => item.isDigital || item.productType === 'digital');
+    const digitalItem = order.items?.find(isDigitalOrderItem);
     if (!digitalItem?.productId) {
       toast.error('Could not find digital product to download.');
       return;

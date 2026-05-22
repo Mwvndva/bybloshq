@@ -47,11 +47,23 @@ export const formatOrderCurrency = (value: number | undefined, currency = 'KSH')
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+export const isPaidOrder = (order: Order): boolean => {
+  const paymentStatus = String(order.paymentStatus || (order as any).payment_status || '').toLowerCase();
+  return ['completed', 'success', 'paid'].includes(paymentStatus);
+};
+
+export const isDigitalOrderItem = (item: any): boolean => {
+  const productType = String(item?.productType || item?.product_type || '').toLowerCase();
+  return Boolean(item?.isDigital || item?.is_digital || productType === 'digital');
+};
+
 export const isDigitalOrder = (order: Order): boolean => {
   return !!(
     order.isDigital ||
+    (order as any).is_digital ||
     (order.metadata as any)?.product_type === 'digital' ||
-    order.items?.some((item: any) => item.isDigital || item.productType === 'digital')
+    (order.metadata as any)?.productType === 'digital' ||
+    order.items?.some(isDigitalOrderItem)
   );
 };
 
