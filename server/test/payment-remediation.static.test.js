@@ -1109,6 +1109,7 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
   const sellerDashboard = read('../src/components/seller/SellerDashboard.tsx');
   const sellerDashboardDataHook = read('../src/components/seller/dashboard/hooks/useSellerDashboardData.ts');
   const sellerDashboardQueryKeys = read('../src/components/seller/dashboard/queryKeys.ts');
+  const sellerAnalyticsRepository = read('src/repositories/sellerAnalytics.repository.js');
   const productCard = read('../src/components/ProductCard.tsx');
   const adminDashboard = read('../src/pages/admin/NewDashboardPage.tsx');
 
@@ -1119,6 +1120,8 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
   assert.match(sellerDashboardDataHook, /staleTime:\s*60_000/);
   assert.match(sellerDashboardDataHook, /queryClient\.fetchQuery/);
   assert.match(sellerDashboardDataHook, /queryClient\.invalidateQueries/);
+  assert.match(sellerAnalyticsRepository, /JOIN payouts p[\s\S]*p\.order_id = o\.id[\s\S]*p\.status = 'completed'/);
+  assert.match(sellerAnalyticsRepository, /COALESCE\(p\.completed_at, p\.processed_at, o\.updated_at, o\.created_at\)/);
   assert.doesNotMatch(sellerDashboard, /window\.location\.reload/);
   assert.doesNotMatch(productCard, /Math\.random/);
   assert.doesNotMatch(adminDashboard, /Math\.random/);
