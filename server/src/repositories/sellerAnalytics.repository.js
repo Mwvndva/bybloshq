@@ -42,6 +42,9 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
         COALESCE(SUM(o.total_amount), 0) as total_sales,
         COALESCE(SUM(o.seller_payout_amount), 0) as net_revenue
       FROM product_orders o
+      JOIN payouts p
+        ON p.order_id = o.id
+       AND p.status = 'completed'
       WHERE o.seller_id = s.id
         AND o.payment_status = 'completed'
         AND o.status::text <> ALL($2::text[])
@@ -57,6 +60,9 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
     LEFT JOIN LATERAL (
       SELECT COALESCE(SUM(o.total_amount), 0) as creator_generated_sales
       FROM product_orders o
+      JOIN payouts p
+        ON p.order_id = o.id
+       AND p.status = 'completed'
       WHERE o.seller_id = s.id
         AND o.payment_status = 'completed'
         AND o.status::text <> ALL($2::text[])
@@ -79,14 +85,17 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
 export async function findMonthlySales({ sellerId, excludedStatuses }) {
   const sql = `
     SELECT
-      TO_CHAR(o.created_at, 'YYYY-MM') as month,
+      TO_CHAR(COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at), 'YYYY-MM') as month,
       COALESCE(SUM(o.total_amount), 0) as sales
     FROM product_orders o
+    JOIN payouts p
+      ON p.order_id = o.id
+     AND p.status = 'completed'
     WHERE o.seller_id = $1
       AND o.payment_status = 'completed'
       AND o.status::text <> ALL($2::text[])
-      AND o.created_at >= NOW() - INTERVAL '12 months'
-    GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
+      AND COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at) >= NOW() - INTERVAL '12 months'
+    GROUP BY TO_CHAR(COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at), 'YYYY-MM')
     ORDER BY month
   `;
   const { rows } = await query(sql, [sellerId, excludedStatuses]);
@@ -123,10 +132,13 @@ export async function findRecentOrders({ sellerId, excludedStatuses }) {
         WHERE oi.order_id = o.id
       ) as items
     FROM product_orders o
+    JOIN payouts p
+      ON p.order_id = o.id
+     AND p.status = 'completed'
     WHERE o.seller_id = $1
       AND o.payment_status = 'completed'
       AND o.status::text <> ALL($2::text[])
-    ORDER BY o.created_at DESC
+    ORDER BY COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at) DESC
     LIMIT 8
   `;
   const { rows } = await query(sql, [sellerId, excludedStatuses]);
