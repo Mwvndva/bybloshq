@@ -6,7 +6,7 @@ import { Loader2, Search, MapPin } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { cn } from '@/lib/utils';
 import {
     DEFAULT_MAP_CENTER,
@@ -55,9 +55,85 @@ interface LocationPickerProps {
     label?: string;
     detailedLabel?: string;
     className?: string;
+    mapClassName?: string;
     autoPopulate?: boolean;
     initialValue?: string;
 }
+
+const buildSearchQueries = (query: string) => {
+    const trimmedQuery = query.trim();
+    const lowerQuery = trimmedQuery.toLowerCase();
+    const hasKenyaContext = /\b(kenya|nairobi|mombasa|kisumu|nakuru|eldoret|kiambu|thika|rongai|kitengela)\b/.test(lowerQuery);
+
+    return hasKenyaContext ? [trimmedQuery] : [`${trimmedQuery}, Kenya`, trimmedQuery];
+};
+
+const uniqueLocationResults = (results: any[]) => {
+    const seen = new Set<string>();
+    return results.filter((result) => {
+        const key = `${result.osm_type || ''}:${result.osm_id || ''}:${result.display_name || ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
+const searchOpenStreetMap = async (query: string) => {
+    const responses = await Promise.all(
+        buildSearchQueries(query).map((searchQuery) => axios.get<any[]>('https://nominatim.openstreetmap.org/search', {
+            params: {
+                format: 'json',
+                q: searchQuery,
+                countrycodes: 'ke',
+                addressdetails: 1,
+                limit: 6
+            }
+        }))
+    );
+
+    return uniqueLocationResults(responses.flatMap((response) => response.data)).slice(0, 8);
+};
+
+const searchPhoton = async (query: string) => {
+    const response = await axios.get('https://photon.komoot.io/api/', {
+        params: {
+            q: query,
+            lat: DEFAULT_MAP_CENTER.lat,
+            lon: DEFAULT_MAP_CENTER.lng,
+            limit: 8,
+            lang: 'en'
+        }
+    });
+
+    const features = Array.isArray(response.data?.features) ? response.data.features : [];
+
+    return features
+        .filter((feature: any) => {
+            const country = String(feature.properties?.country || feature.properties?.countrycode || '').toLowerCase();
+            return !country || country === 'kenya' || country === 'ke';
+        })
+        .map((feature: any) => {
+            const [lon, lat] = feature.geometry?.coordinates || [];
+            const properties = feature.properties || {};
+            const displayParts = [
+                properties.name,
+                properties.street,
+                properties.district,
+                properties.city,
+                properties.county,
+                properties.country
+            ].filter(Boolean);
+
+            return {
+                osm_type: 'photon',
+                osm_id: properties.osm_id || displayParts.join('-'),
+                display_name: displayParts.join(', '),
+                lat: String(lat),
+                lon: String(lon)
+            };
+        })
+        .filter((result: any) => result.display_name && Number.isFinite(Number(result.lat)) && Number.isFinite(Number(result.lon)));
+};
 
 export default function LocationPicker({
     initialAddress = '',
@@ -67,6 +143,7 @@ export default function LocationPicker({
     label = "Search Location",
     detailedLabel = "Detailed Address",
     className,
+    mapClassName,
     autoPopulate = true,
     initialValue = ''
 }: LocationPickerProps) {
@@ -78,6 +155,8 @@ export default function LocationPicker({
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
+    const [searchError, setSearchError] = useState('');
+    const [hasSearched, setHasSearched] = useState(false);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Cleanup timeout on unmount
@@ -106,24 +185,28 @@ export default function LocationPicker({
     const searchAddress = async (query: string) => {
         if (!query.trim()) {
             setSearchResults([]);
+            setSearchError('');
+            setHasSearched(false);
             return;
         }
 
         setIsSearching(true);
+        setSearchError('');
         try {
-            const response = await axios.get<any[]>('https://nominatim.openstreetmap.org/search', {
-                params: {
-                    format: 'json',
-                    q: query,
-                    countrycodes: 'ke',
-                    limit: 8
-                }
-            });
-            setSearchResults(response.data);
+            const openStreetMapResults = await searchOpenStreetMap(query);
+            const results = openStreetMapResults.length > 0 ? openStreetMapResults : await searchPhoton(query);
+            setSearchResults(uniqueLocationResults(results).slice(0, 8));
             setShowResults(true);
         } catch (error) {
             console.error('Error searching address:', error);
+            const status = (error as AxiosError)?.response?.status;
+            setSearchError(status === 429
+                ? 'Location search is busy. Try again in a few seconds.'
+                : 'Could not load locations. Check your connection and try again.');
+            setSearchResults([]);
+            setShowResults(true);
         } finally {
+            setHasSearched(true);
             setIsSearching(false);
         }
     };
@@ -137,12 +220,17 @@ export default function LocationPicker({
         }
 
         if (value.length > 2) {
+            setShowResults(true);
+            setHasSearched(false);
+            setSearchError('');
             searchTimeoutRef.current = setTimeout(() => {
                 searchAddress(value);
             }, 500);
         } else {
             setSearchResults([]);
             setShowResults(false);
+            setSearchError('');
+            setHasSearched(false);
         }
     };
 
@@ -208,18 +296,27 @@ export default function LocationPicker({
                         </div>
                     )}
 
-                    {showResults && searchResults.length > 0 && (
-                        <div className="absolute z-[1000] w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                            {searchResults.map((result, index) => (
-                                <button
-                                    key={index}
-                                    type="button"
-                                    className="w-full text-left px-4 py-2 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none border-b border-slate-100 last:border-0 text-sm text-slate-700"
-                                    onClick={() => selectLocation(result)}
-                                >
-                                    {result.display_name}
-                                </button>
-                            ))}
+                    {showResults && (
+                        <div className="absolute left-0 right-0 top-full z-[5000] mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white text-slate-800 shadow-2xl">
+                            {searchResults.length > 0 ? (
+                                searchResults.map((result, index) => (
+                                    <button
+                                        key={`${result.osm_type || 'location'}-${result.osm_id || index}`}
+                                        type="button"
+                                        className="w-full border-b border-slate-100 px-3 py-2.5 text-left text-xs leading-snug hover:bg-slate-50 focus:bg-slate-50 focus:outline-none sm:text-sm last:border-0"
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => selectLocation(result)}
+                                    >
+                                        {result.display_name}
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="px-3 py-3 text-xs font-semibold text-slate-500 sm:text-sm">
+                                    {isSearching
+                                        ? 'Searching locations...'
+                                        : searchError || (hasSearched ? 'No locations found. Try adding Nairobi, Kenya, or a nearby landmark.' : 'Keep typing to search locations.')}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -239,7 +336,7 @@ export default function LocationPicker({
                 />
             </div>
 
-            <div className="h-64 w-full rounded-xl overflow-hidden border border-white/10 shadow-inner z-0 relative">
+            <div className={cn("h-56 w-full rounded-xl overflow-hidden border border-white/10 shadow-inner z-0 relative sm:h-64", mapClassName)}>
                 <MapContainer
                     center={center}
                     zoom={13}

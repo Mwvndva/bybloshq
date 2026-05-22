@@ -300,6 +300,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                                 <LocationPicker
                                                     onLocationChange={handleLocationPickerChange}
                                                     initialAddress={customLocation || buyerProfile?.fullAddress}
+                                                    mapClassName="h-44 sm:h-56"
                                                 />
                                                 <Button
                                                     onClick={saveLocationToProfile}
@@ -415,6 +416,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                             label="Search Address"
                             autoPopulate={false}
                             initialValue={buyerLocation?.address || ''}
+                            mapClassName="h-44 sm:h-56"
                         />
                     </div>
 
