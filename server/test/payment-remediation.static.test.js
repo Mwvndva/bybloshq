@@ -304,6 +304,8 @@ test('EscrowManager remains isolated behind buyer confirmation release callers',
   assert.match(orderService, /deliveryStatus === 'delivered' \|\| deliveryStatus === 'completed'/);
   assert.doesNotMatch(orderService, /!canConfirmReceipt && order\.status === OrderStatus\.FULFILLING/);
   assert.match(escrowManager, /COALESCE\(balance, 0\)\s+\+\s+\$1/);
+  assert.match(escrowManager, /orderStatus !== 'COMPLETED'/);
+  assert.match(escrowManager, /reason: 'order_not_completed'/);
   assert.match(escrowManager, /RETURNING balance, net_revenue, total_sales/);
   assert.match(escrowManager, /Seller \$\{sellerId\} not found for escrow release/);
   assert.match(ordersSectionUtils, /terminalStatuses/);
@@ -1122,6 +1124,7 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
   assert.match(sellerDashboardDataHook, /queryClient\.invalidateQueries/);
   assert.match(sellerAnalyticsRepository, /JOIN payouts p[\s\S]*p\.order_id = o\.id[\s\S]*p\.status = 'completed'/);
   assert.match(sellerAnalyticsRepository, /COALESCE\(p\.completed_at, p\.processed_at, o\.updated_at, o\.created_at\)/);
+  assert.doesNotMatch(sellerAnalyticsRepository, /COALESCE\(SUM\(o\.total_amount\), 0\) as total_sales[\s\S]{0,120}WHERE o\.seller_id = s\.id[\s\S]{0,80}AND o\.payment_status = 'completed'/);
   assert.doesNotMatch(sellerDashboard, /window\.location\.reload/);
   assert.doesNotMatch(productCard, /Math\.random/);
   assert.doesNotMatch(adminDashboard, /Math\.random/);
