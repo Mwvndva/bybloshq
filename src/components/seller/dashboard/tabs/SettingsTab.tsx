@@ -12,6 +12,7 @@ import ShopLocationPicker from '../../ShopLocationPicker';
 import { ThemeSelector } from '../../ThemeSelector';
 import { getSellerInitials } from '../dashboardUtils';
 import type { SellerSettingsFormData } from '../types';
+import type { LocationCoordinates } from '@/lib/location';
 
 interface SettingsTabProps {
   cities: Record<string, string[]>;
@@ -22,7 +23,7 @@ interface SettingsTabProps {
   handleDeleteLocation: () => Promise<void>;
   handleLocationChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   handleSaveProfile: () => Promise<void>;
-  handleShopLocationChange: (address: string, coordinates: { lat: number; lng: number } | null) => void;
+  handleShopLocationChange: (address: string, coordinates: LocationCoordinates | null) => void;
   isCheckingShopName: boolean;
   isDeletingLocation: boolean;
   isEditing: boolean;
