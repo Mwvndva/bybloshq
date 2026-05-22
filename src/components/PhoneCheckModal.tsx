@@ -275,6 +275,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                               detailedLabel="Full Delivery Address"
                               placeholder="Search delivery location..."
                               autoPopulate
+                              mapClassName="h-40 sm:h-48"
                               onLocationChange={(address, coordinates) => {
                                 setDeliveryLocation(createOptionalBuyerLocation(address, coordinates));
                               }}
