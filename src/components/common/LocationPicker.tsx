@@ -6,7 +6,6 @@ import { Loader2, Search, MapPin } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import axios, { AxiosError } from 'axios';
 import { cn } from '@/lib/utils';
 import {
     DEFAULT_MAP_CENTER,
@@ -14,6 +13,7 @@ import {
     normalizeCoordinates,
     type LocationCoordinates
 } from '@/lib/location';
+import { searchLocations, type LocationSearchResult } from '@/api/locationApi';
 
 // Fix Leaflet marker icon issue
 if (typeof window !== 'undefined') {
@@ -60,81 +60,6 @@ interface LocationPickerProps {
     initialValue?: string;
 }
 
-const buildSearchQueries = (query: string) => {
-    const trimmedQuery = query.trim();
-    const lowerQuery = trimmedQuery.toLowerCase();
-    const hasKenyaContext = /\b(kenya|nairobi|mombasa|kisumu|nakuru|eldoret|kiambu|thika|rongai|kitengela)\b/.test(lowerQuery);
-
-    return hasKenyaContext ? [trimmedQuery] : [`${trimmedQuery}, Kenya`, trimmedQuery];
-};
-
-const uniqueLocationResults = (results: any[]) => {
-    const seen = new Set<string>();
-    return results.filter((result) => {
-        const key = `${result.osm_type || ''}:${result.osm_id || ''}:${result.display_name || ''}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-};
-
-const searchOpenStreetMap = async (query: string) => {
-    const responses = await Promise.all(
-        buildSearchQueries(query).map((searchQuery) => axios.get<any[]>('https://nominatim.openstreetmap.org/search', {
-            params: {
-                format: 'json',
-                q: searchQuery,
-                countrycodes: 'ke',
-                addressdetails: 1,
-                limit: 6
-            }
-        }))
-    );
-
-    return uniqueLocationResults(responses.flatMap((response) => response.data)).slice(0, 8);
-};
-
-const searchPhoton = async (query: string) => {
-    const response = await axios.get('https://photon.komoot.io/api/', {
-        params: {
-            q: query,
-            lat: DEFAULT_MAP_CENTER.lat,
-            lon: DEFAULT_MAP_CENTER.lng,
-            limit: 8,
-            lang: 'en'
-        }
-    });
-
-    const features = Array.isArray(response.data?.features) ? response.data.features : [];
-
-    return features
-        .filter((feature: any) => {
-            const country = String(feature.properties?.country || feature.properties?.countrycode || '').toLowerCase();
-            return !country || country === 'kenya' || country === 'ke';
-        })
-        .map((feature: any) => {
-            const [lon, lat] = feature.geometry?.coordinates || [];
-            const properties = feature.properties || {};
-            const displayParts = [
-                properties.name,
-                properties.street,
-                properties.district,
-                properties.city,
-                properties.county,
-                properties.country
-            ].filter(Boolean);
-
-            return {
-                osm_type: 'photon',
-                osm_id: properties.osm_id || displayParts.join('-'),
-                display_name: displayParts.join(', '),
-                lat: String(lat),
-                lon: String(lon)
-            };
-        })
-        .filter((result: any) => result.display_name && Number.isFinite(Number(result.lat)) && Number.isFinite(Number(result.lon)));
-};
-
 export default function LocationPicker({
     initialAddress = '',
     initialCoordinates = null,
@@ -152,7 +77,7 @@ export default function LocationPicker({
     const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(normalizedInitialCoordinates ? [normalizedInitialCoordinates.lat, normalizedInitialCoordinates.lng] : null);
     const [center, setCenter] = useState<[number, number]>(normalizedInitialCoordinates ? [normalizedInitialCoordinates.lat, normalizedInitialCoordinates.lng] : [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]);
     const [searchQuery, setSearchQuery] = useState(initialValue);
-    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
     const [searchError, setSearchError] = useState('');
@@ -193,16 +118,12 @@ export default function LocationPicker({
         setIsSearching(true);
         setSearchError('');
         try {
-            const openStreetMapResults = await searchOpenStreetMap(query);
-            const results = openStreetMapResults.length > 0 ? openStreetMapResults : await searchPhoton(query);
-            setSearchResults(uniqueLocationResults(results).slice(0, 8));
+            const results = await searchLocations(query);
+            setSearchResults(results);
             setShowResults(true);
         } catch (error) {
             console.error('Error searching address:', error);
-            const status = (error as AxiosError)?.response?.status;
-            setSearchError(status === 429
-                ? 'Location search is busy. Try again in a few seconds.'
-                : 'Could not load locations. Check your connection and try again.');
+            setSearchError('Location search is temporarily unavailable. Try again in a few seconds.');
             setSearchResults([]);
             setShowResults(true);
         } finally {
@@ -234,23 +155,23 @@ export default function LocationPicker({
         }
     };
 
-    const selectLocation = (result: any) => {
-        const lat = parseFloat(result.lat);
-        const lon = parseFloat(result.lon);
+    const selectLocation = (result: LocationSearchResult) => {
+        const lat = Number(result.lat);
+        const lng = Number(result.lng);
 
-        const newPos: [number, number] = [lat, lon];
+        const newPos: [number, number] = [lat, lng];
         setMarkerPosition(newPos);
         setCenter(newPos);
-        setSearchQuery(result.display_name);
+        setSearchQuery(result.displayName);
         setShowResults(false);
 
         // Update detailed address if empty, and trigger change
-        const finalDetailedAddress = autoPopulate && address.trim() === '' ? result.display_name : address;
+        const finalDetailedAddress = autoPopulate && address.trim() === '' ? result.displayName : address;
         if (autoPopulate && address.trim() === '') {
-            setAddress(result.display_name);
+            setAddress(result.displayName);
         }
 
-        const selection = createLocationSelection(finalDetailedAddress, { lat, lng: lon });
+        const selection = createLocationSelection(finalDetailedAddress, { lat, lng });
         onLocationChange(selection.address, selection.coordinates);
     };
 
@@ -301,13 +222,13 @@ export default function LocationPicker({
                             {searchResults.length > 0 ? (
                                 searchResults.map((result, index) => (
                                     <button
-                                        key={`${result.osm_type || 'location'}-${result.osm_id || index}`}
+                                        key={`${result.provider || 'location'}-${result.id || index}`}
                                         type="button"
                                         className="w-full border-b border-slate-100 px-3 py-2.5 text-left text-xs leading-snug hover:bg-slate-50 focus:bg-slate-50 focus:outline-none sm:text-sm last:border-0"
                                         onMouseDown={(event) => event.preventDefault()}
                                         onClick={() => selectLocation(result)}
                                     >
-                                        {result.display_name}
+                                        {result.displayName}
                                     </button>
                                 ))
                             ) : (
