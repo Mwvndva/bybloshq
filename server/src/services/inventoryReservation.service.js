@@ -155,7 +155,7 @@ class InventoryReservationService {
                    AND COALESCE(p.track_inventory, false) = false
                    AND COALESCE(p.is_digital, false) = false
                    AND COALESCE(LOWER(p.product_type::text), 'physical') NOT IN ('digital', 'service')
-                   AND COALESCE(LOWER(p.status), 'available') = 'available'
+                   AND COALESCE(LOWER(p.status::text), 'available') = 'available'
                  RETURNING p.id`,
                 [ids]
             );
@@ -221,7 +221,7 @@ class InventoryReservationService {
                    AND COALESCE(p.track_inventory, false) = false
                    AND COALESCE(p.is_digital, false) = false
                    AND COALESCE(LOWER(p.product_type::text), 'physical') NOT IN ('digital', 'service')
-                   AND COALESCE(LOWER(p.status), 'available') = 'sold'
+                   AND COALESCE(LOWER(p.status::text), 'available') = 'sold'
                  RETURNING p.id`,
                 [ids]
             );
