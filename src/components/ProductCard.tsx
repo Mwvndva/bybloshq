@@ -64,6 +64,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
     invoiceId: string | null;
     isGuest: boolean;
     email?: string;
+    paymentSummary?: {
+      productAmount?: number;
+      deliveryFee?: number;
+      serviceCharge?: number;
+      totalAmount?: number;
+    };
   }>({ isOpen: false, orderNumber: null, invoiceId: null, isGuest: false });
 
   // Loading states
@@ -375,6 +381,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
       }
 
       const paymentDeliveryFeeEstimate = wantsDoorDelivery ? Number(doorDeliverySelection?.quote?.feeAmount || 0) : 0;
+      const productServiceCharge = calculateProductServiceCharge(product.price);
       const paymentEstimate = calculateBuyerPayableTotal(product.price, paymentDeliveryFeeEstimate);
       const checkoutToken = getCheckoutAttemptToken();
       const creatorCode = new URLSearchParams(window.location.search).get('creator') || undefined;
@@ -463,7 +470,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
             orderNumber: orderNumber,
             invoiceId: String(orderNumber || orderId),
             isGuest: !isAuthenticated,
-            email: buyerDetails.email
+            email: buyerDetails.email,
+            paymentSummary: {
+              productAmount: Number(product.price || 0),
+              deliveryFee: paymentDeliveryFeeEstimate,
+              serviceCharge: productServiceCharge,
+              totalAmount: paymentEstimate
+            }
           });
           setIsProcessingPurchase(false);
         }

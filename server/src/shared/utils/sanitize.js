@@ -219,6 +219,27 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
     if (!order) return null;
     const orderObj = order.toObject ? order.toObject() : order;
     const metadata = parseObject(orderObj.metadata, {});
+    const pricing = parseObject(metadata.pricing, {});
+    const buyerServiceChargeAmount = Number.parseFloat(
+        pricing.buyer_service_charge
+        ?? pricing.product_service_charge
+        ?? metadata.buyer_service_charge
+        ?? metadata.product_service_charge
+        ?? 0
+    );
+    const buyerServiceChargeRate = Number.parseFloat(
+        pricing.buyer_service_charge_rate
+        ?? pricing.product_service_charge_rate
+        ?? metadata.buyer_service_charge_rate
+        ?? metadata.product_service_charge_rate
+        ?? 0.02
+    );
+    const buyerPricing = {
+        buyer_service_charge: Number.isFinite(buyerServiceChargeAmount) ? buyerServiceChargeAmount : 0,
+        buyer_service_charge_rate: Number.isFinite(buyerServiceChargeRate) ? buyerServiceChargeRate : 0.02,
+        buyer_delivery_fee: Number.parseFloat(pricing.buyer_delivery_fee || 0) || 0,
+        payable_total: Number.parseFloat(pricing.payable_total || orderObj.totalAmount || orderObj.total_amount || 0) || 0,
+    };
     const logistics = sanitizeLogistics(orderObj.logistics || metadata.delivery?.logistics);
 
     // Safe items — strip internal inventory and tracking fields
@@ -252,15 +273,18 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         isDigital: (orderObj.items || []).some(i => i.isDigital || i.is_digital),
         metadata: {
             product_type: metadata.product_type || null,
+            pricing: buyerPricing,
             delivery: metadata.delivery ? {
                 doorDelivery: metadata.delivery.doorDelivery === true || metadata.delivery.door_delivery === true,
                 deliveryMode: metadata.delivery.deliveryMode || metadata.delivery.delivery_mode || null,
-                pricing: metadata.pricing || null
+                pricing: buyerPricing
             } : null,
             seller_handoff: metadata.seller_handoff || null,
             service_confirmation: metadata.service_confirmation || null,
         },
         logistics,
+        buyerServiceChargeAmount: Number.isFinite(buyerServiceChargeAmount) ? buyerServiceChargeAmount : 0,
+        buyerServiceChargeRate: Number.isFinite(buyerServiceChargeRate) ? buyerServiceChargeRate : 0.02,
         fulfillment_type: orderObj.fulfillment_type || orderObj.fulfillmentType || null,
         location_address: orderObj.location_address || orderObj.locationAddress || null,
         location_lat: orderObj.location_lat || orderObj.locationLat || null,

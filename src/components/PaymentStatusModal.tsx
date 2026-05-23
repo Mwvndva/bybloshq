@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import buyerApi from '@/api/buyerApi';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+import { formatCurrency } from '@/lib/utils';
 
 type ModalState = 'POLLING' | 'SUCCESS' | 'FAILED' | 'TIMEOUT';
 
@@ -14,9 +15,15 @@ interface Props {
     onSuccess?: () => void;
     isGuest?: boolean;
     email?: string;
+    paymentSummary?: {
+        productAmount?: number;
+        deliveryFee?: number;
+        serviceCharge?: number;
+        totalAmount?: number;
+    };
 }
 
-export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, onSuccess, isGuest, email }: Props) => {
+export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, onSuccess, isGuest, email, paymentSummary }: Props) => {
     const [state, setState] = useState<ModalState>('POLLING');
     const [attempts, setAttempts] = useState(0);
     const [failureReason, setFailureReason] = useState<string | null>(null);
@@ -110,6 +117,13 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
 
     if (!isOpen) return null;
 
+    const serviceChargeAmount = Number(paymentSummary?.serviceCharge || 0);
+    const totalAmount = Number(paymentSummary?.totalAmount || 0);
+    const hasServiceChargeSummary = serviceChargeAmount > 0;
+    const serviceChargeText = hasServiceChargeSummary
+        ? `Your total${totalAmount > 0 ? ` of ${formatCurrency(totalAmount)}` : ''} includes a 2% Byblos service charge of ${formatCurrency(serviceChargeAmount)}.`
+        : 'Your total includes Byblos\' 2% service charge for protected checkout, receipts, and order tracking.';
+
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/30 backdrop-blur-md transition-all duration-300">
             <div className="bg-white border-x border-t sm:border border-slate-200 
@@ -139,6 +153,11 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                                     Please enter your M-Pesa PIN on the prompt sent to confirm your payment.
                                 </p>
                             </div>
+                            <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                <p className="text-slate-500 text-xs leading-relaxed">
+                                    {serviceChargeText}
+                                </p>
+                            </div>
                         </>
                     )}
 
@@ -153,6 +172,9 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                                     Order <span className="text-yellow-600 font-mono font-bold">#{orderNumber}</span> has been successfully placed.
                                 </p>
                             )}
+                            <div className="w-full mb-4 p-3 rounded-xl border border-slate-200 bg-slate-50">
+                                <p className="text-slate-500 text-xs leading-relaxed">{serviceChargeText}</p>
+                            </div>
 
                             <div className="w-full space-y-3 mt-4">
                                 <a

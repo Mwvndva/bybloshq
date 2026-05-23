@@ -185,6 +185,12 @@
                             <span>KSh <%= parseFloat(totalAmount).toLocaleString() %></span>
                         </div>
 
+                        <% if (items.some(function(item) { return item.product_type === 'service_charge' || item.metadata?.line_item_type === 'buyer_service_charge'; })) { %>
+                            <p style="margin: 8px 0 0 0; font-size: 12px; color: #718096; text-align: center;">
+                                Amount paid includes the 2% Byblos service charge for protected checkout, receipts, and order tracking.
+                            </p>
+                        <% } %>
+
                         <p style="margin: 10px 0 0 0; font-size: 12px; color: #718096; text-align: center;">
                             Payment Method: <%= paymentMethod %>
                         </p>
