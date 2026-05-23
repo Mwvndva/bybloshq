@@ -18,6 +18,7 @@ import {
 import { searchLocations, type LocationSearchResult } from '@/api/locationApi';
 
 const MAP_TILE_URLS = [
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
 ];
@@ -157,7 +158,8 @@ export default function LocationPicker({
             setAddress(result.displayName);
         }
 
-        const selection = createLocationSelection(finalDetailedAddress || result.displayName, { lat, lng });
+        const selectionAddress = autoPopulate ? (finalDetailedAddress || result.displayName) : address;
+        const selection = createLocationSelection(selectionAddress, { lat, lng });
         onLocationChange(selection.address, selection.coordinates);
     };
 
@@ -307,7 +309,7 @@ export default function LocationPicker({
                 >
                     <TileLayer
                         key={tileUrl}
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                         url={tileUrl}
                         eventHandlers={{
                             tileerror: () => {
