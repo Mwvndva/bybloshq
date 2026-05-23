@@ -4,6 +4,7 @@ import { ProductCard } from './ProductCard';
 import { Product } from '@/types';
 import { ProductGridProps } from '@/types/components';
 import { usePublicProductsGrid } from './product-grid/usePublicProductsGrid';
+import type { Theme } from './product-card/productCardUtils';
 
 type PaginationState = {
   total: number;
@@ -167,6 +168,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
                 key={product.id}
                 product={product}
                 seller={productSeller}
+                theme={productSeller?.theme as Theme}
               />
             );
           })}
@@ -224,6 +226,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
                   key={product.id}
                   product={product}
                   seller={productSeller}
+                  theme={productSeller?.theme as Theme}
                 />
               );
             })}

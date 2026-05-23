@@ -22,7 +22,7 @@ const ProductImage = ({ src, alt, className, style }: ProductImageProps) => {
         return (
             <div
                 className={cn(
-                    'flex flex-col items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 text-gray-500',
+                    'flex flex-col items-center justify-center bg-[var(--product-card-soft,#f8fafc)] text-[var(--product-card-muted,#64748b)]',
                     className
                 )}
                 style={style}
@@ -43,7 +43,7 @@ const ProductImage = ({ src, alt, className, style }: ProductImageProps) => {
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
                 </svg>
-                <span className="text-xs mt-2 opacity-30 font-medium tracking-wide uppercase">No Image</span>
+                <span className="text-xs mt-2 opacity-60 font-medium tracking-wide uppercase">No Image</span>
             </div>
         );
     }
@@ -51,7 +51,7 @@ const ProductImage = ({ src, alt, className, style }: ProductImageProps) => {
     return (
         <div className={cn('relative overflow-hidden', className)} style={style}>
             {isLoading && (
-                <div className="absolute inset-0 bg-gray-800 animate-pulse" />
+                <div className="absolute inset-0 bg-[var(--product-card-soft,#f8fafc)] animate-pulse" />
             )}
             <img
                 src={getImageUrl(src)}

@@ -38,41 +38,45 @@ export function ProductCardDetails({
   onOpenShop
 }: ProductCardDetailsProps) {
   const serviceOptions = product.service_options || (product as any).serviceOptions;
-  void theme;
-  void forceWhiteText;
-
   return (
-    <CardContent className="flex min-h-0 flex-1 flex-col p-2 sm:p-3 md:p-4">
-      <h3 className="mb-1 line-clamp-1 min-h-6 text-base font-semibold text-slate-950 antialiased sm:mb-1.5">
+    <CardContent className="flex min-h-0 flex-1 flex-col p-3 sm:p-3.5 md:p-4">
+      <h3 className={cn(
+        "mb-1 line-clamp-2 min-h-[2.55rem] text-sm font-semibold leading-tight antialiased sm:text-base",
+        forceWhiteText ? "text-white" : "text-[var(--product-card-text)]"
+      )}>
         {product.name}
       </h3>
 
-      <p className={cn("mb-1 flex min-h-6 items-center gap-1.5 text-base font-semibold sm:mb-1.5 sm:gap-2", themeClasses.price)}>
+      <p className={cn("mb-1 flex min-h-6 items-center gap-1.5 text-sm font-semibold sm:mb-1.5 sm:gap-2 sm:text-base", themeClasses.price)}>
         {isDigital ? (
-          <span className="text-yellow-700">
+          <span className={themeClasses.price}>
             {formatCurrency(product.price)}
           </span>
         ) : (
           formatCurrency(product.price)
         )}
         {isService && serviceOptions?.price_type === 'hourly' && (
-          <span className="ml-1 text-sm font-medium text-slate-500">/hr</span>
+          <span className={cn("ml-1 text-xs font-medium sm:text-sm", themeClasses.description)}>/hr</span>
         )}
       </p>
 
-      <div className="relative group/desc mb-1.5 h-9 overflow-y-auto overscroll-contain no-scrollbar sm:mb-2">
+      <div className="relative mb-2 min-h-[2.4rem] sm:min-h-[2.75rem]">
         {product.description ? (
-          <p className="mobile-text min-h-full text-[11px] leading-tight text-slate-500 sm:text-xs">
+          <p className={cn("mobile-text line-clamp-3 text-[11px] leading-snug sm:text-xs", themeClasses.description)}>
             {product.description}
           </p>
-        ) : null}
+        ) : (
+          <p className={cn("text-[11px] leading-snug opacity-70 sm:text-xs", themeClasses.description)}>
+            Product details available at checkout.
+          </p>
+        )}
       </div>
 
-      <div className="mb-2 flex min-h-10 items-start gap-1.5 text-xs text-slate-500">
+      <div className={cn("mb-2 flex min-h-8 items-start gap-1.5 text-xs", themeClasses.description)}>
         {isService ? (
           <>
           <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-          <span className="line-clamp-2 text-sm">
+          <span className="line-clamp-2 text-xs sm:text-sm">
             {serviceOptions?.location_type === 'seller_visits_buyer' ? (
               "Mobile Service"
             ) : serviceOptions?.location_type === 'hybrid' ? (
@@ -85,10 +89,10 @@ export function ProductCardDetails({
         ) : null}
         </div>
 
-      <div className="mt-auto flex min-h-9 items-center gap-1 border-t border-slate-100 pt-1.5 sm:gap-1.5 sm:pt-2">
+      <div className="mt-auto flex min-h-9 items-center gap-1 border-t border-[var(--product-card-border)] pt-1.5 sm:gap-1.5 sm:pt-2">
         <Store className={cn("h-3.5 w-3.5 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
         <span
-          className="mobile-text flex-1 cursor-pointer truncate text-sm font-semibold tracking-tight text-slate-700 opacity-90 hover:underline sm:text-xs"
+          className={cn("mobile-text flex-1 cursor-pointer truncate text-sm font-semibold tracking-tight opacity-90 hover:underline sm:text-xs", themeClasses.seller)}
           onClick={(e) => {
             e.stopPropagation();
             onOpenShop();
@@ -98,11 +102,11 @@ export function ProductCardDetails({
         </span>
         <div className="shrink-0 flex items-center">
           {isSellerShopless(displaySeller) ? (
-            <Badge variant="outline" className="h-4 px-1 text-[8px]">
+            <Badge variant="outline" className="h-4 border-[var(--product-card-border)] bg-[var(--product-card-soft)] px-1 text-[8px] text-[var(--product-card-text)]">
               Online
             </Badge>
           ) : (
-            <Badge variant="outline" className="h-4 border-yellow-200 bg-yellow-50 px-1 text-[8px] text-slate-600">
+            <Badge variant="outline" className="h-4 border-[var(--product-card-border)] bg-[var(--product-card-soft)] px-1 text-[8px] text-[var(--product-card-text)]">
               Shop
             </Badge>
           )}
@@ -117,7 +121,7 @@ export function ProductCardDetails({
                   size="sm"
                   className={cn(
                     "h-6 px-2 text-[10px] font-bold gap-1 transition-all duration-300",
-                    "bg-[var(--theme-accent)]/10 text-[var(--theme-accent)] border-[var(--theme-accent)]/20 hover:bg-[var(--theme-accent)]/20 shadow-sm"
+                    "bg-[var(--product-card-soft)] text-[var(--product-card-accent)] border border-[var(--product-card-border)] hover:opacity-90 shadow-sm"
                   )}
                 >
                   <Store className="w-3 h-3" />

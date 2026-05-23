@@ -14,7 +14,7 @@ import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { ProductCardDetails } from '@/components/product-card/ProductCardDetails';
 import { ProductCardMedia } from '@/components/product-card/ProductCardMedia';
 import { ProductCardModals } from '@/components/product-card/ProductCardModals';
-import { createCheckoutAttemptToken, getProductFlags, getThemeClasses, normalizePhone, type Theme } from '@/components/product-card/productCardUtils';
+import { createCheckoutAttemptToken, getProductCardThemeVars, getProductFlags, getThemeClasses, normalizePhone, type Theme } from '@/components/product-card/productCardUtils';
 import type { DoorDeliverySelection } from '@/components/PhoneCheckModal';
 import { toBuyerLocationPayload, type BuyerLocationPayload } from '@/lib/location';
 
@@ -33,7 +33,7 @@ interface ProductCardProps {
 }
 
 
-export function ProductCard({ product, seller, hideWishlist = false, theme = 'default', forceWhiteText = false }: ProductCardProps) {
+export function ProductCard({ product, seller, hideWishlist = false, theme, forceWhiteText = false }: ProductCardProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -56,6 +56,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<BuyerLocationPayload | null>(null);
 
   const { isDigital, isService, isPhysical, isHybrid, isOutOfStock, isSold } = getProductFlags(product);
+  const cardTheme = (theme || seller?.theme || product.seller?.theme || 'default') as Theme;
 
   const [paymentModalData, setPaymentModalData] = useState<{
     isOpen: boolean;
@@ -499,13 +500,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   // Get theme styles dynamically from CSS variables (set by ShopPage)
   const themedCardStyle: CSSProperties = {
-    background: '#ffffff',
-    border: '1px solid rgba(15, 23, 42, 0.10)',
-    color: '#111111',
+    ...(getProductCardThemeVars(cardTheme) as CSSProperties),
+    background: 'var(--product-card-bg)',
+    borderColor: 'var(--product-card-border)',
+    color: 'var(--product-card-text)',
     boxShadow: '0 16px 38px -28px rgba(15, 23, 42, 0.35)'
   };
 
-  const themeClasses = getThemeClasses(theme);
+  const themeClasses = getThemeClasses(cardTheme);
 
   const openShop = () => {
     if (displaySeller?.shopName) {
@@ -527,7 +529,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   return (
     <Card
       className={cn(
-        'group relative flex h-full min-h-[360px] flex-col overflow-hidden transition-all duration-300 rounded-2xl sm:min-h-[390px]',
+        'group relative flex h-full min-h-[350px] flex-col overflow-hidden transition-all duration-300 rounded-2xl sm:min-h-[380px]',
         isSold ? 'opacity-60' : 'sm:hover:-translate-y-1',
         'cursor-pointer',
         themeClasses.card
@@ -569,7 +571,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         product={product}
         displaySeller={displaySeller}
         displaySellerName={displaySellerName}
-        theme={theme}
+        theme={cardTheme}
         forceWhiteText={forceWhiteText}
         themeClasses={themeClasses}
         isDigital={isDigital}
@@ -582,7 +584,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       <ProductCardModals
         product={product}
-        theme={theme}
+        theme={cardTheme}
         displaySellerName={displaySellerName}
         isPhoneCheckModalOpen={isPhoneCheckModalOpen}
         isBuyerModalOpen={isBuyerModalOpen}

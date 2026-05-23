@@ -435,6 +435,7 @@ const ShopPage = () => {
                   longitude: sellerInfo.longitude,
                   createdAt: sellerInfo.createdAt || new Date().toISOString(),
                   updatedAt: sellerInfo.updatedAt || new Date().toISOString(),
+                  theme: sellerInfo.theme,
                   // Optional fields with defaults
                   bio: sellerInfo.bio,
                   avatarUrl: sellerInfo.avatarUrl,
