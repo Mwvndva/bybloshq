@@ -1,62 +1,65 @@
 
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ShieldCheck, Store, Truck } from 'lucide-react';
 interface HeroSectionProps {
   onExploreClick?: () => void;
 }
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-[82dvh] flex items-center justify-center overflow-hidden bg-black">
+    <section className="relative min-h-[82dvh] flex items-center justify-center overflow-hidden bg-[#f8f7f2]">
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
         <Link to="/creator/login">
-          <Button className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-yellow-400 hover:text-black">
+          <Button className="rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-900 shadow-[0_10px_28px_rgba(17,17,17,0.08)] transition-all duration-300 hover:bg-yellow-400 hover:text-black">
             Creator
           </Button>
         </Link>
       </div>
 
-      {/* Background with deep blur and subtle movement */}
       <div
-        className="absolute inset-0 z-0 opacity-100"
+        className="absolute inset-0 z-0 opacity-70"
         style={{
-          background: 'radial-gradient(circle at center, #0b0b0b 0%, #030303 55%, #000000 100%)',
-          backgroundColor: '#000000'
+          background: 'linear-gradient(180deg, #ffffff 0%, #f8f7f2 72%, #f3f1ea 100%)',
+          backgroundColor: '#f8f7f2'
         }}
       />
 
-      {/* Subtle Grid Pattern for texture */}
       <div
-        className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 z-0 opacity-[0.45] pointer-events-none"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundImage: 'linear-gradient(#e7e2d6 1px, transparent 1px), linear-gradient(90deg, #e7e2d6 1px, transparent 1px)',
+          backgroundSize: '72px 72px',
+          maskImage: 'linear-gradient(to bottom, transparent, black 20%, black 72%, transparent)',
         }}
       />
-
-      {/* Dynamic light blobs for depth */}
-      <div className="absolute top-1/4 left-1/4 w-[30rem] h-[30rem] bg-yellow-300/25 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[25rem] h-[25rem] bg-white/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16">
-        <div className="flex flex-col items-center text-center space-y-12">
+        <div className="mx-auto flex max-w-6xl flex-col items-center text-center space-y-10">
 
-          {/* Main Title Group */}
           <div className="space-y-5">
-            <h1 className="text-6xl sm:text-7xl md:text-9xl font-light text-white leading-none tracking-normal">
+            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-600 shadow-sm">
+              <ShieldCheck className="h-4 w-4 text-yellow-600" />
+              Trusted checkout for social businesses
+            </div>
+
+            <h1 className="text-6xl sm:text-7xl md:text-9xl font-light text-stone-950 leading-none tracking-normal">
               BYBLOS
             </h1>
 
-            <p className="text-xl sm:text-2xl md:text-3xl text-white font-light leading-tight tracking-normal">
+            <p className="text-xl sm:text-2xl md:text-3xl text-stone-700 font-light leading-tight tracking-normal">
               Give Your Business A Social Identity
+            </p>
+
+            <p className="mx-auto max-w-2xl text-sm sm:text-base text-stone-500 leading-7">
+              Sell from Instagram, TikTok, or WhatsApp with trusted shop links, secure checkout, delivery support, and clean digital receipts.
             </p>
           </div>
 
-          {/* Minimal CTA Group */}
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <Link to="/buyer/login">
               <Button
-                className="bg-white/10 text-white hover:bg-white/15 border border-white/20 rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-lg group"
+                className="bg-white text-stone-950 hover:bg-stone-50 border border-stone-200 rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_12px_35px_rgba(17,17,17,0.08)] group"
               >
                 View Businesses
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -64,12 +67,26 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
             </Link>
             <Link to="/seller/register">
               <Button
-                className="bg-yellow-400 hover:bg-yellow-300 text-black rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] group"
+                className="bg-yellow-400 hover:bg-yellow-300 text-black rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_14px_30px_rgba(245,197,24,0.25)] group"
               >
                 Become a Trusted Business
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
+          </div>
+
+          <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              { icon: ShieldCheck, label: 'Escrow protected', copy: 'Buyers trust you faster.' },
+              { icon: Truck, label: 'Door delivery', copy: 'Orders move with less stress.' },
+              { icon: Store, label: 'Beautiful shop links', copy: 'Your page looks more professional.' }
+            ].map(({ icon: Icon, label, copy }) => (
+              <div key={label} className="rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-[0_10px_28px_rgba(17,17,17,0.06)]">
+                <Icon className="mb-3 h-5 w-5 text-yellow-600" />
+                <h3 className="text-sm font-semibold text-stone-950">{label}</h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">{copy}</p>
+              </div>
+            ))}
           </div>
 
         </div>
