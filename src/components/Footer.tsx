@@ -3,14 +3,14 @@ import { Instagram } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <footer className="bg-black py-8 relative overflow-hidden">
+    <footer className="relative overflow-hidden border-t border-stone-200 bg-white py-8">
       <div className="w-full px-6 sm:px-10 lg:px-16">
-        <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4 text-sm font-semibold tracking-tight text-white">
-          <a href="mailto:bybloshqke@zohomail.com" className="hover:text-yellow-300 transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4 text-sm font-semibold tracking-tight text-stone-700">
+          <a href="mailto:bybloshqke@zohomail.com" className="hover:text-black transition-colors">
             bybloshqke@zohomail.com
           </a>
 
-          <a href="tel:+254111548797" className="hover:text-yellow-300 transition-colors">
+          <a href="tel:+254111548797" className="hover:text-black transition-colors">
             +254 111 548 797
           </a>
 
@@ -18,7 +18,7 @@ const Footer = () => {
             href="https://www.instagram.com/bybloshq"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 hover:text-pink-300 transition-colors"
+            className="inline-flex items-center gap-2 hover:text-black transition-colors"
           >
             <Instagram className="h-4 w-4" />
             <span>Instagram</span>
@@ -26,19 +26,19 @@ const Footer = () => {
 
           <Link
             to="/seller"
-            className="inline-flex hover:text-yellow-300 transition-colors border border-white/20 px-4 py-1.5 rounded-full hover:border-yellow-300/70"
+            className="inline-flex rounded-full border border-stone-200 bg-[#f8f7f2] px-4 py-1.5 text-stone-950 transition-colors hover:border-yellow-300 hover:bg-yellow-100"
           >
             Sell on Byblos
           </Link>
 
           <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-widest">
-            <span className="text-white/75">Partners:</span>
-            <span className="text-white italic font-serif">Mzigoego</span>
-            <span className="text-white italic">Payment Provider</span>
-            <span className="text-white">EVOLVE</span>
+            <span className="text-stone-500">Partners:</span>
+            <span className="text-stone-800 italic font-serif">Mzigoego</span>
+            <span className="text-stone-800 italic">Payment Provider</span>
+            <span className="text-stone-800">EVOLVE</span>
           </div>
 
-          <p className="text-[10px] text-white/75 tracking-widest font-semibold uppercase">
+          <p className="text-[10px] text-stone-500 tracking-widest font-semibold uppercase">
             &copy; 2025 BYBLOS. ALL RIGHTS RESERVED.
           </p>
         </div>
