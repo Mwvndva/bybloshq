@@ -92,16 +92,16 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
 
   const refundDialog = (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="border-white/15 bg-black text-white sm:max-w-[500px]">
+      <DialogContent className="border-stone-200 bg-white text-stone-950 sm:max-w-[500px]">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-2xl text-white">Confirm Refund Withdrawal</DialogTitle>
-          <p className="text-sm text-white/70">Review the details before confirming your withdrawal request</p>
+          <DialogTitle className="text-2xl text-stone-950">Confirm Refund Withdrawal</DialogTitle>
+          <p className="text-sm text-stone-500">Review the details before confirming your withdrawal request</p>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="rounded-xl border border-green-400/25 bg-green-500/10 p-6 text-center">
-            <p className="mb-2 text-sm font-semibold text-white/70">Amount to withdraw</p>
-            <p className="text-4xl font-black text-green-300">
+            <p className="mb-2 text-sm font-semibold text-green-800">Amount to withdraw</p>
+            <p className="text-4xl font-black text-green-700">
               {formatCurrency(refundAmount)}
             </p>
           </div>
@@ -140,7 +140,7 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
             variant="outline"
             onClick={() => setIsDialogOpen(false)}
             disabled={isSubmitting}
-            className="border-white/15 bg-white/10 px-6 text-white hover:bg-white/15"
+            className="border-stone-200 bg-white px-6 text-stone-700 hover:bg-stone-50"
           >
             Cancel
           </Button>
@@ -161,7 +161,7 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
   if (compact) {
     return (
       <>
-        <Card className="overflow-hidden rounded-2xl border border-white/15 bg-[#080808] text-white shadow-none">
+        <Card className="overflow-hidden rounded-2xl border border-stone-200 bg-white text-stone-950 shadow-none">
           <CardContent className="space-y-4 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -169,11 +169,11 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
                   <Wallet className="h-5 w-5 text-[#F5C518]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Refund balance</p>
-                  <p className="mt-1 text-xl font-black leading-none text-white">{formatCurrency(refundAmount)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">Refund balance</p>
+                  <p className="mt-1 text-xl font-black leading-none text-stone-950">{formatCurrency(refundAmount)}</p>
                 </div>
               </div>
-              <Badge className="shrink-0 border-white/10 bg-white/10 text-[10px] font-semibold text-white hover:bg-white/10">
+              <Badge className="shrink-0 border-stone-200 bg-stone-100 text-[10px] font-semibold text-stone-700 hover:bg-stone-100">
                 {isLoadingPending ? 'Checking' : hasPendingRequest ? 'Pending' : refundAmount > 0 ? 'Available' : 'Empty'}
               </Badge>
             </div>
@@ -192,7 +192,7 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
                 ))}
               </div>
             ) : (
-              <p className="text-xs leading-5 text-white/60">
+              <p className="text-xs leading-5 text-stone-500">
                 {refundAmount > 0 ? 'Available for withdrawal.' : 'No refunds available right now.'}
               </p>
             )}

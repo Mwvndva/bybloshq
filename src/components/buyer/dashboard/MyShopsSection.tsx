@@ -40,11 +40,11 @@ export function MyShopsSection({
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>My Shops</span>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>{filteredCount} shops</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#111111' }}>My Shops</span>
+        <span style={{ fontSize: 11, color: '#6f6a60' }}>{filteredCount} shops</span>
       </div>
 
-      <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-white/15 bg-white/5 p-1 md:hidden">
+      <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl border border-stone-200 bg-white p-1 shadow-sm md:hidden">
         {shopGroups.map((group) => {
           const isActive = mobileTab === group.key;
           return (
@@ -55,15 +55,15 @@ export function MyShopsSection({
               className="flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition"
               style={{
                 background: isActive ? '#FACC15' : 'transparent',
-                color: isActive ? '#000000' : '#FFFFFF'
+                color: isActive ? '#000000' : '#6f6a60'
               }}
             >
               <span>{group.title}</span>
               <span
                 className="rounded-full px-1.5 py-0.5 text-[10px]"
                 style={{
-                  background: isActive ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)',
-                  color: isActive ? '#000000' : '#FFFFFF'
+                  background: isActive ? 'rgba(0,0,0,0.12)' : '#f3f1ea',
+                  color: isActive ? '#000000' : '#6f6a60'
                 }}
               >
                 {group.count}
@@ -104,7 +104,7 @@ export function MyShopsSection({
       </div>
 
       {filteredCount === 0 && !isLoadingShops && (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.72)' }}>
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#6f6a60' }}>
           {searchQuery ? 'No followed shops match your search.' : shopsCount === 0 ? 'No shops followed yet.' : 'No followed shops match your search.'}
         </div>
       )}
@@ -138,10 +138,10 @@ function ShopsGroup({
   unfollowingShopId
 }: ShopsGroupProps) {
   return (
-    <section className="min-w-0 rounded-2xl border border-white/15 bg-white/5 p-2.5 shadow-sm">
+    <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-2.5 shadow-sm">
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
-        <span className="text-xs font-black text-white">{group.title}</span>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white">
+        <span className="text-xs font-semibold text-stone-950">{group.title}</span>
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-700">
           {group.count}
         </span>
       </div>
@@ -164,7 +164,7 @@ function ShopsGroup({
         ))}
 
         {!isLoadingShops && filteredCount > 0 && group.shops.length === 0 && (
-          <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-8 text-center text-xs text-white">
+          <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-8 text-center text-xs text-stone-600">
             {group.empty}
           </div>
         )}
