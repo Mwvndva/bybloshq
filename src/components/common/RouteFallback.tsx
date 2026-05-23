@@ -7,10 +7,10 @@ interface RouteFallbackProps {
 
 export function RouteFallback({ message = 'Loading' }: RouteFallbackProps) {
     return (
-        <div className="min-h-[100dvh] w-full bg-black text-white flex items-center justify-center px-6">
-            <div className="flex items-center gap-3 rounded-full border border-white/15 bg-white/5 px-4 py-3 shadow-sm shadow-black/40">
-                <span className="h-2.5 w-2.5 rounded-full bg-yellow-400 animate-pulse" />
-                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white">
+        <div className="flex min-h-[100dvh] w-full items-center justify-center bg-[#f8f7f2] px-6 text-stone-950">
+            <div className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-yellow-400" />
+                <span className="text-sm font-semibold text-stone-800">
                     {message}
                 </span>
             </div>

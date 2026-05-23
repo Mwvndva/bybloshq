@@ -10,9 +10,9 @@ interface SkeletonTableProps {
 
 export function SkeletonTable({ rows = 5, columns = 4, className }: SkeletonTableProps) {
     return (
-        <div className={cn('w-full rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 overflow-hidden', className)}>
+        <div className={cn('w-full overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-[0_18px_45px_rgba(17,17,17,0.08)]', className)}>
             {/* Table Header */}
-            <div className="border-b border-white/10 p-4">
+            <div className="border-b border-stone-200 bg-stone-50 p-4">
                 <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
                     {Array.from({ length: columns }).map((_, i) => (
                         <Skeleton key={`header-${i}`} className="h-5 w-24" />
@@ -21,7 +21,7 @@ export function SkeletonTable({ rows = 5, columns = 4, className }: SkeletonTabl
             </div>
 
             {/* Table Rows */}
-            <div className="divide-y divide-white/10">
+            <div className="divide-y divide-stone-100">
                 {Array.from({ length: rows }).map((_, rowIndex) => (
                     <div key={`row-${rowIndex}`} className="p-4">
                         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
@@ -45,7 +45,7 @@ export function SkeletonList({ items = 5, className }: SkeletonListProps) {
     return (
         <div className={cn('space-y-3', className)}>
             {Array.from({ length: items }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
+                <div key={i} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
                     <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
                     <div className="flex-1 space-y-2">
                         <Skeleton className="h-4 w-3/4" />
