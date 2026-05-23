@@ -123,6 +123,8 @@ export interface Order {
   shippingAddress: ShippingAddress;
   metadata?: any;
   isDigital?: boolean;
+  buyerServiceChargeAmount?: number;
+  buyerServiceChargeRate?: number;
   // Flat fields returned by backend
   buyerName?: string;
   buyerEmail?: string;

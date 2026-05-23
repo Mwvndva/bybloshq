@@ -33,6 +33,18 @@ function getBuyerDeliveryFee(payment = {}) {
   return Number.isFinite(normalizedFee) && normalizedFee > 0 ? normalizedFee : 0;
 }
 
+function getBuyerServiceCharge(payment = {}) {
+  const metadata = parseJson(payment.metadata);
+  const serviceCharge = metadata.buyer_service_charge
+    ?? metadata.product_service_charge
+    ?? metadata.pricing?.buyer_service_charge
+    ?? metadata.pricing?.product_service_charge
+    ?? 0;
+
+  const normalizedCharge = Number(serviceCharge);
+  return Number.isFinite(normalizedCharge) && normalizedCharge > 0 ? normalizedCharge : 0;
+}
+
 function buildReceiptId(payment = {}) {
   const metadata = parseJson(payment.metadata);
   return metadata.receipt_id || `BYB-RCPT-${String(payment.id).padStart(8, '0')}`;
@@ -60,6 +72,21 @@ function normalizeEmailItems(items = [], payment = {}) {
       is_digital: false,
       metadata: {
         line_item_type: 'buyer_delivery_fee'
+      }
+    });
+  }
+
+  const buyerServiceCharge = getBuyerServiceCharge(payment);
+  if (buyerServiceCharge > 0) {
+    normalizedItems.push({
+      name: 'Byblos service charge (2%)',
+      price: buyerServiceCharge,
+      quantity: 1,
+      subtotal: buyerServiceCharge,
+      product_type: 'service_charge',
+      is_digital: false,
+      metadata: {
+        line_item_type: 'buyer_service_charge'
       }
     });
   }

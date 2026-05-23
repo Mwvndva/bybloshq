@@ -26,6 +26,12 @@ interface ProductCardModalsProps {
     invoiceId: string | null;
     isGuest: boolean;
     email?: string;
+    paymentSummary?: {
+      productAmount?: number;
+      deliveryFee?: number;
+      serviceCharge?: number;
+      totalAmount?: number;
+    };
   };
   onPhoneCheckClose: () => void;
   onBuyerModalClose: () => void;

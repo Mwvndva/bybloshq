@@ -40,6 +40,19 @@ export const formatOrderCurrency = (value: number | undefined, currency = 'KSH')
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+export const getBuyerServiceCharge = (order?: Order | null): number => {
+  if (!order) return 0;
+  const metadata = (order.metadata as any) || {};
+  const pricing = metadata.pricing || metadata.delivery?.pricing || {};
+  const rawAmount = (order as any).buyerServiceChargeAmount
+    ?? (order as any).buyer_service_charge_amount
+    ?? pricing.buyer_service_charge
+    ?? pricing.product_service_charge
+    ?? 0;
+  const amount = Number(rawAmount);
+  return Number.isFinite(amount) && amount > 0 ? amount : 0;
+};
+
 export const isPaidOrder = (order: Order): boolean => {
   const paymentStatus = String(order.paymentStatus || (order as any).payment_status || '').toLowerCase();
   return ['completed', 'success', 'paid'].includes(paymentStatus);

@@ -70,6 +70,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 
   const productPrice = Number(purchaseDetails?.productPrice || 0);
   const canUseDoorDelivery = Boolean(isPhysicalProduct && productPrice > 0);
+  const displayedServiceCharge = calculateProductServiceCharge(productPrice);
   const displayedDeliveryFee = canUseDoorDelivery && doorDeliveryEnabled ? Number(deliveryQuote?.feeAmount || 0) : 0;
   const displayedTotal = calculateBuyerPayableTotal(productPrice, displayedDeliveryFee);
 
@@ -240,6 +241,13 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                     <span className="text-xs font-semibold text-slate-500">Price</span>
                     <span className="text-sm sm:text-base font-semibold text-slate-950">{formatCurrency(purchaseDetails.productPrice)}</span>
                   </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-slate-500">Byblos service charge (2%)</span>
+                    <span className="text-xs sm:text-sm font-semibold text-slate-950">{formatCurrency(displayedServiceCharge)}</span>
+                  </div>
+                  <p className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-slate-600">
+                    This 2% charge helps keep checkout protected, receipts clear, and your order tracked safely.
+                  </p>
                   {doorDeliveryEnabled && (
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-xs font-semibold text-slate-500">Delivery fee</span>

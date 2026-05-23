@@ -7,6 +7,7 @@ import {
   canConfirmOrderReceipt,
   formatOrderCurrency,
   formatOrderDate,
+  getBuyerServiceCharge,
   getConfirmReceiptLabel,
   getPaymentStatusBadge,
   getStatusBadge,
@@ -51,6 +52,7 @@ export function BuyerOrderDialogs({
   const currentFulfillmentType = currentOrder?.fulfillment_type?.toUpperCase() || '';
   const currentIsHubCollection = currentOrder && !currentIsService && ['COURIER', 'SELLER_TO_HUB'].includes(currentFulfillmentType);
   const showPhysicalReceiptLocation = Boolean(currentIsHubCollection);
+  const selectedOrderServiceCharge = getBuyerServiceCharge(selectedOrderForDetails);
 
   const confirmationContent = currentIsService ? (
     <div className="space-y-4">
@@ -208,8 +210,13 @@ export function BuyerOrderDialogs({
                 </div>
 
                 <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/15 border border-emerald-400/30">
-                  <span className="text-lg font-semibold text-white">Total</span>
-                  <span className="text-2xl font-bold text-emerald-200">
+                  <div>
+                    <span className="text-lg font-semibold text-white">Total</span>
+                    <p className="mt-1 text-xs font-medium text-white/60">
+                      Includes 2% Byblos service charge{selectedOrderServiceCharge > 0 ? ` (${formatOrderCurrency(selectedOrderServiceCharge, selectedOrderForDetails.currency)})` : ''}
+                    </p>
+                  </div>
+                  <span className="text-2xl font-bold text-emerald-200 text-right">
                     {formatOrderCurrency((selectedOrderForDetails as any).total_amount || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
                   </span>
                 </div>

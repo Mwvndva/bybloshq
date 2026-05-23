@@ -11,6 +11,7 @@ import {
   formatOrderCurrency,
   formatOrderDate,
   getConfirmReceiptLabel,
+  getBuyerServiceCharge,
   getPaymentStatusBadge,
   getStatusBadge,
   isDigitalOrder,
@@ -47,6 +48,7 @@ export function BuyerOrderCard({
   const isService = isServiceOrder(order);
   const isDigital = isDigitalOrder(order);
   const canConfirmReceipt = canConfirmOrderReceipt(order);
+  const buyerServiceCharge = getBuyerServiceCharge(order);
   const instruction = getOrderInstruction({
     status: order.status,
     userRole: 'buyer',
@@ -83,6 +85,9 @@ export function BuyerOrderCard({
               <p className="text-xs text-white/70 uppercase tracking-wider mb-1">Total</p>
               <p className="text-xl sm:text-2xl font-bold text-white">
                 {formatOrderCurrency((order as any).total_amount || order.totalAmount, order.currency)}
+              </p>
+              <p className="mt-1 text-[11px] font-medium text-white/60">
+                Includes 2% Byblos charge{buyerServiceCharge > 0 ? ` (${formatOrderCurrency(buyerServiceCharge, order.currency)})` : ''}
               </p>
             </div>
           </div>
