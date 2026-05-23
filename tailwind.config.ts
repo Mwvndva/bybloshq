@@ -66,11 +66,11 @@ export default {
 				}
 			},
 			fontFamily: {
-				sans: ['Poppins', 'sans-serif'],
-				serif: ['Poppins', 'serif'],
-				mono: ['Poppins', 'monospace'],
-				display: ['Poppins', 'sans-serif'],
-				body: ['Poppins', 'sans-serif']
+				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				serif: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+				display: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				body: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

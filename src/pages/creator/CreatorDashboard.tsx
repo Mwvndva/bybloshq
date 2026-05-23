@@ -171,7 +171,7 @@ export default function CreatorDashboard() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-black text-white">
+      <main className="byblos-light-page flex min-h-screen items-center justify-center bg-black text-white">
         <Loader2 className="h-6 w-6 animate-spin text-yellow-300" />
       </main>
     );
@@ -185,7 +185,7 @@ export default function CreatorDashboard() {
   const hasEnoughBalance = Number(creator.balance || 0) >= totalDeduction;
 
   return (
-    <main className="min-h-screen bg-black px-4 py-6 text-white">
+    <main className="byblos-light-page min-h-screen bg-black px-4 py-6 text-white">
       <div className="space-y-5">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>

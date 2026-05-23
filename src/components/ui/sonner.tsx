@@ -4,11 +4,11 @@ import { Toaster as Sonner, toast } from "sonner"
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "dark" } = useTheme()
+  const { theme = "light" } = useTheme()
 
   return (
     <Sonner
-      theme={(theme === "light" ? "dark" : theme) as ToasterProps["theme"]}
+      theme={(theme === "dark" ? "light" : theme) as ToasterProps["theme"]}
       className="toaster group"
       position="top-right"
       expand={false}
@@ -16,13 +16,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-black group-[.toaster]:text-white group-[.toaster]:border-white/20 group-[.toaster]:shadow-2xl sm:min-w-[356px] min-w-[90vw] sm:max-w-[420px] max-w-[95vw] border-2",
-          description: "group-[.toast]:text-white/80 text-sm",
+            "group toast group-[.toaster]:bg-white group-[.toaster]:text-slate-950 group-[.toaster]:border-slate-200 group-[.toaster]:shadow-xl sm:min-w-[356px] min-w-[90vw] sm:max-w-[420px] max-w-[95vw] border rounded-2xl",
+          description: "group-[.toast]:text-slate-500 text-sm",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-          title: "text-sm sm:text-base font-bold",
+          title: "text-sm sm:text-base font-semibold",
           icon: "w-5 h-5 sm:w-6 sm:h-6"
         },
       }}

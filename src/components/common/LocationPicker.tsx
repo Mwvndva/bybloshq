@@ -219,12 +219,12 @@ export default function LocationPicker({
     return (
         <div className={cn("space-y-4", className)}>
             <div>
-                <Label htmlFor="location-search" className="text-sm font-semibold text-gray-200 block mb-2">
+                <Label htmlFor="location-search" className="text-sm font-semibold text-slate-700 block mb-2">
                     {label}
                 </Label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+                        <Search className="h-5 w-5 text-slate-400" />
                     </div>
                     <Input
                         id="location-search"
@@ -237,7 +237,7 @@ export default function LocationPicker({
                     />
                     {isSearching && (
                         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <Loader2 className="h-4 w-4 text-gray-300 animate-spin" />
+                            <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
                         </div>
                     )}
 
@@ -268,7 +268,7 @@ export default function LocationPicker({
             </div>
 
             <div>
-                <Label htmlFor="address-detailed" className="text-sm font-semibold text-gray-200 block mb-2">
+                <Label htmlFor="address-detailed" className="text-sm font-semibold text-slate-700 block mb-2">
                     {detailedLabel}
                 </Label>
                 <Input
@@ -296,7 +296,7 @@ export default function LocationPicker({
                     <MapFlyTo position={center} />
                 </MapContainer>
             </div>
-            <p className="text-[10px] text-gray-400 text-center uppercase tracking-wider font-bold">
+            <p className="text-center text-[10px] font-semibold text-slate-500">
                 Tap the map to pin exact location
             </p>
         </div>

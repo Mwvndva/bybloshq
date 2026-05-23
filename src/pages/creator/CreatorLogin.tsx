@@ -39,7 +39,7 @@ export default function CreatorLogin() {
   };
 
   return (
-    <main className="min-h-screen bg-black px-4 py-8 text-white">
+    <main className="auth-page byblos-light-page min-h-screen bg-black px-4 py-8 text-white">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center">
         <form onSubmit={handleSubmit} className="w-full space-y-5 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
           <div>
