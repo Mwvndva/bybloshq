@@ -44,8 +44,8 @@ export function BuyerLogin() {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
 
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
 
     return () => {
       document.body.style.cssText = originalBodyStyle;
@@ -100,14 +100,14 @@ export function BuyerLogin() {
   };
 
   return (
-    <div className="auth-page min-h-screen w-full bg-black flex flex-col relative"
+    <div className="auth-page min-h-screen w-full flex flex-col relative"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        backgroundColor: '#000000',
+        backgroundColor: '#f8f7f2',
       }}
     >
       {/* Header */}
-      <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30">
+      <header className="bg-white/95 backdrop-blur-md border-b border-stone-200 sticky top-0 z-30">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between h-20">
             {/* Left: Back Button */}
@@ -115,7 +115,7 @@ export function BuyerLogin() {
               variant="ghost"
               size="sm"
               onClick={() => navigate('/')}
-              className="text-white hover:text-black hover:bg-yellow-400 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
+              className="text-stone-700 hover:text-black hover:bg-yellow-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               <span>Back</span>
@@ -126,7 +126,7 @@ export function BuyerLogin() {
               <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
                 <ShoppingBag className="h-4 w-4 text-slate-950" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-semibold text-slate-950 tracking-tight truncate">
                 Buyer Portal
               </h1>
             </div>
@@ -148,16 +148,17 @@ export function BuyerLogin() {
               background: 'rgba(8, 8, 8, 0.96)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
-              boxShadow: '0 18px 45px rgba(0, 0, 0, 0.45)'
+              backgroundColor: '#ffffff',
+              border: '1px solid #e7e2d6',
+              boxShadow: '0 18px 45px rgba(17, 17, 17, 0.08)'
             }}
           >
             <div className="text-center mb-6">
               <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
-                <ShoppingBag className="h-6 w-6 text-white" />
+                <ShoppingBag className="h-6 w-6 text-black" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight text-white">Welcome Back</h1>
-              <p className="text-gray-300 font-normal text-sm">Sign in to your buyer account</p>
+              <h1 className="text-xl font-semibold tracking-tight text-stone-950">Welcome Back</h1>
+              <p className="text-stone-500 font-normal text-sm">Sign in to your buyer account</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -169,7 +170,7 @@ export function BuyerLogin() {
 
 
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-medium text-gray-200">
+                <Label htmlFor="email" className="text-xs font-medium text-stone-700">
                   Email Address
                 </Label>
                 <div className="relative">
@@ -185,13 +186,13 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="!pl-12 h-10 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                    className="!pl-12 h-10 rounded-xl bg-white border-stone-300 text-stone-950 placeholder:text-stone-400 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-xs font-medium text-gray-200">
+                <Label htmlFor="password" className="text-xs font-medium text-stone-700">
                   Password
                 </Label>
                 <div className="relative">
@@ -207,11 +208,11 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="!pl-12 !pr-11 h-10 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                    className="!pl-12 !pr-11 h-10 rounded-xl bg-white border-stone-300 text-stone-950 placeholder:text-stone-400 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-200"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-stone-500 hover:text-stone-950"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
                   >
@@ -241,7 +242,7 @@ export function BuyerLogin() {
             </form>
 
             <div className="mt-6 text-center space-y-2">
-              <p className="text-gray-300 font-normal text-sm">
+              <p className="text-stone-600 font-normal text-sm">
                 Don't have an account?{' '}
                 <Link
                   to="/buyer/register"

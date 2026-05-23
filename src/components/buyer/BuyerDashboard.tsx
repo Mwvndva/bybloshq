@@ -210,8 +210,8 @@ function BuyerDashboard() {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
 
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #F8FAFC; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #F8FAFC; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
 
     return () => {
       document.body.style.cssText = originalBodyStyle;
@@ -324,11 +324,11 @@ function BuyerDashboard() {
   };
 
   return (
-    <div className="page-enter" style={{
+    <div className="page-enter byblos-light-page" style={{
       display: 'flex', flexDirection: 'column',
       height: '100dvh',
       overflow: 'hidden',
-      background: '#000000',
+      background: '#f8f7f2',
     }}>
       <BuyerDashboardHeader onBack={handleBack} />
       <BuyerDashboardSearch
@@ -376,8 +376,8 @@ function BuyerDashboard() {
         {activeSection === 'wishlist' && (
           <div className="space-y-4">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>Wishlist</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>{wishlist.length} items</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#111111' }}>Wishlist</span>
+              <span style={{ fontSize: 11, color: '#6f6a60' }}>{wishlist.length} items</span>
             </div>
             <WishlistSection />
           </div>
@@ -385,7 +385,7 @@ function BuyerDashboard() {
 
         {activeSection === 'orders' && (
           <div className="space-y-4">
-            <Suspense fallback={<div style={{ color: '#FFFFFF' }}>Loading orders...</div>}>
+            <Suspense fallback={<div style={{ color: '#111111' }}>Loading orders...</div>}>
               <OrdersSection />
             </Suspense>
           </div>
