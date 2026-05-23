@@ -52,11 +52,11 @@ export const getThemeClasses = (theme: Theme): ProductCardThemeClasses => {
   switch (theme) {
     case 'black':
       return {
-        card: 'bg-[#0a0a0a]/95 text-white border-white/10 hover:border-[var(--theme-accent, #f59e0b)]/50 hover:shadow-[0_0_30px_rgba(var(--theme-accent-rgb, 245,158,11),0.15)]',
+        card: 'bg-white text-slate-950 border-slate-200 hover:border-[var(--theme-accent, #f59e0b)]/40 hover:shadow-xl hover:shadow-slate-950/10',
         price: 'text-[var(--theme-accent, #f59e0b)]',
-        button: 'bg-[var(--theme-button-bg, #f59e0b)] hover:opacity-90 text-[var(--theme-button-text, black)] font-bold shadow-[0_0_15px_rgba(var(--theme-accent-rgb, 245,158,11),0.3)]',
-        seller: 'text-gray-300',
-        description: 'text-gray-300',
+        button: 'bg-[var(--theme-button-bg, #f5c518)] hover:opacity-90 text-[var(--theme-button-text, black)] font-semibold shadow-sm',
+        seller: 'text-slate-600',
+        description: 'text-slate-600',
         icon: 'text-[var(--theme-accent, #f59e0b)]',
       };
     case 'pink':
@@ -66,21 +66,21 @@ export const getThemeClasses = (theme: Theme): ProductCardThemeClasses => {
     case 'yellow':
     case 'brown':
       return {
-        card: 'bg-[var(--theme-card-bg, white)] text-black border-[var(--theme-border)] hover:shadow-xl hover:shadow-[var(--theme-accent)]/10',
+        card: 'bg-white text-slate-950 border-slate-200 hover:shadow-xl hover:shadow-slate-950/10',
         price: 'text-[var(--theme-accent)]',
-        button: 'bg-[var(--theme-button-bg)] hover:opacity-90 text-[var(--theme-button-text)] shadow-md',
-        seller: 'text-gray-800 opacity-80',
-        description: (theme === 'yellow' || theme === 'orange') ? 'text-gray-800' : 'text-gray-100',
+        button: 'bg-yellow-400 hover:bg-yellow-300 text-black shadow-sm',
+        seller: 'text-slate-600',
+        description: 'text-slate-600',
         icon: 'text-[var(--theme-accent)]',
       };
     default:
       return {
-        card: 'border-0',
+        card: 'border border-slate-200 bg-white text-slate-950 shadow-sm hover:shadow-xl hover:shadow-slate-950/10',
         price: 'text-yellow-600',
-        button: 'bg-yellow-400 hover:bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/10',
-        seller: 'text-white',
-        description: 'text-white',
-        icon: 'text-white',
+        button: 'bg-yellow-400 hover:bg-yellow-300 text-black font-semibold shadow-sm',
+        seller: 'text-slate-600',
+        description: 'text-slate-600',
+        icon: 'text-yellow-600',
       };
   }
 };

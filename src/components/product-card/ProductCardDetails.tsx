@@ -38,46 +38,38 @@ export function ProductCardDetails({
   onOpenShop
 }: ProductCardDetailsProps) {
   const serviceOptions = product.service_options || (product as any).serviceOptions;
+  void theme;
+  void forceWhiteText;
 
   return (
     <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-      <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 h-6 sm:h-6 text-base sm:text-base antialiased",
-        (theme === 'black' || forceWhiteText) ? 'text-white' : 'text-black'
-      )}>
+      <h3 className="mb-1 line-clamp-1 h-6 text-base font-semibold text-slate-950 antialiased sm:mb-1.5">
         {product.name}
       </h3>
 
-      <p className={cn("font-black text-base sm:text-base mb-1 sm:mb-1.5 flex items-center gap-1.5 sm:gap-2",
-        isService
-          ? 'text-purple-600'
-          : (forceWhiteText && theme === 'default') ? 'text-yellow-400' : themeClasses.price
-      )}>
+      <p className={cn("mb-1 flex items-center gap-1.5 text-base font-semibold sm:mb-1.5 sm:gap-2", themeClasses.price)}>
         {isDigital ? (
-          <span className="text-red-600">
+          <span className="text-yellow-700">
             {formatCurrency(product.price)}
           </span>
         ) : (
           formatCurrency(product.price)
         )}
         {isService && serviceOptions?.price_type === 'hourly' && (
-          <span className="text-sm font-medium text-gray-300 ml-1">/hr</span>
+          <span className="ml-1 text-sm font-medium text-slate-500">/hr</span>
         )}
       </p>
 
       {product.description && (
         <div className="relative group/desc h-10 overflow-y-auto no-scrollbar mb-1.5 sm:mb-2 overscroll-contain">
-          <p className={cn("mobile-text leading-tight text-[11px] sm:text-xs min-h-full",
-            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
-          )}>
+          <p className="mobile-text min-h-full text-[11px] leading-tight text-slate-500 sm:text-xs">
             {product.description}
           </p>
         </div>
       )}
 
       {isService && (
-        <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
-          (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
-        )}>
+        <div className="mb-2 flex items-start gap-1.5 text-xs text-slate-500">
           <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
           <span className="line-clamp-2 text-sm">
             {serviceOptions?.location_type === 'seller_visits_buyer' ? (
@@ -91,14 +83,10 @@ export function ProductCardDetails({
         </div>
       )}
 
-      <div className={cn("flex items-center gap-1 sm:gap-1.5 pt-1.5 sm:pt-2 border-t mt-1.5 sm:mt-2",
-        (theme === 'black' || forceWhiteText) ? 'border-gray-800' : 'border-gray-100'
-      )}>
+      <div className="mt-1.5 flex items-center gap-1 border-t border-slate-100 pt-1.5 sm:mt-2 sm:gap-1.5 sm:pt-2">
         <Store className={cn("h-3.5 w-3.5 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
         <span
-          className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90 cursor-pointer hover:underline text-sm sm:text-xs",
-            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-800'
-          )}
+          className="mobile-text flex-1 cursor-pointer truncate text-sm font-semibold tracking-tight text-slate-700 opacity-90 hover:underline sm:text-xs"
           onClick={(e) => {
             e.stopPropagation();
             onOpenShop();
@@ -108,12 +96,12 @@ export function ProductCardDetails({
         </span>
         <div className="shrink-0 flex items-center">
           {isSellerShopless(displaySeller) ? (
-            <Badge variant="outline" className="h-4 px-1 text-[8px] border-zinc-500/30 text-zinc-400 bg-zinc-500/10 font-bold uppercase tracking-wider">
-              Online Only
+            <Badge variant="outline" className="h-4 px-1 text-[8px]">
+              Online
             </Badge>
           ) : (
-            <Badge variant="outline" className="h-4 px-1 text-[8px] border-emerald-500/30 text-emerald-400 bg-emerald-500/10 font-bold uppercase tracking-wider">
-              Physical Shop
+            <Badge variant="outline" className="h-4 border-yellow-200 bg-yellow-50 px-1 text-[8px] text-slate-600">
+              Shop
             </Badge>
           )}
         </div>
@@ -174,18 +162,11 @@ export function ProductCardDetails({
         variant="default"
         size="default"
         className={cn(
-          'button-mobile w-full h-12 sm:h-10 font-bold transition-colors mt-3 sm:mt-2.5',
+          'button-mobile mt-3 h-12 w-full font-semibold transition-colors sm:mt-2.5 sm:h-10',
           'focus-visible:ring-2 focus-visible:ring-offset-2',
           'flex items-center justify-center gap-2 sm:gap-2 text-base sm:text-sm',
           'disabled:opacity-50 disabled:pointer-events-none',
-          isSold
-            ? 'bg-gray-400 hover:bg-gray-400'
-            : isService
-              ? 'bg-purple-600 hover:bg-purple-700 text-white'
-              : isDigital
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : themeClasses.button,
-          (!isService && !isDigital) && themeClasses.button
+          isSold ? 'bg-slate-200 text-slate-500 hover:bg-slate-200' : themeClasses.button
         )}
         onClick={onBuyClick}
         disabled={isSold || isLocked}
@@ -205,7 +186,7 @@ export function ProductCardDetails({
             ) : (
               <ShoppingCart className="h-4 w-4" />
             )}
-            <span>{isSold ? 'Sold Out' : isService ? 'Book Now' : isDigital ? 'Download Now' : 'Buy Now'}</span>
+            <span>{isSold ? 'Sold out' : isService ? 'Book securely' : isDigital ? 'Download securely' : 'Buy safely'}</span>
           </>
         )}
       </Button>

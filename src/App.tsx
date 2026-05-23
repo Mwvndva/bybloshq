@@ -1,4 +1,3 @@
-import React, { useEffect } from 'react';
 import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
 import { AppProviders } from "./components/AppProviders";
 import { LoadingScreen } from "./components/LoadingScreen";
@@ -28,16 +27,6 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  useEffect(() => {
-    document.documentElement.classList.add('byblos-dark-ui');
-    document.body.classList.add('byblos-dark-ui');
-
-    return () => {
-      document.documentElement.classList.remove('byblos-dark-ui');
-      document.body.classList.remove('byblos-dark-ui');
-    };
-  }, []);
-
   return (
     <ErrorBoundary>
       <RouterProvider router={router} fallbackElement={<LoadingScreen />} />

@@ -499,12 +499,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   // Get theme styles dynamically from CSS variables (set by ShopPage)
   const themedCardStyle: CSSProperties = {
-    background: 'var(--theme-card-bg, rgba(5, 5, 5, 0.96))',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
-    border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.14))',
-    color: 'var(--theme-text, #FFFFFF)',
-    boxShadow: '0 10px 34px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--theme-border, rgba(255, 255, 255, 0.14))'
+    background: '#ffffff',
+    border: '1px solid rgba(15, 23, 42, 0.10)',
+    color: '#111111',
+    boxShadow: '0 16px 38px -28px rgba(15, 23, 42, 0.35)'
   };
 
   const themeClasses = getThemeClasses(theme);
@@ -529,8 +527,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-2xl sm:rounded-[2rem]',
-        isSold ? 'opacity-60' : 'sm:hover:-translate-y-3 sm:hover:scale-[1.03]',
+        'group relative overflow-hidden transition-all duration-300 rounded-2xl',
+        isSold ? 'opacity-60' : 'sm:hover:-translate-y-1',
         'cursor-pointer',
         themeClasses.card
       )}
@@ -542,10 +540,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <button
           onClick={toggleWishlist}
           className={cn(
-            'absolute top-2 right-2 z-10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-black/40 hover:bg-black/55 border border-white/10 shadow-md backdrop-blur-sm transition-all duration-300',
+            'absolute top-2 right-2 z-10 p-1.5 sm:p-2 rounded-full bg-white/95 hover:bg-white border border-slate-200 shadow-sm backdrop-blur-sm transition-all duration-300',
             'h-7 w-7 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center',
             wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110',
-            isWishlisted ? 'text-red-500' : 'text-gray-600'
+            isWishlisted ? 'text-red-500' : 'text-slate-500'
           )}
           aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           disabled={isSold || wishlistActionLoading || isWishlistLoading}

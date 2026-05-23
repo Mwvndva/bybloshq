@@ -84,7 +84,7 @@ export default function CreatorRegister() {
   };
 
   return (
-    <main className="min-h-screen bg-black px-4 py-8 text-white">
+    <main className="auth-page byblos-light-page min-h-screen bg-black px-4 py-8 text-white">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-5xl items-center gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="space-y-4">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">
