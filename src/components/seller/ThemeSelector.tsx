@@ -5,14 +5,14 @@ import { sellerApi, Theme } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 
 const themeColors = [
-  { name: 'White', value: 'default', preview: '#ffffff', labelColor: '#111827', labelBg: 'rgba(17, 24, 39, 0.10)' },
-  { name: 'Black', value: 'black', preview: 'linear-gradient(135deg, #1f2937 0%, #030712 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.16)' },
-  { name: 'Pink', value: 'pink', preview: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.24)' },
-  { name: 'Brown', value: 'brown', preview: 'linear-gradient(135deg, #b45309 0%, #7c2d12 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
-  { name: 'Orange', value: 'orange', preview: 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
-  { name: 'Green', value: 'green', preview: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
-  { name: 'Red', value: 'red', preview: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
-  { name: 'Yellow', value: 'yellow', preview: 'linear-gradient(135deg, #fde047 0%, #facc15 100%)', labelColor: '#111827', labelBg: 'rgba(17, 24, 39, 0.10)' },
+  { name: 'White', value: 'default', swatchClass: 'bg-white' },
+  { name: 'Black', value: 'black', swatchClass: 'bg-slate-950' },
+  { name: 'Pink', value: 'pink', swatchClass: 'bg-pink-500' },
+  { name: 'Brown', value: 'brown', swatchClass: 'bg-amber-800' },
+  { name: 'Orange', value: 'orange', swatchClass: 'bg-orange-500' },
+  { name: 'Green', value: 'green', swatchClass: 'bg-emerald-500' },
+  { name: 'Red', value: 'red', swatchClass: 'bg-red-500' },
+  { name: 'Yellow', value: 'yellow', swatchClass: 'bg-yellow-400' },
 ];
 
 interface ThemeSelectorProps {
@@ -81,10 +81,7 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
               : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
               }`}
           >
-            <div
-              className="relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16"
-              style={{ background: theme.preview }}
-            >
+            <div className={`relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16 ${theme.swatchClass}`}>
               {selectedTheme === theme.value && (
                 <div
                   className="absolute top-2 right-2 rounded-full p-1 shadow-lg animate-in zoom-in duration-200"
