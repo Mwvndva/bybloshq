@@ -5,14 +5,14 @@ import { sellerApi, Theme } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 
 const themeColors = [
-  { name: 'White', value: 'default', swatchClass: 'bg-white' },
-  { name: 'Black', value: 'black', swatchClass: 'bg-slate-950' },
-  { name: 'Pink', value: 'pink', swatchClass: 'bg-pink-500' },
-  { name: 'Brown', value: 'brown', swatchClass: 'bg-amber-800' },
-  { name: 'Orange', value: 'orange', swatchClass: 'bg-orange-500' },
-  { name: 'Green', value: 'green', swatchClass: 'bg-emerald-500' },
-  { name: 'Red', value: 'red', swatchClass: 'bg-red-500' },
-  { name: 'Yellow', value: 'yellow', swatchClass: 'bg-yellow-400' },
+  { name: 'White', value: 'default', color: '#ffffff' },
+  { name: 'Black', value: 'black', color: '#020617' },
+  { name: 'Pink', value: 'pink', color: '#ec4899' },
+  { name: 'Brown', value: 'brown', color: '#92400e' },
+  { name: 'Orange', value: 'orange', color: '#f97316' },
+  { name: 'Green', value: 'green', color: '#10b981' },
+  { name: 'Red', value: 'red', color: '#ef4444' },
+  { name: 'Yellow', value: 'yellow', color: '#facc15' },
 ];
 
 interface ThemeSelectorProps {
@@ -81,7 +81,10 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
               : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
               }`}
           >
-            <div className={`relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16 ${theme.swatchClass}`}>
+            <div
+              className="relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16"
+              style={{ backgroundColor: theme.color }}
+            >
               {selectedTheme === theme.value && (
                 <div
                   className="absolute top-2 right-2 rounded-full p-1 shadow-lg animate-in zoom-in duration-200"
