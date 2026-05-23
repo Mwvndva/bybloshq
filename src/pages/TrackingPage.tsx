@@ -90,11 +90,11 @@ export default function TrackingPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-black text-white">
+      <main className="min-h-screen bg-[#f8f7f2] text-stone-950">
         <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-5 text-center">
-            <Clock className="mx-auto h-6 w-6 animate-pulse text-yellow-300" />
-            <p className="mt-3 text-sm text-white/75">Loading tracking details...</p>
+          <div className="rounded-3xl border border-stone-200 bg-white px-6 py-5 text-center shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+            <Clock className="mx-auto h-6 w-6 animate-pulse text-yellow-500" />
+            <p className="mt-3 text-sm font-medium text-stone-600">Loading tracking details...</p>
           </div>
         </div>
       </main>
@@ -103,12 +103,12 @@ export default function TrackingPage() {
 
   if (isError || !data) {
     return (
-      <main className="min-h-screen bg-black text-white">
+      <main className="min-h-screen bg-[#f8f7f2] text-stone-950">
         <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center">
-            <ShieldCheck className="mx-auto h-8 w-8 text-yellow-300" />
-            <h1 className="mt-4 text-2xl font-semibold text-white">Tracking link unavailable</h1>
-            <p className="mt-2 text-sm text-white/70">
+          <div className="rounded-3xl border border-stone-200 bg-white p-6 text-center shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+            <ShieldCheck className="mx-auto h-8 w-8 text-yellow-500" />
+            <h1 className="mt-4 text-2xl font-semibold text-stone-950">Tracking link unavailable</h1>
+            <p className="mt-2 text-sm text-stone-600">
               This link is invalid, expired, or the delivery has not been activated yet.
             </p>
             <Button onClick={() => navigate('/')} className="mt-5 bg-yellow-400 text-black hover:bg-yellow-300">

@@ -73,20 +73,20 @@ export default function PaymentSuccess() {
   }, [searchParams, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#000000] relative">
-      <Card className="w-full max-w-md bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-[#f8f7f2] relative px-4">
+      <Card className="w-full max-w-md border border-stone-200 bg-white shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
         <CardHeader className="text-center">
-          {status === 'loading' && <Loader2 className="mx-auto h-12 w-12 animate-spin text-yellow-400" />}
+          {status === 'loading' && <Loader2 className="mx-auto h-12 w-12 animate-spin text-yellow-500" />}
           {status === 'success' && <CheckCircle className="mx-auto h-12 w-12 text-emerald-500" />}
           {status === 'error' && <XCircle className="mx-auto h-12 w-12 text-red-500" />}
 
-          <CardTitle className="mt-4 text-xl font-bold text-white">
+          <CardTitle className="mt-4 text-xl font-semibold text-stone-950">
             {status === 'loading' && 'Processing Payment'}
             {status === 'success' && 'Payment Successful'}
             {status === 'error' && 'Payment Failed'}
           </CardTitle>
 
-          <CardDescription className="text-zinc-300">
+          <CardDescription className="text-stone-600">
             {message}
           </CardDescription>
         </CardHeader>
@@ -103,50 +103,48 @@ export default function PaymentSuccess() {
       {/* Success Modal */}
       {showSuccessModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/95 backdrop-blur-xl"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/40 p-4 backdrop-blur-sm"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative w-full max-w-lg mx-4 bg-[#000000] backdrop-blur-[20px] border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
-
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-[0_24px_80px_rgba(17,17,17,0.18)]">
             {/* Close Button */}
             <button
               onClick={() => {
                 setShowSuccessModal(false);
                 navigate('/buyer/orders', { replace: true });
               }}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10"
+              className="absolute top-4 right-4 p-2 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 transition-colors z-10"
               aria-label="Close and view orders"
             >
-              <X className="h-5 w-5 text-gray-300" />
+              <X className="h-5 w-5" />
             </button>
 
             <div className="relative p-8 sm:p-12 text-center space-y-6">
               <div className="flex justify-center">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full" />
+                  <div className="absolute inset-0 bg-emerald-100 blur-2xl rounded-full" />
                   <CheckCircle className="relative h-20 w-20 text-emerald-500 animate-pulse" strokeWidth={2} />
                 </div>
               </div>
 
               <div className="space-y-3">
-                <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                <h2 className="text-2xl sm:text-3xl font-semibold text-stone-950">
                   Payment Successful!
                 </h2>
-                <p className="text-base sm:text-lg text-gray-300">
+                <p className="text-base sm:text-lg text-stone-600">
                   Your order has been placed.
                 </p>
                 {orderReference && (
-                  <p className="text-sm text-gray-400 font-mono bg-white/5 rounded-lg px-4 py-2 inline-block">
+                  <p className="text-sm text-stone-500 font-mono bg-stone-100 rounded-lg px-4 py-2 inline-block">
                     Order: {orderReference}
                   </p>
                 )}
               </div>
 
-              <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+              <div className="h-px bg-stone-200" />
 
               <div className="space-y-4">
-                <p className="text-base text-gray-300">
+                <p className="text-base text-stone-600">
                   You can track your order in your dashboard.
                 </p>
 

@@ -171,8 +171,11 @@ export default function CreatorDashboard() {
 
   if (loading) {
     return (
-      <main className="byblos-light-page flex min-h-screen items-center justify-center bg-black text-white">
-        <Loader2 className="h-6 w-6 animate-spin text-yellow-300" />
+      <main className="byblos-light-page flex min-h-screen items-center justify-center bg-[#f8f7f2] px-4 text-stone-950">
+        <div className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+          <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+          <span className="text-sm font-semibold text-stone-700">Loading creator dashboard...</span>
+        </div>
       </main>
     );
   }

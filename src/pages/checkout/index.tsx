@@ -35,7 +35,7 @@ export default function CheckoutPage() {
   const [statusData, setStatusData] = useState<StatusData>({
     title: 'Processing Payment',
     description: 'Please wait while we process your payment...',
-    icon: <Loader2 className="h-12 w-12 animate-spin text-blue-500" />,
+    icon: <Loader2 className="h-12 w-12 animate-spin text-yellow-500" />,
     isError: false,
   });
 
@@ -195,8 +195,11 @@ export default function CheckoutPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+      <div className="flex min-h-screen items-center justify-center bg-[#f8f7f2] px-4">
+        <div className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+          <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+          <span className="text-sm font-semibold text-stone-700">Checking payment...</span>
+        </div>
       </div>
     );
   }
@@ -204,8 +207,8 @@ export default function CheckoutPage() {
   const reference = searchParams.get('reference');
 
   return (
-    <div className="container mx-auto flex min-h-screen items-center justify-center px-4 py-12">
-      <Card className="w-full max-w-md border-0 shadow-none sm:border sm:shadow-md bg-transparent sm:bg-card">
+    <div className="container mx-auto flex min-h-screen items-center justify-center bg-[#f8f7f2] px-4 py-12">
+      <Card className="w-full max-w-md border border-stone-200 bg-white shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center">{statusData.icon}</div>
           <CardTitle className="text-xl font-bold">{statusData.title}</CardTitle>

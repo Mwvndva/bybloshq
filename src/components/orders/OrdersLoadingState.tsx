@@ -1,12 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { glassCardStyle } from './ordersSectionUtils';
 
 export function OrdersLoadingState() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {[1, 2, 3].map((item) => (
-        <Card key={item} className="border-0" style={glassCardStyle}>
+        <Card key={item} className="border-stone-200 bg-white shadow-sm">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
               <div className="space-y-3 sm:space-y-4 flex-1">

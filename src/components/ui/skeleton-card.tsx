@@ -9,9 +9,9 @@ interface SkeletonCardProps {
 
 export function SkeletonCard({ className, variant = 'product' }: SkeletonCardProps) {
     return (
-        <div className={cn('rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 overflow-hidden', className)}>
+        <div className={cn('overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-[0_18px_45px_rgba(17,17,17,0.08)]', className)}>
             {/* Image skeleton */}
-            <Skeleton className="w-full h-48" />
+            <Skeleton className="h-48 w-full rounded-none bg-stone-100" />
 
             {/* Content skeleton */}
             <div className="p-6 space-y-4">
@@ -34,13 +34,13 @@ export function SkeletonCard({ className, variant = 'product' }: SkeletonCardPro
                 </div>
 
                 {variant === 'product' && (
-                    <Skeleton className="h-10 w-full rounded-xl" />
+                    <Skeleton className="h-10 w-full rounded-xl bg-yellow-100" />
                 )}
 
                 {variant === 'event' && (
                     <div className="flex gap-2">
-                        <Skeleton className="h-10 flex-1 rounded-xl" />
-                        <Skeleton className="h-10 flex-1 rounded-xl" />
+                        <Skeleton className="h-10 flex-1 rounded-xl bg-yellow-100" />
+                        <Skeleton className="h-10 flex-1 rounded-xl bg-stone-100" />
                     </div>
                 )}
             </div>
