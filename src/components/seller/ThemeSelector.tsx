@@ -61,12 +61,12 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center gap-3">
-        <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/10 p-2">
-          <Palette className="h-5 w-5 text-yellow-300" />
+        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-2">
+          <Palette className="h-5 w-5 text-yellow-700" />
         </div>
         <div>
-          <h3 className="text-base font-black tracking-tight text-white sm:text-lg">Shop Theme</h3>
-          <p className="mt-1 text-xs font-medium text-white/45 sm:text-sm">Choose a color theme for your shop page</p>
+          <h3 className="text-base font-black tracking-tight text-slate-950 sm:text-lg">Shop Theme</h3>
+          <p className="mt-1 text-xs font-medium text-slate-600 sm:text-sm">Choose a color theme for your shop page</p>
         </div>
       </div>
 
@@ -78,7 +78,7 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
             onClick={() => handleThemeSelect(theme.value as Theme)}
             className={`relative group h-20 overflow-hidden rounded-2xl border transition-all duration-200 sm:h-24 ${selectedTheme === theme.value
               ? 'border-yellow-300 ring-2 ring-yellow-300/25'
-              : 'border-white/10 hover:border-white/25'
+              : 'border-slate-200 hover:border-slate-300'
               }`}
           >
             <div
