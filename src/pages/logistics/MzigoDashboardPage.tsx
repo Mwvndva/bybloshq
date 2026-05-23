@@ -38,29 +38,29 @@ const ACTIVE_GROUPS = [
     key: 'pickupDelivery',
     title: 'Pickup + Delivery',
     description: 'Seller pickup and buyer delivery are both active for the same package.',
-    tone: 'border-yellow-300/70 bg-yellow-300/10',
-    pill: 'bg-yellow-300 text-black',
+    tone: 'border-yellow-200 bg-yellow-50',
+    pill: 'bg-yellow-400 text-black',
   },
   {
     key: 'deliveryOnly',
     title: 'Delivery Only',
     description: 'Buyer paid for door delivery. Seller is expected to drop off the package.',
-    tone: 'border-cyan-300/60 bg-cyan-300/10',
-    pill: 'bg-cyan-300 text-black',
+    tone: 'border-stone-200 bg-white',
+    pill: 'bg-stone-950 text-[#ffffff]',
   },
   {
     key: 'pickupOnly',
     title: 'Pickup Only',
     description: 'Seller paid for pickup. Buyer will collect separately or no door delivery exists.',
-    tone: 'border-fuchsia-300/60 bg-fuchsia-300/10',
-    pill: 'bg-fuchsia-300 text-black',
+    tone: 'border-stone-200 bg-white',
+    pill: 'bg-stone-200 text-stone-950',
   },
   {
     key: 'hubDropoff',
     title: 'Hub Drop-off / Hub Collection',
     description: 'Seller is dropping off at the hub without a paid Mzigo pickup leg.',
-    tone: 'border-emerald-300/60 bg-emerald-300/10',
-    pill: 'bg-emerald-300 text-black',
+    tone: 'border-stone-200 bg-white',
+    pill: 'bg-stone-200 text-stone-950',
   },
 ] as const;
 
@@ -68,8 +68,8 @@ const COMPLETED_GROUP = {
   key: 'completed',
   title: 'Completed Deliveries',
   description: 'Orders and logistics requests already completed. Cards are kept here for delivery history.',
-  tone: 'border-white/15 bg-white/[0.04]',
-  pill: 'bg-white text-black',
+  tone: 'border-stone-200 bg-white',
+  pill: 'bg-stone-200 text-stone-950',
 } as const;
 
 const SORT_OPTIONS: Array<{ value: LogisticsSort; label: string }> = [
@@ -164,7 +164,7 @@ function mapAnchor(label: string, href?: string | null) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 text-xs text-yellow-200 underline-offset-4 hover:underline"
+      className="inline-flex items-center gap-1 text-xs font-medium text-yellow-600 underline-offset-4 hover:underline"
     >
       {label}
       <ExternalLink size={12} />
@@ -184,12 +184,12 @@ function DetailField({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2">
+      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-stone-500">
         {icon}
         {label}
       </p>
-      <div className="text-sm text-white">{value || children || 'Not provided'}</div>
+      <div className="text-sm text-stone-950">{value || children || 'Not provided'}</div>
     </div>
   );
 }
@@ -198,7 +198,7 @@ function DashboardStat({
   label,
   value,
   icon,
-  tone = 'border-white/10 bg-white/[0.03]',
+  tone = 'border-stone-200 bg-white',
 }: {
   label: string;
   value: number | string;
@@ -207,11 +207,11 @@ function DashboardStat({
 }) {
   return (
     <div className={`rounded-2xl border p-4 ${tone}`}>
-      <div className="mb-3 flex items-center justify-between gap-3 text-white/65">
-        <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
+      <div className="mb-3 flex items-center justify-between gap-3 text-stone-500">
+        <span className="text-xs font-semibold">{label}</span>
         {icon}
       </div>
-      <p className="text-2xl font-semibold text-white">{value}</p>
+      <p className="text-2xl font-semibold text-stone-950">{value}</p>
     </div>
   );
 }
@@ -341,7 +341,7 @@ function RequestCard({
   const buyerMapLink = request.deliveryLeg?.destination.mapLink || null;
 
   return (
-    <article className={`rounded-2xl border p-4 text-white shadow-lg shadow-black/30 ${tone}`}>
+    <article className={`rounded-2xl border p-4 text-stone-950 shadow-[0_18px_45px_rgba(17,17,17,0.08)] ${tone}`}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-white/60">Order</p>
@@ -564,28 +564,28 @@ const MzigoDashboardPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-black/95 px-4 py-4 backdrop-blur">
+    <main className="mzigo-light-dashboard min-h-screen bg-[#f8f7f2] text-stone-950">
+      <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/95 px-4 py-4 backdrop-blur">
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white transition hover:bg-white hover:text-black"
+            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-yellow-300 hover:bg-yellow-50 hover:text-black"
           >
             <ArrowLeft size={16} />
             Home
           </button>
 
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.3em] text-yellow-200">Mzigo Ego</p>
-            <h1 className="text-xl font-semibold text-white">Delivery Orders</h1>
-            <p className="text-xs text-white/65">{partner?.name || 'Logistics partner'} workspace</p>
+            <p className="text-xs font-semibold text-yellow-600">Mzigo Ego</p>
+            <h1 className="text-xl font-semibold text-stone-950">Delivery Orders</h1>
+            <p className="text-xs text-stone-500">{partner?.name || 'Logistics partner'} workspace</p>
           </div>
 
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white transition hover:bg-white hover:text-black"
+            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             <LogOut size={16} />
             Logout
@@ -596,11 +596,11 @@ const MzigoDashboardPage = () => {
       <section className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="flex items-center gap-2 text-sm text-white/70">
+            <p className="flex items-center gap-2 text-sm font-medium text-stone-700">
               <Truck size={16} />
               {activeCount} active logistics orders
             </p>
-            <p className="mt-1 text-xs text-white/55">
+            <p className="mt-1 text-xs text-stone-500">
               Completed orders are separated from active work so dispatch can focus on open movement.
             </p>
           </div>
@@ -614,7 +614,7 @@ const MzigoDashboardPage = () => {
                 className={`rounded-full px-4 py-2 text-sm transition ${
                   sort === option.value
                     ? 'bg-yellow-300 text-black'
-                    : 'border border-white/15 text-white hover:bg-white hover:text-black'
+                    : 'border border-stone-200 bg-white text-stone-700 hover:bg-yellow-50 hover:text-black'
                 }`}
               >
                 {option.label}
@@ -623,7 +623,7 @@ const MzigoDashboardPage = () => {
             <button
               type="button"
               onClick={() => requestsQuery.refetch()}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white transition hover:bg-white hover:text-black"
+              className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-700 transition hover:bg-yellow-50 hover:text-black"
             >
               <RefreshCw size={15} />
               Refresh
@@ -642,7 +642,7 @@ const MzigoDashboardPage = () => {
             label="Overdue"
             value={overdueCount}
             icon={<CalendarClock size={18} />}
-            tone={overdueCount > 0 ? 'border-red-300/30 bg-red-400/10' : 'border-white/10 bg-white/[0.03]'}
+            tone={overdueCount > 0 ? 'border-red-200 bg-red-50' : 'border-stone-200 bg-white'}
           />
           <DashboardStat
             label="Completed"
@@ -660,7 +660,7 @@ const MzigoDashboardPage = () => {
         {requestsQuery.isLoading ? (
           <div className="grid gap-4 lg:grid-cols-3">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="h-64 animate-pulse rounded-2xl border border-white/10 bg-white/[0.04]" />
+              <div key={item} className="h-64 animate-pulse rounded-2xl border border-stone-200 bg-white" />
             ))}
           </div>
         ) : (
@@ -671,8 +671,8 @@ const MzigoDashboardPage = () => {
                 <section key={group.key}>
                   <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                     <div>
-                      <h2 className="text-lg font-semibold text-white">{group.title}</h2>
-                      <p className="text-sm text-white/65">{group.description}</p>
+                      <h2 className="text-lg font-semibold text-stone-950">{group.title}</h2>
+                      <p className="text-sm text-stone-500">{group.description}</p>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${group.pill}`}>
                       {cards.length} orders
@@ -680,7 +680,7 @@ const MzigoDashboardPage = () => {
                   </div>
 
                   {cards.length === 0 ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/65">
+                    <div className="rounded-2xl border border-stone-200 bg-white p-6 text-sm text-stone-500">
                       No {group.title.toLowerCase()} orders right now.
                     </div>
                   ) : (
@@ -704,8 +704,8 @@ const MzigoDashboardPage = () => {
             <section>
               <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">{COMPLETED_GROUP.title}</h2>
-                  <p className="text-sm text-white/65">{COMPLETED_GROUP.description}</p>
+                  <h2 className="text-lg font-semibold text-stone-950">{COMPLETED_GROUP.title}</h2>
+                  <p className="text-sm text-stone-500">{COMPLETED_GROUP.description}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${COMPLETED_GROUP.pill}`}>
                   {grouped.completed.length} orders
@@ -713,7 +713,7 @@ const MzigoDashboardPage = () => {
               </div>
 
               {grouped.completed.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/65">
+                <div className="rounded-2xl border border-stone-200 bg-white p-6 text-sm text-stone-500">
                   No completed deliveries yet.
                 </div>
               ) : (
@@ -736,7 +736,7 @@ const MzigoDashboardPage = () => {
         )}
       </section>
 
-      <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/55">
+      <footer className="border-t border-stone-200 px-4 py-4 text-center text-xs text-stone-500">
         <CalendarClock size={14} className="mr-1 inline-block" />
         Deliveries are organized against the 24 hour logistics window.
       </footer>
