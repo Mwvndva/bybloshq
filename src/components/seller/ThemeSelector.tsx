@@ -93,7 +93,7 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
                   <Check className="h-4 w-4 text-green-600" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/5" />
+              <div className="absolute inset-0 bg-transparent transition-colors duration-200 group-hover:bg-slate-950/5" />
             </div>
             <span className="mt-2 block text-center text-xs font-bold text-slate-700 sm:text-sm">
               {theme.name}
