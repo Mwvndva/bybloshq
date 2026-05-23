@@ -82,7 +82,7 @@ export function BaseDashboardLayout({
     };
 
     return (
-        <div className="dashboard-layout min-h-screen bg-slate-50 text-slate-950 flex">
+        <div className="dashboard-layout flex min-h-[100svh] overflow-x-hidden bg-slate-50 text-slate-950">
             {/* Skip to Content for Accessibility */}
             <a
                 href="#main-content"
@@ -106,7 +106,7 @@ export function BaseDashboardLayout({
                     {/* Sidebar */}
                     <aside
                         className={cn(
-                            'fixed lg:sticky top-0 left-0 h-screen w-64 bg-white/95 backdrop-blur-md border-r border-slate-200 z-50 transition-transform duration-300 ease-in-out',
+                            'fixed lg:sticky top-0 left-0 h-[100svh] w-64 bg-white/95 backdrop-blur-md border-r border-slate-200 z-50 transition-transform duration-300 ease-in-out',
                             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                         )}
                         aria-label={`${role} sidebar navigation`}
@@ -178,13 +178,13 @@ export function BaseDashboardLayout({
             )}
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex min-w-0 flex-1 flex-col">
                 {showHeader && (
                     <header
                         className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30"
                         role="banner"
                     >
-                        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="mx-auto max-w-screen-2xl px-3 sm:px-6 lg:px-8">
                             <div className="relative flex items-center justify-between h-20">
                                 {/* Left: Menu/Back Button */}
                                 <div className="flex-1 flex items-center gap-2">
@@ -215,7 +215,7 @@ export function BaseDashboardLayout({
                                 </div>
 
                                 {/* Center: Title */}
-                                <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%]">
+                                <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[42%] sm:max-w-[50%]">
                                     <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
                                         {title}
                                     </h1>
@@ -248,7 +248,7 @@ export function BaseDashboardLayout({
                 {/* Main Content */}
                 <main
                     id="main-content"
-                    className="flex-1 relative overflow-y-auto focus:outline-none"
+                    className="relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto focus:outline-none"
                     role="main"
                 >
                     {children || <Outlet />}

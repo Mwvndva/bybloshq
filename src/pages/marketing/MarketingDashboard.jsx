@@ -98,13 +98,13 @@ export default function MarketingDashboard() {
     }, [fetchAll, navigate])
 
     if (loading) return (
-        <div className="marketing-light-dashboard min-h-screen bg-[#f8f7f2] flex items-center justify-center">
+        <div className="marketing-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2]">
             <LoadingSpinner />
         </div>
     )
 
     if (error) return (
-        <div className="marketing-light-dashboard min-h-screen bg-[#f8f7f2] flex items-center justify-center p-4">
+        <div className="marketing-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2] p-4">
             <div className="text-red-600 text-center rounded-3xl border border-stone-200 bg-white p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
                 <p>{error}</p>
                 <button onClick={fetchAll} className="mt-4 text-yellow-600 underline text-sm">Try again</button>
@@ -113,7 +113,7 @@ export default function MarketingDashboard() {
     )
 
     return (
-        <div className="marketing-light-dashboard min-h-screen bg-[#f8f7f2] text-stone-950 p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12 selection:bg-yellow-500/30">
+        <div className="marketing-light-dashboard min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] p-3 text-stone-950 selection:bg-yellow-500/30 sm:p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12">
             {/* Header */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white border border-stone-200 rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)] relative overflow-hidden group">
                 <div className="relative z-10 flex items-center gap-5 md:gap-8">

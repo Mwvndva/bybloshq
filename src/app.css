@@ -501,6 +501,10 @@ body.dashboard-active .seller-service-charge-notice * {
     box-shadow: 0 18px 45px rgba(17, 17, 17, 0.08) !important;
 }
 
+.theme-swatch {
+    background-color: var(--theme-swatch-color) !important;
+}
+
 .auth-page p[class*="text-gray"],
 .auth-page span[class*="text-gray"],
 .auth-page .text-muted-foreground,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, Palette, Loader2 } from 'lucide-react';
 import { sellerApi, Theme } from '@/api/sellerApi';
@@ -82,8 +82,8 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
               }`}
           >
             <div
-              className="relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16"
-              style={{ backgroundColor: theme.color }}
+              className="theme-swatch relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16"
+              style={{ '--theme-swatch-color': theme.color } as CSSProperties}
             >
               {selectedTheme === theme.value && (
                 <div

@@ -512,7 +512,7 @@ const NewAdminDashboard = () => {
 
   if (authLoading || !isInitialized) {
     return (
-      <div className="admin-light-dashboard flex items-center justify-center min-h-screen bg-[#f8f7f2]">
+      <div className="admin-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2]">
         <div className="flex flex-col items-center gap-4 rounded-full border border-stone-200 bg-white px-6 py-4 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
           <Spinner className="h-12 w-12 text-yellow-500" />
           <p className="text-stone-600 font-semibold text-sm animate-pulse">Initializing admin dashboard...</p>
@@ -528,7 +528,7 @@ const NewAdminDashboard = () => {
 
   if (error) {
     return (
-      <div className="admin-light-dashboard flex items-center justify-center min-h-screen bg-[#f8f7f2] p-6 text-center">
+      <div className="admin-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2] p-4 text-center sm:p-6">
         <div className="max-w-md space-y-6 rounded-3xl border border-stone-200 bg-white p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
           <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto border border-red-100">
             <XCircle className="h-10 w-10 text-red-500" />
@@ -716,8 +716,8 @@ const NewAdminDashboard = () => {
   // Accessibility labels and aria roles were missing on modals
 
   return (
-    <div className="admin-light-dashboard min-h-screen bg-[#f8f7f2] text-stone-950 font-sans selection:bg-yellow-500/30 selection:text-black">
-        <div className="mx-auto w-full max-w-[1760px] p-4 md:p-8 lg:p-10 space-y-8">
+    <div className="admin-light-dashboard min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] text-stone-950 font-sans selection:bg-yellow-500/30 selection:text-black">
+        <div className="mx-auto w-full max-w-[1760px] p-3 sm:p-5 md:p-8 lg:p-10 space-y-6 sm:space-y-8">
           <AdminDashboardHeader />
 
           {/* Stats Grid */}

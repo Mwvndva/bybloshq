@@ -49,7 +49,7 @@ export const AdminLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f2] flex items-center justify-center p-4 text-stone-950">
+    <div className="flex min-h-[100svh] items-start justify-center overflow-x-hidden bg-[#f8f7f2] px-4 py-6 text-stone-950 sm:items-center sm:p-6">
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
         <Card className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-[0_22px_60px_rgba(17,17,17,0.09)]">
           <CardHeader className="px-6 pb-7 pt-10 text-center md:px-10">
