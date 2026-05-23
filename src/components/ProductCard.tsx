@@ -527,7 +527,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all duration-300 rounded-2xl',
+        'group relative flex h-full min-h-[360px] flex-col overflow-hidden transition-all duration-300 rounded-2xl sm:min-h-[390px]',
         isSold ? 'opacity-60' : 'sm:hover:-translate-y-1',
         'cursor-pointer',
         themeClasses.card

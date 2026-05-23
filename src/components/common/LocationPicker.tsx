@@ -17,6 +17,11 @@ import {
 } from '@/lib/location';
 import { searchLocations, type LocationSearchResult } from '@/api/locationApi';
 
+const MAP_TILE_URLS = [
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+];
+
 // Fix Leaflet marker icon issue
 if (typeof window !== 'undefined') {
     delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -105,8 +110,10 @@ export default function LocationPicker({
     const [showResults, setShowResults] = useState(false);
     const [searchError, setSearchError] = useState('');
     const [hasSearched, setHasSearched] = useState(false);
+    const [tileUrlIndex, setTileUrlIndex] = useState(0);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const mapWatchKey = `${center[0]}:${center[1]}:${markerPosition?.[0] || ''}:${markerPosition?.[1] || ''}`;
+    const tileUrl = MAP_TILE_URLS[tileUrlIndex] || MAP_TILE_URLS[0];
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -131,6 +138,29 @@ export default function LocationPicker({
         }
     }, [initialAddress, initialCoordinates]);
 
+    const applyLocationResult = (result: LocationSearchResult, shouldCloseResults: boolean) => {
+        const lat = Number(result.lat);
+        const lng = Number(result.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        const newPos: [number, number] = [lat, lng];
+        setMarkerPosition(newPos);
+        setCenter(newPos);
+
+        if (shouldCloseResults) {
+            setSearchQuery(result.displayName);
+            setShowResults(false);
+        }
+
+        const finalDetailedAddress = autoPopulate && address.trim() === '' ? result.displayName : address;
+        if (autoPopulate && address.trim() === '') {
+            setAddress(result.displayName);
+        }
+
+        const selection = createLocationSelection(finalDetailedAddress || result.displayName, { lat, lng });
+        onLocationChange(selection.address, selection.coordinates);
+    };
+
     const searchAddress = async (query: string) => {
         if (!query.trim()) {
             setSearchResults([]);
@@ -145,6 +175,9 @@ export default function LocationPicker({
             const results = await searchLocations(query);
             setSearchResults(results);
             setShowResults(true);
+            if (results.length > 0) {
+                applyLocationResult(results[0], false);
+            }
         } catch (error) {
             console.error('Error searching address:', error);
             setSearchError('Location search is temporarily unavailable. Try again in a few seconds.');
@@ -180,23 +213,7 @@ export default function LocationPicker({
     };
 
     const selectLocation = (result: LocationSearchResult) => {
-        const lat = Number(result.lat);
-        const lng = Number(result.lng);
-
-        const newPos: [number, number] = [lat, lng];
-        setMarkerPosition(newPos);
-        setCenter(newPos);
-        setSearchQuery(result.displayName);
-        setShowResults(false);
-
-        // Update detailed address if empty, and trigger change
-        const finalDetailedAddress = autoPopulate && address.trim() === '' ? result.displayName : address;
-        if (autoPopulate && address.trim() === '') {
-            setAddress(result.displayName);
-        }
-
-        const selection = createLocationSelection(finalDetailedAddress, { lat, lng });
-        onLocationChange(selection.address, selection.coordinates);
+        applyLocationResult(result, true);
     };
 
     const handleManualAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,11 +302,18 @@ export default function LocationPicker({
                 <MapContainer
                     center={center}
                     zoom={13}
+                    scrollWheelZoom={false}
                     style={{ height: '100%', width: '100%' }}
                 >
                     <TileLayer
+                        key={tileUrl}
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        url={tileUrl}
+                        eventHandlers={{
+                            tileerror: () => {
+                                setTileUrlIndex((currentIndex) => Math.min(currentIndex + 1, MAP_TILE_URLS.length - 1));
+                            },
+                        }}
                     />
                     <LocationMarker position={markerPosition} setPosition={(pos) => handleMapClick(pos[0], pos[1])} />
                     <MapSizeInvalidator watchKey={mapWatchKey} />
