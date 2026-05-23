@@ -16,19 +16,16 @@ export const AdminLoginPage = () => {
   const { login, error: authError, loading, isAuthenticated } = auth;
   const navigate = useNavigate();
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/admin/dashboard');
     }
   }, [isAuthenticated, navigate]);
 
-  // Clear error when component mounts
   useEffect(() => {
     setLocalError('');
   }, []);
 
-  // Update local error when auth error changes
   useEffect(() => {
     if (authError) {
       setLocalError(authError);
@@ -45,111 +42,97 @@ export const AdminLoginPage = () => {
     }
 
     try {
-      await login(email, password); // Updated signature in context/api
+      await login(email, password);
     } catch (err) {
-      // Error handling is managed by context via authError
-      console.error("Login failed", err);
+      console.error('Login failed', err);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Dynamic Background Pulse */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] bg-yellow-500/10 rounded-full blur-[160px] animate-pulse duration-7000"></div>
-        <div className="absolute -bottom-[20%] -right-[10%] w-[900px] h-[900px] bg-yellow-600/10 rounded-full blur-[180px] animate-pulse duration-10000"></div>
-      </div>
-
-      <div className="relative w-full max-w-md z-10 animate-in fade-in zoom-in-95 duration-1000">
-        {/* Superior Glassmorphism Card */}
-        <Card className="bg-[#0A0A0A]/40 backdrop-blur-3xl border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-2xl md:rounded-[3rem] overflow-hidden relative group">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
-
-          <CardHeader className="relative text-center pb-8 md:pb-10 pt-12 md:pt-16 px-6 md:px-10">
-            <div className="mx-auto w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-2xl md:rounded-[2rem] flex items-center justify-center mb-6 md:mb-8 border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
-              <Shield className="h-8 w-8 md:h-10 md:h-10 text-yellow-500" />
+    <div className="min-h-screen bg-[#f8f7f2] flex items-center justify-center p-4 text-stone-950">
+      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
+        <Card className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-[0_22px_60px_rgba(17,17,17,0.09)]">
+          <CardHeader className="px-6 pb-7 pt-10 text-center md:px-10">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-200 bg-yellow-100 text-black">
+              <Shield className="h-8 w-8 text-yellow-600" />
             </div>
-            <CardTitle className="text-3xl md:text-4xl font-black text-white mb-2 md:mb-3 tracking-tighter italic uppercase">ADMIN<span className="text-yellow-500">.</span></CardTitle>
-            <CardDescription className="text-gray-500 font-bold uppercase tracking-[0.2em] text-[9px] md:text-[10px]">
-              Secure Protocol Access
+            <CardTitle className="text-3xl font-semibold tracking-tight text-stone-950">
+              Admin Access
+            </CardTitle>
+            <CardDescription className="mt-2 text-sm text-stone-500">
+              Sign in to manage Byblos operations.
             </CardDescription>
           </CardHeader>
 
           <form onSubmit={handleSubmit}>
-            <CardContent className="relative space-y-5 md:space-y-6 px-6 md:px-10">
+            <CardContent className="space-y-5 px-6 md:px-10">
               {localError && (
-                <div className="p-4 md:p-5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest backdrop-blur-sm animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                    {localError}
-                  </div>
+                <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {localError}
                 </div>
               )}
 
-              <div className="space-y-4 md:space-y-5">
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 opacity-60">
-                    Identification
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="ACCESS_ID@BYBLOS.HQ"
-                      required
-                      autoComplete="email"
-                      className="w-full h-12 md:h-14 px-5 md:px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-xl md:rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-sm md:text-base"
-                    />
-                  </div>
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-stone-700">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@byblos.hq"
+                    required
+                    autoComplete="email"
+                    className="h-12 rounded-2xl border-stone-200 bg-white pl-11 text-stone-950 placeholder:text-stone-400 focus:border-yellow-400 focus:ring-yellow-400/20"
+                  />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="password" className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 opacity-60">
-                    Secret Key
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      required
-                      autoComplete="current-password"
-                      className="w-full h-12 md:h-14 px-5 md:px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-xl md:rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-sm md:text-base"
-                    />
-                  </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium text-stone-700">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    required
+                    autoComplete="current-password"
+                    className="h-12 rounded-2xl border-stone-200 bg-white pl-11 text-stone-950 placeholder:text-stone-400 focus:border-yellow-400 focus:ring-yellow-400/20"
+                  />
                 </div>
               </div>
             </CardContent>
 
-            <CardFooter className="relative px-6 md:px-10 pb-12 md:pb-16 pt-6 md:pt-8">
+            <CardFooter className="px-6 pb-10 pt-6 md:px-10">
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 md:h-14 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-xl md:rounded-2xl shadow-[0_20px_40px_rgba(234,179,8,0.15)] hover:shadow-[0_20px_60px_rgba(234,179,8,0.25)] transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed group-hover:translate-y-[-2px]"
+                className="h-12 w-full rounded-2xl bg-yellow-400 text-sm font-semibold text-black shadow-none transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="mr-3 h-4 w-4 md:h-5 md:w-5 animate-spin" />
-                    AUTHENTICATING...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
                   </>
                 ) : (
-                  'Establish Connection'
+                  'Sign in'
                 )}
               </Button>
             </CardFooter>
           </form>
         </Card>
 
-        {/* Footer */}
-        <div className="text-center mt-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
-          <p className="text-gray-600 text-[9px] uppercase tracking-[0.3em] font-black opacity-40">
-            Encrypted Session • Node ID: 0x4F92 • Layer-7 Protection
-          </p>
-        </div>
+        <p className="mt-6 text-center text-xs text-stone-500">
+          Protected access for approved Byblos administrators.
+        </p>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BarChart3, Loader2, Lock, Mail } from 'lucide-react'
 import { marketingApi } from '../../services/marketingApi'
 import { getFreshCsrfToken } from '@/lib/apiClient'
 
@@ -11,7 +12,6 @@ export default function MarketingLogin() {
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
-        // Fetch CSRF token on mount to avoid mismatch on first login attempt
         getFreshCsrfToken();
     }, []);
 
@@ -35,80 +35,78 @@ export default function MarketingLogin() {
     }
 
     return (
-        <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 selection:bg-yellow-500/30">
-            <div className="w-full max-w-sm">
-                {/* Logo / Brand */}
-                <div className="text-center mb-10 group">
-                    <div className="inline-flex w-16 h-16 md:w-20 md:h-20 bg-yellow-500 rounded-2xl md:rounded-[2rem] items-center justify-center mb-6 shadow-[0_20px_40px_rgba(234,179,8,0.15)] group-hover:scale-110 transition-transform duration-700">
-                        <span className="text-black font-black text-3xl md:text-4xl">B</span>
+        <div className="min-h-screen bg-[#f8f7f2] flex items-center justify-center px-4 py-8 text-stone-950">
+            <div className="w-full max-w-md">
+                <div className="mb-8 text-center">
+                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-200 bg-yellow-100 text-black">
+                        <BarChart3 className="h-8 w-8 text-yellow-600" />
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">MARKETING<span className="text-yellow-500">.</span></h1>
-                    <p className="text-gray-500 mt-2 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] opacity-60">Protocol Intelligence Access</p>
+                    <h1 className="text-3xl font-semibold tracking-tight text-stone-950">Marketing Access</h1>
+                    <p className="mt-2 text-sm text-stone-500">Sign in to review Byblos growth and acquisition.</p>
                 </div>
 
-                <div className="bg-[#0A0A0A]/40 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[3rem] p-6 md:p-10 shadow-[0_0_100px_rgba(0,0,0,0.5)] relative overflow-hidden group/card">
-                    {/* Subtle Glow Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
-                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-yellow-500/[0.05] blur-[100px] rounded-full"></div>
-
-                    <h2 className="text-lg font-black text-white mb-6 relative z-10 uppercase italic tracking-tight">Identity Verification</h2>
-
+                <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_22px_60px_rgba(17,17,17,0.09)] md:p-8">
                     {error && (
-                        <div className="mb-6 p-4 md:p-5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest backdrop-blur-sm animate-in fade-in slide-in-from-top-4 duration-500 relative z-10">
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                                {error}
-                            </div>
+                        <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                            {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6 relative z-10">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
-                            <label htmlFor="email" className="block text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 ml-1 opacity-60">Identification</label>
-                            <input
-                                type="email"
-                                id="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="INTEL_NODE@BYBLOS.HQ"
-                                required
-                                className="w-full h-12 md:h-14 bg-white/[0.03] border-white/10 rounded-xl md:rounded-2xl px-5 md:px-6
-                           text-white placeholder-gray-700 focus:outline-none
-                           focus:border-yellow-500/50 focus:bg-white/[0.08] transition-all text-sm md:text-base font-bold tracking-tight"
-                            />
+                            <label htmlFor="email" className="block text-sm font-medium text-stone-700">Email</label>
+                            <div className="relative">
+                                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                                <input
+                                    type="email"
+                                    id="email"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    placeholder="marketing@byblos.hq"
+                                    required
+                                    autoComplete="email"
+                                    className="h-12 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-4 text-sm text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/15"
+                                />
+                            </div>
                         </div>
+
                         <div className="space-y-2">
-                            <label htmlFor="password" className="block text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 ml-1 opacity-60">Secret Key</label>
-                            <input
-                                type="password"
-                                id="password"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                placeholder="••••••••••••"
-                                required
-                                className="w-full h-12 md:h-14 bg-white/[0.03] border-white/10 rounded-xl md:rounded-2xl px-5 md:px-6
-                           text-white placeholder-gray-700 focus:outline-none
-                           focus:border-yellow-500/50 focus:bg-white/[0.08] transition-all text-sm md:text-base font-bold tracking-tight"
-                            />
+                            <label htmlFor="password" className="block text-sm font-medium text-stone-700">Password</label>
+                            <div className="relative">
+                                <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                                <input
+                                    type="password"
+                                    id="password"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    placeholder="Enter password"
+                                    required
+                                    autoComplete="current-password"
+                                    className="h-12 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-4 text-sm text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/15"
+                                />
+                            </div>
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full h-12 md:h-14 bg-yellow-500 hover:bg-yellow-400 text-black
-                         font-black rounded-xl md:rounded-2xl transition-all shadow-[0_20px_40px_rgba(234,179,8,0.15)] hover:shadow-[0_20px_60px_rgba(234,179,8,0.25)]
-                         disabled:opacity-50 disabled:cursor-not-allowed mt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] transform active:scale-95 group-hover/card:translate-y-[-2px] duration-500"
+                            className="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-yellow-400 px-4 text-sm font-semibold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {loading ? 'AUTHENTICATING...' : 'Establish Connection'}
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Signing in...
+                                </>
+                            ) : (
+                                'Sign in'
+                            )}
                         </button>
                     </form>
                 </div>
 
-                <div className="text-center mt-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
-                    <p className="text-gray-600 text-[9px] font-black uppercase tracking-[0.4em] opacity-40">
-                        Encrypted Data Channel • Marketing Node Protocol
-                    </p>
-                </div>
+                <p className="mt-6 text-center text-xs text-stone-500">
+                    Protected access for Byblos marketing teams.
+                </p>
             </div>
         </div>
     )

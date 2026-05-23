@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { ArrowLeft, Lock, Truck } from 'lucide-react';
+import { ArrowLeft, Lock, Mail, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getLogisticsToken, loginLogisticsPartner } from '@/api/logisticsApi';
@@ -33,11 +33,11 @@ const MzigoLoginPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-black px-4 py-6 text-white">
+    <main className="min-h-screen bg-[#f8f7f2] px-4 py-6 text-stone-950">
       <button
         type="button"
         onClick={() => navigate('/')}
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white transition hover:bg-white hover:text-black"
+        className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:border-stone-300 hover:text-stone-950"
       >
         <ArrowLeft size={16} />
         Back
@@ -46,50 +46,53 @@ const MzigoLoginPage = () => {
       <section className="mx-auto flex min-h-[calc(100vh-96px)] max-w-md items-center">
         <form
           onSubmit={handleSubmit}
-          className="w-full rounded-2xl border border-white/15 bg-white/[0.04] p-6 shadow-2xl shadow-black/40 backdrop-blur"
+          className="w-full rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_22px_60px_rgba(17,17,17,0.09)] md:p-8"
         >
-          <div className="mb-8 flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-yellow-300 text-black">
-              <Truck size={22} />
+          <div className="mb-8 text-center">
+            <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-200 bg-yellow-100 text-black">
+              <Truck size={28} className="text-yellow-600" />
             </span>
-            <div>
-              <h1 className="text-2xl font-semibold text-white">Mzigo Ego</h1>
-              <p className="text-sm text-white/75">Door to door logistics dashboard</p>
-            </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-stone-950">Mzigo Ego</h1>
+            <p className="mt-2 text-sm text-stone-500">Door to door logistics dashboard.</p>
           </div>
 
-          <label className="mb-4 block">
-            <span className="mb-2 block text-sm text-white">Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              autoComplete="email"
-              className="w-full rounded-xl border border-white/15 bg-black px-4 py-3 text-white outline-none transition placeholder:text-white/45 focus:border-yellow-300"
-              placeholder="mzigo@example.com"
-            />
+          <label className="mb-5 block">
+            <span className="mb-2 block text-sm font-medium text-stone-700">Email</span>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                autoComplete="email"
+                className="h-12 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-4 text-sm text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/15"
+                placeholder="mzigo@example.com"
+              />
+            </div>
           </label>
 
           <label className="mb-6 block">
-            <span className="mb-2 block text-sm text-white">Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              autoComplete="current-password"
-              className="w-full rounded-xl border border-white/15 bg-black px-4 py-3 text-white outline-none transition placeholder:text-white/45 focus:border-yellow-300"
-              placeholder="Enter password"
-            />
+            <span className="mb-2 block text-sm font-medium text-stone-700">Password</span>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                autoComplete="current-password"
+                className="h-12 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-4 text-sm text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/15"
+                placeholder="Enter password"
+              />
+            </div>
           </label>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-yellow-300 px-4 py-3 text-sm font-semibold text-black transition hover:bg-yellow-200 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-yellow-400 px-4 text-sm font-semibold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Lock size={16} />
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
