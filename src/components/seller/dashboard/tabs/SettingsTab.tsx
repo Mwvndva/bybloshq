@@ -139,8 +139,8 @@ export function SettingsTab({
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
         <SectionHeader title="Business Profile" description="The core identity buyers see on your shop page." />
-        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-5 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(220px,320px)_minmax(0,1fr)]">
+          <div className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <BusinessPhotoUpload
               currentPhotoUrl={sellerProfile?.avatarUrl}
               fallbackInitials={getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}

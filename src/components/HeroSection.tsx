@@ -8,10 +8,10 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-[82dvh] flex items-center justify-center overflow-hidden bg-[#f8f7f2]">
+    <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden bg-[#f8f7f2] py-24 sm:py-28 lg:py-32">
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
         <Link to="/creator/login">
-          <Button className="rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-900 shadow-[0_10px_28px_rgba(17,17,17,0.08)] transition-all duration-300 hover:bg-yellow-400 hover:text-black">
+          <Button className="rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-900 shadow-[0_10px_28px_rgba(17,17,17,0.08)] transition-all duration-300 hover:bg-yellow-400 hover:text-black sm:px-5 sm:py-2.5 sm:text-sm">
             Creator
           </Button>
         </Link>
@@ -34,8 +34,8 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
         }}
       />
 
-      <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16">
-        <div className="mx-auto flex max-w-6xl flex-col items-center text-center space-y-10">
+      <div className="relative z-10 w-full px-4 sm:px-8 lg:px-16">
+        <div className="mx-auto flex max-w-6xl flex-col items-center text-center space-y-8 sm:space-y-10">
 
           <div className="space-y-5">
             <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-600 shadow-sm">
@@ -43,11 +43,11 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
               Trusted checkout for social businesses
             </div>
 
-            <h1 className="text-6xl sm:text-7xl md:text-9xl font-light text-stone-950 leading-none tracking-normal">
+            <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light text-stone-950 leading-none tracking-normal">
               BYBLOS
             </h1>
 
-            <p className="text-xl sm:text-2xl md:text-3xl text-stone-700 font-light leading-tight tracking-normal">
+            <p className="text-lg sm:text-2xl md:text-3xl text-stone-700 font-light leading-tight tracking-normal">
               Give Your Business A Social Identity
             </p>
 
@@ -56,18 +56,18 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <Link to="/buyer/login">
+          <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row">
+            <Link to="/buyer/login" className="w-full sm:w-auto">
               <Button
-                className="bg-white text-stone-950 hover:bg-stone-50 border border-stone-200 rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_12px_35px_rgba(17,17,17,0.08)] group"
+                className="w-full bg-white text-stone-950 hover:bg-stone-50 border border-stone-200 rounded-full px-6 py-5 text-base font-medium transition-all duration-300 shadow-[0_12px_35px_rgba(17,17,17,0.08)] group sm:w-auto sm:px-10 sm:py-6 sm:text-lg"
               >
                 View Businesses
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link to="/seller/register">
+            <Link to="/seller/register" className="w-full sm:w-auto">
               <Button
-                className="bg-yellow-400 hover:bg-yellow-300 text-black rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_14px_30px_rgba(245,197,24,0.25)] group"
+                className="w-full bg-yellow-400 hover:bg-yellow-300 text-black rounded-full px-6 py-5 text-base font-medium transition-all duration-300 shadow-[0_14px_30px_rgba(245,197,24,0.25)] group sm:w-auto sm:px-10 sm:py-6 sm:text-lg"
               >
                 Become a Trusted Business
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
