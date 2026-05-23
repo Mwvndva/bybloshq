@@ -88,18 +88,18 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
             transition={{ duration: 0.5 }}
             className="relative w-full overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-[0_18px_50px_rgba(17,17,17,0.08)]"
         >
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
                 {metrics.map(({ label, value, helper, icon: Icon, tone }, index) => (
                     <div
                         key={label}
-                        className={`group min-h-[128px] p-4 sm:p-5 lg:p-6 flex flex-col justify-between border-stone-200 transition-colors hover:bg-stone-50 ${index < metrics.length - 1 ? 'xl:border-r' : ''} ${index < 4 ? 'border-b xl:border-b-0' : ''} md:[&:nth-child(3)]:border-r-0 md:[&:nth-child(3)]:xl:border-r`}
+                        className={`group min-h-[128px] p-4 sm:p-5 lg:p-6 flex flex-col justify-between border-stone-200 transition-colors hover:bg-stone-50 ${index < metrics.length - 1 ? 'border-r' : ''} max-md:[&:nth-child(2n)]:border-r-0 max-md:[&:nth-child(-n+4)]:border-b md:max-xl:[&:nth-child(3n)]:border-r-0 md:max-xl:[&:nth-child(-n+3)]:border-b`}
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                                 <h3 className="text-[11px] sm:text-xs font-semibold text-stone-500 tracking-wide">
                                     {label}
                                 </h3>
-                                <p className="mt-1 text-xl sm:text-2xl lg:text-3xl font-semibold text-stone-950 tracking-tight truncate">
+                                <p className="mt-1 text-xl sm:text-2xl font-semibold leading-tight tracking-tight text-stone-950 [overflow-wrap:anywhere]">
                                     {value}
                                 </p>
                             </div>

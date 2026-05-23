@@ -76,13 +76,13 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
             key={theme.value}
             type="button"
             onClick={() => handleThemeSelect(theme.value as Theme)}
-            className={`relative group h-20 overflow-hidden rounded-2xl border transition-all duration-200 sm:h-24 ${selectedTheme === theme.value
-              ? 'border-yellow-300 ring-2 ring-yellow-300/25'
-              : 'border-slate-200 hover:border-slate-300'
+            className={`relative group h-24 rounded-2xl border bg-white p-2 transition-all duration-200 sm:h-28 ${selectedTheme === theme.value
+              ? 'border-yellow-400 ring-2 ring-yellow-300/30 shadow-sm'
+              : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
               }`}
           >
             <div
-              className="w-full h-full flex flex-col items-center justify-center relative"
+              className="relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16"
               style={{ background: theme.preview }}
             >
               {selectedTheme === theme.value && (
@@ -93,14 +93,11 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
                   <Check className="h-4 w-4 text-green-600" />
                 </div>
               )}
-              <span
-                className="font-bold text-xs sm:text-sm px-2 py-0.5 rounded-full"
-                style={{ color: theme.labelColor, background: theme.labelBg }}
-              >
-                {theme.name}
-              </span>
               <div className="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/5" />
             </div>
+            <span className="mt-2 block text-center text-xs font-bold text-slate-700 sm:text-sm">
+              {theme.name}
+            </span>
           </button>
         ))}
       </div>
