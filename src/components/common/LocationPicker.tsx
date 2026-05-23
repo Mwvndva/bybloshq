@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Search, MapPin } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { Loader2, Search } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import L from 'leaflet';
 import { cn } from '@/lib/utils';
 import {
@@ -19,9 +21,9 @@ import { searchLocations, type LocationSearchResult } from '@/api/locationApi';
 if (typeof window !== 'undefined') {
     delete (L.Icon.Default.prototype as any)._getIconUrl;
     L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        iconRetinaUrl: markerIcon2x,
+        iconUrl: markerIcon,
+        shadowUrl: markerShadow,
     });
 }
 
@@ -36,12 +38,33 @@ function LocationMarker({ position, setPosition }: { position: [number, number] 
     return position ? <Marker position={position} /> : null;
 }
 
+function MapSizeInvalidator({ watchKey }: { watchKey: string }) {
+    const map = useMap();
+
+    useEffect(() => {
+        const invalidate = () => map.invalidateSize({ animate: false });
+        const first = window.setTimeout(invalidate, 80);
+        const second = window.setTimeout(invalidate, 300);
+
+        return () => {
+            window.clearTimeout(first);
+            window.clearTimeout(second);
+        };
+    }, [map, watchKey]);
+
+    return null;
+}
+
 // Component to fly to location
 function MapFlyTo({ position }: { position: [number, number] | null }) {
-    const map = useMapEvents({});
+    const map = useMap();
     useEffect(() => {
         if (position) {
-            map.flyTo(position, map.getZoom());
+            map.invalidateSize({ animate: false });
+            map.flyTo(position, Math.max(map.getZoom(), 15), {
+                animate: true,
+                duration: 0.6
+            });
         }
     }, [position, map]);
     return null;
@@ -83,6 +106,7 @@ export default function LocationPicker({
     const [searchError, setSearchError] = useState('');
     const [hasSearched, setHasSearched] = useState(false);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const mapWatchKey = `${center[0]}:${center[1]}:${markerPosition?.[0] || ''}:${markerPosition?.[1] || ''}`;
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -268,6 +292,7 @@ export default function LocationPicker({
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     <LocationMarker position={markerPosition} setPosition={(pos) => handleMapClick(pos[0], pos[1])} />
+                    <MapSizeInvalidator watchKey={mapWatchKey} />
                     <MapFlyTo position={center} />
                 </MapContainer>
             </div>
