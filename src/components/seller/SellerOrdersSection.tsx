@@ -428,12 +428,12 @@ export default function SellerOrdersSection() {
 
     if (ordersQuery.error) {
         return (
-            <div className="text-center py-12 px-4 bg-black rounded-2xl border border-red-400/25">
-                <div className="mx-auto w-16 h-16 bg-red-500/15 border border-red-400/30 rounded-full flex items-center justify-center mb-4">
-                    <RefreshCw className="h-8 w-8 text-red-200" />
+            <div className="text-center py-12 px-4 bg-white rounded-2xl border border-red-200 shadow-sm">
+                <div className="mx-auto w-16 h-16 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mb-4">
+                    <RefreshCw className="h-8 w-8 text-red-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">Unable to load orders</h3>
-                <p className="text-white/75 max-w-md mx-auto mb-4">Please try refreshing your orders.</p>
+                <h3 className="text-lg font-semibold text-slate-950 mb-2">Unable to load orders</h3>
+                <p className="text-slate-600 max-w-md mx-auto mb-4">Please try refreshing your orders.</p>
                 <Button
                     onClick={() => ordersQuery.refetch()}
                     className="bg-yellow-400 text-black hover:bg-yellow-500"
@@ -449,10 +449,10 @@ export default function SellerOrdersSection() {
         return (
             <div className="text-center py-12 px-4">
                 <div className="mx-auto w-16 h-16 bg-yellow-400/15 border border-yellow-400/30 rounded-full flex items-center justify-center mb-4">
-                    <Package className="h-8 w-8 text-yellow-300" />
+                    <Package className="h-8 w-8 text-yellow-700" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
-                <p className="text-white/75 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
+                <h3 className="text-lg font-semibold text-slate-950 mb-2">No orders yet</h3>
+                <p className="text-slate-600 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
             </div>
         );
     }
@@ -468,7 +468,7 @@ export default function SellerOrdersSection() {
                             placeholder="Search by buyer name, product, or order ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-black border-white/20 text-white placeholder:text-white/65 focus:border-yellow-400/70 focus:ring-yellow-400/20"
+                            className="h-11 rounded-2xl bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400/70 focus:ring-yellow-400/20"
                         />
                     </div>
 
@@ -476,7 +476,7 @@ export default function SellerOrdersSection() {
                     <Button
                         onClick={() => exportOrdersToCSV(orders)}
                         variant="outline"
-                        className="border-white/20 text-white hover:bg-yellow-400 hover:text-black gap-2"
+                        className="h-11 rounded-2xl border-slate-200 bg-white text-slate-700 hover:bg-yellow-400 hover:text-black gap-2"
                         disabled={orders.length === 0}
                     >
                         <Download className="h-4 w-4" />
@@ -485,10 +485,10 @@ export default function SellerOrdersSection() {
                     </Button>
                 </div>
 
-                <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                <div className="space-y-4">
                     {filteredOrders.length === 0 ? (
-                        <div className="text-center py-12 px-4 bg-black rounded-2xl border border-white/15">
-                            <p className="text-white/75">No orders found matching "{searchQuery}"</p>
+                        <div className="text-center py-12 px-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                            <p className="text-slate-600">No orders found matching "{searchQuery}"</p>
                         </div>
                     ) : (
                         filteredOrders.map((order) => {
@@ -546,7 +546,7 @@ export default function SellerOrdersSection() {
                                 <Card key={order.id} className={cardClasses}>
                                     <CardContent className="p-4 sm:p-6">
                                         {/* Mobile-first responsive layout */}
-                                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_220px] gap-4 sm:gap-6">
+                                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_240px] gap-4 sm:gap-6">
                                             {/* Order Information Section */}
                                             <div className="space-y-3 sm:space-y-4 flex-1">
                                                 {/* Order Header */}
@@ -726,7 +726,7 @@ export default function SellerOrdersSection() {
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="w-full justify-center border-blue-400/30 bg-blue-500/10 text-blue-100 hover:bg-blue-500/20 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                                className="w-full min-h-10 justify-center border-blue-400/30 bg-blue-500/10 text-blue-100 hover:bg-blue-500/20 text-xs font-semibold transition-all duration-200"
                                                                 onClick={() => selectHubDropoff(order.id)}
                                                                 disabled={isUpdating}
                                                             >
@@ -739,7 +739,7 @@ export default function SellerOrdersSection() {
                                                         <div className="mb-2 space-y-1.5">
                                                             <Button
                                                                 size="sm"
-                                                                className="w-full justify-center bg-yellow-400 text-black hover:bg-yellow-300 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                                className="w-full min-h-10 justify-center bg-yellow-400 text-black hover:bg-yellow-300 text-xs font-semibold transition-all duration-200"
                                                                 onClick={() => openRequestPickupDialog(order)}
                                                                 disabled={isUpdating || isRequestingPickup}
                                                             >
@@ -758,7 +758,7 @@ export default function SellerOrdersSection() {
                                                             </p>
                                                             <Button
                                                                 size="sm"
-                                                                className="w-full justify-center bg-blue-500 hover:bg-blue-600 text-white text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                                className="w-full min-h-10 justify-center bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold transition-all duration-200"
                                                                 onClick={() => handleReadyForPickupClick(order.id, 'hub_dropoff')}
                                                                 disabled={isUpdating}
                                                             >
@@ -777,7 +777,7 @@ export default function SellerOrdersSection() {
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
+                                                                className="w-full min-h-10 justify-center sm:w-auto sm:justify-start lg:w-full text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-xs font-semibold transition-all duration-200"
                                                                 onClick={() => handleCancelClick(order.id)}
                                                                 disabled={isUpdating}
                                                             >
@@ -790,7 +790,7 @@ export default function SellerOrdersSection() {
                                                         <div className="space-y-1.5">
                                                             <Button
                                                                 size="sm"
-                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                className="w-full min-h-10 justify-center sm:w-auto sm:justify-start lg:w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200"
                                                                 onClick={() => confirmBooking(order.id)}
                                                                 disabled={isUpdating}
                                                             >
@@ -800,7 +800,7 @@ export default function SellerOrdersSection() {
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
+                                                                className="w-full min-h-10 justify-center sm:w-auto sm:justify-start lg:w-full text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-xs font-semibold transition-all duration-200"
                                                                 onClick={() => handleCancelClick(order.id)}
                                                                 disabled={isUpdating}
                                                             >
@@ -813,7 +813,7 @@ export default function SellerOrdersSection() {
                                                         <div className="space-y-1.5">
                                                             <Button
                                                                 size="sm"
-                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                className="w-full min-h-10 justify-center sm:w-auto sm:justify-start lg:w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200"
                                                                 onClick={() => markServiceReadyForBuyerConfirmation(order.id)}
                                                                 disabled={isUpdating}
                                                             >
@@ -826,7 +826,7 @@ export default function SellerOrdersSection() {
                                                         <div className="space-y-1.5">
                                                             <Button
                                                                 size="sm"
-                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                className="w-full min-h-10 justify-center sm:w-auto sm:justify-start lg:w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200"
                                                                 onClick={() => handleReadyForPickupClick(order.id, 'shop_ready')}
                                                                 disabled={isUpdating}
                                                             >
@@ -840,7 +840,7 @@ export default function SellerOrdersSection() {
                                                             <div className="space-y-1.5">
                                                                 <Button
                                                                     size="sm"
-                                                                    className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                    className="w-full min-h-10 justify-center sm:w-auto sm:justify-start lg:w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200"
                                                                     onClick={() => handleReadyForPickupClick(order.id, 'shop_ready')}
                                                                     disabled={isUpdating}
                                                                 >
@@ -851,7 +851,7 @@ export default function SellerOrdersSection() {
                                                                 <Button
                                                                     size="sm"
                                                                     variant="outline"
-                                                                    className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
+                                                                    className="w-full min-h-10 justify-center sm:w-auto sm:justify-start lg:w-full text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-xs font-semibold transition-all duration-200"
                                                                     onClick={() => handleCancelClick(order.id)}
                                                                     disabled={isUpdating}
                                                                 >

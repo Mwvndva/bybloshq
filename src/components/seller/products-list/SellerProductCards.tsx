@@ -31,7 +31,7 @@ export function SellerProductCards({
   onInventoryEdit
 }: SellerProductCardsProps) {
   return (
-    <div className="md:hidden grid gap-3 grid-cols-1 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
       {products.map((product) => (
         <Card key={product.id} className="relative group bg-white border border-slate-200 rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
           <div className="absolute right-2 top-2 z-10">

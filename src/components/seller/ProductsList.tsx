@@ -399,9 +399,9 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
       </div>
 
       {filteredProducts.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-8 text-center">
-          <p className="text-white">No products match "{searchQuery}".</p>
-          <Button variant="link" className="mt-2 text-yellow-400" onClick={() => setSearchQuery('')}>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-slate-700">No products match "{searchQuery}".</p>
+          <Button variant="link" className="mt-2 text-yellow-700" onClick={() => setSearchQuery('')}>
             Clear search
           </Button>
         </div>

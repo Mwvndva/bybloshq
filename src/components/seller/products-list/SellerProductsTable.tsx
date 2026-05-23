@@ -25,36 +25,36 @@ export function SellerProductsTable({
   onInventoryEdit
 }: SellerProductsTableProps) {
   return (
-    <div className="hidden md:block bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+    <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:block">
       <Table>
-        <TableHeader className="border-b border-white/10">
-          <TableRow className="bg-zinc-900/20">
-            <TableHead className="w-1/4 text-zinc-400 font-semibold">Product</TableHead>
-            <TableHead className="w-1/6 text-zinc-400 font-semibold">Aesthetic</TableHead>
-            <TableHead className="w-1/8 text-zinc-400 font-semibold">Price</TableHead>
-            <TableHead className="w-1/8 text-zinc-400 font-semibold">Stock</TableHead>
-            <TableHead className="w-1/8 text-zinc-400 font-semibold">Status</TableHead>
-            <TableHead className="w-1/6 text-right text-zinc-400 font-semibold">Actions</TableHead>
+        <TableHeader className="border-b border-slate-200">
+          <TableRow className="bg-slate-50">
+            <TableHead className="w-1/4 text-slate-600 font-semibold">Product</TableHead>
+            <TableHead className="w-1/6 text-slate-600 font-semibold">Aesthetic</TableHead>
+            <TableHead className="w-1/8 text-slate-600 font-semibold">Price</TableHead>
+            <TableHead className="w-1/8 text-slate-600 font-semibold">Stock</TableHead>
+            <TableHead className="w-1/8 text-slate-600 font-semibold">Status</TableHead>
+            <TableHead className="w-1/6 text-right text-slate-600 font-semibold">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {products.map((product) => (
-            <TableRow key={product.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+            <TableRow key={product.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
               <TableCell className="font-medium">
                 <div className="flex items-center gap-3">
                   {product.image_url ? (
                     <img
                       src={product.image_url}
                       alt={product.name}
-                      className="h-10 w-10 rounded-lg object-cover border border-white/10"
+                      className="h-10 w-10 rounded-lg object-cover border border-slate-200"
                     />
                   ) : (
-                    <div className="h-10 w-10 rounded-lg bg-zinc-800 border border-white/5 flex items-center justify-center">
-                      <EyeOff className="h-5 w-5 text-zinc-400" />
+                    <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      <EyeOff className="h-5 w-5 text-slate-400" />
                     </div>
                   )}
                   <div className="flex flex-col">
-                    <span className="line-clamp-2 text-white font-medium">{product.name}</span>
+                    <span className="line-clamp-2 text-slate-950 font-medium">{product.name}</span>
                     <div className="flex gap-1 mt-1">
                       {(product.product_type === 'digital' || product.productType === 'digital' || product.is_digital) && (
                         <Badge variant="outline" className="w-fit text-[10px] h-5 px-1.5 border-blue-500/30 text-blue-400 bg-blue-500/10">
@@ -71,8 +71,8 @@ export function SellerProductsTable({
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="capitalize text-zinc-300">{product.aesthetic}</TableCell>
-              <TableCell className="text-white font-semibold">{formatCurrency(product.price)}</TableCell>
+              <TableCell className="capitalize text-slate-700">{product.aesthetic}</TableCell>
+              <TableCell className="text-slate-950 font-semibold">{formatCurrency(product.price)}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   {(product as any).track_inventory ? (
@@ -90,13 +90,13 @@ export function SellerProductsTable({
                       {(product as any).quantity ?? 0}
                     </Badge>
                   ) : (
-                    <span className="text-xs text-zinc-500 italic">Not tracked</span>
+                    <span className="text-xs text-slate-500 italic">Not tracked</span>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onInventoryEdit(product)}
-                    className="h-7 px-2 text-xs text-zinc-400 hover:text-emerald-400 hover:bg-white/5"
+                    className="h-8 px-2 text-xs text-slate-600 hover:text-emerald-700 hover:bg-emerald-50"
                   >
                     Edit
                   </Button>
@@ -120,7 +120,7 @@ export function SellerProductsTable({
                       size="sm"
                       onClick={() => onStatusUpdate(product.id, product.status === 'sold' ? 'available' : 'sold')}
                       disabled={updatingId === product.id}
-                      className={`${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'} h-6 px-2 text-[10px]`}
+                      className={`${product.status === 'sold' ? 'bg-yellow-50 text-yellow-800 border-yellow-200 hover:bg-yellow-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'} h-8 px-2 text-[10px]`}
                     >
                       {updatingId === product.id ? (
                         <Loader2 className="h-3 w-3 animate-spin mr-1" />
