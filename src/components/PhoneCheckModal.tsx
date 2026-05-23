@@ -204,7 +204,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
           <DialogTitle className="text-xl font-black text-center text-white uppercase tracking-tight">Mobile Payment Number</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto p-5 sm:p-8 py-4 space-y-4">
+          <div className="no-scrollbar flex-1 overflow-y-auto p-5 sm:p-8 py-4 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-wider text-white/70 ml-1">M-Pesa Number</Label>
               <Input
