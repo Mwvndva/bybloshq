@@ -324,9 +324,10 @@ function BuyerDashboard() {
   };
 
   return (
-    <div className="page-enter byblos-light-page" style={{
+    <div className="page-enter byblos-light-page min-w-0 overflow-x-hidden" style={{
       display: 'flex', flexDirection: 'column',
-      height: '100dvh',
+      minHeight: '100svh',
+      height: '100svh',
       overflow: 'hidden',
       background: '#f8f7f2',
     }}>
@@ -344,7 +345,7 @@ function BuyerDashboard() {
         flex: 1,
         overflowY: 'auto',
         overflowX: 'hidden',
-        padding: '6px 18px 16px',
+        padding: 'clamp(10px, 4vw, 18px)',
         WebkitOverflowScrolling: 'touch',
         scrollBehavior: 'smooth',
         overscrollBehavior: 'contain',

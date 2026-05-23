@@ -33,7 +33,7 @@ const MzigoLoginPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#f8f7f2] px-4 py-6 text-stone-950">
+    <main className="min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] px-4 py-6 text-stone-950">
       <button
         type="button"
         onClick={() => navigate('/')}
@@ -43,7 +43,7 @@ const MzigoLoginPage = () => {
         Back
       </button>
 
-      <section className="mx-auto flex min-h-[calc(100vh-96px)] max-w-md items-center">
+      <section className="mx-auto flex min-h-[calc(100svh-96px)] max-w-md items-start py-6 sm:items-center sm:py-0">
         <form
           onSubmit={handleSubmit}
           className="w-full rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_22px_60px_rgba(17,17,17,0.09)] md:p-8"

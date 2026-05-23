@@ -564,9 +564,9 @@ const MzigoDashboardPage = () => {
   };
 
   return (
-    <main className="mzigo-light-dashboard min-h-screen bg-[#f8f7f2] text-stone-950">
+    <main className="mzigo-light-dashboard min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] text-stone-950">
       <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/95 px-4 py-4 backdrop-blur">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+        <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={() => navigate('/')}
@@ -576,7 +576,7 @@ const MzigoDashboardPage = () => {
             Home
           </button>
 
-          <div className="text-center">
+          <div className="order-first text-center sm:order-none">
             <p className="text-xs font-semibold text-yellow-600">Mzigo Ego</p>
             <h1 className="text-xl font-semibold text-stone-950">Delivery Orders</h1>
             <p className="text-xs text-stone-500">{partner?.name || 'Logistics partner'} workspace</p>
@@ -594,7 +594,7 @@ const MzigoDashboardPage = () => {
       </header>
 
       <section className="w-full px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-6 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <p className="flex items-center gap-2 text-sm font-medium text-stone-700">
               <Truck size={16} />
@@ -605,29 +605,31 @@ const MzigoDashboardPage = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {SORT_OPTIONS.map((option) => (
+          <div className="w-full overflow-x-auto pb-1 sm:w-auto">
+            <div className="flex min-w-max items-center gap-2">
+              {SORT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSort(option.value)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
+                    sort === option.value
+                      ? 'bg-yellow-300 text-black'
+                      : 'border border-stone-200 bg-white text-stone-700 hover:bg-yellow-50 hover:text-black'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
               <button
-                key={option.value}
                 type="button"
-                onClick={() => setSort(option.value)}
-                className={`rounded-full px-4 py-2 text-sm transition ${
-                  sort === option.value
-                    ? 'bg-yellow-300 text-black'
-                    : 'border border-stone-200 bg-white text-stone-700 hover:bg-yellow-50 hover:text-black'
-                }`}
+                onClick={() => requestsQuery.refetch()}
+                className="inline-flex shrink-0 items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-700 transition hover:bg-yellow-50 hover:text-black"
               >
-                {option.label}
+                <RefreshCw size={15} />
+                Refresh
               </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => requestsQuery.refetch()}
-              className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-700 transition hover:bg-yellow-50 hover:text-black"
-            >
-              <RefreshCw size={15} />
-              Refresh
-            </button>
+            </div>
           </div>
         </div>
 

@@ -307,7 +307,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
 
   return (
-    <div className="auth-page min-h-screen w-full flex flex-col relative"
+    <div className="auth-page relative flex min-h-[100svh] w-full flex-col overflow-x-hidden"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         backgroundColor: '#f8f7f2',
@@ -316,7 +316,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-md border-b border-stone-200 sticky top-0 z-30">
         <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="relative flex items-center justify-between h-20">
+          <div className="relative flex h-16 items-center justify-between sm:h-20">
             {/* Left: Back Button */}
             <div className="flex-1 flex items-center gap-2">
               <Button
@@ -332,7 +332,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
             </div>
 
             {/* Center: Title */}
-            <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%] flex items-center justify-center gap-2">
+            <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[46%] flex items-center justify-center gap-2 sm:max-w-[50%]">
               <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
                 <Store className="h-4 w-4 text-slate-950" />
               </div>
@@ -351,7 +351,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-1 items-start justify-center px-4 py-5 sm:items-center sm:px-6 sm:py-8 lg:px-8">
         <div className="w-full max-w-[420px]">
           {/* Register Card */}
           <div
@@ -361,31 +361,31 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
               <div className="mx-auto mb-4 flex items-center justify-center">
                 <Store className="h-12 w-12 text-yellow-500" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight text-white mb-1">Create Account</h1>
-              <p className="text-sm text-gray-400">Join our seller community</p>
+              <h1 className="text-xl font-semibold tracking-tight text-stone-950 mb-1">Create Account</h1>
+              <p className="text-sm text-stone-500">Join our seller community</p>
 
               {/* Progress Indicator */}
               <div className="mt-4 flex items-center justify-center gap-2">
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 1 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 1 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
                     1
                   </div>
                 </div>
-                <div className={`w-6 h-0.5 ${currentStep >= 2 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 2 ? 'bg-yellow-400' : 'bg-stone-200'}`} />
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 2 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 2 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
                     2
                   </div>
                 </div>
-                <div className={`w-6 h-0.5 ${currentStep >= 3 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 3 ? 'bg-yellow-400' : 'bg-stone-200'}`} />
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 3 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 3 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
                     3
                   </div>
                 </div>
-                <div className={`w-6 h-0.5 ${currentStep >= 4 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 4 ? 'bg-yellow-400' : 'bg-stone-200'}`} />
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 4 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 4 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
                     4
                   </div>
                 </div>

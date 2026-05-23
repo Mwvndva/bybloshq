@@ -131,7 +131,7 @@ export function SellerLogin() {
 
   return (
     <div
-      className="auth-page min-h-screen w-full flex flex-col relative"
+      className="auth-page relative flex min-h-[100svh] w-full flex-col overflow-x-hidden"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         backgroundColor: '#f8f7f2',
@@ -140,7 +140,7 @@ export function SellerLogin() {
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-md border-b border-stone-200 sticky top-0 z-30">
         <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="relative flex items-center justify-between h-20">
+          <div className="relative flex h-16 items-center justify-between sm:h-20">
             {/* Left: Back Button */}
             <div className="flex-1 flex items-center gap-2">
               <Button
@@ -156,7 +156,7 @@ export function SellerLogin() {
             </div>
 
             {/* Center: Title */}
-            <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%] flex items-center justify-center gap-2">
+            <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[46%] flex items-center justify-center gap-2 sm:max-w-[50%]">
               <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
                 <Store className="h-4 w-4 text-slate-950" />
               </div>
@@ -173,7 +173,7 @@ export function SellerLogin() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-1 items-start justify-center px-4 py-5 sm:items-center sm:px-6 sm:py-8 lg:px-8">
         <div className="w-full max-w-[400px]">
           {/* Login Card */}
           <div
