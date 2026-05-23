@@ -132,31 +132,35 @@ export const BusinessPhotoUpload = ({ currentPhotoUrl, fallbackInitials, onPhoto
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-yellow-200 to-yellow-400 border border-slate-200 overflow-hidden flex items-center justify-center text-2xl font-black text-black shrink-0 shadow-sm">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start gap-3">
+          <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-yellow-200 to-yellow-400 border border-slate-200 overflow-hidden flex items-center justify-center text-xl font-black text-black shrink-0 shadow-sm">
           {imageSrc ? (
             <img src={imageSrc} alt="Business photo preview" className="h-full w-full object-cover" />
           ) : (
             <span>{fallbackInitials}</span>
           )}
-        </div>
-
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="rounded-xl border border-yellow-200 bg-yellow-100 p-2">
-              <ImageIcon className="h-4 w-4 text-yellow-700" />
-            </div>
-            <div>
-              <h4 className="text-sm sm:text-base font-bold text-slate-950">Business Photo</h4>
-              <p className="text-[10px] sm:text-xs text-slate-600">Square images work best. This appears on your public shop page.</p>
-            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl border border-yellow-200 bg-yellow-100 p-2">
+                <ImageIcon className="h-4 w-4 text-yellow-700" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-950">Business Photo</h4>
+            </div>
+            <p className="mt-1 text-[11px] leading-4 text-slate-600">
+              Square images work best. This appears on your public shop page.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-2">
             <Button
               variant="outline"
               size="default"
-              className={`relative flex-1 sm:flex-none border bg-white text-slate-700 hover:bg-slate-50 ${photoError ? 'border-red-500' : 'border-slate-200 hover:border-yellow-400'}`}
+              className={`relative w-full border bg-white text-slate-700 hover:bg-slate-50 ${photoError ? 'border-red-500' : 'border-slate-200 hover:border-yellow-400'}`}
               disabled={isUploading}
             >
               <input
@@ -176,7 +180,7 @@ export const BusinessPhotoUpload = ({ currentPhotoUrl, fallbackInitials, onPhoto
                 size="default"
                 onClick={handleRemove}
                 disabled={isUploading}
-                className="flex-1 sm:flex-none border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                className="w-full border border-red-200 bg-white text-red-600 hover:bg-red-50"
               >
                 <X className="h-4 w-4 mr-2" />
                 <span className="text-sm font-semibold">Remove</span>
@@ -187,7 +191,7 @@ export const BusinessPhotoUpload = ({ currentPhotoUrl, fallbackInitials, onPhoto
               <Button
                 onClick={handleUpload}
                 disabled={isUploading}
-                className="flex-1 bg-yellow-400 text-black hover:bg-yellow-300"
+                className="w-full bg-yellow-400 text-black hover:bg-yellow-300"
               >
                 {isUploading ? (
                   <>
