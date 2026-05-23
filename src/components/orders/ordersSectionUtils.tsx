@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { format, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, Package, Truck, XCircle } from 'lucide-react';
@@ -8,13 +7,7 @@ type DateLike = string | Date | { createdAt?: string | Date; created_at?: string
 
 const badgeGlow = 'shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_10px_20px_rgba(0,0,0,0.35)]';
 
-export const glassCardStyle: CSSProperties = {
-  background: '#050505',
-  border: '1px solid rgba(255, 255, 255, 0.16)',
-  boxShadow: '0 14px 34px rgba(0, 0, 0, 0.45)'
-};
-
-export const detailPillClass = 'rounded-xl border border-white/15 bg-white/5 px-3 py-2';
+export const detailPillClass = 'rounded-xl border border-white/15 bg-white/8 px-3 py-2';
 
 export const formatOrderDate = (dateInput: DateLike | null | undefined): string => {
   if (!dateInput) return 'Date not available';
