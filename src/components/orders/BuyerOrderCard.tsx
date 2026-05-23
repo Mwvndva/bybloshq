@@ -13,9 +13,9 @@ import {
   getConfirmReceiptLabel,
   getPaymentStatusBadge,
   getStatusBadge,
-  glassCardStyle,
   isDigitalOrder,
-  isPaidOrder
+  isPaidOrder,
+  isServiceOrder
 } from './ordersSectionUtils';
 
 interface BuyerOrderCardProps {
@@ -44,6 +44,8 @@ export function BuyerOrderCard({
   const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
   const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
   const productType = order.items[0]?.productType || 'PHYSICAL';
+  const isService = isServiceOrder(order);
+  const isDigital = isDigitalOrder(order);
   const canConfirmReceipt = canConfirmOrderReceipt(order);
   const instruction = getOrderInstruction({
     status: order.status,
@@ -51,9 +53,17 @@ export function BuyerOrderCard({
     orderType: productType.toUpperCase(),
     fulfillmentType: order.fulfillment_type,
   });
+  const cardClasses = [
+    'overflow-hidden transition-all duration-300 bg-black border shadow-[0_12px_32px_rgba(0,0,0,0.35)] hover:border-yellow-400/40',
+    isService ? 'border-purple-400/45' : isDigital ? 'border-red-400/45' : 'border-white/15'
+  ].join(' ');
+  const itemClasses = [
+    'flex items-center justify-between gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg border transition-colors',
+    isService ? 'bg-purple-500/10 border-purple-400/25' : isDigital ? 'bg-red-500/10 border-red-400/25' : 'bg-white/8 border-white/12'
+  ].join(' ');
 
   return (
-    <Card className="border-0 overflow-hidden" style={glassCardStyle}>
+    <Card className={cardClasses}>
       <CardContent className="p-0">
         <div className="p-4 sm:p-6 border-b border-white/10">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
@@ -98,7 +108,7 @@ export function BuyerOrderCard({
 
         {instruction && (
           <div className={`mx-4 sm:mx-6 mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-500/15 text-blue-100 border border-blue-400/30' :
-            instruction.color === 'amber' ? 'bg-yellow-500/15 text-yellow-100 border border-yellow-400/30' :
+            instruction.color === 'amber' ? 'bg-yellow-400/15 text-yellow-100 border border-yellow-400/30' :
               instruction.color === 'green' ? 'bg-green-500/15 text-green-100 border border-green-400/30' :
                 'bg-red-500/15 text-red-100 border border-red-400/30'
             }`}>
@@ -117,7 +127,7 @@ export function BuyerOrderCard({
 
         <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
           {order.items.slice(0, 2).map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-white/5 border border-white/10 transition-colors">
+            <div key={idx} className={itemClasses}>
               <div className="flex-1 min-w-0">
                 <p className="text-sm sm:text-base font-semibold text-white truncate">{item.name}</p>
                 <p className="text-xs text-white/70">Qty {item.quantity || 1}</p>
@@ -135,7 +145,7 @@ export function BuyerOrderCard({
         <div className="p-4 sm:p-6 pt-0 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
             {mainImage && (
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden border-2 border-white/10">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden border-2 border-white/15">
                 <img src={mainImage} alt="Seller" className="h-full w-full object-cover" />
               </div>
             )}
