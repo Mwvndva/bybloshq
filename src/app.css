@@ -505,6 +505,13 @@ body.dashboard-active .seller-service-charge-notice * {
     background-color: var(--theme-swatch-color) !important;
 }
 
+.leaflet-container img.leaflet-tile,
+.leaflet-container .leaflet-marker-icon,
+.leaflet-container .leaflet-marker-shadow {
+    max-width: none !important;
+    background: transparent !important;
+}
+
 .auth-page p[class*="text-gray"],
 .auth-page span[class*="text-gray"],
 .auth-page .text-muted-foreground,

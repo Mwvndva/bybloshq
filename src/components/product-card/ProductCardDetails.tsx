@@ -42,12 +42,12 @@ export function ProductCardDetails({
   void forceWhiteText;
 
   return (
-    <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-      <h3 className="mb-1 line-clamp-1 h-6 text-base font-semibold text-slate-950 antialiased sm:mb-1.5">
+    <CardContent className="flex min-h-0 flex-1 flex-col p-2 sm:p-3 md:p-4">
+      <h3 className="mb-1 line-clamp-1 min-h-6 text-base font-semibold text-slate-950 antialiased sm:mb-1.5">
         {product.name}
       </h3>
 
-      <p className={cn("mb-1 flex items-center gap-1.5 text-base font-semibold sm:mb-1.5 sm:gap-2", themeClasses.price)}>
+      <p className={cn("mb-1 flex min-h-6 items-center gap-1.5 text-base font-semibold sm:mb-1.5 sm:gap-2", themeClasses.price)}>
         {isDigital ? (
           <span className="text-yellow-700">
             {formatCurrency(product.price)}
@@ -60,16 +60,17 @@ export function ProductCardDetails({
         )}
       </p>
 
-      {product.description && (
-        <div className="relative group/desc h-10 overflow-y-auto no-scrollbar mb-1.5 sm:mb-2 overscroll-contain">
+      <div className="relative group/desc mb-1.5 h-9 overflow-y-auto overscroll-contain no-scrollbar sm:mb-2">
+        {product.description ? (
           <p className="mobile-text min-h-full text-[11px] leading-tight text-slate-500 sm:text-xs">
             {product.description}
           </p>
-        </div>
-      )}
+        ) : null}
+      </div>
 
-      {isService && (
-        <div className="mb-2 flex items-start gap-1.5 text-xs text-slate-500">
+      <div className="mb-2 flex min-h-10 items-start gap-1.5 text-xs text-slate-500">
+        {isService ? (
+          <>
           <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
           <span className="line-clamp-2 text-sm">
             {serviceOptions?.location_type === 'seller_visits_buyer' ? (
@@ -80,10 +81,11 @@ export function ProductCardDetails({
               (isSellerShopless(displaySeller) ? "Mobile Service" : "In-store")
             )}
           </span>
+          </>
+        ) : null}
         </div>
-      )}
 
-      <div className="mt-1.5 flex items-center gap-1 border-t border-slate-100 pt-1.5 sm:mt-2 sm:gap-1.5 sm:pt-2">
+      <div className="mt-auto flex min-h-9 items-center gap-1 border-t border-slate-100 pt-1.5 sm:gap-1.5 sm:pt-2">
         <Store className={cn("h-3.5 w-3.5 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
         <span
           className="mobile-text flex-1 cursor-pointer truncate text-sm font-semibold tracking-tight text-slate-700 opacity-90 hover:underline sm:text-xs"
@@ -162,7 +164,7 @@ export function ProductCardDetails({
         variant="default"
         size="default"
         className={cn(
-          'button-mobile mt-3 h-12 w-full font-semibold transition-colors sm:mt-2.5 sm:h-10',
+          'button-mobile mt-3 h-11 w-full font-semibold transition-colors sm:mt-2.5 sm:h-10',
           'focus-visible:ring-2 focus-visible:ring-offset-2',
           'flex items-center justify-center gap-2 sm:gap-2 text-base sm:text-sm',
           'disabled:opacity-50 disabled:pointer-events-none',

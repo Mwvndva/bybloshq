@@ -14,7 +14,7 @@ interface ProductCardMediaProps {
 
 export function ProductCardMedia({ product, isDigital, isService, isHybrid, isOutOfStock }: ProductCardMediaProps) {
   return (
-    <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
+    <div className="relative shrink-0 overflow-hidden rounded-t-lg sm:rounded-t-xl">
       {isDigital && (
         <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
           <Badge className="border-yellow-200 bg-white/95 text-slate-900 shadow-sm backdrop-blur-sm">
@@ -56,7 +56,7 @@ export function ProductCardMedia({ product, isDigital, isService, isHybrid, isOu
       <ProductImage
         src={product.image_url}
         alt={product.name}
-        className="w-full aspect-[3/4] transition-transform duration-500 sm:group-hover:scale-[1.02]"
+        className="w-full aspect-[4/3] transition-transform duration-500 sm:group-hover:scale-[1.02]"
       />
     </div>
   );
