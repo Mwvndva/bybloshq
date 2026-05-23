@@ -88,7 +88,7 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
             transition={{ duration: 0.5 }}
             className="relative w-full overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-[0_18px_50px_rgba(17,17,17,0.08)]"
         >
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
                 {metrics.map(({ label, value, helper, icon: Icon, tone }, index) => (
                     <div
                         key={label}
