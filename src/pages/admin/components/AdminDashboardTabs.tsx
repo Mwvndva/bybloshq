@@ -13,16 +13,15 @@ const ADMIN_TABS = [
 
 export function AdminDashboardTabs() {
   return (
-    <div className="bg-[#0A0A0A]/80 border border-white/10 rounded-2xl p-1 md:p-2 shadow-xl sticky top-4 z-40 overflow-hidden">
+    <div className="bg-white border border-stone-200 rounded-2xl p-1 md:p-2 shadow-[0_18px_45px_rgba(17,17,17,0.08)] sticky top-4 z-40 overflow-hidden">
       <TabsList className="bg-transparent border-0 p-0 h-auto flex flex-nowrap overflow-x-auto no-scrollbar gap-1 md:gap-2">
         {ADMIN_TABS.map((tab) => (
           <TabsTrigger
             key={tab.id}
             value={tab.id}
-            className={`flex-shrink-0 min-w-[100px] md:flex-1 rounded-xl px-4 md:px-6 py-2.5 md:py-3.5 text-[10px] md:text-sm font-black transition-all duration-300
-            data-[state=active]:bg-gradient-to-r ${tab.color} data-[state=active]:text-black data-[state=active]:shadow-[0_0_20px_rgba(245,158,11,0.3)]
-            data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5
-            uppercase tracking-widest`}
+            className={`flex-shrink-0 min-w-[100px] md:flex-1 rounded-xl px-4 md:px-6 py-2.5 md:py-3.5 text-xs md:text-sm font-semibold transition-all duration-300
+            data-[state=active]:bg-yellow-400 data-[state=active]:text-black data-[state=active]:shadow-sm
+            data-[state=inactive]:text-stone-600 data-[state=inactive]:hover:text-black data-[state=inactive]:hover:bg-stone-100`}
           >
             {tab.label}
           </TabsTrigger>

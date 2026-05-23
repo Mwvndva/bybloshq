@@ -517,3 +517,90 @@ body.dashboard-active .seller-service-charge-notice * {
     background-color: var(--byblos-surface) !important;
     border-color: var(--byblos-border) !important;
 }
+
+.admin-light-dashboard,
+.marketing-light-dashboard,
+.mzigo-light-dashboard {
+    background: var(--byblos-bg) !important;
+    color: var(--byblos-text) !important;
+}
+
+.admin-light-dashboard [class*="bg-[#050505]"],
+.admin-light-dashboard [class*="bg-[#0A0A0A]"],
+.admin-light-dashboard [class*="bg-gray-950"],
+.admin-light-dashboard [class*="bg-gray-900"],
+.admin-light-dashboard [class*="bg-gray-800"],
+.admin-light-dashboard [class*="bg-zinc-950"],
+.admin-light-dashboard [class*="bg-black"],
+.admin-light-dashboard [class*="bg-white/"],
+.marketing-light-dashboard [class*="bg-[#050505]"],
+.marketing-light-dashboard [class*="bg-gray-950"],
+.marketing-light-dashboard [class*="bg-gray-900"],
+.marketing-light-dashboard [class*="bg-black"],
+.marketing-light-dashboard [class*="bg-white/"],
+.mzigo-light-dashboard [class*="bg-black"],
+.mzigo-light-dashboard [class*="bg-white/"] {
+    background-color: var(--byblos-surface) !important;
+}
+
+.admin-light-dashboard [class*="border-white"],
+.admin-light-dashboard [class*="border-gray-"],
+.admin-light-dashboard [class*="border-zinc-"],
+.marketing-light-dashboard [class*="border-white"],
+.marketing-light-dashboard [class*="border-gray-"],
+.marketing-light-dashboard [class*="border-zinc-"],
+.mzigo-light-dashboard [class*="border-white"],
+.mzigo-light-dashboard [class*="border-gray-"],
+.mzigo-light-dashboard [class*="border-zinc-"] {
+    border-color: var(--byblos-border) !important;
+}
+
+.admin-light-dashboard [class*="text-white"],
+.admin-light-dashboard [class*="text-gray-"],
+.admin-light-dashboard [class*="text-zinc-"],
+.marketing-light-dashboard [class*="text-white"],
+.marketing-light-dashboard [class*="text-gray-"],
+.marketing-light-dashboard [class*="text-zinc-"],
+.mzigo-light-dashboard [class*="text-white"],
+.mzigo-light-dashboard [class*="text-gray-"],
+.mzigo-light-dashboard [class*="text-zinc-"] {
+    color: var(--byblos-text) !important;
+}
+
+.admin-light-dashboard [class*="text-white/"],
+.admin-light-dashboard [class*="text-gray-400"],
+.admin-light-dashboard [class*="text-gray-500"],
+.admin-light-dashboard [class*="text-gray-600"],
+.marketing-light-dashboard [class*="text-gray-400"],
+.marketing-light-dashboard [class*="text-gray-500"],
+.marketing-light-dashboard [class*="text-gray-600"],
+.mzigo-light-dashboard [class*="text-white/"] {
+    color: var(--byblos-muted) !important;
+}
+
+.admin-light-dashboard table,
+.marketing-light-dashboard table {
+    color: var(--byblos-text);
+}
+
+.admin-light-dashboard thead,
+.marketing-light-dashboard thead {
+    background: #f4f1e8 !important;
+}
+
+.admin-light-dashboard tbody,
+.marketing-light-dashboard tbody {
+    background: #ffffff !important;
+}
+
+.admin-light-dashboard input,
+.marketing-light-dashboard input {
+    background: #ffffff !important;
+    border-color: var(--byblos-border) !important;
+    color: var(--byblos-text) !important;
+}
+
+.admin-light-dashboard .recharts-cartesian-grid line,
+.marketing-light-dashboard .recharts-cartesian-grid line {
+    stroke: #e7e5df;
+}

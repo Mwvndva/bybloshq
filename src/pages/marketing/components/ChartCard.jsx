@@ -1,9 +1,9 @@
 export function ChartCard({ title, subtitle, children, className = '' }) {
     return (
-        <div className={`bg-black/40 backdrop-blur-lg border border-white/5 rounded-2xl p-4 md:p-6 shadow-2xl transition-all hover:bg-black/50 ${className}`}>
+        <div className={`bg-white border border-stone-200 rounded-2xl p-4 md:p-6 shadow-[0_18px_45px_rgba(17,17,17,0.08)] transition-all hover:border-yellow-300 ${className}`}>
             <div className="mb-4 md:mb-6">
-                <h3 className="text-sm md:text-base font-black text-white tracking-tight leading-none mb-1 md:mb-1.5 uppercase italic">{title}</h3>
-                {subtitle && <p className="text-gray-500 text-[10px] md:text-xs font-bold uppercase tracking-widest">{subtitle}</p>}
+                <h3 className="text-sm md:text-base font-semibold text-stone-950 tracking-tight leading-none mb-1 md:mb-1.5">{title}</h3>
+                {subtitle && <p className="text-stone-500 text-[10px] md:text-xs font-medium">{subtitle}</p>}
             </div>
             <div className="relative">
                 {children}

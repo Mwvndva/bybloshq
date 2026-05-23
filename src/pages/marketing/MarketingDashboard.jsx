@@ -12,20 +12,20 @@ import { SectionTitle } from './components/SectionTitle'
 import { LoadingSpinner } from './components/LoadingSpinner'
 
 // Chart colour palette — matches Byblos brand (yellow, white, greys + accent colours)
-const COLORS = ['#F5C842', '#60A5FA', '#34D399', '#F87171', '#A78BFA', '#FB923C', '#38BDF8', '#4ADE80']
+const COLORS = ['#F5C842', '#111111', '#737373', '#D4D4D4', '#F59E0B', '#A3A3A3', '#E7E5DF', '#525252']
 
 const CHART_THEME = {
-    grid: '#1F2937',
-    axis: '#6B7280',
-    tooltip: { bg: '#111827', border: '#374151', text: '#F9FAFB' }
+    grid: '#E7E5DF',
+    axis: '#78716C',
+    tooltip: { bg: '#FFFFFF', border: '#E7E5DF', text: '#111111' }
 }
 
 // Custom tooltip for all charts
 const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }) => {
     if (!active || !payload?.length) return null
     return (
-        <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs shadow-xl">
-            <p className="text-gray-400 mb-2 font-medium">{label}</p>
+        <div className="bg-white border border-stone-200 rounded-lg p-3 text-xs shadow-xl">
+            <p className="text-stone-500 mb-2 font-medium">{label}</p>
             {payload.map((entry) => (
                 <p key={entry.name} style={{ color: entry.color }} className="mb-0.5">
                     {entry.name}: <span className="font-bold">{prefix}{Number(entry.value).toLocaleString()}{suffix}</span>
@@ -98,45 +98,44 @@ export default function MarketingDashboard() {
     }, [fetchAll, navigate])
 
     if (loading) return (
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="marketing-light-dashboard min-h-screen bg-[#f8f7f2] flex items-center justify-center">
             <LoadingSpinner />
         </div>
     )
 
     if (error) return (
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-            <div className="text-red-400 text-center">
+        <div className="marketing-light-dashboard min-h-screen bg-[#f8f7f2] flex items-center justify-center p-4">
+            <div className="text-red-600 text-center rounded-3xl border border-stone-200 bg-white p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
                 <p>{error}</p>
-                <button onClick={fetchAll} className="mt-4 text-yellow-400 underline text-sm">Try again</button>
+                <button onClick={fetchAll} className="mt-4 text-yellow-600 underline text-sm">Try again</button>
             </div>
         </div>
     )
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12 selection:bg-yellow-500/30">
+        <div className="marketing-light-dashboard min-h-screen bg-[#f8f7f2] text-stone-950 p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12 selection:bg-yellow-500/30">
             {/* Header */}
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/[0.02] to-transparent pointer-events-none"></div>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white border border-stone-200 rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)] relative overflow-hidden group">
                 <div className="relative z-10 flex items-center gap-5 md:gap-8">
-                    <div className="w-12 h-12 md:w-20 md:h-20 bg-yellow-500 rounded-xl md:rounded-3xl flex items-center justify-center shadow-lg shadow-yellow-500/20 group-hover:scale-110 transition-transform duration-500">
-                        <span className="text-black font-black text-2xl md:text-4xl">B</span>
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-yellow-400 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm">
+                        <span className="text-black font-semibold text-2xl md:text-3xl">B</span>
                     </div>
                     <div>
-                        <h1 className="text-2xl md:text-4xl font-black tracking-tighter uppercase italic">INTELLIGENCE<span className="text-yellow-500">.</span></h1>
-                        <p className="text-gray-500 text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] mt-1 opacity-60">Marketing Protocol / Admin Engine</p>
+                        <h1 className="text-2xl md:text-4xl font-semibold tracking-tight">Marketing Dashboard<span className="text-yellow-500">.</span></h1>
+                        <p className="text-stone-500 text-xs md:text-sm font-medium mt-1">Platform growth and acquisition intelligence.</p>
                     </div>
                 </div>
 
-                <div className="relative z-10 flex items-center justify-between md:justify-end gap-3 md:gap-6 bg-black/20 md:bg-transparent p-3 md:p-0 rounded-xl md:rounded-none">
+                <div className="relative z-10 flex items-center justify-between md:justify-end gap-3 md:gap-6 bg-stone-50 p-3 rounded-xl border border-stone-200">
                     <div className="text-left md:text-right">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Authenticated As</p>
-                        <p className="text-xs md:text-sm font-bold text-white tracking-tight truncate max-w-[150px] md:max-w-none">{user?.email}</p>
+                        <p className="text-[10px] font-semibold text-stone-500 leading-none mb-1">Signed in as</p>
+                        <p className="text-xs md:text-sm font-semibold text-stone-950 tracking-tight truncate max-w-[150px] md:max-w-none">{user?.email}</p>
                     </div>
                     <button
                         onClick={logout}
-                        className="bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/20
-                       text-gray-400 hover:text-red-400 px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl
-                       text-[10px] font-black uppercase tracking-widest transition-all backdrop-blur-sm"
+                        className="bg-white hover:bg-red-50 border border-stone-200 hover:border-red-200
+                       text-stone-700 hover:text-red-600 px-4 md:px-6 py-2 md:py-3 rounded-xl
+                       text-xs font-semibold transition-all"
                     >
                         Sign Out
                     </button>
@@ -156,20 +155,20 @@ export default function MarketingDashboard() {
 
             <main className="max-w-[1600px] mx-auto space-y-8 md:space-y-12">
                 {/* Dashboard Subheader */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-white/5">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-stone-200">
                     <div>
-                        <p className="text-gray-500 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-1">Platform performance overview</p>
-                        <h2 className="text-2xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Growth Dashboard</h2>
+                        <p className="text-stone-500 text-xs md:text-sm font-medium mb-1">Platform performance overview</p>
+                        <h2 className="text-2xl md:text-4xl font-semibold text-stone-950 tracking-tight">Growth Dashboard</h2>
                     </div>
 
-                    <div className="flex p-1 bg-white/5 rounded-xl border border-white/5 backdrop-blur-md">
+                    <div className="flex p-1 bg-white rounded-xl border border-stone-200 shadow-sm">
                         {[3, 6, 12].map(m => (
                             <button
                                 key={m}
                                 onClick={() => setPeriod(m)}
                                 className={`px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${period === m
                                     ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20'
-                                    : 'text-gray-400 hover:text-white'
+                                    : 'text-stone-600 hover:text-black hover:bg-stone-100'
                                     }`}
                             >
                                 {m}M

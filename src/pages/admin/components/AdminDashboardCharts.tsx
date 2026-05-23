@@ -11,7 +11,7 @@ export interface StatsCardProps {
   trend: number | null;
 }
 
-const COLORS = ['#38bdf8', '#f59e0b', '#22c55e', '#e879f9', '#f43f5e', '#a3e635'];
+const COLORS = ['#facc15', '#111111', '#737373', '#d4d4d4', '#f59e0b', '#a3a3a3'];
 
 const hasChartData = (data: any[] = []) => data.some(item =>
   Object.values(item || {}).some(value => typeof value === 'number' && value > 0)
@@ -19,22 +19,18 @@ const hasChartData = (data: any[] = []) => data.some(item =>
 
 export const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
   <div className="relative group">
-    <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/0 to-yellow-500/0 rounded-[2rem] blur opacity-0 group-hover:opacity-30 group-hover:from-yellow-500/50 group-hover:to-orange-500/50 transition duration-500" />
-
-    <Card className="relative bg-[#0A0A0A]/70 border border-white/10 shadow-xl rounded-2xl overflow-hidden transition-all duration-300 group-hover:bg-[#0A0A0A]/90 group-hover:border-white/20">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none" />
-
+    <Card className="relative bg-white border border-stone-200 shadow-[0_18px_45px_rgba(17,17,17,0.08)] rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-yellow-300">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
-        <CardTitle className="text-sm font-semibold text-gray-400 tracking-wide uppercase">
+        <CardTitle className="text-sm font-semibold text-stone-600 tracking-wide">
           {title}
         </CardTitle>
-        <div className="h-12 w-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-yellow-500 group-hover:scale-110 group-hover:text-yellow-400 transition-all duration-500 shadow-inner">
+        <div className="h-12 w-12 rounded-2xl bg-yellow-100 border border-yellow-200 flex items-center justify-center text-yellow-600 transition-all duration-500">
           {icon}
         </div>
       </CardHeader>
 
       <CardContent className="relative z-10 pt-0">
-        <div className="text-3xl font-black text-white tracking-tight tabular-nums group-hover:text-yellow-50 transition-colors duration-500">
+        <div className="text-3xl font-semibold text-stone-950 tracking-tight tabular-nums">
           {value}
         </div>
         <div className="mt-3 flex items-center gap-2">
@@ -44,7 +40,7 @@ export const StatsCard = ({ title, value, icon, description, trend }: StatsCardP
               {Math.abs(trend)}%
             </div>
           )}
-          <span className="text-xs text-gray-500 font-medium truncate">{description}</span>
+          <span className="text-xs text-stone-500 font-medium truncate">{description}</span>
         </div>
       </CardContent>
     </Card>
@@ -52,11 +48,10 @@ export const StatsCard = ({ title, value, icon, description, trend }: StatsCardP
 );
 
 export const ChartContainer = ({ title, description, children, className = '' }: { title: string, description: string, children: ReactNode, className?: string }) => (
-  <Card className={`${className} bg-[#0A0A0A]/70 border border-white/10 shadow-xl rounded-2xl overflow-hidden group hover:border-white/20 transition-all duration-300`}>
-    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
+  <Card className={`${className} bg-white border border-stone-200 shadow-[0_18px_45px_rgba(17,17,17,0.08)] rounded-2xl overflow-hidden group hover:border-yellow-300 transition-all duration-300`}>
     <CardHeader className="relative z-10 pb-2">
-      <CardTitle className="text-xl font-bold text-white group-hover:text-yellow-50 transition-colors">{title}</CardTitle>
-      <CardDescription className="text-gray-400 font-medium">{description}</CardDescription>
+      <CardTitle className="text-xl font-semibold text-stone-950 transition-colors">{title}</CardTitle>
+      <CardDescription className="text-stone-600 font-medium">{description}</CardDescription>
     </CardHeader>
     <CardContent className="relative z-10 h-[350px] w-full pt-4">
       {children}
@@ -78,12 +73,12 @@ export const UserGrowthChart = ({ data }: { data: any[] }) => (
             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" vertical={false} />
         <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <Tooltip
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)', color: '#fff' }}
-          itemStyle={{ color: '#e5e7eb', fontSize: '12px' }}
+          contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '1rem', color: '#111111' }}
+          itemStyle={{ color: '#111111', fontSize: '12px' }}
         />
         <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
         <Line type="monotone" dataKey="buyers" stroke="#06b6d4" strokeWidth={4} dot={{ r: 4, fill: '#06b6d4', strokeWidth: 2, stroke: '#0A0A0A' }} activeDot={{ r: 6, strokeWidth: 0 }} name="Buyers" />
@@ -103,13 +98,13 @@ export const RevenueChart = ({ data }: { data: any[] }) => (
             <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.4} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" vertical={false} />
         <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <Tooltip
-          cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-          itemStyle={{ color: '#e5e7eb' }}
+          cursor={{ fill: 'rgba(250, 204, 21, 0.08)' }}
+          contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '1rem' }}
+          itemStyle={{ color: '#111111' }}
         />
         <Bar dataKey="revenue" fill="url(#colorRevenue)" radius={[8, 8, 0, 0]} name="Revenue (KSh)" barSize={40} />
       </BarChart>
@@ -127,13 +122,13 @@ export const SalesChart = ({ data }: { data: any[] }) => (
             <stop offset="100%" stopColor="#10b981" stopOpacity={0.4} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" vertical={false} />
         <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <Tooltip
-          cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
-          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
-          itemStyle={{ color: '#e5e7eb' }}
+          cursor={{ fill: 'rgba(250, 204, 21, 0.08)' }}
+          contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '1rem' }}
+          itemStyle={{ color: '#111111' }}
         />
         <Bar dataKey="sales" fill="url(#colorSales)" radius={[8, 8, 0, 0]} name="Sales (KSh)" barSize={40} />
       </BarChart>
@@ -160,7 +155,7 @@ export const ProductStatusChart = ({ data }: { data: any[] }) => (
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '0.75rem', color: '#fff' }}
+            contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '0.75rem', color: '#111111' }}
           />
           <Legend />
         </PieChart>
@@ -178,12 +173,12 @@ export const GeoDistributionChart = ({ data }: { data: any[] }) => (
     {hasChartData(data) ? (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ left: 24, right: 12 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" horizontal={false} />
           <XAxis type="number" stroke="#6b7280" axisLine={false} tickLine={false} fontSize={12} />
           <YAxis type="category" dataKey="name" width={96} stroke="#9ca3af" axisLine={false} tickLine={false} fontSize={12} />
           <Tooltip
-            cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
-            contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '0.75rem', color: '#fff' }}
+            cursor={{ fill: 'rgba(250, 204, 21, 0.08)' }}
+            contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '0.75rem', color: '#111111' }}
           />
           <Legend />
           <Bar dataKey="gmv" fill="#f59e0b" radius={[0, 8, 8, 0]} name="GMV" />

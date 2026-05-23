@@ -512,10 +512,10 @@ const NewAdminDashboard = () => {
 
   if (authLoading || !isInitialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#050505]">
-        <div className="flex flex-col items-center gap-4">
+      <div className="admin-light-dashboard flex items-center justify-center min-h-screen bg-[#f8f7f2]">
+        <div className="flex flex-col items-center gap-4 rounded-full border border-stone-200 bg-white px-6 py-4 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
           <Spinner className="h-12 w-12 text-yellow-500" />
-          <p className="text-gray-500 font-black uppercase tracking-widest text-xs animate-pulse">Initializing System...</p>
+          <p className="text-stone-600 font-semibold text-sm animate-pulse">Initializing admin dashboard...</p>
         </div>
       </div>
     );
@@ -528,14 +528,14 @@ const NewAdminDashboard = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#050505] p-6 text-center">
-        <div className="max-w-md space-y-6">
-          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto border border-red-500/20">
+      <div className="admin-light-dashboard flex items-center justify-center min-h-screen bg-[#f8f7f2] p-6 text-center">
+        <div className="max-w-md space-y-6 rounded-3xl border border-stone-200 bg-white p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+          <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto border border-red-100">
             <XCircle className="h-10 w-10 text-red-500" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-black text-white tracking-tight uppercase">System Error</h2>
-            <p className="text-gray-400 font-medium">{error}</p>
+            <h2 className="text-2xl font-semibold text-stone-950 tracking-tight">System error</h2>
+            <p className="text-stone-600 font-medium">{error}</p>
           </div>
           <Button
             onClick={() => {
@@ -543,9 +543,9 @@ const NewAdminDashboard = () => {
               setIsInitialized(false);
               setDashboardReloadToken(token => token + 1);
             }}
-            className="w-full h-14 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition-all"
+            className="w-full h-12 bg-yellow-400 text-black font-semibold rounded-2xl hover:bg-yellow-300 transition-all"
           >
-            Re-Initialize
+            Try again
           </Button>
         </div>
       </div>
@@ -716,7 +716,7 @@ const NewAdminDashboard = () => {
   // Accessibility labels and aria roles were missing on modals
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-yellow-500/30 selection:text-black">
+    <div className="admin-light-dashboard min-h-screen bg-[#f8f7f2] text-stone-950 font-sans selection:bg-yellow-500/30 selection:text-black">
         <div className="mx-auto w-full max-w-[1760px] p-4 md:p-8 lg:p-10 space-y-8">
           <AdminDashboardHeader />
 
