@@ -640,10 +640,10 @@ export default function SellerOrdersSection() {
                                                     });
                                                     if (!instruction) return null;
                                                     return (
-                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-500/15 text-white border border-blue-400/30' :
-                                                            instruction.color === 'amber' ? 'bg-yellow-400/15 text-yellow-100 border border-yellow-400/30' :
-                                                                instruction.color === 'green' ? 'bg-green-500/15 text-green-100 border border-green-400/30' :
-                                                                    'bg-red-500/15 text-red-100 border border-red-400/30'
+                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-50 text-blue-950 border border-blue-200' :
+                                                            instruction.color === 'amber' ? 'bg-yellow-50 text-yellow-950 border border-yellow-300' :
+                                                                instruction.color === 'green' ? 'bg-green-50 text-green-950 border border-green-200' :
+                                                                    'bg-red-50 text-red-950 border border-red-200'
                                                             }`}>
                                                             {instruction.text}
                                                         </div>
@@ -744,7 +744,7 @@ export default function SellerOrdersSection() {
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="w-full min-h-10 justify-center border-blue-400/30 bg-blue-500/10 text-blue-100 hover:bg-blue-500/20 text-xs font-semibold transition-all duration-200"
+                                                                className="w-full min-h-10 justify-center border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-semibold transition-all duration-200"
                                                                 onClick={() => selectHubDropoff(order.id)}
                                                                 disabled={isUpdating}
                                                             >
@@ -770,8 +770,8 @@ export default function SellerOrdersSection() {
                                                         </div>
                                                     )}
                                                     {canMarkDroppedAtHub && (
-                                                        <div className="mb-2 rounded-lg border border-blue-400/25 bg-blue-500/10 p-2">
-                                                            <p className="mb-2 text-[10px] leading-relaxed text-blue-100">
+                                                        <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-2">
+                                                            <p className="mb-2 text-[10px] leading-relaxed text-blue-950">
                                                                 Drop at {HUB_DROPOFF_LOCATION} within 24 hours. Mzigo Ego will check the package against the order before handling delivery.
                                                             </p>
                                                             <Button
