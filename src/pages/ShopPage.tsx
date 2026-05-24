@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package, Users } from 'lucide-react';
@@ -11,8 +11,13 @@ import type { Product as SellerApiProduct } from '@/api/sellerApi';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { useShopTheme, type Theme } from '@/hooks/useShopTheme';
 
-const SHOP_DEFAULT_BANNER_CLASS =
-  'absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,204,0,0.22),transparent_28%),linear-gradient(135deg,#111111_0%,#050505_62%,#facc15_100%)]';
+const SHOP_DEFAULT_BANNER_STYLE: CSSProperties = {
+  background: [
+    'radial-gradient(circle at 18% 18%, rgba(var(--theme-accent-rgb), 0.28), transparent 28%)',
+    'radial-gradient(circle at 82% 32%, rgba(var(--theme-accent-rgb), 0.18), transparent 30%)',
+    'linear-gradient(135deg, var(--theme-bg-color) 0%, var(--theme-card-bg) 52%, var(--theme-accent) 100%)'
+  ].join(', ')
+};
 
 // Type guard to check if a string is a valid Aesthetic
 function isAesthetic(value: string): value is Aesthetic {
@@ -231,10 +236,16 @@ const ShopPage = () => {
             }}
           />
         ) : (
-          <div className={SHOP_DEFAULT_BANNER_CLASS} aria-hidden="true">
-            <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.9)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:44px_44px]" />
-            <div className="absolute right-[-4rem] top-1/2 h-64 w-64 -translate-y-1/2 rounded-full border border-white/10 bg-white/[0.04] sm:h-96 sm:w-96" />
-            <div className="absolute left-6 top-20 rounded-full border border-yellow-300/20 bg-yellow-300/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-yellow-100 sm:left-10">
+          <div className="absolute inset-0" style={SHOP_DEFAULT_BANNER_STYLE} aria-hidden="true">
+            <div className="absolute inset-0 opacity-[0.1] [background-image:linear-gradient(rgba(255,255,255,0.82)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.82)_1px,transparent_1px)] [background-size:44px_44px]" />
+            <div className="absolute right-[-4rem] top-1/2 h-64 w-64 -translate-y-1/2 rounded-full border bg-white/[0.06] sm:h-96 sm:w-96" style={{ borderColor: 'rgba(var(--theme-accent-rgb), 0.24)' }} />
+            <div
+              className="absolute left-6 top-20 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm backdrop-blur-sm sm:left-10"
+              style={{
+                backgroundColor: 'rgba(var(--theme-accent-rgb), 0.22)',
+                borderColor: 'rgba(var(--theme-accent-rgb), 0.34)'
+              }}
+            >
               Byblos Shop
             </div>
           </div>
