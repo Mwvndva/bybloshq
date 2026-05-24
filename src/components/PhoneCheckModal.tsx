@@ -310,7 +310,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                             {quoteError && <p className="text-xs text-red-500 font-bold">{quoteError}</p>}
                             <div className="flex items-start gap-2 rounded-xl bg-white border border-yellow-200 p-2 text-[11px] font-semibold leading-relaxed text-slate-600">
                               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-600" />
-                              <span>Deliveries are made within 24 hours.</span>
+                              <span>Mzigo Ego handles your package securely, checks it against the order, and delivers within 24 hours.</span>
                             </div>
                           </div>
                         </div>
