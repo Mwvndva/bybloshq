@@ -41,6 +41,9 @@ export const sellerOrdersApi = {
     chargeableDistanceKm: number;
     rateKesPerKm: number;
     currency: string;
+    pricingModel?: string;
+    cbdPickupFeeKes?: number;
+    cbdRadiusKm?: number;
   }> {
     const response = await sellerApiInstance.post<{ data: any }>('/payments/logistics-quote', {
       legType: 'pickup',

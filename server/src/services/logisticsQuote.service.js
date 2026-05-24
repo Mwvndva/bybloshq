@@ -1,5 +1,7 @@
 const EARTH_RADIUS_KM = 6371;
 const DEFAULT_RATE_KES_PER_KM = 40;
+const DEFAULT_SELLER_PICKUP_CBD_FEE_KES = 100;
+const DEFAULT_SELLER_PICKUP_CBD_RADIUS_KM = 3;
 const DEFAULT_HUB = Object.freeze({
     label: 'Byblos CBD Hub',
     address: 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32',
@@ -98,6 +100,34 @@ class LogisticsQuoteService {
         return rate;
     }
 
+    static getSellerPickupCbdFee(env = process.env) {
+        const fee = parseOptionalNumber(
+            env.SELLER_PICKUP_CBD_FEE_KES,
+            DEFAULT_SELLER_PICKUP_CBD_FEE_KES,
+            'SELLER_PICKUP_CBD_FEE_KES'
+        );
+
+        if (fee < 0) {
+            throw new Error('SELLER_PICKUP_CBD_FEE_KES cannot be negative');
+        }
+
+        return fee;
+    }
+
+    static getSellerPickupCbdRadiusKm(env = process.env) {
+        const radius = parseOptionalNumber(
+            env.SELLER_PICKUP_CBD_RADIUS_KM,
+            DEFAULT_SELLER_PICKUP_CBD_RADIUS_KM,
+            'SELLER_PICKUP_CBD_RADIUS_KM'
+        );
+
+        if (radius < 0) {
+            throw new Error('SELLER_PICKUP_CBD_RADIUS_KM cannot be negative');
+        }
+
+        return radius;
+    }
+
     static calculateDistanceKm(origin, destination) {
         const normalizedOrigin = normalizeLocation(origin, 'origin');
         const normalizedDestination = normalizeLocation(destination, 'destination');
@@ -158,7 +188,12 @@ class LogisticsQuoteService {
         const origin = normalizeLocation(sellerPickupLocation, 'sellerPickupLocation');
         const rateKesPerKm = options.rateKesPerKm ?? this.getConfiguredRate(options.env);
         const distanceKm = this.calculateDistanceKm(hub, origin);
-        const feeAmount = this.calculateFeeForDistance(distanceKm, rateKesPerKm);
+        const cbdRadiusKm = options.cbdRadiusKm ?? this.getSellerPickupCbdRadiusKm(options.env);
+        const cbdPickupFeeKes = options.cbdPickupFeeKes ?? this.getSellerPickupCbdFee(options.env);
+        const isWithinCbd = distanceKm <= cbdRadiusKm;
+        const feeAmount = isWithinCbd
+            ? roundMoney(cbdPickupFeeKes)
+            : this.calculateFeeForDistance(distanceKm, rateKesPerKm);
 
         return {
             legType: 'pickup',
@@ -168,6 +203,9 @@ class LogisticsQuoteService {
             distanceKm,
             chargeableDistanceKm: Math.ceil(distanceKm),
             feeAmount,
+            pricingModel: isWithinCbd ? 'cbd_flat' : 'distance_rate',
+            cbdRadiusKm,
+            cbdPickupFeeKes,
             origin,
             destination: hub
         };
@@ -177,6 +215,8 @@ class LogisticsQuoteService {
 export {
     DEFAULT_HUB,
     DEFAULT_RATE_KES_PER_KM,
+    DEFAULT_SELLER_PICKUP_CBD_FEE_KES,
+    DEFAULT_SELLER_PICKUP_CBD_RADIUS_KM,
     LogisticsQuoteService
 };
 

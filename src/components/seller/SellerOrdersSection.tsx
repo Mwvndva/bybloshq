@@ -75,6 +75,9 @@ export default function SellerOrdersSection() {
         chargeableDistanceKm: number;
         rateKesPerKm: number;
         currency: string;
+        pricingModel?: string;
+        cbdPickupFeeKes?: number;
+        cbdRadiusKm?: number;
     } | null>(null);
     const [pickupQuoteError, setPickupQuoteError] = useState('');
     const [isPickupQuoteLoading, setIsPickupQuoteLoading] = useState(false);
@@ -968,7 +971,9 @@ export default function SellerOrdersSection() {
                                     </div>
                                     {pickupQuote && (
                                         <p className="mt-2 text-white/75">
-                                            {pickupQuote.chargeableDistanceKm} km billed at KSh {pickupQuote.rateKesPerKm}/km.
+                                            {pickupQuote.pricingModel === 'cbd_flat'
+                                                ? `Nairobi CBD flat pickup fee: ${formatCurrency(pickupQuote.feeAmount, pickupQuote.currency || 'KSH')}.`
+                                                : `${pickupQuote.chargeableDistanceKm} km billed at KSh ${pickupQuote.rateKesPerKm}/km.`}
                                         </p>
                                     )}
                                 </div>
