@@ -75,9 +75,15 @@ function isPhysicalOnlineOrder(order) {
     const orderType = String(order?.order_type || order?.orderType || '').toUpperCase();
     const productType = String(metadata.product_type || '').toLowerCase();
     const fulfillmentType = String(order?.fulfillment_type || order?.fulfillmentType || '').toUpperCase();
+    const delivery = metadata.delivery || {};
+    const hasDoorDelivery = delivery.doorDelivery === true
+        || delivery.door_delivery === true
+        || delivery.deliveryMode === 'DOOR_DELIVERY'
+        || delivery.delivery_mode === 'DOOR_DELIVERY'
+        || Boolean(order?.delivery_leg_id || order?.deliveryLegId || order?.logistics?.deliveryLeg?.id);
 
     return (orderType === 'PHYSICAL' || productType === 'physical')
-        && fulfillmentType === 'COURIER';
+        && (fulfillmentType === 'COURIER' || hasDoorDelivery);
 }
 
 class LogisticsRequestService {

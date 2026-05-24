@@ -17,6 +17,9 @@ export const FulfillmentType = {
  * This is the SINGLE SOURCE OF TRUTH for logistics rules.
  * 
  * Rules:
+ * 0. IF physical product has buyer-paid door delivery:
+ *    - COURIER, even when the seller has a physical address.
+ *
  * 1. IF Seller HAS Coordinates:
  *    - Always BUYER_TO_SELLER (Pickup/In-store)
  *    - No courier flow.
@@ -34,10 +37,19 @@ export const FulfillmentType = {
 export const resolveFulfillmentType = (seller, productType, metadata = {}) => {
     const hasCoordinates = sellerHasPhysicalShop(seller);
     const type = productType?.toLowerCase();
+    const delivery = metadata?.delivery || {};
+    const wantsDoorDelivery = delivery.doorDelivery === true
+        || delivery.door_delivery === true
+        || delivery.deliveryMode === 'DOOR_DELIVERY'
+        || delivery.delivery_mode === 'DOOR_DELIVERY';
 
     // Rule 0: Explicitly Virtual/Online (Bypasses location checks)
     if (metadata?.is_virtual === true || metadata?.is_digital === true) {
         return FulfillmentType.DIGITAL;
+    }
+
+    if (type === ProductType.PHYSICAL && wantsDoorDelivery) {
+        return FulfillmentType.COURIER;
     }
 
     // Rule 1: Professional with Physical Shop -> ALWAYS In-Store (Task BUG-SHIP-09)

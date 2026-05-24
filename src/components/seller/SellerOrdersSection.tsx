@@ -34,6 +34,20 @@ import { sellerDashboardQueryKeys } from './dashboard/queryKeys';
 import LocationPicker from '../common/LocationPicker';
 import { OrderLogisticsTracking } from '../orders/OrderLogisticsTracking';
 
+const hasBuyerPaidDoorDelivery = (order?: Order | null) => {
+    if (!order) return false;
+    const delivery = order.metadata?.delivery || {};
+    return delivery.doorDelivery === true
+        || delivery.door_delivery === true
+        || delivery.deliveryMode === 'DOOR_DELIVERY'
+        || delivery.delivery_mode === 'DOOR_DELIVERY'
+        || Boolean(order.logistics?.deliveryLeg);
+};
+
+const getEffectiveFulfillmentType = (order?: Order | null) => (
+    hasBuyerPaidDoorDelivery(order) ? 'COURIER' : order?.fulfillment_type
+);
+
 export default function SellerOrdersSection() {
     const queryClient = useQueryClient();
     const ordersQuery = useSellerOrders();
@@ -379,7 +393,7 @@ export default function SellerOrdersSection() {
     };
 
     const pickupOrderIsPhysicalOnline = pickupOrder
-        ? !pickupOrder.items?.some(item => item.productType === 'service' || item.productType === 'digital') && pickupOrder.fulfillment_type === 'COURIER'
+        ? !pickupOrder.items?.some(item => item.productType === 'service' || item.productType === 'digital') && getEffectiveFulfillmentType(pickupOrder) === 'COURIER'
         : false;
     const pickupDialogHelpText = pickupOrderIsPhysicalOnline
         ? 'Choose pickup if you want Mzigo Ego to collect the package from your location. They will secure it and check it against the order before delivery.'
@@ -496,7 +510,8 @@ export default function SellerOrdersSection() {
                             const isDigital = order.items?.some(i => i.productType === 'digital');
                             const isPhysicalOrder = !isService && !isDigital;
                             const isPaid = ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '');
-                            const isPhysicalOnline = isPhysicalOrder && order.fulfillment_type === 'COURIER';
+                            const effectiveFulfillmentType = getEffectiveFulfillmentType(order);
+                            const isPhysicalOnline = isPhysicalOrder && effectiveFulfillmentType === 'COURIER';
                             const sellerHandoff = order.metadata?.seller_handoff || {};
                             const pickupTracking = order.logistics?.pickupLeg;
                             const pickupIsActive = !!pickupTracking && !['failed', 'cancelled'].includes(String(pickupTracking.status || '').toLowerCase());
@@ -618,7 +633,7 @@ export default function SellerOrdersSection() {
                                                         status: order.status,
                                                         userRole: 'seller',
                                                         orderType: productType.toUpperCase(),
-                                                        fulfillmentType: order.fulfillment_type,
+                                                        fulfillmentType: getEffectiveFulfillmentType(order),
                                                     });
                                                     if (!instruction) return null;
                                                     return (
