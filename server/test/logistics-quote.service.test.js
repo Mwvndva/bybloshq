@@ -31,7 +31,7 @@ test('buyer door delivery fee is ceil distance from hub to buyer times KSh 40', 
   assert.equal(quote.feeAmount, 80);
 });
 
-test('seller pickup fee is ceil distance from hub to seller pickup point times KSh 40', () => {
+test('seller pickup fee uses KSh 100 flat rate for businesses inside CBD radius', () => {
   const quote = LogisticsQuoteService.quoteSellerPickup(
     {
       address: 'Seller pickup point',
@@ -48,8 +48,32 @@ test('seller pickup fee is ceil distance from hub to seller pickup point times K
   assert.equal(quote.payer, 'seller');
   assert.equal(quote.currency, 'KES');
   assert.equal(quote.chargeableDistanceKm, Math.ceil(quote.distanceKm));
+  assert.equal(quote.pricingModel, 'cbd_flat');
+  assert.equal(quote.cbdPickupFeeKes, 100);
+  assert.equal(quote.feeAmount, 100);
+});
+
+test('seller pickup fee falls back to distance pricing outside CBD radius', () => {
+  const quote = LogisticsQuoteService.quoteSellerPickup(
+    {
+      address: 'Seller pickup point outside CBD',
+      latitude: 0.04,
+      longitude: 0
+    },
+    {
+      hub: testHub,
+      rateKesPerKm: 40,
+      cbdRadiusKm: 3
+    }
+  );
+
+  assert.equal(quote.legType, 'pickup');
+  assert.equal(quote.payer, 'seller');
+  assert.equal(quote.currency, 'KES');
+  assert.equal(quote.pricingModel, 'distance_rate');
+  assert.equal(quote.chargeableDistanceKm, Math.ceil(quote.distanceKm));
   assert.equal(quote.feeAmount, quote.chargeableDistanceKm * 40);
-  assert.equal(quote.feeAmount, 80);
+  assert.equal(quote.feeAmount, 200);
 });
 
 test('zero distance has zero fee because backend applies the exact ceil distance rule', () => {
@@ -134,7 +158,8 @@ test('configured environment values can override hub and shared logistics rate w
   assert.equal(deliveryQuote.rateKesPerKm, 65);
   assert.equal(pickupQuote.rateKesPerKm, 65);
   assert.equal(deliveryQuote.feeAmount, deliveryQuote.chargeableDistanceKm * 65);
-  assert.equal(pickupQuote.feeAmount, pickupQuote.chargeableDistanceKm * 65);
+  assert.equal(pickupQuote.feeAmount, 100);
+  assert.equal(pickupQuote.pricingModel, 'cbd_flat');
 });
 
 test('legacy door delivery rate env falls back to the shared rate for both quote types', () => {
@@ -165,4 +190,30 @@ test('legacy door delivery rate env falls back to the shared rate for both quote
 
   assert.equal(deliveryQuote.rateKesPerKm, 70);
   assert.equal(pickupQuote.rateKesPerKm, 70);
+  assert.equal(pickupQuote.feeAmount, 100);
+  assert.equal(pickupQuote.pricingModel, 'cbd_flat');
+});
+
+test('seller pickup CBD flat fee and radius can be configured from env', () => {
+  const env = {
+    LOGISTICS_HUB_LATITUDE: '0',
+    LOGISTICS_HUB_LONGITUDE: '0',
+    SELLER_PICKUP_CBD_FEE_KES: '120',
+    SELLER_PICKUP_CBD_RADIUS_KM: '2'
+  };
+
+  const quote = LogisticsQuoteService.quoteSellerPickup(
+    {
+      latitude: 0.01,
+      longitude: 0
+    },
+    {
+      env
+    }
+  );
+
+  assert.equal(quote.pricingModel, 'cbd_flat');
+  assert.equal(quote.cbdPickupFeeKes, 120);
+  assert.equal(quote.cbdRadiusKm, 2);
+  assert.equal(quote.feeAmount, 120);
 });

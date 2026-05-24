@@ -342,7 +342,10 @@ class LogisticsRequestService {
                 rate_kes_per_km: quote.rateKesPerKm,
                 distance_km: quote.distanceKm,
                 chargeable_distance_km: quote.chargeableDistanceKm,
-                fee_amount: quote.feeAmount
+                fee_amount: quote.feeAmount,
+                pricing_model: quote.pricingModel,
+                cbd_pickup_fee_kes: quote.cbdPickupFeeKes,
+                cbd_radius_km: quote.cbdRadiusKm
             },
             origin: locationPayload(quote.origin || pickupLocation),
             destination: locationPayload(quote.destination)
