@@ -217,12 +217,12 @@ export default function SellerOrdersSection() {
                 await sellerApi.selectHubDropoff(orderId);
                 await refreshOrders();
                 toast({
-                    title: 'Hub drop-off selected',
-                    description: 'Drop the package at the hub within 24 hours, then mark it dropped off.'
+                    title: 'Mzigo Ego drop-off selected',
+                    description: 'Drop the package at Mzigo Ego within 24 hours, then mark it handed over.'
                 });
             } catch (error: any) {
                 toast({
-                    title: 'Could not select hub drop-off',
+                    title: 'Could not select Mzigo drop-off',
                     description: error?.response?.data?.message || error?.message || 'Please try again.',
                     variant: 'destructive'
                 });
@@ -249,9 +249,9 @@ export default function SellerOrdersSection() {
                 await refreshOrders();
 
                 toast({
-                    title: readyAction === 'hub_dropoff' ? 'Package dropped at hub' : 'Order ready for pickup',
+                    title: readyAction === 'hub_dropoff' ? 'Package handed to Mzigo Ego' : 'Order ready for pickup',
                     description: readyAction === 'hub_dropoff'
-                        ? 'The buyer and logistics timeline have been updated.'
+                        ? 'Mzigo Ego will secure the package, check it against the order, and update the buyer.'
                         : 'The buyer has been notified that their order is ready for shop pickup.',
                 });
             } catch (err) {
@@ -382,7 +382,7 @@ export default function SellerOrdersSection() {
         ? !pickupOrder.items?.some(item => item.productType === 'service' || item.productType === 'digital') && pickupOrder.fulfillment_type === 'COURIER'
         : false;
     const pickupDialogHelpText = pickupOrderIsPhysicalOnline
-        ? 'Pickup is optional. If you do not request pickup, drop the package at the hub within 24 hours.'
+        ? 'Choose pickup if you want Mzigo Ego to collect the package from your location. They will secure it and check it against the order before delivery.'
         : 'Mzigo pickup is only available for online shop courier orders.';
 
     if (isLoading) {
@@ -731,7 +731,7 @@ export default function SellerOrdersSection() {
                                                                 disabled={isUpdating}
                                                             >
                                                                 <MapPin className="h-3 w-3 mr-1.5" />
-                                                                I will drop off at hub
+                                                                Drop off at Mzigo Ego
                                                             </Button>
                                                         </div>
                                                     )}
@@ -744,17 +744,17 @@ export default function SellerOrdersSection() {
                                                                 disabled={isUpdating || isRequestingPickup}
                                                             >
                                                                 <Truck className="h-3 w-3 mr-1.5" />
-                                                                Request pickup
+                                                                Request Mzigo pickup
                                                             </Button>
                                                             <p className="text-[10px] leading-relaxed text-white/60">
-                                                                Optional. Without pickup, drop the package at the hub within 24 hours.
+                                                                Choose one handoff method. Mzigo Ego secures the package and checks it against the order.
                                                             </p>
                                                         </div>
                                                     )}
                                                     {canMarkDroppedAtHub && (
                                                         <div className="mb-2 rounded-lg border border-blue-400/25 bg-blue-500/10 p-2">
                                                             <p className="mb-2 text-[10px] leading-relaxed text-blue-100">
-                                                                Drop at {HUB_DROPOFF_LOCATION} within 24 hours.
+                                                                Drop at {HUB_DROPOFF_LOCATION} within 24 hours. Mzigo Ego will check the package against the order before handling delivery.
                                                             </p>
                                                             <Button
                                                                 size="sm"
@@ -763,7 +763,7 @@ export default function SellerOrdersSection() {
                                                                 disabled={isUpdating}
                                                             >
                                                                 <Package className="h-3 w-3 mr-1.5" />
-                                                                Mark Dropped Off at Hub
+                                                                Mark Handed to Mzigo Ego
                                                             </Button>
                                                         </div>
                                                     )}
@@ -949,7 +949,7 @@ export default function SellerOrdersSection() {
                                 <div className="rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-3 text-xs">
                                     <div className="flex items-center gap-2 text-yellow-100">
                                         <CreditCard className="h-4 w-4" />
-                                        <span className="font-semibold">Seller pays pickup from CBD hub.</span>
+                                        <span className="font-semibold">Seller pays the Mzigo pickup fee.</span>
                                     </div>
                                     {pickupQuote && (
                                         <p className="mt-2 text-white/75">
@@ -961,7 +961,7 @@ export default function SellerOrdersSection() {
 
                             <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/75">
                                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-yellow-300" />
-                                <span>After the pickup fee is paid, the pickup leg becomes visible to Mzigo Ego. If the buyer also paid for door delivery, both legs stay grouped under the same package.</span>
+                                <span>After the pickup fee is paid, Mzigo Ego collects the package, secures it, and checks it against the order before delivery.</span>
                             </div>
 
                             {pickupQuoteError && (
@@ -1008,11 +1008,11 @@ export default function SellerOrdersSection() {
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center">
                                 <Truck className="h-4 w-4 text-blue-300" />
                             </div>
-                            {readyAction === 'hub_dropoff' ? 'Confirm Package Drop-off' : 'Confirm Shop Pickup Readiness'}
+                            {readyAction === 'hub_dropoff' ? 'Confirm Mzigo Ego Drop-off' : 'Confirm Shop Pickup Readiness'}
                         </DialogTitle>
                         <DialogDescription className="text-sm text-white/75 leading-relaxed">
                             {readyAction === 'hub_dropoff'
-                                ? 'Have you dropped off the package at the specified location?'
+                                ? 'Have you handed this package to Mzigo Ego?'
                                 : 'Is this order ready for the buyer to collect at your shop?'}
                         </DialogDescription>
                     </DialogHeader>
@@ -1024,7 +1024,7 @@ export default function SellerOrdersSection() {
                                 <Package className="h-4 w-4 text-blue-300" />
                             </div>
                             <div className="text-sm">
-                                <p className="font-semibold text-blue-100 mb-1">Drop-off Location:</p>
+                                <p className="font-semibold text-blue-100 mb-1">Mzigo Ego drop-off location:</p>
                                 <p className="text-blue-50">
                                     {HUB_DROPOFF_LOCATION}
                                 </p>
@@ -1036,7 +1036,7 @@ export default function SellerOrdersSection() {
                     <div className="bg-yellow-500/10 border border-yellow-400/20 rounded-xl p-3 mb-4">
                         <p className="text-sm text-yellow-100 font-semibold">
                             {readyAction === 'hub_dropoff'
-                                ? 'Please confirm only after the package has been physically dropped off at the specified location.'
+                                ? 'Please confirm only after Mzigo Ego has received the package. They will secure it and check it against the order before delivery.'
                                 : 'Please confirm only after the package is ready to hand over to the buyer.'}
                         </p>
                     </div>
@@ -1063,7 +1063,7 @@ export default function SellerOrdersSection() {
                             ) : (
                                 <>
                                     <CheckCircle className="h-3 w-3 mr-2" />
-                                    {readyAction === 'hub_dropoff' ? 'Confirm Drop-off' : 'Confirm Ready'}
+                                    {readyAction === 'hub_dropoff' ? 'Confirm Handoff' : 'Confirm Ready'}
                                 </>
                             )}
                         </Button>

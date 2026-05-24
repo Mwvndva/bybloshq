@@ -1,4 +1,4 @@
-import { CalendarClock, Clock, MapPin, Route, Truck } from 'lucide-react';
+import { CalendarClock, Clock, MapPin, Route, ShieldCheck, Truck } from 'lucide-react';
 import type { Order, OrderLogisticsDeliveryLeg } from '@/types/order';
 
 type TrackingView = 'buyer' | 'seller';
@@ -135,7 +135,9 @@ export function OrderLogisticsTracking({
             </h4>
           </div>
           <p className="mt-1 text-xs text-white/75">
-            {latestMessage || 'Estimated delivery is within 24 hours after payment confirmation.'}
+            {latestMessage || (view === 'buyer'
+              ? 'Mzigo Ego handles your package securely and checks it against the order before delivery.'
+              : 'Choose drop-off or pickup so Mzigo Ego can secure and check the package.')}
           </p>
         </div>
         <span className="w-fit rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold capitalize text-yellow-100">
@@ -211,10 +213,24 @@ export function OrderLogisticsTracking({
             </p>
             <p className="mt-1 text-sm font-semibold text-white">{formatDateTime(hubDropoffDeadline)}</p>
             <p className="mt-1 text-xs text-white/65">
-              No seller pickup is active. Drop this package at the hub within 24 hours.
+              No seller pickup is active. Drop this package at Mzigo Ego within 24 hours.
             </p>
           </div>
         )}
+      </div>
+
+      <div className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-3">
+        <div className="flex items-start gap-2">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+          <div>
+            <p className="text-xs font-semibold text-emerald-100">Secure Mzigo Ego handling</p>
+            <p className="mt-1 text-xs leading-relaxed text-white/75">
+              {view === 'buyer'
+                ? 'Mzigo Ego keeps the package safe and checks it against your order before delivery.'
+                : 'Mzigo Ego keeps the package safe and checks it against the buyer order before it moves forward.'}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-3">
