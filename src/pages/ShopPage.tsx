@@ -11,6 +11,9 @@ import type { Product as SellerApiProduct } from '@/api/sellerApi';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { useShopTheme, type Theme } from '@/hooks/useShopTheme';
 
+const SHOP_DEFAULT_BANNER_CLASS =
+  'absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,204,0,0.22),transparent_28%),linear-gradient(135deg,#111111_0%,#050505_62%,#facc15_100%)]';
+
 // Type guard to check if a string is a valid Aesthetic
 function isAesthetic(value: string): value is Aesthetic {
   return [
@@ -68,7 +71,7 @@ const ShopPage = () => {
   const [sellerInfo, setSellerInfo] = useState<ShopSeller | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const defaultBanner = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
+  const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
 
   const { isAuthenticated } = useBuyerAuth();
   const themeClasses = useShopTheme((sellerInfo?.theme as Theme) || 'default');
@@ -126,6 +129,7 @@ const ShopPage = () => {
 
         setSellerInfo(sellerData);
         setAvatarLoadFailed(false);
+        setBannerLoadFailed(false);
 
         const sellerProducts = await sellerApi.getSellerProducts(seller.id);
 
@@ -216,22 +220,24 @@ const ShopPage = () => {
     <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
       {/* Modern Hero Section */}
       <div className="relative h-[38dvh] min-h-[340px] sm:h-[44dvh] lg:h-[50dvh] w-full overflow-hidden">
-        {sellerInfo?.bannerImage ? (
+        {sellerInfo?.bannerImage && !bannerLoadFailed ? (
           <img
             src={getImageUrl(sellerInfo.bannerImage)}
             alt={`${sellerInfo.shopName || 'Shop'} Banner`}
-            className="w-full h-full object-cover sm:animate-slow-zoom"
+            className="h-full w-full object-cover object-center sm:animate-slow-zoom"
             onError={(e) => {
               console.error('Error loading banner image:', e);
-              e.currentTarget.src = defaultBanner;
+              setBannerLoadFailed(true);
             }}
           />
         ) : (
-          <img
-            src={defaultBanner}
-            alt="Default Shop Banner"
-            className="w-full h-full object-cover"
-          />
+          <div className={SHOP_DEFAULT_BANNER_CLASS} aria-hidden="true">
+            <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.9)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:44px_44px]" />
+            <div className="absolute right-[-4rem] top-1/2 h-64 w-64 -translate-y-1/2 rounded-full border border-white/10 bg-white/[0.04] sm:h-96 sm:w-96" />
+            <div className="absolute left-6 top-20 rounded-full border border-yellow-300/20 bg-yellow-300/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-yellow-100 sm:left-10">
+              Byblos Shop
+            </div>
+          </div>
         )}
 
         {/* Sleek Gradient Overlay */}
