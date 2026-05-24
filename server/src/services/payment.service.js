@@ -1075,6 +1075,8 @@ export class PaymentService {
 
             const orderMetadata = parseObject(order.metadata);
             const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
+            const hasBuyerDoorDelivery = isDoorDeliveryRequested(orderMetadata.delivery || {}, orderMetadata)
+                || Boolean(order.delivery_leg_id || order.deliveryLegId);
             const hasPhysicalItem = itemRows.length
                 ? itemRows.some(item => {
                     const type = String(item.product_type || '').toLowerCase();
@@ -1086,7 +1088,7 @@ export class PaymentService {
                 throw new Error('Pickup is only available for physical product orders');
             }
 
-            if (fulfillmentType !== 'COURIER') {
+            if (fulfillmentType !== 'COURIER' && !hasBuyerDoorDelivery) {
                 throw new Error('Mzigo pickup is only available for courier orders from online shops. Shop pickup orders must be collected from the seller address.');
             }
 

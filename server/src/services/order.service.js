@@ -492,9 +492,10 @@ class OrderService {
     const orderType = String(order.order_type || order.orderType || '').toUpperCase();
     const productType = String(metadata.product_type || '').toLowerCase();
     const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
+    const hasDoorDelivery = this._hasBuyerDoorDelivery(order) || !!(order.delivery_leg_id || order.deliveryLegId || order.logistics?.deliveryLeg?.id);
 
     return (orderType === OrderType.PHYSICAL || productType === ProductType.PHYSICAL)
-      && fulfillmentType === FulfillmentType.COURIER;
+      && (fulfillmentType === FulfillmentType.COURIER || hasDoorDelivery);
   }
 
   static _hasBuyerDoorDelivery(order) {
