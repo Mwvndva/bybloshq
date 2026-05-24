@@ -23,6 +23,8 @@ class WhatsAppService {
         this.COURIER_NUMBER = (process.env.COURIER_WHATSAPP_NUMBER || '0748137819').replace(/\s/g, '');
         this.SELLER_DEADLINE_HRS = 48;
         this.BUYER_PICKUP_HRS = 24;
+        this.SELLER_PICKUP_CBD_FEE_KES = Number.parseFloat(process.env.SELLER_PICKUP_CBD_FEE_KES || '100');
+        this.SELLER_PICKUP_CBD_RADIUS_KM = Number.parseFloat(process.env.SELLER_PICKUP_CBD_RADIUS_KM || '3');
     }
 
     async initialize() {
@@ -413,13 +415,13 @@ class WhatsAppService {
                 buyer: {
                     mobileService: '*Next step:* Wait for the seller to confirm the booking. After the service is done, use your buyer dashboard to mark it completed and release funds.',
                     shopService: '*Next step:* Wait for the seller to confirm the booking. After the service is done, use your buyer dashboard to mark it completed and release funds.',
-                    systemDelivery: `*Next step:* The seller must choose hub drop-off or paid Mzigo pickup. You will be notified when the package reaches ${this.DROPOFF_LOCATION} or goes out for door delivery.`,
+                    systemDelivery: '*Next step:* The seller must choose Mzigo Ego drop-off or request Mzigo pickup. Mzigo Ego keeps the package safe and checks it against your order before it moves.',
                     shopPickup: '*Next step:* The seller is preparing your order. You will be notified when it is ready for pickup.'
                 },
                 seller: {
                     mobileService: '*Next step:* Confirm the booking in your seller dashboard, then provide the service as scheduled. The buyer confirms completion.',
                     shopService: '*Next step:* Confirm the booking in your seller dashboard, then provide the service as scheduled. The buyer confirms completion.',
-                    systemDelivery: `*Next step:* In your seller dashboard, choose "I will drop off at hub" or "Request Mzigo pickup". Hub drop-off is due within 24 hours at ${this.DROPOFF_LOCATION}.`,
+                    systemDelivery: `*Next step:* In your seller dashboard, choose "Drop off at Mzigo Ego" or "Request Mzigo pickup". ${this.sellerPickupCbdSummary()} Mzigo Ego checks the package against the buyer order.`,
                     shopPickup: '*Next step:* Prepare the order and mark it ready for shop pickup in your seller dashboard.'
                 }
             },
@@ -428,13 +430,13 @@ class WhatsAppService {
                     digital: '*Next step:* Open your buyer dashboard to access the digital product.',
                     mobileService: '*Next step:* Attend the confirmed service. After it is completed, mark it completed in your buyer dashboard to release funds.',
                     shopService: '*Next step:* Attend the confirmed service. After it is completed, mark it completed in your buyer dashboard to release funds.',
-                    systemDelivery: '*Next step:* Track package movement in your buyer dashboard. You will be notified when it is ready for collection or out for delivery.',
+                    systemDelivery: '*Next step:* Track package movement in your buyer dashboard. Mzigo Ego keeps the package safe and checks it against your order before delivery or collection.',
                     shopPickup: '*Next step:* Wait for the seller to mark the order ready for pickup.'
                 },
                 seller: {
                     mobileService: '*Next step:* Provide the service as scheduled. The buyer must confirm completion before funds are released.',
                     shopService: '*Next step:* Provide the service as scheduled. The buyer must confirm completion before funds are released.',
-                    systemDelivery: '*Next step:* Complete your selected handoff. If you chose hub drop-off, mark the package dropped at hub after you deliver it there.',
+                    systemDelivery: '*Next step:* Complete your selected Mzigo handoff. If you chose Mzigo Ego drop-off, mark the package dropped off after you deliver it there.',
                     shopPickup: '*Next step:* Prepare the order and mark it ready for buyer pickup.'
                 }
             },
@@ -463,7 +465,7 @@ class WhatsAppService {
             },
             DELIVERY_PENDING: {
                 buyer: {
-                    systemDelivery: '*Next step:* Your order is moving through logistics. Wait for a hub collection or door delivery update before taking action.',
+                    systemDelivery: '*Next step:* Your order is moving through Mzigo Ego logistics. Wait for a collection or door delivery update before taking action.',
                     default: '*Next step:* Your order is on the way. Be ready to receive it and confirm completion after receiving it.'
                 },
                 seller: {
@@ -511,11 +513,11 @@ class WhatsAppService {
         if (status === 'AWAITING_SELLER_ACTION') {
             if (isBuyer) {
                 if (isService) return '*Next Step:* Waiting for the seller to confirm your booking.';
-                if (isSystemDelivery) return `*Next Step:* The seller must choose hub drop-off or paid Mzigo pickup. You will be notified when the package reaches ${this.DROPOFF_LOCATION}.`;
+                if (isSystemDelivery) return '*Next Step:* The seller must choose Mzigo Ego drop-off or request Mzigo pickup. Mzigo Ego will check the package against your order before it moves.';
                 if (isShopPickup) return '*Next Step:* The seller is preparing your order for shop pickup.';
             }
             if (isService) return '*Next Step:* Confirm the booking in your dashboard, then complete the service as scheduled.';
-            if (isSystemDelivery) return `*Next Step:* Choose "I will drop off at hub" or "Request Mzigo pickup". Hub drop-off is due within 24 hours at ${this.DROPOFF_LOCATION}.`;
+            if (isSystemDelivery) return `*Next Step:* Choose "Drop off at Mzigo Ego" or "Request Mzigo pickup". ${this.sellerPickupCbdSummary()}`;
             if (isShopPickup) return '*Next Step:* Prepare the order and mark it ready for shop pickup.';
         }
 
@@ -523,11 +525,11 @@ class WhatsAppService {
             if (isBuyer) {
                 if (isDigital) return '*Notice:* Your digital item is being prepared for access.';
                 if (isService) return '*Notice:* Your booking is confirmed. After the service is complete, mark it completed in your buyer dashboard to release funds.';
-                if (isSystemDelivery) return '*Notice:* Package movement is in progress. Your dashboard has the latest logistics updates.';
+                if (isSystemDelivery) return '*Notice:* Mzigo Ego package movement is in progress. Your dashboard has the latest logistics updates.';
                 return '*Notice:* The seller is preparing your pickup.';
             }
             if (isService) return '*Next Step:* Deliver the service as scheduled. The buyer will mark it completed to release funds.';
-            if (isSystemDelivery) return '*Next Step:* Complete your selected handoff. If dropping off, mark the package dropped at hub after delivery.';
+            if (isSystemDelivery) return '*Next Step:* Complete your selected Mzigo handoff. If dropping off, mark the package dropped off after delivery.';
             return '*Next Step:* Prepare the order for buyer pickup.';
         }
 
@@ -545,12 +547,12 @@ class WhatsAppService {
         if (['CONFIRMED', 'PAID', 'PENDING', 'RESERVED'].includes(status)) {
             if (isBuyer) {
                 if (isDigital) return "👉 *Next Step:* Click the download link below to access your product.";
-                if (isSystemDelivery) return "⏳ *Next Step:* The seller has been notified to drop off your item at our hub. We'll alert you when it arrives!";
+                if (isSystemDelivery) return "Next Step: The seller has been notified to choose Mzigo Ego drop-off or request Mzigo pickup. Mzigo Ego checks the package against your order.";
                 if (isShopPickup) return "⏳ *Next Step:* The seller is preparing your items. You'll receive a notification the moment they are ready for collection at the shop.";
                 if (isMobileService) return "Appointment confirmed. After the service is complete, mark it completed in your buyer dashboard to release funds.";
                 if (isShopService) return "Appointment confirmed. Please visit the shop at the scheduled time. After the service is complete, mark it completed in your buyer dashboard to release funds.";
             } else {
-                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 24 hours to initiate delivery.`;
+                if (isSystemDelivery) return `Next Step: Choose Mzigo Ego drop-off or request Mzigo pickup in your seller dashboard. ${this.sellerPickupCbdSummary()}`;
                 if (isShopPickup) return "👉 *Next Step:* Prepare the items. Once ready, update status to 'Ready for Collection' in your dashboard.";
                 if (isMobileService) return "Next Step: Proceed to the buyer's location at the scheduled time to provide the service. The buyer confirms completion.";
                 if (isShopService) return "Next Step: Prepare for the buyer's arrival at your shop at the scheduled time. The buyer confirms completion.";
@@ -568,10 +570,10 @@ class WhatsAppService {
         // 3. DELIVERY / DISPATCH
         if (status === 'DELIVERY_PENDING') {
             if (isBuyer) {
-                if (isSystemDelivery) return "🚚 *Next Step:* Your order is en route to our hub. Please wait for the 'Arrived at Hub' notification before visiting.";
+                if (isSystemDelivery) return "Next Step: Your order is moving through Mzigo Ego. Wait for the next collection or door delivery update.";
                 return "🚚 *Next Step:* Your order is on its way! Please be ready to receive it.";
             }
-            return isSystemDelivery ? "✅ *Next Step:* Item successfully received for hub delivery. Logistics tracking is active." : "🚚 *Next Step:* Proceed with the delivery to the buyer's address.";
+            return isSystemDelivery ? "Next Step: Mzigo Ego handling is active. The package will be checked against the buyer order before it moves forward." : "🚚 *Next Step:* Proceed with the delivery to the buyer's address.";
         }
 
         // 4. COLLECTION (READY)
@@ -579,7 +581,7 @@ class WhatsAppService {
             if (isBuyer) {
                 if (isShopService) return "Next Step: If the service has been completed, mark it completed in your buyer dashboard to release funds.";
                 if (isShopPickup) return "📍 *Next Step:* YOUR ORDER IS READY! Please visit the shop now to collect your order.";
-                if (isSystemDelivery) return `📍 *Next Step:* ARRIVED AT HUB! Your order is ready for pickup at ${this.DROPOFF_LOCATION}.`;
+                if (isSystemDelivery) return `Next Step: Your order is ready at Mzigo Ego. Collect it at ${this.DROPOFF_LOCATION}, then confirm it in your buyer dashboard.`;
             }
             return isService
                 ? "Status: Buyer has been notified. The buyer must mark the service completed to release funds."
@@ -598,7 +600,7 @@ class WhatsAppService {
         if (status === 'COMPLETED' || status === 'DELIVERY_COMPLETE') {
             if (isBuyer) {
                 if (isSystemDelivery && status === 'DELIVERY_COMPLETE') {
-                    return `📍 *Notice:* Your order has arrived at our hub (${this.DROPOFF_LOCATION}). Please collect it at your earliest convenience.`;
+                    return `Notice: Your order has arrived at Mzigo Ego (${this.DROPOFF_LOCATION}). Please collect it at your earliest convenience.`;
                 }
                 return "🎉 *Notice:* Order successfully completed. Thank you for choosing Byblos!";
             }
@@ -668,7 +670,9 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
             }
         }
         else if (isSystemDelivery) {
-            locationDetails = isSeller ? `📦 *Drop-off at:* ${this.DROPOFF_LOCATION}\n` : `📦 *Pick-up from:* ${this.DROPOFF_LOCATION}\n`;
+            locationDetails = isSeller
+                ? `Mzigo Ego drop-off: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}\n`
+                : `Mzigo Ego collection point: ${this.DROPOFF_LOCATION}\n`;
         }
         else if ((isShopPickup || isShopService) && !isSeller) {
             const mapsLink = `https://www.google.com/maps/search/?api=1&query=${seller.latitude},${seller.longitude}`;
@@ -787,7 +791,7 @@ _Keep this message private. Your buyer dashboard also has your downloads._
             locationDetails = `📍 *At Shop:* ${shopAddr}\n`;
             if (mapsLink) locationDetails += `🔗 *Navigate:* ${mapsLink}\n`;
         } else if (isSystemDelivery && ['AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER', 'COLLECTION_PENDING', 'DELIVERY_COMPLETE'].includes(newStatus)) {
-            locationDetails = `📍 *At Hub:* ${this.DROPOFF_LOCATION}\n`;
+            locationDetails = `Mzigo Ego location: ${this.DROPOFF_LOCATION}\n`;
         } else if (isMobileService) {
             locationDetails = `📍 *Your Service Address:* ${loc.address}\n`;
         }
@@ -863,7 +867,7 @@ _Check your dashboard for full details._
             const mapsLink = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
             locationDetails = `📍 *Buyer Location:* ${loc.address}\n🔗 *Navigate:* ${mapsLink}\n`;
         } else if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER'].includes(newStatus)) {
-            locationDetails = `📍 *Drop-off Point:* ${this.DROPOFF_LOCATION}\n`;
+            locationDetails = `Mzigo Ego drop-off point: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}\n`;
         }
 
         // FIX 5: Enriched Booking Details
@@ -892,7 +896,7 @@ _Check your dashboard for full details._
                 return `Buyer location: ${loc?.address || 'Not provided'}\n${mapsLink ? `Map: ${mapsLink}\n` : ''}`;
             }
             if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER'].includes(newStatus)) {
-                return `Hub drop-off point: ${this.DROPOFF_LOCATION}\n`;
+                return `Mzigo Ego drop-off point: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}\n`;
             }
             return '';
         })();
@@ -970,6 +974,23 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
         return `${label} ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
+    sellerPickupCbdSummary() {
+        const radius = Number.isFinite(this.SELLER_PICKUP_CBD_RADIUS_KM)
+            ? this.SELLER_PICKUP_CBD_RADIUS_KM
+            : 3;
+        return `Nairobi CBD seller pickup is ${this.formatLogisticsAmount(this.SELLER_PICKUP_CBD_FEE_KES, 'KES')} within ${radius}km of the CBD hub. Outside CBD, normal distance pricing applies.`;
+    }
+
+    parseLogisticsMetadata(metadata) {
+        if (!metadata) return {};
+        if (typeof metadata === 'object') return metadata;
+        try {
+            return JSON.parse(metadata);
+        } catch (error) {
+            return {};
+        }
+    }
+
     logisticsMilestoneTitle(notificationType) {
         const titles = {
             new_order: 'New Mzigo order',
@@ -977,7 +998,7 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
             pickup_paid: 'Seller pickup paid',
             pickup_assigned: 'Pickup assigned',
             picked_up_from_seller: 'Package picked up from seller',
-            dropped_at_hub: 'Package dropped at hub',
+            dropped_at_hub: 'Package dropped at Mzigo Ego',
             out_for_delivery: 'Package out for delivery',
             delivered: 'Package delivered',
             delivery_delayed: 'Delivery delayed',
@@ -998,7 +1019,12 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
         const title = this.logisticsMilestoneTitle(notificationType);
         const orderNumber = order.orderNumber || order.id || 'pending';
         const packageCode = request.packageCode || `Order ${orderNumber}`;
-        const fee = this.formatLogisticsAmount(leg.feeAmount, leg.feeCurrency);
+        const legMetadata = this.parseLogisticsMetadata(leg.metadata);
+        const quoteMetadata = this.parseLogisticsMetadata(legMetadata.quote);
+        const pricingModel = leg.pricingModel || leg.pricing_model || legMetadata.pricing_model || quoteMetadata.pricing_model;
+        const isCbdFlatPickup = leg.type === 'pickup' && pricingModel === 'cbd_flat';
+        const feeLabel = this.formatLogisticsAmount(leg.feeAmount, leg.feeCurrency);
+        const fee = isCbdFlatPickup ? `${feeLabel} (Nairobi CBD flat seller pickup fee)` : feeLabel;
         const location = leg.type === 'pickup'
             ? (leg.origin || seller.location || 'Pickup location pending')
             : (leg.destination || 'Delivery address pending');
@@ -1029,6 +1055,8 @@ Phone: ${buyer.phone || 'Not provided'}
 Action: Open the Mzigo dashboard and review the full order card before assigning pickup, confirming hub arrival, or updating delivery.
 Dashboard: ${dashboardUrl}
 
+Safety: Keep the package secure and check it against the order before it moves forward.
+
 _WhatsApp is notification only. Byblos tracking is the source of truth._
 `.trim();
 
@@ -1040,23 +1068,26 @@ _WhatsApp is notification only. Byblos tracking is the source of truth._
                 return `Action: Open the Mzigo dashboard to coordinate this ${leg.type || 'logistics'} leg.\nDashboard: ${dashboardUrl}`;
             }
             if (notificationType === 'delivery_paid' && recipientRole === 'buyer') {
-                return `Action: Door delivery is paid. Track updates here: ${trackingLink || 'Open your buyer dashboard.'}`;
+                return `Action: Door delivery is paid. Mzigo Ego will keep the package safe and check it against your order. Track updates here: ${trackingLink || 'Open your buyer dashboard.'}`;
             }
             if (notificationType === 'delivery_paid' && recipientRole === 'seller') {
-                return 'Action: Prepare the package and choose hub drop-off or request Mzigo pickup in your seller dashboard.';
+                return `Action: Prepare the package and choose Mzigo Ego drop-off or request Mzigo pickup in your seller dashboard. ${this.sellerPickupCbdSummary()} Mzigo Ego checks the package against the buyer order.`;
             }
             if (notificationType === 'pickup_paid' && recipientRole === 'seller') {
-                return 'Action: Keep the package ready at the pickup location. Mzigo will update pickup progress.';
+                return 'Action: Keep the package ready at the pickup location. Mzigo Ego will collect it, keep it safe, and check it against the buyer order before delivery.';
+            }
+            if (notificationType === 'pickup_paid' && recipientRole === 'buyer') {
+                return `Action: Seller pickup is paid. Mzigo Ego will pick up the package, keep it safe, and check it against your order. Track updates here: ${trackingLink || 'Open your buyer dashboard.'}`;
             }
             if (notificationType === 'picked_up_from_seller') {
                 return recipientRole === 'seller'
-                    ? 'Action: Pickup is complete. Track the package until it reaches the hub.'
-                    : 'Action: The package has left the seller. Watch for hub collection or door delivery updates.';
+                    ? 'Action: Pickup is complete. Mzigo Ego has the package and will check it against the buyer order before moving it forward.'
+                    : 'Action: Mzigo Ego has picked up the package from the seller and will check it against your order before delivery or collection.';
             }
             if (notificationType === 'dropped_at_hub') {
                 return recipientRole === 'buyer'
-                    ? `Action: If this is hub collection, collect the package at ${this.DROPOFF_LOCATION} and mark the order completed after collection.`
-                    : 'Action: Package reached the hub. Track the next buyer collection or delivery update.';
+                    ? `Action: The package is at Mzigo Ego. If this is collection, collect it at ${this.DROPOFF_LOCATION} and mark the order completed after collection.`
+                    : 'Action: Package reached Mzigo Ego. It will be checked against the buyer order before the next collection or delivery update.';
             }
             if (notificationType === 'out_for_delivery') {
                 return recipientRole === 'buyer'
@@ -1086,6 +1117,7 @@ Leg: ${leg.type || 'logistics'}
 Status: ${String(leg.status || notificationType).replace(/_/g, ' ')}
 Fee: ${fee}
 Location: ${location}
+Safety: Mzigo Ego keeps the package secure and checks it against the order.
 
 ${audienceLine}
 _WhatsApp is notification only. Byblos tracking is the source of truth._
@@ -1122,7 +1154,7 @@ ${itemsList}
 👤 *Buyer:* ${order.buyer.name} (${buyerPhone})
 📍 *Pick/Drop:* ${order.location.address}
 
-_Coordinate pickup and delivery to ${this.DROPOFF_LOCATION}._
+_Coordinate Mzigo Ego pickup, package checks, and delivery to ${this.DROPOFF_LOCATION}._
 `.trim();
 
             return this.sendMessage(this.COURIER_NUMBER, msg);
