@@ -69,7 +69,6 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                     || ['FAILED', 'CANCELLED', 'COMPENSATION_REQUIRED'].includes(orderStatus);
 
                 if (isPaymentSuccess || isOrderPaid) {
-                    setState('SUCCESS');
                     if (intervalRef.current) clearInterval(intervalRef.current);
 
                     // If guest and we have autologin token, use it
@@ -78,6 +77,7 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                     }
 
                     onSuccess?.();
+                    onClose();
                     return;
                 }
 
@@ -113,7 +113,7 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
         };
-    }, [isOpen, invoiceId, state, isGuest, onSuccess]);
+    }, [isOpen, invoiceId, state, isGuest, onSuccess, onClose]);
 
     if (!isOpen) return null;
 
