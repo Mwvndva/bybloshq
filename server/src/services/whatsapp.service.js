@@ -430,7 +430,7 @@ class WhatsAppService {
                     digital: '*Next step:* Open your buyer dashboard to access the digital product.',
                     mobileService: '*Next step:* Attend the confirmed service. After it is completed, mark it completed in your buyer dashboard to release funds.',
                     shopService: '*Next step:* Attend the confirmed service. After it is completed, mark it completed in your buyer dashboard to release funds.',
-                    systemDelivery: '*Next step:* Track package movement in your buyer dashboard. Mzigo Ego keeps the package safe and checks it against your order before delivery or collection.',
+                    systemDelivery: '*Next step:* Track package movement in your buyer dashboard. Mzigo Ego keeps the package safe, checks it against your order, and delivers it to your address.',
                     shopPickup: '*Next step:* Wait for the seller to mark the order ready for pickup.'
                 },
                 seller: {
@@ -465,7 +465,7 @@ class WhatsAppService {
             },
             DELIVERY_PENDING: {
                 buyer: {
-                    systemDelivery: '*Next step:* Your order is moving through Mzigo Ego logistics. Wait for a collection or door delivery update before taking action.',
+                    systemDelivery: '*Next step:* Your order is moving through Mzigo Ego logistics for door delivery. Be ready for the delivery update before taking action.',
                     default: '*Next step:* Your order is on the way. Be ready to receive it and confirm completion after receiving it.'
                 },
                 seller: {
@@ -570,7 +570,7 @@ class WhatsAppService {
         // 3. DELIVERY / DISPATCH
         if (status === 'DELIVERY_PENDING') {
             if (isBuyer) {
-                if (isSystemDelivery) return "Next Step: Your order is moving through Mzigo Ego. Wait for the next collection or door delivery update.";
+                if (isSystemDelivery) return "Next Step: Your order is moving through Mzigo Ego for door delivery. Wait for the next delivery update.";
                 return "🚚 *Next Step:* Your order is on its way! Please be ready to receive it.";
             }
             return isSystemDelivery ? "Next Step: Mzigo Ego handling is active. The package will be checked against the buyer order before it moves forward." : "🚚 *Next Step:* Proceed with the delivery to the buyer's address.";
@@ -610,6 +610,36 @@ class WhatsAppService {
         return "";
     }
 
+    getNotificationFulfillmentContext(order = {}, seller = {}, type = '') {
+        const fulfillmentType = String(
+            order.fulfillmentType
+            || order.fulfillment_type
+            || order.metadata?.fulfillmentType
+            || order.metadata?.fulfillment_type
+            || ''
+        ).toUpperCase();
+        const productType = String(type || order.type || order.order_type || order.orderType || '').toUpperCase();
+        const hasSellerShop = sellerHasPhysicalShop(seller);
+
+        if (fulfillmentType) {
+            return {
+                fulfillmentType,
+                hasPhysicalShop: fulfillmentType === 'BUYER_TO_SELLER',
+                isCourier: fulfillmentType === 'COURIER',
+                isMobileService: fulfillmentType === 'SELLER_TO_BUYER',
+                isDigital: fulfillmentType === 'DIGITAL'
+            };
+        }
+
+        return {
+            fulfillmentType: hasSellerShop ? 'BUYER_TO_SELLER' : '',
+            hasPhysicalShop: hasSellerShop,
+            isCourier: productType === 'PHYSICAL' && !hasSellerShop,
+            isMobileService: productType === 'SERVICE' && !hasSellerShop,
+            isDigital: productType === 'DIGITAL'
+        };
+    }
+
     /**
      * Central message builder using the Normalized Order Payload (Single Source of Truth)
      */
@@ -624,8 +654,8 @@ class WhatsAppService {
         const isService = (type || '').toUpperCase() === 'SERVICE';
         const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
 
-        // SOT: Use fulfillmentType if available, fallback to seller coordinate check
-        const hasPhysicalShop = fulfillmentType === 'BUYER_TO_SELLER' || sellerHasPhysicalShop(seller);
+        const fulfillmentContext = this.getNotificationFulfillmentContext({ ...order, fulfillmentType }, seller, type);
+        const hasPhysicalShop = fulfillmentContext.hasPhysicalShop;
 
         const partyName = isSeller ? (seller.name || 'Seller') : (buyer.name || 'Customer');
         const headerText = isSeller ? `🔔 *New Order: #${orderNumber}*` : `✅ *Order Confirmed: #${orderNumber}*`;
@@ -672,7 +702,7 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
         else if (isSystemDelivery) {
             locationDetails = isSeller
                 ? `Mzigo Ego drop-off: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}\n`
-                : `Mzigo Ego collection point: ${this.DROPOFF_LOCATION}\n`;
+                : 'Door delivery: Mzigo Ego will check the package and deliver it to your address.\n';
         }
         else if ((isShopPickup || isShopService) && !isSeller) {
             const mapsLink = `https://www.google.com/maps/search/?api=1&query=${seller.latitude},${seller.longitude}`;
@@ -768,11 +798,13 @@ _Keep this message private. Your buyer dashboard also has your downloads._
         if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
 
         const { type } = order;
+        const normalizedStatus = String(newStatus || '').toUpperCase();
         const isService = (type || '').toUpperCase() === 'SERVICE';
         const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
-        const hasPhysicalShop = order.fulfillment_type === 'BUYER_TO_SELLER' || sellerHasPhysicalShop(seller);
+        const fulfillmentContext = this.getNotificationFulfillmentContext(order, seller, type);
+        const hasPhysicalShop = fulfillmentContext.hasPhysicalShop;
 
-        const instructions = this.getLifecycleInstruction(newStatus, 'buyer', type, hasPhysicalShop);
+        const instructions = this.getLifecycleInstruction(normalizedStatus, 'buyer', type, hasPhysicalShop);
         let locationDetails = '';
 
         const isShopPickup = isPhysical && hasPhysicalShop;
@@ -790,8 +822,10 @@ _Keep this message private. Your buyer dashboard also has your downloads._
                 : null;
             locationDetails = `📍 *At Shop:* ${shopAddr}\n`;
             if (mapsLink) locationDetails += `🔗 *Navigate:* ${mapsLink}\n`;
-        } else if (isSystemDelivery && ['AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER', 'COLLECTION_PENDING', 'DELIVERY_COMPLETE'].includes(newStatus)) {
-            locationDetails = `Mzigo Ego location: ${this.DROPOFF_LOCATION}\n`;
+        } else if (isSystemDelivery && ['COLLECTION_PENDING', 'READY_FOR_COLLECTION'].includes(normalizedStatus)) {
+            locationDetails = `Mzigo Ego collection point: ${this.DROPOFF_LOCATION}\n`;
+        } else if (isSystemDelivery && ['AWAITING_SELLER_ACTION', 'FULFILLING', 'DELIVERY_PENDING', 'DELIVERY_COMPLETE', 'READY_FOR_BUYER'].includes(normalizedStatus)) {
+            locationDetails = 'Door delivery: Mzigo Ego will check the package and deliver it to your address.\n';
         } else if (isMobileService) {
             locationDetails = `📍 *Your Service Address:* ${loc.address}\n`;
         }
@@ -826,8 +860,11 @@ _Keep this message private. Your buyer dashboard also has your downloads._
                     : null;
                 return `Shop: ${shopAddr}\n${mapsLink ? `Map: ${mapsLink}\n` : ''}`;
             }
-            if (isSystemDelivery && ['AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER', 'COLLECTION_PENDING', 'DELIVERY_COMPLETE'].includes(newStatus)) {
-                return `Hub: ${this.DROPOFF_LOCATION}\n`;
+            if (isSystemDelivery && ['COLLECTION_PENDING', 'READY_FOR_COLLECTION'].includes(normalizedStatus)) {
+                return `Mzigo Ego collection point: ${this.DROPOFF_LOCATION}\n`;
+            }
+            if (isSystemDelivery && ['AWAITING_SELLER_ACTION', 'FULFILLING', 'DELIVERY_PENDING', 'DELIVERY_COMPLETE', 'READY_FOR_BUYER'].includes(normalizedStatus)) {
+                return 'Door delivery: Mzigo Ego will check the package and deliver it to your address.\n';
             }
             if (isMobileService) {
                 return `Service address: ${loc?.address || 'Not provided'}\n`;
@@ -853,11 +890,13 @@ _Check your dashboard for full details._
         if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
 
         const { type } = order;
+        const normalizedStatus = String(newStatus || '').toUpperCase();
         const isService = (type || '').toUpperCase() === 'SERVICE';
         const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
-        const hasPhysicalShop = order.fulfillment_type === 'BUYER_TO_SELLER' || sellerHasPhysicalShop(seller);
+        const fulfillmentContext = this.getNotificationFulfillmentContext(order, seller, type);
+        const hasPhysicalShop = fulfillmentContext.hasPhysicalShop;
 
-        const instructions = this.getLifecycleInstruction(newStatus, 'seller', type, hasPhysicalShop);
+        const instructions = this.getLifecycleInstruction(normalizedStatus, 'seller', type, hasPhysicalShop);
         let locationDetails = '';
 
         const isMobileService = isService && !hasPhysicalShop;
@@ -866,7 +905,7 @@ _Check your dashboard for full details._
         if (isMobileService) {
             const mapsLink = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
             locationDetails = `📍 *Buyer Location:* ${loc.address}\n🔗 *Navigate:* ${mapsLink}\n`;
-        } else if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER'].includes(newStatus)) {
+        } else if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER', 'DELIVERY_PENDING'].includes(normalizedStatus)) {
             locationDetails = `Mzigo Ego drop-off point: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}\n`;
         }
 
@@ -895,7 +934,7 @@ _Check your dashboard for full details._
                     : null;
                 return `Buyer location: ${loc?.address || 'Not provided'}\n${mapsLink ? `Map: ${mapsLink}\n` : ''}`;
             }
-            if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER'].includes(newStatus)) {
+            if (isSystemDelivery && ['CONFIRMED', 'AWAITING_SELLER_ACTION', 'FULFILLING', 'READY_FOR_BUYER', 'DELIVERY_PENDING'].includes(normalizedStatus)) {
                 return `Mzigo Ego drop-off point: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}\n`;
             }
             return '';
