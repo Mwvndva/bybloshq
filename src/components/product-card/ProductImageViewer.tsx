@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getImageUrl } from '@/lib/utils';
@@ -36,17 +37,27 @@ export function ProductImageViewer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeIndex, hasMultipleImages, images.length, onActiveIndexChange, onClose]);
 
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   if (!activeImage) return null;
 
-  const goToPrevious = () => {
+  const goToPrevious = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     onActiveIndexChange((activeIndex - 1 + images.length) % images.length);
   };
 
-  const goToNext = () => {
+  const goToNext = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     onActiveIndexChange((activeIndex + 1) % images.length);
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-3 text-white backdrop-blur-sm sm:p-6"
       role="dialog"
@@ -54,16 +65,16 @@ export function ProductImageViewer({
       aria-label={`${productName} images`}
       onClick={onClose}
     >
-      <div
-        className="relative flex h-full w-full max-w-6xl items-center justify-center"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className="relative flex h-full w-full max-w-6xl items-center justify-center">
         <Button
           type="button"
           variant="ghost"
           size="icon"
           className="absolute right-2 top-2 z-20 h-10 w-10 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:right-4 sm:top-4 sm:h-11 sm:w-11"
-          onClick={onClose}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
           aria-label="Close image viewer"
         >
           <X className="h-5 w-5" />
@@ -86,6 +97,7 @@ export function ProductImageViewer({
           src={getImageUrl(activeImage)}
           alt={`${productName} image ${activeIndex + 1}`}
           className="max-h-[92dvh] max-w-full select-none rounded-xl object-contain shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl"
+          onClick={(event) => event.stopPropagation()}
         />
 
         {hasMultipleImages && (
@@ -106,6 +118,7 @@ export function ProductImageViewer({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
