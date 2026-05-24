@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn, getImageUrl } from '@/lib/utils';
+import { getImageUrl } from '@/lib/utils';
 
 interface ProductImageViewerProps {
   images: string[];
@@ -48,44 +48,33 @@ export function ProductImageViewer({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex flex-col bg-slate-950/95 text-white backdrop-blur-md"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-3 text-white backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={`${productName} images`}
       onClick={onClose}
     >
-      <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-6">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold sm:text-base">{productName}</p>
-          <p className="text-xs text-white/55">
-            {activeIndex + 1} of {images.length}
-          </p>
-        </div>
+      <div
+        className="relative flex h-full w-full max-w-6xl items-center justify-center"
+        onClick={(event) => event.stopPropagation()}
+      >
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-10 w-10 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
-          onClick={(event) => {
-            event.stopPropagation();
-            onClose();
-          }}
+          className="absolute right-2 top-2 z-20 h-10 w-10 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:right-4 sm:top-4 sm:h-11 sm:w-11"
+          onClick={onClose}
           aria-label="Close image viewer"
         >
           <X className="h-5 w-5" />
         </Button>
-      </div>
 
-      <div
-        className="relative flex min-h-0 flex-1 items-center justify-center px-3 py-4 sm:px-12"
-        onClick={(event) => event.stopPropagation()}
-      >
         {hasMultipleImages && (
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute left-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white sm:left-5 sm:h-12 sm:w-12"
+            className="absolute left-2 top-1/2 z-20 h-11 w-11 -translate-y-1/2 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:left-4 sm:h-12 sm:w-12"
             onClick={goToPrevious}
             aria-label="Previous product image"
           >
@@ -96,7 +85,7 @@ export function ProductImageViewer({
         <img
           src={getImageUrl(activeImage)}
           alt={`${productName} image ${activeIndex + 1}`}
-          className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl"
+          className="max-h-[92dvh] max-w-full select-none rounded-xl object-contain shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl"
         />
 
         {hasMultipleImages && (
@@ -104,40 +93,19 @@ export function ProductImageViewer({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white sm:right-5 sm:h-12 sm:w-12"
+            className="absolute right-2 top-1/2 z-20 h-11 w-11 -translate-y-1/2 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:right-4 sm:h-12 sm:w-12"
             onClick={goToNext}
             aria-label="Next product image"
           >
             <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
           </Button>
         )}
+        {hasMultipleImages && (
+          <div className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white shadow-lg sm:bottom-4">
+            {activeIndex + 1} / {images.length}
+          </div>
+        )}
       </div>
-
-      {hasMultipleImages && (
-        <div
-          className="no-scrollbar flex shrink-0 gap-2 overflow-x-auto border-t border-white/10 px-4 py-3 sm:justify-center"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {images.map((image, index) => (
-            <button
-              key={`${image}-${index}`}
-              type="button"
-              onClick={() => onActiveIndexChange(index)}
-              className={cn(
-                'h-16 w-16 shrink-0 overflow-hidden rounded-xl border bg-white/5 transition-all sm:h-20 sm:w-20',
-                index === activeIndex ? 'border-yellow-400 ring-2 ring-yellow-400/30' : 'border-white/15 opacity-70 hover:opacity-100'
-              )}
-              aria-label={`View product image ${index + 1}`}
-            >
-              <img
-                src={getImageUrl(image)}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

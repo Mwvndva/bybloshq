@@ -63,12 +63,10 @@ export function ProductCardMedia({
         </div>
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[1]" />
-
       <ProductImage
         src={product.image_url}
         alt={product.name}
-        className="w-full aspect-[4/3] object-cover transition-transform duration-500 sm:group-hover:scale-[1.02]"
+        className="w-full aspect-[4/3] object-cover"
       />
 
       {canOpenGallery && (
