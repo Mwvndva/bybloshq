@@ -13,6 +13,7 @@ import apiClient from '@/lib/apiClient';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { ProductCardDetails } from '@/components/product-card/ProductCardDetails';
 import { ProductCardMedia } from '@/components/product-card/ProductCardMedia';
+import { ProductImageViewer } from '@/components/product-card/ProductImageViewer';
 import { ProductCardModals } from '@/components/product-card/ProductCardModals';
 import { createCheckoutAttemptToken, getProductCardThemeVars, getProductFlags, getThemeClasses, normalizePhone, type Theme } from '@/components/product-card/productCardUtils';
 import type { DoorDeliverySelection } from '@/components/PhoneCheckModal';
@@ -22,6 +23,31 @@ const PRODUCT_SERVICE_CHARGE_RATE = 0.02;
 const calculateProductServiceCharge = (amount: number) => Math.ceil(amount * PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
 const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 0) => {
   return Math.ceil(Math.round((productAmount + deliveryFee + calculateProductServiceCharge(productAmount)) * 100) / 100);
+};
+
+const normalizeProductImages = (product: Product): string[] => {
+  const rawImages = (product as any).images;
+  const extraImages = Array.isArray(rawImages)
+    ? rawImages
+    : typeof rawImages === 'string'
+      ? (() => {
+        try {
+          const parsed = JSON.parse(rawImages);
+          return Array.isArray(parsed) ? parsed : [rawImages];
+        } catch {
+          return [rawImages];
+        }
+      })()
+      : [];
+
+  return [
+    product.image_url,
+    (product as any).imageUrl,
+    ...extraImages
+  ]
+    .filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
+    .map(image => image.trim())
+    .filter((image, index, allImages) => allImages.indexOf(image) === index);
 };
 
 interface ProductCardProps {
@@ -54,9 +80,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<BuyerLocationPayload | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
   const { isDigital, isService, isPhysical, isHybrid, isOutOfStock, isSold } = getProductFlags(product);
   const cardTheme = (theme || seller?.theme || product.seller?.theme || 'default') as Theme;
+  const productImages = normalizeProductImages(product);
 
   const [paymentModalData, setPaymentModalData] = useState<{
     isOpen: boolean;
@@ -578,6 +606,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         isService={isService}
         isHybrid={isHybrid}
         isOutOfStock={isOutOfStock}
+        canOpenGallery={productImages.length > 0}
+        imageCount={productImages.length}
+        onOpenGallery={() => setGalleryIndex(0)}
       />
 
       <ProductCardDetails
@@ -620,6 +651,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         }}
         onBookingConfirm={handleBookingConfirm}
       />
+
+      {galleryIndex !== null && (
+        <ProductImageViewer
+          images={productImages}
+          productName={product.name}
+          activeIndex={galleryIndex}
+          onActiveIndexChange={setGalleryIndex}
+          onClose={() => setGalleryIndex(null)}
+        />
+      )}
     </Card>
   );
 }

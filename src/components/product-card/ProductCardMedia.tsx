@@ -10,9 +10,21 @@ interface ProductCardMediaProps {
   isService: boolean;
   isHybrid: boolean;
   isOutOfStock: boolean;
+  canOpenGallery?: boolean;
+  imageCount?: number;
+  onOpenGallery?: () => void;
 }
 
-export function ProductCardMedia({ product, isDigital, isService, isHybrid, isOutOfStock }: ProductCardMediaProps) {
+export function ProductCardMedia({
+  product,
+  isDigital,
+  isService,
+  isHybrid,
+  isOutOfStock,
+  canOpenGallery = false,
+  imageCount = 0,
+  onOpenGallery
+}: ProductCardMediaProps) {
   return (
     <div className="relative shrink-0 overflow-hidden rounded-t-2xl bg-[var(--product-card-soft)]">
       {isDigital && (
@@ -58,6 +70,26 @@ export function ProductCardMedia({ product, isDigital, isService, isHybrid, isOu
         alt={product.name}
         className="w-full aspect-[4/3] object-cover transition-transform duration-500 sm:group-hover:scale-[1.02]"
       />
+
+      {canOpenGallery && (
+        <>
+          <button
+            type="button"
+            className="absolute inset-0 z-[2] cursor-zoom-in"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpenGallery?.();
+            }}
+            aria-label={`Open ${product.name} image gallery`}
+          />
+          {imageCount > 1 && (
+            <div className="pointer-events-none absolute bottom-2 right-2 z-[3] rounded-full border border-white/20 bg-black/55 px-2 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm">
+              {imageCount} photos
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
