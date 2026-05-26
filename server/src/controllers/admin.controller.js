@@ -20,6 +20,20 @@ const paymentService = new PaymentService();
 
 dotenv.config();
 
+function getWithdrawalReservedAmount(request) {
+  let metadata = request?.metadata || {};
+  if (typeof metadata === 'string') {
+    try {
+      metadata = JSON.parse(metadata || '{}');
+    } catch {
+      metadata = {};
+    }
+  }
+  const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
+  const amount = Number.parseFloat(request?.amount || 0);
+  return amount + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0);
+}
+
 // Admin login (kept as is, simple enough)
 // Admin login with Email/Password
 const adminLogin = async (req, res, next) => {
@@ -487,7 +501,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
         throw new AppError(`Already finalized as "${lockedRequest.status}" — cannot override`, 400);
       }
 
-      if (status === 'failed' && lockedRequest.seller_id) {
+      if (lockedRequest.seller_id) {
         await sellerRepository.lockById(lockedRequest.seller_id, client);
       }
 
@@ -504,6 +518,14 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
       let newBalance = null;
       if (status === 'failed') {
         newBalance = await payoutService.refundToWallet(client, request);
+      } else if (status === 'completed' && request.seller_id) {
+        await client.query(
+          `UPDATE sellers
+           SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+               updated_at = NOW()
+           WHERE id = $2`,
+          [getWithdrawalReservedAmount(request), request.seller_id]
+        );
       }
 
       const updatedEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.UPDATED, {

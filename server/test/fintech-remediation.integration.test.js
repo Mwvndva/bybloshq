@@ -31,7 +31,11 @@ async function runtime() {
             import('../src/services/inventoryReservation.service.js'),
             import('../src/services/logisticsRequest.service.js'),
             import('../src/providers/PaystackProviderClient.js'),
-            import('../src/events/eventBus.js')
+            import('../src/events/eventBus.js'),
+            import('../src/services/EscrowManager.js'),
+            import('../src/services/creator.service.js'),
+            import('../src/services/settlement.service.js'),
+            import('../src/services/withdrawal.service.js')
         ]).then(([
             database,
             corePayment,
@@ -42,7 +46,11 @@ async function runtime() {
             inventoryReservation,
             logisticsRequest,
             paystackProviderClient,
-            eventBusModule
+            eventBusModule,
+            escrowManager,
+            creatorService,
+            settlementService,
+            withdrawalService
         ]) => ({
             pool: database.pool,
             CorePaymentService: corePayment.default,
@@ -53,7 +61,11 @@ async function runtime() {
             InventoryReservationService: inventoryReservation.default,
             LogisticsRequestService: logisticsRequest.default,
             PaystackProviderClient: paystackProviderClient.default,
-            eventBus: eventBusModule.default
+            eventBus: eventBusModule.default,
+            EscrowManager: escrowManager.default,
+            CreatorService: creatorService.default,
+            settlementService: settlementService.default,
+            WithdrawalService: withdrawalService.default
         }));
     }
     return runtimePromise;
@@ -328,6 +340,130 @@ test('payment cron race guard claims pending rows with SKIP LOCKED and delegates
     assert.doesNotMatch(paymentService, /\|\|\s*payment\.amount/);
 });
 
+test('completed order creates pending settlement instead of withdrawable seller balance', async () => {
+    const {
+        EscrowManager,
+        CreatorService
+    } = await runtime();
+
+    const order = {
+        id: 900,
+        order_number: 'BYB-900',
+        status: 'COMPLETED',
+        seller_id: 77,
+        seller_payout_amount: '490.00',
+        total_amount: '500.00'
+    };
+    const client = new FakeClient([
+        respond(text => /SELECT id FROM payments/.test(text), [{ id: 333 }]),
+        respond(text => /FROM logistics_requests/.test(text), []),
+        respond(text => /INSERT INTO payouts/.test(text), [{ id: 444 }]),
+        respond(text => /UPDATE sellers/.test(text) && /pending_settlement_balance/.test(text), [{
+            balance: '0.00',
+            pending_settlement_balance: '490.00',
+            net_revenue: '490.00',
+            total_sales: '500.00'
+        }]),
+        respond(text => /UPDATE product_orders/.test(text), [])
+    ]);
+
+    await withPatches([
+        [CreatorService, 'creditCreatorForOrder', async () => {}],
+        [CreatorService, 'creditCreatorReferralForSeller', async () => {}]
+    ], async () => {
+        const result = await EscrowManager.releaseFunds(client, order, 'test');
+        assert.equal(result.success, true);
+        assert.equal(result.alreadyReleased, false);
+        assert.ok(result.availableAt instanceof Date);
+    });
+
+    const insert = client.queries.find(query => /INSERT INTO payouts/.test(query.text));
+    const sellerUpdate = client.queries.find(query => /UPDATE sellers/.test(query.text));
+    assert.match(insert.text, /'pending'/);
+    assert.match(insert.text, /'pending_settlement'/);
+    assert.match(sellerUpdate.text, /pending_settlement_balance = COALESCE\(pending_settlement_balance, 0\) \+ \$1/);
+    assert.doesNotMatch(sellerUpdate.text, /balance\s*=\s*COALESCE\(balance, 0\)\s*\+\s*\$1/);
+});
+
+test('settlement promotion moves eligible pending funds into available balance', async () => {
+    const { settlementService } = await runtime();
+    const client = new FakeClient([
+        respond(text => /FROM payouts/.test(text) && /FOR UPDATE SKIP LOCKED/.test(text), [{
+            id: 444,
+            seller_id: 77,
+            amount: '490.00'
+        }]),
+        respond(text => /UPDATE sellers/.test(text) && /pending_settlement_balance/.test(text), [{ id: 77 }]),
+        respond(text => /UPDATE payouts/.test(text) && /settlement_status = 'settled'/.test(text), [{ id: 444 }])
+    ]);
+
+    const result = await settlementService.promoteEligibleSettlements(client, { limit: 10 });
+
+    assert.deepEqual(result, { scanned: 1, promoted: 1 });
+    assert.ok(indexOfQuery(client, /FROM payouts .* FOR UPDATE SKIP LOCKED/) < indexOfQuery(client, /UPDATE sellers/));
+    assert.ok(indexOfQuery(client, /UPDATE sellers/) < indexOfQuery(client, /UPDATE payouts/));
+});
+
+test('withdrawal before settlement fails with insufficient available balance copy', async () => {
+    const {
+        pool,
+        WithdrawalService
+    } = await runtime();
+
+    const client = new FakeClient([
+        respond(text => /FROM sellers/.test(text) && /FOR UPDATE/.test(text), [{
+            id: 77,
+            balance: '0.00',
+            pending_settlement_balance: '490.00',
+            withdrawal_reserved_balance: '0.00',
+            full_name: 'Seller',
+            whatsapp_number: '0712345678'
+        }]),
+        respond(text => /FROM withdrawal_requests/.test(text) && /FOR UPDATE/.test(text), [])
+    ]);
+
+    await withPatches([
+        [pool, 'connect', async () => client]
+    ], async () => {
+        await assert.rejects(
+            () => WithdrawalService.createWithdrawalRequest({
+                entityId: 77,
+                entityType: 'seller',
+                amount: 100,
+                mpesaNumber: '0712345678',
+                mpesaName: 'Seller',
+                idempotencyKey: 'WD-PENDING-SETTLEMENT'
+            }),
+            /Recent sales may still be pending Paystack settlement/
+        );
+    });
+
+    assert.equal(indexOfQuery(client, /UPDATE sellers/), -1);
+    assert.ok(indexOfQuery(client, /^ROLLBACK$/) > indexOfQuery(client, /FROM withdrawal_requests/));
+});
+
+test('refund before settlement consumes pending payout before it can mature', async () => {
+    const { settlementService } = await runtime();
+    const client = new FakeClient([
+        respond(text => /FROM payouts/.test(text) && /FOR UPDATE/.test(text), [{
+            id: 444,
+            seller_id: 77,
+            amount: '490.00',
+            settlement_status: 'pending_settlement',
+            status: 'pending'
+        }]),
+        respond(text => /UPDATE sellers/.test(text) && /refund_reserved_balance/.test(text), [{ id: 77 }]),
+        respond(text => /UPDATE payouts/.test(text) && /refunded_before_settlement/.test(text), [{ id: 444 }])
+    ]);
+
+    const result = await settlementService.reverseOrderSettlementForRefund(client, 900, 'test_refund');
+
+    assert.equal(result.adjusted, true);
+    assert.equal(result.bucket, 'pending_settlement');
+    assert.equal(result.amount, 490);
+    assert.ok(indexOfQuery(client, /UPDATE sellers/) < indexOfQuery(client, /UPDATE payouts/));
+});
+
 test('withdrawal callback race locks request and records late provider success as compensation', async () => {
     const {
         pool,
@@ -494,7 +630,9 @@ test('Paystack transfer success completes withdrawal without refunding wallet', 
     };
     const client = new FakeClient([
         respond(text => /WITH matched_ids AS/.test(text) && /FOR UPDATE OF wr/.test(text), [request]),
+        respond(text => /SELECT id FROM sellers WHERE id = \$1 FOR UPDATE/.test(text), [{ id: 17 }]),
         respond(text => /UPDATE withdrawal_requests/.test(text) && /status = \$1/.test(text), [{ ...request, status: 'completed' }]),
+        respond(text => /UPDATE sellers/.test(text) && /withdrawal_reserved_balance/.test(text), [{ id: 17 }]),
         respond(text => /UPDATE payout_provider_attempts/.test(text), [])
     ]);
     const dispatched = [];
@@ -520,7 +658,8 @@ test('Paystack transfer success completes withdrawal without refunding wallet', 
         assert.equal(result.withdrawalId, 52);
     });
 
-    assert.equal(indexOfQuery(client, /SELECT id FROM sellers/), -1);
+    assert.ok(indexOfQuery(client, /SELECT id FROM sellers/) < indexOfQuery(client, /UPDATE withdrawal_requests/));
+    assert.ok(indexOfQuery(client, /UPDATE withdrawal_requests/) < indexOfQuery(client, /UPDATE sellers/));
     assert.ok(indexOfQuery(client, /UPDATE withdrawal_requests/) < indexOfQuery(client, /^COMMIT$/));
     assert.deepEqual(dispatched, [
         'withdrawal.updated:52:completed',

@@ -25,7 +25,7 @@ export async function countAvailableProducts(sellerId) {
  * @param {number|string} input.sellerId
  * @param {string[]} input.excludedStatuses  Order statuses excluded from
  *                                           financial aggregates.
- * @returns {Promise<{total_sales: string, net_revenue: string, balance: string, client_count: number, creator_count: number, creator_generated_sales: string}>}
+ * @returns {Promise<{total_sales: string, net_revenue: string, balance: string, available_balance: string, pending_settlement_balance: string, withdrawal_reserved_balance: string, refund_reserved_balance: string, next_settlement_at: string|null, client_count: number, creator_count: number, creator_generated_sales: string}>}
  */
 export async function findSellerStats({ sellerId, excludedStatuses }) {
   const sql = `
@@ -33,6 +33,11 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       COALESCE(financials.total_sales, 0) as total_sales,
       COALESCE(financials.net_revenue, 0) as net_revenue,
       COALESCE(s.balance, 0) as balance,
+      COALESCE(s.balance, 0) as available_balance,
+      COALESCE(s.pending_settlement_balance, 0) as pending_settlement_balance,
+      COALESCE(s.withdrawal_reserved_balance, 0) as withdrawal_reserved_balance,
+      COALESCE(s.refund_reserved_balance, 0) as refund_reserved_balance,
+      next_settlement.next_settlement_at,
       COALESCE(s.client_count, 0) as client_count,
       COALESCE(creator_links.creator_count, 0) as creator_count,
       COALESCE(creator_sales.creator_generated_sales, 0) as creator_generated_sales
@@ -44,7 +49,7 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       FROM product_orders o
       JOIN payouts p
         ON p.order_id = o.id
-       AND p.status = 'completed'
+       AND p.settlement_status IN ('pending_settlement', 'settled', 'refunded_after_settlement', 'refunded_before_settlement')
       WHERE o.seller_id = s.id
         AND o.payment_status = 'completed'
         AND o.status::text <> ALL($2::text[])
@@ -62,12 +67,19 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       FROM product_orders o
       JOIN payouts p
         ON p.order_id = o.id
-       AND p.status = 'completed'
+       AND p.settlement_status IN ('pending_settlement', 'settled', 'refunded_after_settlement', 'refunded_before_settlement')
       WHERE o.seller_id = s.id
         AND o.payment_status = 'completed'
         AND o.status::text <> ALL($2::text[])
         AND COALESCE(o.metadata, '{}'::jsonb) ? 'creator_attribution'
     ) creator_sales ON true
+    LEFT JOIN LATERAL (
+      SELECT MIN(p.available_at) AS next_settlement_at
+      FROM payouts p
+      WHERE p.seller_id = s.id
+        AND p.settlement_status = 'pending_settlement'
+        AND p.available_at IS NOT NULL
+    ) next_settlement ON true
     WHERE s.id = $1
   `;
   const { rows } = await query(sql, [sellerId, excludedStatuses]);
@@ -85,17 +97,17 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
 export async function findMonthlySales({ sellerId, excludedStatuses }) {
   const sql = `
     SELECT
-      TO_CHAR(COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at), 'YYYY-MM') as month,
+      TO_CHAR(COALESCE(p.completed_at, p.processed_at, p.available_at, o.updated_at, o.created_at), 'YYYY-MM') as month,
       COALESCE(SUM(o.total_amount), 0) as sales
     FROM product_orders o
     JOIN payouts p
       ON p.order_id = o.id
-     AND p.status = 'completed'
+     AND p.settlement_status IN ('pending_settlement', 'settled', 'refunded_after_settlement', 'refunded_before_settlement')
     WHERE o.seller_id = $1
       AND o.payment_status = 'completed'
       AND o.status::text <> ALL($2::text[])
-      AND COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at) >= NOW() - INTERVAL '12 months'
-    GROUP BY TO_CHAR(COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at), 'YYYY-MM')
+      AND COALESCE(p.completed_at, p.processed_at, p.available_at, o.updated_at, o.created_at) >= NOW() - INTERVAL '12 months'
+    GROUP BY TO_CHAR(COALESCE(p.completed_at, p.processed_at, p.available_at, o.updated_at, o.created_at), 'YYYY-MM')
     ORDER BY month
   `;
   const { rows } = await query(sql, [sellerId, excludedStatuses]);
@@ -134,11 +146,11 @@ export async function findRecentOrders({ sellerId, excludedStatuses }) {
     FROM product_orders o
     JOIN payouts p
       ON p.order_id = o.id
-     AND p.status = 'completed'
+     AND p.settlement_status IN ('pending_settlement', 'settled', 'refunded_after_settlement', 'refunded_before_settlement')
     WHERE o.seller_id = $1
       AND o.payment_status = 'completed'
       AND o.status::text <> ALL($2::text[])
-    ORDER BY COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at) DESC
+    ORDER BY COALESCE(p.completed_at, p.processed_at, p.available_at, o.updated_at, o.created_at) DESC
     LIMIT 8
   `;
   const { rows } = await query(sql, [sellerId, excludedStatuses]);
