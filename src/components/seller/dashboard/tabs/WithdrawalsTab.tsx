@@ -10,6 +10,10 @@ import type { WithdrawalRequest } from '../types';
 
 interface WithdrawalsTabProps {
   balance: number;
+  pendingSettlementBalance?: number;
+  withdrawalReservedBalance?: number;
+  refundReservedBalance?: number;
+  nextSettlementAt?: string | null;
   endDate: string;
   filteredWithdrawals: WithdrawalRequest[];
   handleWithdrawalRequest: (event: React.FormEvent) => Promise<void>;
@@ -30,6 +34,10 @@ const formatKes = (amount: number) => {
 
 export function WithdrawalsTab({
   balance,
+  pendingSettlementBalance = 0,
+  withdrawalReservedBalance = 0,
+  refundReservedBalance = 0,
+  nextSettlementAt = null,
   endDate,
   filteredWithdrawals,
   handleWithdrawalRequest,
@@ -48,6 +56,9 @@ export function WithdrawalsTab({
   const totalDeducted = Number.isFinite(requestedAmount) && requestedAmount >= MIN_WITHDRAWAL_AMOUNT
     ? requestedAmount + withdrawalFee
     : 0;
+  const nextSettlementLabel = nextSettlementAt
+    ? new Date(nextSettlementAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Pending schedule';
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
@@ -56,15 +67,54 @@ export function WithdrawalsTab({
         <p className="text-slate-700 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
       </div>
 
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
-          <div className="flex-1">
-            <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Available Balance</h3>
-            <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Current balance for withdrawal</p>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg sm:rounded-xl p-3 md:p-4 w-full sm:w-auto">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Available to Withdraw</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Settled Paystack funds</p>
+            </div>
             <p className="text-lg sm:text-xl md:text-2xl font-black text-green-800">
               {formatKes(balance)}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Pending Settlement</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Recent sales become withdrawable after Paystack settlement.</p>
+            </div>
+            <div>
+              <p className="text-lg sm:text-xl md:text-2xl font-black text-yellow-700">
+                {formatKes(pendingSettlementBalance)}
+              </p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-500">Next: {nextSettlementLabel}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Withdrawal Reserve</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Processing transfers</p>
+            </div>
+            <p className="text-lg sm:text-xl md:text-2xl font-black text-slate-800">
+              {formatKes(withdrawalReservedBalance)}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Refund Reserve</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Protected buyer refunds</p>
+            </div>
+            <p className="text-lg sm:text-xl md:text-2xl font-black text-slate-800">
+              {formatKes(refundReservedBalance)}
             </p>
           </div>
         </div>
@@ -77,7 +127,7 @@ export function WithdrawalsTab({
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-black text-[10px] sm:text-xs">Minimum: KSh {MIN_WITHDRAWAL_AMOUNT}</h4>
           <p className="text-black text-[9px] sm:text-[10px] mt-0.5 leading-tight">
-            Withdrawal charges are deducted from your seller balance together with the requested amount.
+            Withdrawal charges are deducted from your available balance together with the requested amount.
           </p>
           <div className="mt-2 grid gap-1 text-[9px] sm:text-[10px] font-semibold text-black sm:grid-cols-3">
             {WITHDRAWAL_FEE_TIERS.map((tier) => (

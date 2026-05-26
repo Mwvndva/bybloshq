@@ -35,6 +35,20 @@ export function providerPayloadIndicatesReversal(data = {}) {
     return normalizedEvent === 'transfer.reversed' || normalizedStatus === 'reversed';
 }
 
+function getWithdrawalReservedAmount(request) {
+    let metadata = request?.metadata || {};
+    if (typeof metadata === 'string') {
+        try {
+            metadata = JSON.parse(metadata || '{}');
+        } catch {
+            metadata = {};
+        }
+    }
+    const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
+    const amount = Number.parseFloat(request?.amount || 0);
+    return amount + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0);
+}
+
 class PayoutCallbackStateMachineService {
     async handleProviderCallback(providerPayload = {}, context = {}) {
         const data = providerPayload?.data || providerPayload || {};
@@ -246,7 +260,7 @@ class PayoutCallbackStateMachineService {
             }
 
             let newBalance = null;
-            if (!isSuccess) {
+            if (request.seller_id) {
                 await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
             }
 
@@ -291,6 +305,14 @@ class PayoutCallbackStateMachineService {
 
             if (!isSuccess) {
                 newBalance = await payoutService.refundToWallet(client, request);
+            } else {
+                await client.query(
+                    `UPDATE sellers
+                     SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                         updated_at = NOW()
+                     WHERE id = $2`,
+                    [getWithdrawalReservedAmount(request), request.seller_id]
+                );
             }
 
             await this.updatePayoutProviderAttempt(client, request.id, transactionReference, finalStatus, data);

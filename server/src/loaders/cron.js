@@ -1,6 +1,7 @@
 import { schedulePaymentProcessing } from '../cron/paymentCron.js';
 import { schedulePayoutReconciliation } from '../cron/payoutCleanup.js';
 import { scheduleReferralRewards } from '../cron/referralCron.js';
+import { scheduleSettlementPromotion } from '../cron/settlementCron.js';
 import logger from '../shared/utils/logger.js';
 
 export default async () => {
@@ -39,6 +40,16 @@ export default async () => {
             logger.info('Payout reconciliation cron started');
         } catch (err) {
             logger.error('Failed to start payout reconciliation cron:', err.message);
+        }
+    }
+
+    // 5c. Settlement promotion
+    if (process.env.ENABLE_SETTLEMENT_PROMOTION_CRON !== 'false') {
+        try {
+            scheduleSettlementPromotion();
+            logger.info('Settlement promotion cron started');
+        } catch (err) {
+            logger.error('Failed to start settlement promotion cron:', err.message);
         }
     }
 

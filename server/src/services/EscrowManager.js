@@ -1,10 +1,11 @@
 import logger from '../shared/utils/logger.js';
 import CreatorService from './creator.service.js';
+import settlementService from './settlement.service.js';
 
 class EscrowManager {
     /**
-     * Release funds from escrow to a seller's wallet.
-     * This handles balance updates, revenue tracking, and payout record completion.
+     * Release funds from escrow to a seller's pending settlement wallet.
+     * Earnings are visible immediately, but withdrawable only after settlement.
      * 
      * @param {Object} client - DB client for transaction support
      * @param {Object} order - The order object
@@ -90,16 +91,33 @@ class EscrowManager {
             return { success: true };
         }
 
+        const availableAt = settlementService.calculateAvailableAt(new Date());
+
         // 3. Create payout row first. This is the idempotency gate.
         // If another transaction already inserted this order_id, do not credit the wallet.
         const { rows: insertedPayouts } = await client.query(
             `INSERT INTO payouts
                (seller_id, order_id, payment_id, amount, platform_fee, status,
-                payment_method, processed_at, completed_at, metadata)
-             VALUES ($1, $2, $3, $4, $5, 'completed', 'wallet_credit', NOW(), NOW(), $6)
+                payment_method, processed_at, completed_at, available_at,
+                settlement_status, metadata, settlement_metadata)
+             VALUES ($1, $2, $3, $4, $5, 'pending', 'wallet_credit', NOW(), NULL, $6,
+                     'pending_settlement', $7::jsonb, $8::jsonb)
              ON CONFLICT (order_id) DO NOTHING
              RETURNING id`,
-            [sellerId, orderId, paymentId, sellerPayoutAmount, platformFeeAmount, JSON.stringify({ processed_by: source })],
+            [
+                sellerId,
+                orderId,
+                paymentId,
+                sellerPayoutAmount,
+                platformFeeAmount,
+                availableAt,
+                JSON.stringify({ processed_by: source }),
+                JSON.stringify({
+                    settlement_provider: 'paystack',
+                    settlement_business_days: settlementService.getSettlementBusinessDays(),
+                    settlement_basis: 'escrow_release'
+                })
+            ],
         );
 
         if (insertedPayouts.length === 0) {
@@ -110,12 +128,12 @@ class EscrowManager {
         // 4. Update Seller Wallet exactly once after the payout idempotency gate wins.
         const { rows: updatedSellers } = await client.query(
             `UPDATE sellers
-             SET balance     = COALESCE(balance, 0)     + $1,
+             SET pending_settlement_balance = COALESCE(pending_settlement_balance, 0) + $1,
                  net_revenue = COALESCE(net_revenue, 0) + $1,
                  total_sales = COALESCE(total_sales, 0) + $2,
                  updated_at  = NOW()
              WHERE id = $3
-             RETURNING balance, net_revenue, total_sales`,
+             RETURNING balance, pending_settlement_balance, net_revenue, total_sales`,
             [sellerPayoutAmount, totalAmount, sellerId],
         );
 
@@ -137,9 +155,9 @@ class EscrowManager {
         );
 
         logger.info(
-            `[EscrowManager] Released KES ${sellerPayoutAmount} to seller ${sellerId} for Order ${orderId} (source: ${source})`,
+            `[EscrowManager] Released KES ${sellerPayoutAmount} to pending settlement for seller ${sellerId} on Order ${orderId} (source: ${source})`,
         );
-        return { success: true, alreadyReleased: false };
+        return { success: true, alreadyReleased: false, availableAt };
     }
 
     roundMoney(amount) {

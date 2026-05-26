@@ -56,8 +56,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     updateSellerProfile
   });
 
+  const availableBalance = analytics?.availableBalance ?? analytics?.balance ?? 0;
   const withdrawals = useSellerWithdrawals({
-    balance: analytics?.balance || 0,
+    balance: availableBalance,
     enabled: activeTab === 'withdrawals',
     toast
   });
@@ -184,7 +185,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
         {activeTab === 'withdrawals' && (
           <WithdrawalsTab
-            balance={analytics.balance}
+            balance={availableBalance}
+            pendingSettlementBalance={analytics.pendingSettlementBalance || 0}
+            withdrawalReservedBalance={analytics.withdrawalReservedBalance || 0}
+            refundReservedBalance={analytics.refundReservedBalance || 0}
+            nextSettlementAt={analytics.nextSettlementAt || null}
             {...withdrawals}
           />
         )}

@@ -69,6 +69,11 @@ export interface SellerAnalytics {
   totalRevenue: number;
   totalPayout: number;
   balance: number;
+  availableBalance?: number;
+  pendingSettlementBalance?: number;
+  withdrawalReservedBalance?: number;
+  refundReservedBalance?: number;
+  nextSettlementAt?: string | null;
   clientCount: number;
   creatorCount: number;
   creatorGeneratedSales: number;
