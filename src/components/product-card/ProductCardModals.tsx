@@ -20,6 +20,9 @@ interface ProductCardModalsProps {
   initialBuyerLocation: BuyerLocationPayload | null;
   shouldSkipSave: boolean;
   isPhysicalProduct: boolean;
+  isCustomProduct: boolean;
+  productionDays?: number | null;
+  customizationPrompt?: string | null;
   paymentModalData: {
     isOpen: boolean;
     orderNumber: string | null;
@@ -62,6 +65,9 @@ export function ProductCardModals({
   initialBuyerLocation,
   shouldSkipSave,
   isPhysicalProduct,
+  isCustomProduct,
+  productionDays = null,
+  customizationPrompt = null,
   paymentModalData,
   onPhoneCheckClose,
   onBuyerModalClose,
@@ -79,9 +85,9 @@ export function ProductCardModals({
         onPhoneSubmit={onPhoneSubmit}
         isLoading={isCheckingPhone}
         isPhysicalProduct={isPhysicalProduct}
-        isCustomProduct={Boolean((product as any).is_custom_product || (product as any).isCustomProduct)}
-        productionDays={(product as any).production_days || (product as any).productionDays || null}
-        customizationPrompt={(product as any).customization_prompt || (product as any).customizationPrompt || null}
+        isCustomProduct={isCustomProduct}
+        productionDays={productionDays}
+        customizationPrompt={customizationPrompt}
         purchaseDetails={{
           shopName: displaySellerName,
           productName: product.name,
