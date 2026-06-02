@@ -15,24 +15,11 @@ import { PaymentService } from '../services/payment.service.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
 import LogisticsDashboardService from '../services/logisticsDashboard.service.js';
+import { getWithdrawalReservedAmount } from '../shared/utils/withdrawalUtils.js';
 
 const paymentService = new PaymentService();
 
 dotenv.config();
-
-function getWithdrawalReservedAmount(request) {
-  let metadata = request?.metadata || {};
-  if (typeof metadata === 'string') {
-    try {
-      metadata = JSON.parse(metadata || '{}');
-    } catch {
-      metadata = {};
-    }
-  }
-  const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
-  const amount = Number.parseFloat(request?.amount || 0);
-  return amount + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0);
-}
 
 // Admin login (kept as is, simple enough)
 // Admin login with Email/Password

@@ -402,6 +402,17 @@ test('settlement promotion moves eligible pending funds into available balance',
     assert.deepEqual(result, { scanned: 1, promoted: 1 });
     assert.ok(indexOfQuery(client, /FROM payouts .* FOR UPDATE SKIP LOCKED/) < indexOfQuery(client, /UPDATE sellers/));
     assert.ok(indexOfQuery(client, /UPDATE sellers/) < indexOfQuery(client, /UPDATE payouts/));
+    const sellerUpdate = client.queries[indexOfQuery(client, /UPDATE sellers/)];
+    const payoutUpdate = client.queries[indexOfQuery(client, /UPDATE payouts/)];
+    assert.match(
+        sellerUpdate.text,
+        /pending_settlement_balance = GREATEST\(COALESCE\(pending_settlement_balance, 0\) - \$1, 0\)/
+    );
+    assert.match(sellerUpdate.text, /balance = COALESCE\(balance, 0\) \+ \$1/);
+    assert.match(payoutUpdate.text, /status = 'completed'/);
+    assert.match(payoutUpdate.text, /settlement_status = 'settled'/);
+    assert.deepEqual(sellerUpdate.params, [490, 77]);
+    assert.deepEqual(payoutUpdate.params, [444, JSON.stringify({ promoted_by: 'settlement_service' })]);
 });
 
 test('withdrawal before settlement fails with insufficient available balance copy', async () => {
@@ -462,6 +473,16 @@ test('refund before settlement consumes pending payout before it can mature', as
     assert.equal(result.bucket, 'pending_settlement');
     assert.equal(result.amount, 490);
     assert.ok(indexOfQuery(client, /UPDATE sellers/) < indexOfQuery(client, /UPDATE payouts/));
+    const sellerUpdate = client.queries[indexOfQuery(client, /UPDATE sellers/)];
+    const payoutUpdate = client.queries[indexOfQuery(client, /UPDATE payouts/)];
+    assert.match(
+        sellerUpdate.text,
+        /pending_settlement_balance = GREATEST\(COALESCE\(pending_settlement_balance, 0\) - \$1, 0\)/
+    );
+    assert.match(sellerUpdate.text, /refund_reserved_balance = COALESCE\(refund_reserved_balance, 0\) \+ \$1/);
+    assert.match(payoutUpdate.text, /status = 'refunded'/);
+    assert.match(payoutUpdate.text, /settlement_status = 'refunded_before_settlement'/);
+    assert.deepEqual(sellerUpdate.params, [490, 77]);
 });
 
 test('withdrawal callback race locks request and records late provider success as compensation', async () => {
@@ -626,7 +647,11 @@ test('Paystack transfer success completes withdrawal without refunding wallet', 
         status: 'processing',
         provider_reference: 'TRF-SUCCESS',
         idempotency_key: 'WD-SUCCESS',
-        entity_phone: '0712345678'
+        entity_phone: '0712345678',
+        metadata: {
+            withdrawal_fee: 10,
+            total_deducted: 85
+        }
     };
     const client = new FakeClient([
         respond(text => /WITH matched_ids AS/.test(text) && /FOR UPDATE OF wr/.test(text), [request]),
@@ -660,6 +685,7 @@ test('Paystack transfer success completes withdrawal without refunding wallet', 
 
     assert.ok(indexOfQuery(client, /SELECT id FROM sellers/) < indexOfQuery(client, /UPDATE withdrawal_requests/));
     assert.ok(indexOfQuery(client, /UPDATE withdrawal_requests/) < indexOfQuery(client, /UPDATE sellers/));
+    assert.deepEqual(client.queries[indexOfQuery(client, /UPDATE sellers/)].params, [85, 17]);
     assert.ok(indexOfQuery(client, /UPDATE withdrawal_requests/) < indexOfQuery(client, /^COMMIT$/));
     assert.deepEqual(dispatched, [
         'withdrawal.updated:52:completed',
@@ -682,7 +708,11 @@ test('Paystack transfer failure refunds seller wallet once', async () => {
         status: 'processing',
         provider_reference: 'TRF-FAILED',
         idempotency_key: 'WD-FAILED',
-        entity_phone: '0712345678'
+        entity_phone: '0712345678',
+        metadata: {
+            withdrawal_fee: 10,
+            total_deducted: 90
+        }
     };
     const client = new FakeClient([
         respond(text => /WITH matched_ids AS/.test(text) && /FOR UPDATE OF wr/.test(text), [request]),
@@ -695,7 +725,10 @@ test('Paystack transfer failure refunds seller wallet once', async () => {
     await withPatches([
         [pool, 'connect', async () => client],
         [payoutService, 'refundToWallet', async (_client, refundedRequest) => {
-            refunds.push(refundedRequest.id);
+            refunds.push({
+                id: refundedRequest.id,
+                totalDeducted: refundedRequest.metadata.total_deducted
+            });
             return 980;
         }],
         [eventBus, 'enqueueInTransaction', async (_client, event, data) => ({ eventId: data.eventId || `${event}:test` })],
@@ -713,7 +746,7 @@ test('Paystack transfer failure refunds seller wallet once', async () => {
         assert.equal(result.withdrawalId, 53);
     });
 
-    assert.deepEqual(refunds, [53]);
+    assert.deepEqual(refunds, [{ id: 53, totalDeducted: 90 }]);
     assert.ok(indexOfQuery(client, /SELECT id FROM sellers/) < indexOfQuery(client, /UPDATE withdrawal_requests/));
     assert.ok(indexOfQuery(client, /UPDATE withdrawal_requests/) < indexOfQuery(client, /^COMMIT$/));
 });

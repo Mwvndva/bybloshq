@@ -8,6 +8,7 @@ import PayoutCallbackStateMachineService, {
     providerPayloadIndicatesFailure
 } from './payoutCallbackStateMachine.service.js';
 import WithdrawalRetryWorkerService from './withdrawalRetryWorker.service.js';
+import { getWithdrawalReservedAmount } from '../shared/utils/withdrawalUtils.js';
 
 const AMBIGUOUS_PAYOUT_ERROR_CODES = new Set([
     'CONNECTION_FAILED',
@@ -27,20 +28,6 @@ function isAmbiguousPayoutProviderError(error) {
     if (AMBIGUOUS_PAYOUT_ERROR_CODES.has(error?.code)) return true;
     if (!status && (error?.request || error?.code)) return true;
     return Number.isFinite(status) && status >= 500;
-}
-
-function getWithdrawalReservedAmount(request) {
-    let metadata = request?.metadata || {};
-    if (typeof metadata === 'string') {
-        try {
-            metadata = JSON.parse(metadata || '{}');
-        } catch {
-            metadata = {};
-        }
-    }
-    const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
-    const amount = Number.parseFloat(request?.amount || 0);
-    return amount + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0);
 }
 
 /**

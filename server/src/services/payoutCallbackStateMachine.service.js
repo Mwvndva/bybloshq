@@ -2,6 +2,7 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import payoutService from './payout.service.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import { getWithdrawalReservedAmount } from '../shared/utils/withdrawalUtils.js';
 
 const PAYOUT_SUCCESS_STATUSES = new Set(['0', 'success', 'successful', 'completed', 'complete', 'paid', 'sent', 'delivered']);
 const PAYOUT_FAILURE_STATUSES = new Set(['failed', 'failure', 'cancelled', 'canceled', 'rejected', 'reversed', 'error']);
@@ -33,20 +34,6 @@ export function providerPayloadIndicatesReversal(data = {}) {
     const normalizedEvent = normalizePayoutStatus(data.paystack_event || data.event || data.provider_event || data.raw_response?.event);
     const normalizedStatus = normalizePayoutStatus(data.status || data.state || data.result || data.transaction_status);
     return normalizedEvent === 'transfer.reversed' || normalizedStatus === 'reversed';
-}
-
-function getWithdrawalReservedAmount(request) {
-    let metadata = request?.metadata || {};
-    if (typeof metadata === 'string') {
-        try {
-            metadata = JSON.parse(metadata || '{}');
-        } catch {
-            metadata = {};
-        }
-    }
-    const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
-    const amount = Number.parseFloat(request?.amount || 0);
-    return amount + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0);
 }
 
 class PayoutCallbackStateMachineService {
@@ -305,7 +292,7 @@ class PayoutCallbackStateMachineService {
 
             if (!isSuccess) {
                 newBalance = await payoutService.refundToWallet(client, request);
-            } else {
+            } else if (request.seller_id) {
                 await client.query(
                     `UPDATE sellers
                      SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
