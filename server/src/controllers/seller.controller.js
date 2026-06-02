@@ -626,6 +626,12 @@ async function getSellerProductsFromDB(sellerId) {
       p.updated_at AS "updatedAt",
       p.is_digital AS "isDigital",
       p.product_type AS "productType",
+      p.is_custom_product,
+      p.production_days,
+      p.customization_prompt,
+      p.is_imported_product,
+      p.import_days,
+      p.import_note,
       p.service_locations AS "serviceLocations",
       p.service_options AS "serviceOptions",
       s.shop_name AS "sellerName"
