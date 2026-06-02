@@ -2,13 +2,15 @@ import { Badge } from '@/components/ui/badge';
 import ProductImage from '@/components/common/ProductImage';
 import type { Product } from '@/types';
 import { formatFileSize } from '@/lib/utils';
-import { FileText, Handshake } from 'lucide-react';
+import { FileText, Handshake, Plane } from 'lucide-react';
 
 interface ProductCardMediaProps {
   product: Product;
   isDigital: boolean;
   isService: boolean;
   isHybrid: boolean;
+  isImportedProduct?: boolean;
+  importDays?: number | null;
   isOutOfStock: boolean;
   canOpenGallery?: boolean;
   imageCount?: number;
@@ -20,6 +22,8 @@ export function ProductCardMedia({
   isDigital,
   isService,
   isHybrid,
+  isImportedProduct = false,
+  importDays = null,
   isOutOfStock,
   canOpenGallery = false,
   imageCount = 0,
@@ -52,6 +56,18 @@ export function ProductCardMedia({
               Hybrid
             </Badge>
           )}
+        </div>
+      )}
+
+      {isImportedProduct && !isDigital && !isService && (
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+          <Badge className="border-yellow-200 bg-yellow-400 text-black font-semibold shadow-sm backdrop-blur-sm">
+            <Plane className="h-3 w-3 mr-1" />
+            Imported
+          </Badge>
+          <Badge className="border-[var(--product-card-border)] bg-white/95 text-slate-800 text-[10px] py-0.5 px-2 backdrop-blur-md rounded-full shadow-sm">
+            Ready in {importDays || 14} days
+          </Badge>
         </div>
       )}
 
