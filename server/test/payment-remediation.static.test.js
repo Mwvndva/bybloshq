@@ -1566,6 +1566,7 @@ test('imported physical products expose pre-order ready SLA without customizatio
   const productService = read('src/services/product.service.js');
   const paymentService = read('src/services/payment.service.js');
   const paymentController = read('src/controllers/payment.controller.js');
+  const sellerController = read('src/controllers/seller.controller.js');
   const core = read('src/core/CorePaymentService.js');
   const whatsapp = read('src/services/whatsapp.service.js');
   const phoneModal = read('../src/components/PhoneCheckModal.tsx');
@@ -1591,6 +1592,9 @@ test('imported physical products expose pre-order ready SLA without customizatio
   assert.doesNotMatch(paymentService, /isImportedProduct[\s\S]{0,300}Customization instructions are required/);
   assert.match(paymentController, /Imported product is misconfigured/);
   assert.match(paymentController, /Product cannot be both custom and imported/);
+  assert.match(sellerController, /p\.is_imported_product/);
+  assert.match(sellerController, /p\.import_days/);
+  assert.match(sellerController, /p\.import_note/);
 
   assert.match(core, /import_waiting/);
   assert.match(whatsapp, /Imported \/ pre-order item/);
