@@ -98,6 +98,30 @@ function isSellerPickupFeePayment(metadata = {}) {
         || meta.logistics_payment_type === 'seller_pickup_fee';
 }
 
+function resolveCustomProductionPatch(orderRow = {}, paidAt = new Date()) {
+    const metadata = parseJson(orderRow.metadata);
+    const customProduct = metadata.custom_product || {};
+    if (customProduct.is_custom_product !== true) return null;
+
+    const productionDays = Number.parseInt(customProduct.production_days, 10);
+    if (!Number.isInteger(productionDays) || productionDays < 1 || productionDays > 5) return null;
+
+    const productionDeadline = new Date(paidAt.getTime() + productionDays * 24 * 60 * 60 * 1000);
+    const graceDeadline = new Date(productionDeadline.getTime() + 24 * 60 * 60 * 1000);
+
+    return {
+        productionDeadline,
+        graceDeadline,
+        metadataPatch: {
+            custom_product: {
+                ...customProduct,
+                production_deadline_at: productionDeadline.toISOString(),
+                production_grace_deadline_at: graceDeadline.toISOString()
+            }
+        }
+    };
+}
+
 async function recordFraudEvent(event) {
     try {
         await pool.query(
@@ -422,13 +446,14 @@ const CorePaymentService = {
 
             const logisticsFeePayment = isSellerPickupFeePayment(paymentRow.metadata);
             const receipt = normalizeReceiptForColumn(extractReceipt(providerPayload));
+            const completedAt = new Date();
             const completionMetadata = {
                 completion_source: source,
                 provider_status: providerStatus,
                 provider_reference: providerReference,
                 provider_amount: rawAmount ?? null,
                 ...(isSuccess ? { receipt_id: buildPaymentReceiptId(paymentRow) } : {}),
-                completed_at: isSuccess ? new Date().toISOString() : undefined,
+                completed_at: isSuccess ? completedAt.toISOString() : undefined,
                 failed_at: isFailed ? new Date().toISOString() : undefined,
                 provider_payload: providerPayload
             };
@@ -494,17 +519,43 @@ const CorePaymentService = {
                                 previousStatus: currentStatus
                             });
                         } else {
+                            const customProductionPatch = resolveCustomProductionPatch(orderRow, completedAt);
                             if (!PAID_TERMINAL_ORDER_STATUSES.has(currentStatus)) {
                                 const { rows: paidOrders } = await client.query(
                                     `UPDATE product_orders
                                      SET status = 'PAID',
                                          payment_status = 'completed',
+                                         custom_production_deadline_at = COALESCE(custom_production_deadline_at, $2),
+                                         custom_production_grace_deadline_at = COALESCE(custom_production_grace_deadline_at, $3),
+                                         metadata = COALESCE(metadata, '{}'::jsonb) || $4::jsonb,
                                          updated_at = NOW()
                                      WHERE id = $1
                                      RETURNING *`,
-                                    [orderId]
+                                    [
+                                        orderId,
+                                        customProductionPatch?.productionDeadline || null,
+                                        customProductionPatch?.graceDeadline || null,
+                                        JSON.stringify(customProductionPatch?.metadataPatch || {})
+                                    ]
                                 );
                                 orderRow = paidOrders[0];
+                            } else if (customProductionPatch && !orderRow.custom_production_deadline_at) {
+                                const { rows: updatedCustomRows } = await client.query(
+                                    `UPDATE product_orders
+                                     SET custom_production_deadline_at = $2,
+                                         custom_production_grace_deadline_at = $3,
+                                         metadata = COALESCE(metadata, '{}'::jsonb) || $4::jsonb,
+                                         updated_at = NOW()
+                                     WHERE id = $1
+                                     RETURNING *`,
+                                    [
+                                        orderId,
+                                        customProductionPatch.productionDeadline,
+                                        customProductionPatch.graceDeadline,
+                                        JSON.stringify(customProductionPatch.metadataPatch)
+                                    ]
+                                );
+                                orderRow = updatedCustomRows[0] || orderRow;
                             }
 
                             await FulfillmentQueueService.enqueue(client, orderId);

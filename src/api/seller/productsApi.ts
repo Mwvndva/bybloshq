@@ -24,6 +24,9 @@ export const transformProduct = (product: any): Product => {
     sellerId: product.sellerId || product.seller_id,
     createdAt: product.createdAt || product.created_at,
     updatedAt: product.updatedAt || product.updated_at,
+    is_custom_product: Boolean(product.is_custom_product || product.isCustomProduct),
+    production_days: product.production_days ?? product.productionDays ?? null,
+    customization_prompt: product.customization_prompt || product.customizationPrompt || null,
     isSold: product.isSold || product.is_sold || product.status === 'sold',
     status: product.status || (product.isSold || product.is_sold ? 'sold' : 'available')
   };

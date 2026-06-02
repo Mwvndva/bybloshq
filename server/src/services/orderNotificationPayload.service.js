@@ -69,8 +69,13 @@ class OrderNotificationPayloadService {
       items: items.map(i => ({
         title: i.product_name || i.name || 'Item',
         price: Number.parseFloat(i.product_price || i.price || 0),
-        quantity: Number.parseInt(i.quantity || 1, 10)
-      }))
+        quantity: Number.parseInt(i.quantity || 1, 10),
+        metadata: typeof i.metadata === 'string' ? JSON.parse(i.metadata) : (i.metadata || {})
+      })),
+      metadata,
+      customProduct: metadata.custom_product || null,
+      customProductionDeadlineAt: fullOrder.custom_production_deadline_at || metadata.custom_product?.production_deadline_at || null,
+      customProductionGraceDeadlineAt: fullOrder.custom_production_grace_deadline_at || metadata.custom_product?.production_grace_deadline_at || null
     };
   }
 

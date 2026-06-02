@@ -73,6 +73,12 @@ export interface Product {
   digital_file_size?: number;
   product_type?: ProductType;
   productType?: ProductType;
+  is_custom_product?: boolean;
+  isCustomProduct?: boolean;
+  production_days?: number | null;
+  productionDays?: number | null;
+  customization_prompt?: string | null;
+  customizationPrompt?: string | null;
   service_locations?: string;
   service_options?: {
     availability_days?: string[];

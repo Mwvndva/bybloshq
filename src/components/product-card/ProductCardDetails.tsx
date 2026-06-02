@@ -38,6 +38,8 @@ export function ProductCardDetails({
   onOpenShop
 }: ProductCardDetailsProps) {
   const serviceOptions = product.service_options || (product as any).serviceOptions;
+  const isCustomProduct = Boolean((product as any).is_custom_product || (product as any).isCustomProduct);
+  const productionDays = Number((product as any).production_days || (product as any).productionDays || 0);
   return (
     <CardContent className="flex min-h-0 flex-1 flex-col p-3 sm:p-3.5 md:p-4">
       <h3 className={cn(
@@ -71,6 +73,12 @@ export function ProductCardDetails({
           </p>
         )}
       </div>
+
+      {isCustomProduct && productionDays > 0 && (
+        <div className="mb-2 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-2 py-1.5 text-[11px] font-semibold leading-snug text-yellow-100">
+          Custom product: made in up to {productionDays} {productionDays === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
+        </div>
+      )}
 
       <div className={cn("mb-2 flex min-h-8 items-start gap-1.5 text-xs", themeClasses.description)}>
         {isService ? (

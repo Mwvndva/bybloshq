@@ -53,6 +53,9 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
             po.id AS order_id,
             po.order_number,
             po.total_amount,
+            po.metadata AS order_metadata,
+            po.custom_production_deadline_at,
+            po.custom_production_grace_deadline_at,
             po.buyer_name,
             po.buyer_mobile_payment,
             po.buyer_whatsapp_number,
@@ -88,7 +91,8 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
              SELECT json_agg(json_build_object(
                  'name', oi.product_name,
                  'quantity', oi.quantity,
-                 'price', oi.product_price
+                 'price', oi.product_price,
+                 'metadata', oi.metadata
              ) ORDER BY oi.id) AS items
              FROM order_items oi
              WHERE oi.order_id = po.id
@@ -121,6 +125,9 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
             id: row.order_id,
             orderNumber: row.order_number,
             totalAmount: Number(row.total_amount || 0),
+            metadata: row.order_metadata || {},
+            custom_production_deadline_at: row.custom_production_deadline_at,
+            custom_production_grace_deadline_at: row.custom_production_grace_deadline_at,
             items: parseItems(row.items)
         },
         buyer: {

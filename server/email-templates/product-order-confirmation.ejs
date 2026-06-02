@@ -155,6 +155,21 @@
           </div>
         </div>
         <% } %>
+          <% if (locals.customProduct || locals.custom_product) { const custom = locals.customProduct || locals.custom_product; %>
+            <div style="margin: 25px 0; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; background: #fff7ed;">
+              <h3 style="margin-top: 0; color: #92400e; border-bottom: 1px solid #fed7aa; padding-bottom: 10px;">Custom Product</h3>
+              <p style="font-size: 14px; color: #92400e; margin: 8px 0;">
+                Made in up to <strong><%= custom.production_days %> <%= custom.production_days === 1 ? 'day' : 'days' %></strong>.
+                Delivery starts after seller handoff.
+              </p>
+              <% if (custom.buyer_instructions) { %>
+                <p style="font-size: 14px; color: #92400e; margin: 8px 0;"><strong>Your instructions:</strong> <%= custom.buyer_instructions %></p>
+              <% } %>
+              <% if (locals.custom_production_deadline_at) { %>
+                <p style="font-size: 13px; color: #92400e; margin: 8px 0;">Expected ready by: <%= new Date(custom_production_deadline_at).toLocaleString('en-KE') %></p>
+              <% } %>
+            </div>
+          <% } %>
           <% if (locals.downloadUrl || (locals.downloadUrls && downloadUrls.length> 0)) { %>
             <div
               style="margin: 25px 0; border: 1px solid #10b981; border-radius: 8px; padding: 20px; background: #ecfdf5; text-align: center;">
@@ -181,8 +196,10 @@
               <div
                 style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin: 20px 0;">
                 <p style="margin: 0; font-size: 14px; color: #0369a1;"><strong>What's next?</strong>
-                  <% if (items.some(i=> i.product_type === 'physical' || !i.is_digital)) { %>
-                    The seller will ship your item soon. You'll receive another email once your order has been shipped.
+                  <% if (locals.customProduct || locals.custom_product) { %>
+                    The seller is making your custom item. Delivery starts after seller handoff.
+                  <% } else if (items.some(i=> i.product_type === 'physical' || !i.is_digital)) { %>
+                    The seller will prepare your item soon. Delivery starts after seller handoff.
                     <% } else { %>
                       Your digital items are available for download above. You can also access them anytime from your
                       account dashboard.

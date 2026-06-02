@@ -8,7 +8,9 @@ export const AppEvents = {
         PAID: 'order.paid',
         UPDATED: 'order.updated',
         FULFILLED: 'order.fulfilled',
-        CANCELLED: 'order.cancelled'
+        CANCELLED: 'order.cancelled',
+        CUSTOM_PRODUCTION_REMINDER: 'order.custom_production_reminder',
+        CUSTOM_PRODUCTION_EXPIRED: 'order.custom_production_expired'
     },
     INVENTORY: {
         LOW_STOCK: 'inventory.low_stock',
