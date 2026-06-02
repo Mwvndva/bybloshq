@@ -71,8 +71,8 @@ export function WithdrawalsTab({
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
           <div className="flex h-full flex-col justify-between gap-4">
             <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Available to Withdraw</h3>
-              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Settled Paystack funds</p>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Ready to Withdraw</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Money you can send to M-Pesa now.</p>
             </div>
             <p className="text-lg sm:text-xl md:text-2xl font-black text-green-800">
               {formatKes(balance)}
@@ -83,8 +83,8 @@ export function WithdrawalsTab({
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
           <div className="flex h-full flex-col justify-between gap-4">
             <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Pending Settlement</h3>
-              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Recent sales become withdrawable after Paystack settlement.</p>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Waiting for Paystack</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Paid orders not yet cleared by Paystack.</p>
             </div>
             <div>
               <p className="text-lg sm:text-xl md:text-2xl font-black text-yellow-700">
@@ -98,8 +98,8 @@ export function WithdrawalsTab({
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
           <div className="flex h-full flex-col justify-between gap-4">
             <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Withdrawal Reserve</h3>
-              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Processing transfers</p>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Being Sent to You</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Money already removed from your balance while M-Pesa transfer is processing.</p>
             </div>
             <p className="text-lg sm:text-xl md:text-2xl font-black text-slate-800">
               {formatKes(withdrawalReservedBalance)}
@@ -110,8 +110,8 @@ export function WithdrawalsTab({
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
           <div className="flex h-full flex-col justify-between gap-4">
             <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Refund Reserve</h3>
-              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Protected buyer refunds</p>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Held for Refunds</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Money kept aside for approved buyer refunds before it can be withdrawn.</p>
             </div>
             <p className="text-lg sm:text-xl md:text-2xl font-black text-slate-800">
               {formatKes(refundReservedBalance)}
