@@ -176,8 +176,32 @@ class PayoutService {
             );
             newBalance = Number.parseFloat(rows[0]?.balance ?? 0);
             logger.info(`[PayoutService] Refunded KES ${amount} to seller ${request.seller_id}. New balance: ${newBalance}`);
+        } else if (request.creator_id) {
+            const { rows } = await client.query(
+                `UPDATE creators
+                 SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                     balance = COALESCE(balance, 0) + $1,
+                     updated_at = NOW()
+                 WHERE id = $2
+                 RETURNING balance`,
+                [amount, request.creator_id]
+            );
+            newBalance = Number.parseFloat(rows[0]?.balance ?? 0);
+            logger.info(`[PayoutService] Refunded KES ${amount} to creator ${request.creator_id}. New balance: ${newBalance}`);
+        } else if (request.buyer_id) {
+            const { rows } = await client.query(
+                `UPDATE buyers
+                 SET refund_withdrawal_reserved_balance = GREATEST(COALESCE(refund_withdrawal_reserved_balance, 0) - $1, 0),
+                     refunds = COALESCE(refunds, 0) + $1,
+                     updated_at = NOW()
+                 WHERE id = $2
+                 RETURNING refunds`,
+                [amount, request.buyer_id]
+            );
+            newBalance = Number.parseFloat(rows[0]?.refunds ?? 0);
+            logger.info(`[PayoutService] Refunded KES ${amount} to buyer refund balance ${request.buyer_id}. New refund balance: ${newBalance}`);
         } else {
-            logger.error('[PayoutService] Cannot refund: withdrawal has no seller_id', {
+            logger.error('[PayoutService] Cannot refund: withdrawal has no seller_id, creator_id, or buyer_id', {
                 requestId: request.id
             });
         }

@@ -1,6 +1,4 @@
-import { pool } from '../shared/db/database.js';
 import * as refundRequestRepository from '../repositories/refundRequest.repository.js';
-import * as buyerRepository from '../repositories/buyer.repository.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
@@ -65,96 +63,10 @@ export const getRefundRequestById = async (req, res, next) => {
  * This deducts the amount from buyer's refunds
  */
 export const confirmRefundRequest = async (req, res, next) => {
-  const client = await pool.connect();
-  let approvedEventId = null;
-
-  try {
-    const { id } = req.params;
-    const { adminNotes } = req.body;
-    const adminId = req.user.id;
-
-    logger.info(`Admin ${adminId} confirming refund request ${id}`);
-
-    await client.query('BEGIN');
-
-    // Lock the refund request row
-    const request = await refundRequestRepository.findByIdForUpdate(id, client);
-
-    if (!request) {
-      await client.query('ROLLBACK');
-      return next(new AppError('Refund request not found', 404));
-    }
-
-    // Check status before acquiring the buyer lock (fast check)
-    if (request.status !== 'pending') {
-      await client.query('ROLLBACK');
-      return next(new AppError(`Refund request is already ${request.status}`, 400));
-    }
-
-    // Lock the buyer row SEPARATELY to serialize concurrent refund processing
-    // for the same buyer across different refund requests
-    const buyer = await buyerRepository.findRefundColumnsByIdForUpdate(request.buyer_id, client);
-
-    if (!buyer) {
-      await client.query('ROLLBACK');
-      return next(new AppError('Buyer account not found', 404));
-    }
-
-    const buyerRefunds = parseFloat(buyer.refunds || 0);
-    const requestAmount = parseFloat(request.amount);
-
-    if (buyerRefunds < requestAmount) {
-      await client.query('ROLLBACK');
-      return next(new AppError('Buyer does not have sufficient refund balance', 400));
-    }
-
-    // Only set processed_by if adminId is a valid number
-    const processedBy = typeof adminId === 'number' ? adminId : null;
-
-    await refundRequestRepository.markCompleted({
-      id,
-      adminNotes: adminNotes || 'Refund processed successfully',
-      processedBy
-    }, client);
-
-    await buyerRepository.decrementRefundBalance({
-      buyerId: request.buyer_id,
-      amount: requestAmount
-    }, client);
-
-    const approvedEvent = await eventBus.enqueueInTransaction(client, AppEvents.REFUND.APPROVED, {
-      eventId: `refund.approved:${id}`,
-      refund: {
-        ...request,
-        id,
-        amount: requestAmount,
-        status: 'completed'
-      },
-      buyer
-    });
-    approvedEventId = approvedEvent.eventId;
-
-    await client.query('COMMIT');
-
-    logger.info(`Refund request ${id} confirmed. Deducted KSh ${requestAmount} from buyer ${request.buyer_id}`);
-
-    eventBus.dispatchAfterCommit(approvedEventId, 'RefundController.confirmRefundRequest');
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Refund request confirmed and processed successfully',
-      data: {
-        requestId: id,
-        amountProcessed: requestAmount
-      }
-    });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    logger.error('Error confirming refund request:', error);
-    next(error);
-  } finally {
-    client.release();
-  }
+  return next(new AppError(
+    'Manual refund payout confirmation is disabled. Buyer refund withdrawals are processed through Paystack withdrawal requests.',
+    410
+  ));
 };
 
 /**

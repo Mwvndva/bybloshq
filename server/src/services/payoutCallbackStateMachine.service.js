@@ -84,10 +84,14 @@ class PayoutCallbackStateMachineService {
                         )
                     GROUP BY wr.id
                  )
-                 SELECT wr.*, s.whatsapp_number AS entity_phone, matched_ids.match_priority
+                 SELECT wr.*,
+                        COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone,
+                        matched_ids.match_priority
                  FROM matched_ids
                  JOIN withdrawal_requests wr ON wr.id = matched_ids.id
                  LEFT JOIN sellers s ON s.id = wr.seller_id
+                 LEFT JOIN creators c ON c.id = wr.creator_id
+                 LEFT JOIN buyers b ON b.id = wr.buyer_id
                  ORDER BY matched_ids.match_priority ASC, wr.created_at DESC
                  FOR UPDATE OF wr`,
                 [transactionReference || null, clientReference || null]
@@ -249,6 +253,10 @@ class PayoutCallbackStateMachineService {
             let newBalance = null;
             if (request.seller_id) {
                 await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
+            } else if (request.creator_id) {
+                await client.query('SELECT id FROM creators WHERE id = $1 FOR UPDATE', [request.creator_id]);
+            } else if (request.buyer_id) {
+                await client.query('SELECT id FROM buyers WHERE id = $1 FOR UPDATE', [request.buyer_id]);
             }
 
             const { rows: [updatedRequest] } = await client.query(
@@ -299,6 +307,22 @@ class PayoutCallbackStateMachineService {
                          updated_at = NOW()
                      WHERE id = $2`,
                     [getWithdrawalReservedAmount(request), request.seller_id]
+                );
+            } else if (request.creator_id) {
+                await client.query(
+                    `UPDATE creators
+                     SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                         updated_at = NOW()
+                     WHERE id = $2`,
+                    [getWithdrawalReservedAmount(request), request.creator_id]
+                );
+            } else if (request.buyer_id) {
+                await client.query(
+                    `UPDATE buyers
+                     SET refund_withdrawal_reserved_balance = GREATEST(COALESCE(refund_withdrawal_reserved_balance, 0) - $1, 0),
+                         updated_at = NOW()
+                     WHERE id = $2`,
+                    [getWithdrawalReservedAmount(request), request.buyer_id]
                 );
             }
 
@@ -361,9 +385,12 @@ class PayoutCallbackStateMachineService {
             await client.query('BEGIN');
 
             const { rows: [request] } = await client.query(
-                `SELECT wr.*, s.whatsapp_number AS entity_phone
+                `SELECT wr.*,
+                        COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone
                  FROM withdrawal_requests wr
                  LEFT JOIN sellers s ON wr.seller_id = s.id
+                 LEFT JOIN creators c ON wr.creator_id = c.id
+                 LEFT JOIN buyers b ON wr.buyer_id = b.id
                  WHERE wr.id = $1
                  FOR UPDATE OF wr`,
                 [requestId]
@@ -438,6 +465,8 @@ class PayoutCallbackStateMachineService {
             replay_event_id: refs.replayEventId || null,
             matched_withdrawal_ids: matches.map(row => row.id),
             matched_seller_ids: matches.map(row => row.seller_id),
+            matched_creator_ids: matches.map(row => row.creator_id),
+            matched_buyer_ids: matches.map(row => row.buyer_id),
             detected_at: new Date().toISOString()
         };
 
@@ -445,6 +474,8 @@ class PayoutCallbackStateMachineService {
             `INSERT INTO payout_reconciliation_events (
                  withdrawal_request_id,
                  seller_id,
+                 creator_id,
+                 buyer_id,
                  event_type,
                  provider_reference,
                  client_reference,
@@ -453,7 +484,7 @@ class PayoutCallbackStateMachineService {
                  payload,
                  metadata
              )
-             SELECT NULL, NULL, 'PAYOUT_REFERENCE_AMBIGUOUS', $1, $2, $3, $4, $5::jsonb, $6::jsonb
+             SELECT NULL, NULL, NULL, NULL, 'PAYOUT_REFERENCE_AMBIGUOUS', $1, $2, $3, $4, $5::jsonb, $6::jsonb
              WHERE NOT EXISTS (
                  SELECT 1
                  FROM payout_reconciliation_events
@@ -533,6 +564,8 @@ class PayoutCallbackStateMachineService {
             `INSERT INTO payout_reconciliation_events (
                  withdrawal_request_id,
                  seller_id,
+                 creator_id,
+                 buyer_id,
                  event_type,
                  provider_reference,
                  client_reference,
@@ -541,7 +574,7 @@ class PayoutCallbackStateMachineService {
                  payload,
                  metadata
              )
-             VALUES ($1, $2, 'PROVIDER_SUCCESS_AFTER_REFUND', $3, $4, $5, $6, $7::jsonb, $8::jsonb)
+             VALUES ($1, $2, $3, $4, 'PROVIDER_SUCCESS_AFTER_REFUND', $5, $6, $7, $8, $9::jsonb, $10::jsonb)
              ON CONFLICT (withdrawal_request_id, event_type, reference_key)
              DO UPDATE SET
                  payload = EXCLUDED.payload,
@@ -550,6 +583,8 @@ class PayoutCallbackStateMachineService {
             [
                 request.id,
                 request.seller_id,
+                request.creator_id,
+                request.buyer_id,
                 providerReference,
                 clientReference,
                 referenceKey,
@@ -605,6 +640,8 @@ class PayoutCallbackStateMachineService {
             `INSERT INTO payout_reconciliation_events (
                  withdrawal_request_id,
                  seller_id,
+                 creator_id,
+                 buyer_id,
                  event_type,
                  provider_reference,
                  client_reference,
@@ -613,7 +650,7 @@ class PayoutCallbackStateMachineService {
                  payload,
                  metadata
              )
-             VALUES ($1, $2, 'PROVIDER_REVERSAL_AFTER_COMPLETION', $3, $4, $5, $6, $7::jsonb, $8::jsonb)
+             VALUES ($1, $2, $3, $4, 'PROVIDER_REVERSAL_AFTER_COMPLETION', $5, $6, $7, $8, $9::jsonb, $10::jsonb)
              ON CONFLICT (withdrawal_request_id, event_type, reference_key)
              DO UPDATE SET
                  payload = EXCLUDED.payload,
@@ -622,6 +659,8 @@ class PayoutCallbackStateMachineService {
             [
                 request.id,
                 request.seller_id,
+                request.creator_id,
+                request.buyer_id,
                 providerReference,
                 clientReference,
                 referenceKey,

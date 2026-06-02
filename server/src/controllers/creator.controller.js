@@ -1,4 +1,6 @@
 import CreatorService from '../services/creator.service.js';
+import WithdrawalService from '../services/withdrawal.service.js';
+import { sanitizeWithdrawalRequest } from '../shared/utils/sanitize.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 import { getTokenFromRequest, verifyToken } from '../shared/utils/jwt.js';
 import logger from '../shared/utils/logger.js';
@@ -242,12 +244,13 @@ export const trackLinkClick = async (req, res, next) => {
 
 export const requestWithdrawal = async (req, res, next) => {
   try {
-    const request = await CreatorService.createWithdrawalRequest({
-      creatorId: req.user.creatorId || req.user.profileId,
+    const request = await WithdrawalService.createWithdrawalRequest({
+      entityId: req.user.creatorId || req.user.profileId,
+      entityType: 'creator',
       amount: req.body.amount,
       idempotencyKey: req.get('Idempotency-Key') || req.body.idempotencyKey
     });
-    res.status(201).json({ status: 'success', data: { withdrawal: request } });
+    res.status(201).json({ status: 'success', data: { withdrawal: sanitizeWithdrawalRequest(request) } });
   } catch (error) {
     next(error);
   }
