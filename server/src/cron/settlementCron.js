@@ -32,7 +32,10 @@ export async function promoteSettlementsOnce({ limit = 100 } = {}) {
     }
 }
 
-export function scheduleSettlementPromotion({ schedule = process.env.SETTLEMENT_PROMOTION_CRON || '*/30 * * * *', limit = 100 } = {}) {
+export function scheduleSettlementPromotion({
+    schedule = process.env.SETTLEMENT_PROMOTION_CRON || '*/30 * * * *',
+    limit = Number.parseInt(process.env.SETTLEMENT_PROMOTION_LIMIT, 10) || 100
+} = {}) {
     return cron.schedule(schedule, () => {
         promoteSettlementsOnce({ limit }).catch(error => {
             logger.error('[SettlementCron] Scheduled promotion failed:', error.message);

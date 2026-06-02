@@ -49,7 +49,9 @@ class SettlementService {
         const metadata = this.parseMetadata(request?.metadata);
         const withdrawalFee = Number.parseFloat(metadata.withdrawal_fee || 0);
         const amount = Number.parseFloat(request?.amount || 0);
-        return amount + (Number.isFinite(withdrawalFee) ? withdrawalFee : 0);
+        const safeAmount = Number.isFinite(amount) ? amount : 0;
+        const safeFee = Number.isFinite(withdrawalFee) ? withdrawalFee : 0;
+        return safeAmount + safeFee;
     }
 
     async promoteEligibleSettlements(client, { limit = 100 } = {}) {

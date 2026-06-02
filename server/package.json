@@ -15,7 +15,7 @@
     "migrate": "node scripts/migrate.js",
     "migrate:create": "node-pg-migrate create",
     "seed": "node --experimental-json-modules -r dotenv/config scripts/seed-db.js",
-    "test": "node --test test/",
+    "test": "node --test \"test/*.test.js\"",
     "lint": "eslint . --ext .js,.ts",
     "format": "prettier --write \"**/*.{js,ts,json,md}\""
   },

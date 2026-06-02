@@ -1156,7 +1156,9 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
   assert.match(sellerDashboardDataHook, /queryClient\.fetchQuery/);
   assert.match(sellerDashboardDataHook, /queryClient\.invalidateQueries/);
   assert.match(sellerAnalyticsRepository, /JOIN payouts p[\s\S]*p\.order_id = o\.id[\s\S]*p\.settlement_status IN \('pending_settlement', 'settled'/);
-  assert.match(sellerAnalyticsRepository, /COALESCE\(p\.completed_at, p\.processed_at, p\.available_at, o\.updated_at, o\.created_at\)/);
+  assert.match(sellerAnalyticsRepository, /next_settlement_at[\s\S]*p\.available_at IS NOT NULL/);
+  assert.match(sellerAnalyticsRepository, /COALESCE\(p\.completed_at, p\.processed_at, o\.updated_at, o\.created_at\)/);
+  assert.doesNotMatch(sellerAnalyticsRepository, /COALESCE\(p\.completed_at, p\.processed_at, p\.available_at, o\.updated_at, o\.created_at\)/);
   assert.doesNotMatch(sellerAnalyticsRepository, /COALESCE\(SUM\(o\.total_amount\), 0\) as total_sales[\s\S]{0,120}WHERE o\.seller_id = s\.id[\s\S]{0,80}AND o\.payment_status = 'completed'/);
   assert.doesNotMatch(sellerDashboard, /window\.location\.reload/);
   assert.doesNotMatch(productCard, /Math\.random/);
