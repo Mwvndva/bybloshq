@@ -83,8 +83,8 @@ export function WithdrawalsTab({
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
           <div className="flex h-full flex-col justify-between gap-4">
             <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Waiting for Paystack</h3>
-              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Paid orders not yet cleared by Paystack.</p>
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Preparing for Withdrawal</h3>
+              <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Paid orders being prepared before they can be withdrawn.</p>
             </div>
             <div>
               <p className="text-lg sm:text-xl md:text-2xl font-black text-yellow-700">
