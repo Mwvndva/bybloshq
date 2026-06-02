@@ -77,13 +77,13 @@ export function ProductCardDetails({
       </div>
 
       {isCustomProduct && productionDays > 0 && (
-        <div className="mb-2 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-2 py-1.5 text-[11px] font-semibold leading-snug text-yellow-100">
+        <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-semibold leading-snug text-amber-900">
           Custom product: made in up to {productionDays} {productionDays === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
         </div>
       )}
 
       {isImportedProduct && !isCustomProduct && importDays > 0 && (
-        <div className="mb-2 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-2 py-1.5 text-[11px] font-semibold leading-snug text-yellow-100">
+        <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-semibold leading-snug text-amber-900">
           Imported / pre-order item: ready in up to {importDays} days. Delivery starts after seller handoff.
         </div>
       )}
