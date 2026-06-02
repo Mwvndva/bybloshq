@@ -15,6 +15,8 @@ interface AnalyticsData {
     totalRevenue: number;
     totalPayout?: number;
     balance: number;
+    availableBalance?: number;
+    pendingSettlementBalance?: number;
     clientCount: number;
     clickCount: number;
     wishlistCount: number;
@@ -27,6 +29,7 @@ interface UnifiedAnalyticsHubProps {
 export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
     analytics
 }) => {
+    const availableBalance = analytics.availableBalance ?? analytics.balance ?? 0;
     const metrics = [
         {
             label: 'Sales',
@@ -44,8 +47,8 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
         },
         {
             label: 'Balance',
-            value: formatCurrency(analytics.balance || 0),
-            helper: 'Ready to withdraw',
+            value: formatCurrency(availableBalance),
+            helper: 'Available to withdraw',
             icon: Wallet,
             tone: 'green'
         },

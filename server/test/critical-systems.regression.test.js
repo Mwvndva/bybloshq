@@ -429,21 +429,26 @@ test('escrow release credits seller exactly once behind payout idempotency gate'
         respond(text => /FROM logistics_requests lr/.test(text), []),
         respond(text => /INSERT INTO payouts/.test(text) && /ON CONFLICT \(order_id\) DO NOTHING/.test(text), [{ id: 901 }]),
         respond(text => /UPDATE sellers/.test(text), [{
-            balance: '99.00',
+            balance: '0.00',
+            pending_settlement_balance: '99.00',
             net_revenue: '99.00',
             total_sales: '100.00'
         }]),
+        respond(text => /SELECT referred_by_creator_id FROM sellers/.test(text), []),
         respond(text => /UPDATE product_orders/.test(text), [])
     ]);
 
     const result = await EscrowManager.releaseFunds(client, order, 'critical-test');
 
-    assert.deepEqual(result, { success: true, alreadyReleased: false });
+    assert.equal(result.success, true);
+    assert.equal(result.alreadyReleased, false);
+    assert.ok(result.availableAt instanceof Date);
     assert.ok(indexOfQuery(client, /INSERT INTO payouts/) < indexOfQuery(client, /UPDATE sellers/));
     assert.ok(indexOfQuery(client, /UPDATE sellers/) < indexOfQuery(client, /UPDATE product_orders/));
     assert.deepEqual(client.queries[indexOfQuery(client, /UPDATE sellers/)].params, [99, 100, 77]);
-    assert.match(client.queries[indexOfQuery(client, /UPDATE sellers/)].text, /COALESCE\(balance, 0\)\s+\+\s+\$1/);
-    assert.match(client.queries[indexOfQuery(client, /UPDATE sellers/)].text, /RETURNING balance, net_revenue, total_sales/);
+    assert.match(client.queries[indexOfQuery(client, /UPDATE sellers/)].text, /pending_settlement_balance = COALESCE\(pending_settlement_balance, 0\) \+ \$1/);
+    assert.doesNotMatch(client.queries[indexOfQuery(client, /UPDATE sellers/)].text, /balance\s*=\s*COALESCE\(balance, 0\)\s+\+\s+\$1/);
+    assert.match(client.queries[indexOfQuery(client, /UPDATE sellers/)].text, /RETURNING balance, pending_settlement_balance, net_revenue, total_sales/);
 
     const duplicateClient = new FakeClient([
         respond(text => /SELECT id FROM payments/.test(text), [{ id: 601 }]),

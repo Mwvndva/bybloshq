@@ -166,7 +166,12 @@ class PayoutService {
 
         if (request.seller_id) {
             const { rows } = await client.query(
-                'UPDATE sellers SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
+                `UPDATE sellers
+                 SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                     balance = COALESCE(balance, 0) + $1,
+                     updated_at = NOW()
+                 WHERE id = $2
+                 RETURNING balance`,
                 [amount, request.seller_id]
             );
             newBalance = Number.parseFloat(rows[0]?.balance ?? 0);
