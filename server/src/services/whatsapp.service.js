@@ -697,45 +697,67 @@ class WhatsAppService {
         });
     }
 
+    compactMessage(parts = []) {
+        return parts
+            .flat()
+            .filter(part => part !== null && part !== undefined && String(part).trim())
+            .map(part => String(part).trim())
+            .join('\n\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    formatLine(label, value) {
+        if (value === null || value === undefined || String(value).trim() === '') return '';
+        return `*${label}:* ${value}`;
+    }
+
     buildCustomProductionCopy(order, recipientRole = 'buyer') {
         const custom = this.getCustomProductionContext(order);
         if (!custom) return '';
 
         const daysText = custom.productionDays
-            ? `Made in up to ${custom.productionDays} day${custom.productionDays === 1 ? '' : 's'}.`
-            : 'This is a custom order.';
-        const deadlineText = `Expected ready by: ${this.formatDateTimeForMessage(custom.deadline)}.`;
+            ? `Made in up to ${custom.productionDays} day${custom.productionDays === 1 ? '' : 's'}`
+            : 'Custom order';
+        const deadlineText = this.formatDateTimeForMessage(custom.deadline);
         const instructionsText = custom.instructions
-            ? `Buyer instructions: ${custom.instructions}`
+            ? this.formatLine('Buyer instructions', custom.instructions)
             : '';
 
         if (recipientRole === 'seller') {
-            return [
-                '*Custom order:* Make this before handoff.',
-                daysText,
-                deadlineText,
+            return this.compactMessage([
+                '*Custom order*',
+                [
+                    this.formatLine('Production time', daysText),
+                    this.formatLine('Ready by', deadlineText)
+                ].filter(Boolean).join('\n'),
                 instructionsText,
-                'After production, choose Mzigo Ego drop-off or request Mzigo pickup in your dashboard.'
-            ].filter(Boolean).join('\n');
+                '*After making it:*\nChoose Mzigo Ego drop-off or request Mzigo pickup in your seller dashboard.'
+            ]);
         }
 
         if (recipientRole === 'partner') {
-            return [
-                '*Custom order:* Verify package against buyer instructions at handoff.',
-                daysText,
-                deadlineText,
+            return this.compactMessage([
+                '*Custom order*',
+                [
+                    this.formatLine('Production time', daysText),
+                    this.formatLine('Ready by', deadlineText)
+                ].filter(Boolean).join('\n'),
                 instructionsText,
-                'Delivery starts after the seller hands it to Mzigo Ego.'
-            ].filter(Boolean).join('\n');
+                '*Mzigo action:*\nCheck the package against the buyer instructions when the seller hands it over.'
+            ]);
         }
 
-        return [
-            '*Custom order:* The seller is making this item.',
-            daysText,
-            deadlineText,
-            'Delivery starts after seller handoff.',
+        return this.compactMessage([
+            '*Custom order*',
+            'The seller is making your item.',
+            [
+                this.formatLine('Production time', daysText),
+                this.formatLine('Expected ready by', deadlineText)
+            ].filter(Boolean).join('\n'),
+            'Delivery starts after the seller hands the item to Mzigo Ego.',
             instructionsText
-        ].filter(Boolean).join('\n');
+        ]);
     }
 
     /**
@@ -762,84 +784,74 @@ class WhatsAppService {
             : `Hello ${partyName}, your order has been successfully processed.`;
 
         const typeLabel = isDigital ? 'Digital Product' : (isService ? 'Service Booking' : 'Physical Product');
-
-        let message = `
-${headerText}
-${bodyText}
-
-🏷️ *Type:* ${typeLabel}
-💰 *Total:* KSh ${totalAmount.toLocaleString()}
-${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 *Time:* ${booking.time}\n` : ''}
-
-*Order Details:*
-`.trim();
-
-        // Items List
-        const itemsList = items?.length > 0
+        const itemsListForSimpleMessage = items?.length > 0
             ? items.map(i => `- ${i.title} (x${i.quantity})`).join('\n')
             : `- ${service.title} (x${service.quantity})`;
+        const customCopyForSimpleMessage = this.buildCustomProductionCopy(order, isSeller ? 'seller' : 'buyer');
+        const instructionForSimpleMessage = this.getLifecycleInstruction(status || 'CONFIRMED', isSeller ? 'seller' : 'buyer', type, hasPhysicalShop);
+        const simpleLocationDetails = (() => {
+            const isShopServiceSimple = isService && hasPhysicalShop;
+            const isShopPickupSimple = isPhysical && hasPhysicalShop;
+            const isMobileServiceSimple = isService && !hasPhysicalShop;
+            const isSystemDeliverySimple = isPhysical && !hasPhysicalShop;
 
-        message += `\n${itemsList}\n`;
-
-        const customProductionCopy = this.buildCustomProductionCopy(order, isSeller ? 'seller' : 'buyer');
-        if (customProductionCopy) {
-            message += `\n${customProductionCopy}\n`;
-        }
-
-        // SCENARIO-BASED INSTRUCTIONS & LOCATIONS
-        const instructions = this.getLifecycleInstruction(status || 'CONFIRMED', isSeller ? 'seller' : 'buyer', type, hasPhysicalShop);
-        let locationDetails = '';
-
-        const isShopService = isService && hasPhysicalShop;
-        const isShopPickup = isPhysical && hasPhysicalShop;
-        const isMobileService = isService && !hasPhysicalShop;
-        const isSystemDelivery = isPhysical && !hasPhysicalShop;
-
-        if (isDigital && !isSeller) {
-            if (downloadUrls && downloadUrls.length > 1) {
-                locationDetails = `🔗 *Downloads:*\n${downloadUrls.map(dl => `- ${dl.name}: ${dl.url}`).join('\n')}\n`;
-            } else {
-                locationDetails = `🔗 *Download:* ${downloadUrl || 'Link will be sent via email'}\n`;
+            if (isDigital && !isSeller) {
+                if (downloadUrls && downloadUrls.length > 1) {
+                    return `*Downloads:*\n${downloadUrls.map(dl => `- ${dl.name}: ${dl.url}`).join('\n')}`;
+                }
+                return this.formatLine('Download', downloadUrl || 'Link will be sent via email');
             }
-        }
-        else if (isSystemDelivery) {
-            locationDetails = isSeller
-                ? `Mzigo Ego drop-off: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}\n`
-                : 'Door delivery: Mzigo Ego will check the package and deliver it to your address.\n';
-        }
-        else if ((isShopPickup || isShopService) && !isSeller) {
-            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${seller.latitude},${seller.longitude}`;
-            locationDetails = `📍 *At Shop:* ${seller.address}\n🔗 *Navigate:* ${mapsLink}\n`;
-        }
-        else if (isMobileService && isSeller) {
-            const hasBuyerLoc = !!loc.lat && !!loc.lng && !!loc.address && loc.address !== 'Not specified';
-            const mapsLink = hasBuyerLoc ? `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}` : null;
-            locationDetails = `📍 *Buyer Location:* ${loc.address}${mapsLink ? `\n🔗 *Navigate:* ${mapsLink}` : ''}\n`;
-        }
-        else if (isMobileService && !isSeller) {
-            locationDetails = `📍 *Your Service Address:* ${loc.address}\n`;
-        }
 
-        // Render full booking details for service orders
-        const hasDate = booking?.date && booking.date !== 'null' && booking.date !== 'undefined';
-        const hasTime = booking?.time && booking.time !== 'null' && booking.time !== 'undefined';
+            if (isSystemDeliverySimple) {
+                return isSeller
+                    ? `*Mzigo Ego handoff:*\nDrop-off point: ${this.DROPOFF_LOCATION}\n${this.sellerPickupCbdSummary()}`
+                    : '*Delivery:*\nMzigo Ego checks the package, then delivers it to your address.';
+            }
 
-        if (hasDate || hasTime || booking?.requirements) {
-            message += '\n📋 *Booking Details:*\n';
-            if (hasDate) message += `📅 *Date:* ${booking.date}\n`;
-            if (hasTime) message += `⏰ *Time:* ${booking.time}\n`;
-            if (booking?.duration) message += `⏱ *Duration:* ${booking.duration}\n`;
-            if (booking?.requirements) message += `📝 *Specifications:* ${booking.requirements}\n`;
-        }
+            if ((isShopPickupSimple || isShopServiceSimple) && !isSeller) {
+                const mapsLink = seller.latitude && seller.longitude
+                    ? `https://www.google.com/maps/search/?api=1&query=${seller.latitude},${seller.longitude}`
+                    : null;
+                return `*Shop location:*\n${seller.address || 'Shop address not provided'}${mapsLink ? `\nMap: ${mapsLink}` : ''}`;
+            }
 
-        if (locationDetails) message += `\n${locationDetails}`;
-        if (instructions) message += `\n${instructions}\n`;
+            if (isMobileServiceSimple) {
+                const mapsLink = isSeller && loc.lat && loc.lng
+                    ? `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`
+                    : null;
+                return `${isSeller ? '*Buyer location:*' : '*Service address:*'}\n${loc.address || 'Not provided'}${mapsLink ? `\nMap: ${mapsLink}` : ''}`;
+            }
 
-        // Footer
-        const footerText = isSeller ? 'Manage your orders on your dashboard.' : 'Thank you for shopping with Byblos!';
-        message += `\n${footerText}`;
+            return '';
+        })();
+        const simpleBookingDetails = (() => {
+            const hasDate = booking?.date && booking.date !== 'null' && booking.date !== 'undefined';
+            const hasTime = booking?.time && booking.time !== 'null' && booking.time !== 'undefined';
+            if (!hasDate && !hasTime && !booking?.requirements && !booking?.duration) return '';
+            return [
+                '*Booking details:*',
+                hasDate ? this.formatLine('Date', booking.date) : '',
+                hasTime ? this.formatLine('Time', booking.time) : '',
+                booking?.duration ? this.formatLine('Duration', booking.duration) : '',
+                booking?.requirements ? this.formatLine('Requirements', booking.requirements) : ''
+            ].filter(Boolean).join('\n');
+        })();
 
-        return message.trim();
+        return this.compactMessage([
+            isSeller ? `*New order: #${orderNumber}*` : `*Order confirmed: #${orderNumber}*`,
+            isSeller ? `Hi ${partyName}, you have a new order.` : `Hi ${partyName}, your payment is confirmed.`,
+            [
+                this.formatLine('Type', typeLabel),
+                this.formatLine('Total', `KSh ${totalAmount.toLocaleString()}`)
+            ].filter(Boolean).join('\n'),
+            `*Items:*\n${itemsListForSimpleMessage}`,
+            customCopyForSimpleMessage,
+            simpleBookingDetails,
+            simpleLocationDetails,
+            instructionForSimpleMessage,
+            isSeller ? 'Manage this order in your seller dashboard.' : 'Check your buyer dashboard for live updates.'
+        ]);
+
     }
 
     async notifyBuyerPaymentSuccess({ order, items = [] }) {
@@ -852,19 +864,16 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
             ? items.map(item => `- ${item.product_name || item.name || item.title || 'Item'} (x${item.quantity || 1})`).join('\n')
             : (order.items || []).map(item => `- ${item.title || item.name || 'Item'} (x${item.quantity || 1})`).join('\n');
 
-        const message = `
-✅ *Payment Confirmed: #${orderNumber}*
-Amount: *KSh ${total.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*
+        const simplePaymentMessage = this.compactMessage([
+            `*Payment confirmed: #${orderNumber}*`,
+            this.formatLine('Amount', `KSh ${total.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+            `*Items:*\n${itemsList || '- Order item'}`,
+            this.buildCustomProductionCopy(order, 'buyer'),
+            'Check your buyer dashboard for order status.'
+        ]);
 
-*Items:*
-${itemsList || '- Order item'}
+        return this.sendMessage(buyerWhatsApp, simplePaymentMessage);
 
-${this.buildCustomProductionCopy(order, 'buyer') || ''}
-
-_Your Byblos dashboard remains the source of truth for order status._
-`.trim();
-
-        return this.sendMessage(buyerWhatsApp, message);
     }
 
     async notifyBuyerDigitalDelivery({ order, items = [] }) {
@@ -978,16 +987,20 @@ _Keep this message private. Your buyer dashboard also has your downloads._
             return '';
         })();
 
-        const msg = `
-✅ *Status Update: #${order.orderNumber}*${buBooking}
-Type: *${typeLabel}*
-New Status: *${newStatus.replace(/_/g, ' ')}*
+        const simpleMsg = this.compactMessage([
+            `*Status update: #${order.orderNumber}*`,
+            [
+                this.formatLine('Type', typeLabel),
+                this.formatLine('Status', String(newStatus || '').replace(/_/g, ' '))
+            ].filter(Boolean).join('\n'),
+            customProductionCopy,
+            locationSection,
+            instructions,
+            'Check your buyer dashboard for full details.'
+        ]);
 
-${customProductionCopy ? `${customProductionCopy}\n\n` : ''}${locationSection}${instructions ? `${instructions}\n` : ''}
-_Check your dashboard for full details._
-`.trim();
+        return this.sendMessage(buyerWhatsApp, simpleMsg);
 
-        return this.sendMessage(buyerWhatsApp, msg);
     }
 
     async notifySellerStatusUpdate(updateData) {
@@ -1047,15 +1060,17 @@ _Check your dashboard for full details._
             return '';
         })();
 
-        const msg = `
-✅ *Status Update: #${order.orderNumber}*${suBooking}
-New Status: *${newStatus.replace(/_/g, ' ')}*
+        const simpleMsg = this.compactMessage([
+            `*Status update: #${order.orderNumber}*`,
+            this.formatLine('Status', String(newStatus || '').replace(/_/g, ' ')),
+            customProductionCopy,
+            sellerLocationSection,
+            instructions,
+            'Manage this order in your seller dashboard.'
+        ]);
 
-${customProductionCopy ? `${customProductionCopy}\n\n` : ''}${sellerLocationSection}${instructions ? `${instructions}\n` : ''}
-_Managed via your dashboard._
-`.trim();
+        return this.sendMessage(sellerWhatsApp, simpleMsg);
 
-        return this.sendMessage(sellerWhatsApp, msg);
     }
 
     async notifyClientOrderCreated(clientPhone, orderData) {
@@ -1361,26 +1376,24 @@ _Refund added to your balance. View on your dashboard._
         const customProductionCopy = this.buildCustomProductionCopy(order, recipientRole);
         const title = recipientRole === 'partner'
             ? 'Custom order handoff reminder'
-            : 'Custom order deadline reminder';
+            : 'Custom order reminder';
 
         const action = (() => {
             if (recipientRole === 'seller') {
-                return `Action: Finish the order, then choose Mzigo Ego drop-off or request Mzigo pickup. ${this.sellerPickupCbdSummary()}`;
+                return `*Action:*\nFinish the order, then choose Mzigo Ego drop-off or request Mzigo pickup.\n\n${this.sellerPickupCbdSummary()}`;
             }
             if (recipientRole === 'partner') {
-                return 'Action: Be ready to verify the package against the buyer instructions when the seller hands it to Mzigo Ego.';
+                return '*Action:*\nBe ready to check the package against the buyer instructions at handoff.';
             }
-            return 'Action: The seller should hand the package to Mzigo Ego after production. Delivery starts after seller handoff.';
+            return '*What happens next:*\nThe seller should hand the package to Mzigo Ego after production.\n\nDelivery starts after seller handoff.';
         })();
 
-        const message = `
-*${title}: #${orderNumber}*
-
-${customProductionCopy}
-
-${action}
-_WhatsApp is notification only. Byblos dashboard is the source of truth._
-`.trim();
+        const message = this.compactMessage([
+            `*${title}: #${orderNumber}*`,
+            customProductionCopy,
+            action,
+            'Check the Byblos dashboard for the latest order status.'
+        ]);
 
         return this.sendMessage(phone, message);
     }
@@ -1392,19 +1405,16 @@ _WhatsApp is notification only. Byblos dashboard is the source of truth._
         const orderNumber = order.orderNumber || order.order_number || order.id;
         const amount = Number.parseFloat(order.total_amount || order.totalAmount || 0);
         const customProductionCopy = this.buildCustomProductionCopy(order, recipientRole);
-        const buyerText = `The production deadline and 1-day grace period expired. KSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your Byblos refund balance.`;
-        const sellerText = 'The production deadline and 1-day grace period expired. The order has been cancelled and the buyer refund balance was credited.';
+        const buyerText = `The seller missed the custom production deadline and the 1-day grace period.\n\nKSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your Byblos refund balance.`;
+        const sellerText = 'The custom production deadline and 1-day grace period expired.\n\nThe order has been cancelled.\n\nThe buyer refund balance was credited.';
 
-        const message = `
-*Custom order cancelled: #${orderNumber}*
-
-${recipientRole === 'seller' ? sellerText : buyerText}
-${reason ? `\nReason: ${reason}` : ''}
-
-${customProductionCopy || ''}
-
-_Do not hand off this order after cancellation._
-`.trim();
+        const message = this.compactMessage([
+            `*Custom order cancelled: #${orderNumber}*`,
+            recipientRole === 'seller' ? sellerText : buyerText,
+            reason ? this.formatLine('Reason', reason) : '',
+            customProductionCopy,
+            'Do not hand off this order after cancellation.'
+        ]);
 
         return this.sendMessage(phone, message);
     }

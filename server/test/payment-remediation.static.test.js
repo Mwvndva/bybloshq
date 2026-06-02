@@ -1599,7 +1599,7 @@ test('custom production SLA deadlines, reminders, refunds, and notifications are
   assert.match(whatsapp, /sendCustomProductionReminder/);
   assert.match(whatsapp, /sendCustomProductionExpiredNotification/);
   assert.match(whatsapp, /Delivery starts after seller handoff/);
-  assert.match(whatsapp, /Verify package against buyer instructions at handoff/);
+  assert.match(whatsapp, /check the package against the buyer instructions at handoff/i);
   assert.match(logisticsEvents, /custom_production_deadline_at/);
   assert.match(logisticsEvents, /metadata', oi\.metadata/);
 
