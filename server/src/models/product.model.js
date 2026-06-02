@@ -4,7 +4,8 @@ const PRODUCT_UPDATABLE_FIELDS = new Set([
     'name', 'price', 'description', 'image_url', 'images', 'aesthetic',
     'status', 'sold_at', 'is_sold', 'service_options', 'service_locations',
     'track_inventory', 'quantity', 'reserved_quantity', 'low_stock_threshold',
-    'is_custom_product', 'production_days', 'customization_prompt', 'updated_at'
+    'is_custom_product', 'production_days', 'customization_prompt',
+    'is_imported_product', 'import_days', 'import_note', 'updated_at'
 ]);
 
 class ProductModel {
@@ -13,7 +14,8 @@ class ProductModel {
             name, price, description, image_url, images, seller_id, aesthetic,
             is_digital, digital_file_path, digital_file_name, digital_file_size,
             product_type, service_locations, service_options,
-            is_custom_product, production_days, customization_prompt
+            is_custom_product, production_days, customization_prompt,
+            is_imported_product, import_days, import_note
         } = data;
 
         const query = `
@@ -22,8 +24,9 @@ class ProductModel {
         status, created_at, updated_at,
         is_digital, digital_file_path, digital_file_name, digital_file_size,
         product_type, service_locations, service_options,
-        is_custom_product, production_days, customization_prompt
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'available', NOW(), NOW(), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        is_custom_product, production_days, customization_prompt,
+        is_imported_product, import_days, import_note
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'available', NOW(), NOW(), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *
     `;
 
@@ -31,7 +34,8 @@ class ProductModel {
             name, price, description, image_url, images, seller_id, aesthetic,
             is_digital, digital_file_path, digital_file_name, digital_file_size,
             product_type, service_locations, service_options,
-            is_custom_product || false, production_days || null, customization_prompt || null
+            is_custom_product || false, production_days || null, customization_prompt || null,
+            is_imported_product || false, import_days || null, import_note || null
         ];
 
         // support transaction client or default pool

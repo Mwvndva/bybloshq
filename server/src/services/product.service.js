@@ -14,7 +14,8 @@ class ProductService {
             name, price, description, image, image_url, aesthetic = 'noir',
             is_digital = false, digital_file_path, digital_file_name, digital_file_size,
             product_type = 'physical', service_locations, service_options,
-            is_custom_product = false, production_days, customization_prompt
+            is_custom_product = false, production_days, customization_prompt,
+            is_imported_product = false, import_days, import_note
         } = data;
 
         // Validation Logic
@@ -48,11 +49,22 @@ class ProductService {
 
         const customProduct = product_type === 'physical' && is_custom_product === true;
         const productionDaysValue = customProduct ? Number.parseInt(production_days, 10) : null;
+        const importedProduct = product_type === 'physical' && is_imported_product === true;
+        const importDaysValue = importedProduct ? Number.parseInt(import_days, 10) : null;
         if (is_custom_product === true && product_type !== 'physical') {
             throw new Error('Only physical products can be custom products');
         }
+        if (is_imported_product === true && product_type !== 'physical') {
+            throw new Error('Only physical products can be imported or pre-order products');
+        }
+        if (customProduct && importedProduct) {
+            throw new Error('Choose either custom product or imported/pre-order product, not both');
+        }
         if (customProduct && (!Number.isInteger(productionDaysValue) || productionDaysValue < 1 || productionDaysValue > 5)) {
             throw new Error('Custom physical products require production days between 1 and 5');
+        }
+        if (importedProduct && ![7, 14, 21, 30].includes(importDaysValue)) {
+            throw new Error('Imported physical products require an estimated ready time of 7, 14, 21, or 30 days');
         }
 
         // Image Handling - now optional
@@ -126,6 +138,11 @@ class ProductService {
             production_days: finalProductType === 'physical' && customProduct ? productionDaysValue : null,
             customization_prompt: finalProductType === 'physical' && customProduct
                 ? String(customization_prompt || 'Tell the seller exactly what you want customized.').trim().slice(0, 240)
+                : null,
+            is_imported_product: finalProductType === 'physical' ? importedProduct : false,
+            import_days: finalProductType === 'physical' && importedProduct ? importDaysValue : null,
+            import_note: finalProductType === 'physical' && importedProduct
+                ? String(import_note || 'Imported item. Delivery starts after seller handoff.').trim().slice(0, 240)
                 : null
         };
 
@@ -196,7 +213,15 @@ class ProductService {
                 updateFields.images = Array.isArray(images) ? JSON.stringify(images) : images;
             }
             if (aesthetic !== undefined) updateFields.aesthetic = aesthetic;
-            if (data.is_custom_product !== undefined || data.production_days !== undefined || data.customization_prompt !== undefined || data.product_type !== undefined) {
+            if (
+                data.is_custom_product !== undefined
+                || data.production_days !== undefined
+                || data.customization_prompt !== undefined
+                || data.is_imported_product !== undefined
+                || data.import_days !== undefined
+                || data.import_note !== undefined
+                || data.product_type !== undefined
+            ) {
                 const existing = await ProductModel.findById(productId);
                 if (!existing) throw new Error('Product not found');
                 if (existing.seller_id !== sellerId) throw new Error('Unauthorized');
@@ -204,18 +229,34 @@ class ProductService {
                 const nextProductType = data.product_type || existing.product_type || 'physical';
                 const nextCustom = nextProductType === 'physical' && data.is_custom_product === true;
                 const nextProductionDays = nextCustom ? Number.parseInt(data.production_days ?? existing.production_days, 10) : null;
+                const nextImported = nextProductType === 'physical' && data.is_imported_product === true;
+                const nextImportDays = nextImported ? Number.parseInt(data.import_days ?? existing.import_days, 10) : null;
 
                 if (data.is_custom_product === true && nextProductType !== 'physical') {
                     throw new Error('Only physical products can be custom products');
                 }
+                if (data.is_imported_product === true && nextProductType !== 'physical') {
+                    throw new Error('Only physical products can be imported or pre-order products');
+                }
+                if (nextCustom && nextImported) {
+                    throw new Error('Choose either custom product or imported/pre-order product, not both');
+                }
                 if (nextCustom && (!Number.isInteger(nextProductionDays) || nextProductionDays < 1 || nextProductionDays > 5)) {
                     throw new Error('Custom physical products require production days between 1 and 5');
+                }
+                if (nextImported && ![7, 14, 21, 30].includes(nextImportDays)) {
+                    throw new Error('Imported physical products require an estimated ready time of 7, 14, 21, or 30 days');
                 }
 
                 updateFields.is_custom_product = nextCustom;
                 updateFields.production_days = nextCustom ? nextProductionDays : null;
                 updateFields.customization_prompt = nextCustom
                     ? String(data.customization_prompt || existing.customization_prompt || 'Tell the seller exactly what you want customized.').trim().slice(0, 240)
+                    : null;
+                updateFields.is_imported_product = nextImported;
+                updateFields.import_days = nextImported ? nextImportDays : null;
+                updateFields.import_note = nextImported
+                    ? String(data.import_note || existing.import_note || 'Imported item. Delivery starts after seller handoff.').trim().slice(0, 240)
                     : null;
             }
 
@@ -348,4 +389,3 @@ class ProductService {
 }
 
 export default ProductService;
-

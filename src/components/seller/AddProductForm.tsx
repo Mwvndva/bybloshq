@@ -48,6 +48,9 @@ interface FormData {
   is_custom_product: boolean;
   production_days: string;
   customization_prompt: string;
+  is_imported_product: boolean;
+  import_days: string;
+  import_note: string;
 }
 
 const formDataDefaults: FormData = {
@@ -66,6 +69,9 @@ const formDataDefaults: FormData = {
   is_custom_product: false,
   production_days: '1',
   customization_prompt: 'Tell the seller exactly what you want customized.',
+  is_imported_product: false,
+  import_days: '14',
+  import_note: 'Imported item. Delivery starts after seller handoff.',
   service_options: {
     availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     location_type: 'buyer_visits_seller',
@@ -189,6 +195,13 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         return;
       }
     }
+    if (step === 3 && formData.product_type === 'physical' && formData.is_imported_product) {
+      const days = Number.parseInt(formData.import_days, 10);
+      if (![7, 14, 21, 30].includes(days)) {
+        toast({ title: 'Import ready time required', description: 'Select 7, 14, 21, or 30 days.', variant: 'destructive' });
+        return;
+      }
+    }
     setStep(s => s + 1);
   };
 
@@ -228,6 +241,9 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         is_custom_product: formData.product_type === 'physical' ? formData.is_custom_product : false,
         production_days: formData.product_type === 'physical' && formData.is_custom_product ? Number.parseInt(formData.production_days, 10) : null,
         customization_prompt: formData.product_type === 'physical' && formData.is_custom_product ? formData.customization_prompt : null,
+        is_imported_product: formData.product_type === 'physical' ? formData.is_imported_product : false,
+        import_days: formData.product_type === 'physical' && formData.is_imported_product ? Number.parseInt(formData.import_days, 10) : null,
+        import_note: formData.product_type === 'physical' && formData.is_imported_product ? formData.import_note : null,
         digital_file_path: digitalFilePath,
         digital_file_name: digitalFileName,
         digital_file_size: digitalFileSize,
@@ -450,7 +466,28 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
               <input
                 type="checkbox"
                 checked={formData.is_custom_product}
-                onChange={event => setFormData(p => ({ ...p, is_custom_product: event.target.checked }))}
+                onChange={event => setFormData(p => ({
+                  ...p,
+                  is_custom_product: event.target.checked,
+                  is_imported_product: event.target.checked ? false : p.is_imported_product
+                }))}
+                className="h-5 w-5 accent-yellow-400"
+              />
+            </label>
+
+            <label className="flex items-center justify-between gap-3">
+              <span>
+                <span className="block text-xs font-bold text-white uppercase">Imported / pre-order item</span>
+                <span className="block text-[11px] text-white/70">Buyer sees the estimated ready time before paying.</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={formData.is_imported_product}
+                onChange={event => setFormData(p => ({
+                  ...p,
+                  is_imported_product: event.target.checked,
+                  is_custom_product: event.target.checked ? false : p.is_custom_product
+                }))}
                 className="h-5 w-5 accent-yellow-400"
               />
             </label>
@@ -483,6 +520,29 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
                 </div>
                 <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-amber-800">
                   Buyers will see: Made in up to {formData.production_days} {Number(formData.production_days) === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
+                </p>
+              </div>
+            )}
+
+            {formData.is_imported_product && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold text-white uppercase">Estimated ready time</Label>
+                  <Select value={formData.import_days} onValueChange={value => setFormData(p => ({ ...p, import_days: value }))}>
+                    <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-[100] rounded-xl border-yellow-400/40 bg-zinc-950 text-white shadow-2xl shadow-black/70">
+                      {[7, 14, 21, 30].map(day => (
+                        <SelectItem key={day} value={String(day)} className="text-white focus:bg-yellow-400 focus:text-black">
+                          {day} days
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-amber-800">
+                  Buyers will see: Imported item, ready in up to {formData.import_days} days. Delivery starts after seller handoff.
                 </p>
               </div>
             )}
@@ -531,6 +591,11 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           {formData.product_type === 'physical' && formData.is_custom_product && (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-800">
               Custom product: made in up to {formData.production_days} {Number(formData.production_days) === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
+            </p>
+          )}
+          {formData.product_type === 'physical' && formData.is_imported_product && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-800">
+              Imported item: ready in up to {formData.import_days} days. Delivery starts after seller handoff.
             </p>
           )}
         </div>

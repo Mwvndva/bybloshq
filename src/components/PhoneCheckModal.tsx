@@ -45,6 +45,9 @@ interface PhoneCheckModalProps {
   isCustomProduct?: boolean;
   productionDays?: number | null;
   customizationPrompt?: string | null;
+  isImportedProduct?: boolean;
+  importDays?: number | null;
+  importNote?: string | null;
   purchaseDetails?: {
     shopName: string;
     productName: string;
@@ -61,6 +64,9 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   isCustomProduct = false,
   productionDays = null,
   customizationPrompt = null,
+  isImportedProduct = false,
+  importDays = null,
+  importNote = null,
   purchaseDetails
 }) => {
   const [phone, setPhone] = useState('');
@@ -269,6 +275,12 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                   {isCustomProduct && (
                     <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-slate-700">
                       Custom product: made in up to {productionDays || 1} {(productionDays || 1) === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
+                    </div>
+                  )}
+                  {isImportedProduct && !isCustomProduct && (
+                    <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-slate-700">
+                      Imported / pre-order item: expected ready in up to {importDays || 14} days. Delivery starts after seller handoff.
+                      {importNote ? <span className="mt-1 block font-medium text-slate-600">{importNote}</span> : null}
                     </div>
                   )}
                   {doorDeliveryEnabled && (

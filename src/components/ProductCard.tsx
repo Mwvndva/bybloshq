@@ -126,9 +126,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   const isCustomProduct = isPhysical && Boolean((product as any).is_custom_product || (product as any).isCustomProduct);
   const productionDays = Number((product as any).production_days || (product as any).productionDays || 0) || null;
   const customizationPrompt = (product as any).customization_prompt || (product as any).customizationPrompt || null;
+  const isImportedProduct = isPhysical && Boolean((product as any).is_imported_product || (product as any).isImportedProduct);
+  const importDays = Number((product as any).import_days || (product as any).importDays || 0) || null;
+  const importNote = (product as any).import_note || (product as any).importNote || null;
   const effectiveIsCustomProduct = isCustomProduct || (isPhysical && forceCustomCheckout);
   const effectiveProductionDays = productionDays || (effectiveIsCustomProduct ? 1 : null);
   const effectiveCustomizationPrompt = customizationPrompt || 'Tell the seller exactly what you want customized.';
+  const effectiveIsImportedProduct = isImportedProduct && !effectiveIsCustomProduct;
+  const effectiveImportDays = importDays || (effectiveIsImportedProduct ? 14 : null);
 
   const isWishlisted = isInWishlist(product.id);
   const toggleWishlist = async (e: MouseEvent) => {
@@ -439,6 +444,22 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
       const paymentEstimate = calculateBuyerPayableTotal(product.price, paymentDeliveryFeeEstimate);
       const checkoutToken = getCheckoutAttemptToken();
       const creatorCode = new URLSearchParams(window.location.search).get('creator') || undefined;
+      const preHandoffSla = effectiveIsCustomProduct ? {
+        type: 'custom_production',
+        label: 'Custom order',
+        ready_days: effectiveProductionDays,
+        production_days: effectiveProductionDays,
+        customization_prompt: effectiveCustomizationPrompt,
+        buyer_instructions: customInstructions,
+        delivery_starts_after_seller_handoff: true
+      } : effectiveIsImportedProduct ? {
+        type: 'import_waiting',
+        label: 'Imported / pre-order item',
+        ready_days: effectiveImportDays,
+        import_days: effectiveImportDays,
+        note: importNote || 'Imported item. Delivery starts after seller handoff.',
+        delivery_starts_after_seller_handoff: true
+      } : undefined;
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
         mobilePayment: buyerDetails.mobilePayment,
@@ -479,6 +500,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
             customization_prompt: effectiveCustomizationPrompt,
             instructions: customInstructions
           } : undefined,
+          pre_handoff_sla: preHandoffSla,
           delivery: wantsDoorDelivery ? {
             doorDelivery: true,
             door_delivery: true,
@@ -496,6 +518,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
             customization_prompt: effectiveCustomizationPrompt,
             instructions: customInstructions
           } : undefined,
+          pre_handoff_sla: preHandoffSla,
           delivery: wantsDoorDelivery ? {
             doorDelivery: true,
             door_delivery: true,
@@ -699,6 +722,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         isCustomProduct={effectiveIsCustomProduct}
         productionDays={effectiveProductionDays}
         customizationPrompt={effectiveCustomizationPrompt}
+        isImportedProduct={effectiveIsImportedProduct}
+        importDays={effectiveImportDays}
+        importNote={importNote}
         onPhoneCheckClose={() => setIsPhoneCheckModalOpen(false)}
         onBuyerModalClose={() => setIsBuyerModalOpen(false)}
         onBookingModalClose={() => setIsBookingModalOpen(false)}

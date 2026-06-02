@@ -101,6 +101,8 @@ class PaymentController {
         'Seller is not accepting orders',
         'Custom product is misconfigured. Please contact the seller.',
         'Customization instructions are required for this custom product.',
+        'Imported product is misconfigured. Please contact the seller.',
+        'Product cannot be both custom and imported.',
         'Door delivery is only available for physical products.',
         'Door delivery address is required.',
         'Door delivery coordinates are required.',

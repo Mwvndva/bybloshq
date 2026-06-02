@@ -1561,6 +1561,51 @@ test('custom physical products validate production SLA and buyer instructions at
   assert.match(editDialog, /Custom product/);
 });
 
+test('imported physical products expose pre-order ready SLA without customization friction', () => {
+  const migration = read('migrations/20260602200000_imported_product_preorder_sla.sql');
+  const productService = read('src/services/product.service.js');
+  const paymentService = read('src/services/payment.service.js');
+  const paymentController = read('src/controllers/payment.controller.js');
+  const core = read('src/core/CorePaymentService.js');
+  const whatsapp = read('src/services/whatsapp.service.js');
+  const phoneModal = read('../src/components/PhoneCheckModal.tsx');
+  const productCard = read('../src/components/ProductCard.tsx');
+  const addProductForm = read('../src/components/seller/AddProductForm.tsx');
+  const productsList = read('../src/components/seller/ProductsList.tsx');
+  const editDialog = read('../src/components/seller/products-list/ProductEditDialog.tsx');
+  const receiptTemplate = read('email-templates/product-payment-receipt.ejs');
+  const confirmationTemplate = read('email-templates/product-order-confirmation.ejs');
+
+  assert.match(migration, /is_imported_product BOOLEAN NOT NULL DEFAULT FALSE/);
+  assert.match(migration, /import_days INTEGER/);
+  assert.match(migration, /import_days IN \(7, 14, 21, 30\)/);
+  assert.match(migration, /product_type = 'physical'/);
+
+  assert.match(productService, /Only physical products can be imported or pre-order products/);
+  assert.match(productService, /custom product or imported\/pre-order product, not both/);
+  assert.match(productService, /7, 14, 21, or 30 days/);
+
+  assert.match(paymentService, /Imported product is misconfigured/);
+  assert.match(paymentService, /type:\s*'import_waiting'/);
+  assert.match(paymentService, /pre_handoff_sla:\s*preHandoffSla/);
+  assert.doesNotMatch(paymentService, /isImportedProduct[\s\S]{0,300}Customization instructions are required/);
+  assert.match(paymentController, /Imported product is misconfigured/);
+  assert.match(paymentController, /Product cannot be both custom and imported/);
+
+  assert.match(core, /import_waiting/);
+  assert.match(whatsapp, /Imported \/ pre-order item/);
+  assert.match(receiptTemplate, /Imported \/ Pre-order Item|Imported \/ pre-order item/);
+  assert.match(confirmationTemplate, /Imported \/ Pre-order Item|Imported \/ pre-order item/);
+
+  assert.match(phoneModal, /Imported \/ pre-order item: expected ready in up to/);
+  assert.doesNotMatch(phoneModal, /isImportedProduct[\s\S]{0,500}Please describe what you want customized before paying/);
+  assert.match(productCard, /type:\s*'import_waiting'/);
+  assert.match(productCard, /pre_handoff_sla:\s*preHandoffSla/);
+  assert.match(addProductForm, /Imported \/ pre-order item/);
+  assert.match(productsList, /is_imported_product/);
+  assert.match(editDialog, /Imported \/ pre-order item/);
+});
+
 test('custom production SLA deadlines, reminders, refunds, and notifications are idempotent', () => {
   const core = read('src/core/CorePaymentService.js');
   const deadlineService = read('src/services/orderDeadline.service.js');

@@ -64,6 +64,9 @@ export interface Product {
   is_custom_product?: boolean;
   production_days?: number | null;
   customization_prompt?: string | null;
+  is_imported_product?: boolean;
+  import_days?: number | null;
+  import_note?: string | null;
 }
 
 export interface SellerAnalytics {

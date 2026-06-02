@@ -196,12 +196,22 @@
                         </p>
             </div>
 
-            <% if (locals.customProduct || locals.custom_product) { const custom = locals.customProduct || locals.custom_product; %>
+            <% if (locals.pre_handoff_sla || locals.customProduct || locals.custom_product) {
+                const preHandoff = locals.pre_handoff_sla || null;
+                const custom = locals.customProduct || locals.custom_product || {};
+                const isImported = preHandoff && preHandoff.type === 'import_waiting';
+                const readyDays = preHandoff ? (preHandoff.ready_days || preHandoff.import_days || preHandoff.production_days) : custom.production_days;
+            %>
                 <div style="background: #fff7ed; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 4px; margin: 20px 0;">
                     <p style="margin: 0 0 8px 0; font-size: 14px; color: #92400e;">
-                        <strong>Custom production:</strong> Made in up to <%= custom.production_days %> <%= custom.production_days === 1 ? 'day' : 'days' %>.
+                        <strong><%= isImported ? 'Imported / pre-order item' : 'Custom production' %>:</strong> <%= isImported ? 'Expected ready in up to' : 'Made in up to' %> <%= readyDays %> <%= readyDays === 1 ? 'day' : 'days' %>.
                         Delivery starts after seller handoff.
                     </p>
+                    <% if (isImported) { %>
+                        <p style="margin: 0 0 8px 0; font-size: 13px; color: #92400e;">
+                            The seller is waiting for this item to arrive before handing it to Mzigo Ego.
+                        </p>
+                    <% } %>
                     <% if (custom.buyer_instructions) { %>
                         <p style="margin: 0; font-size: 13px; color: #92400e;">
                             <strong>Your instructions:</strong> <%= custom.buyer_instructions %>
