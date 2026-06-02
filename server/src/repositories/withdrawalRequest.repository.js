@@ -16,17 +16,21 @@ export async function findAllWithSeller({ status } = {}) {
     SELECT
       wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name, wr.status,
       wr.provider_reference, wr.created_at, wr.processed_at,
-      wr.processed_by, wr.metadata, wr.seller_id,
+      wr.processed_by, wr.metadata, wr.seller_id, wr.creator_id, wr.buyer_id,
       CASE
         WHEN wr.seller_id IS NOT NULL THEN 'seller'
+        WHEN wr.creator_id IS NOT NULL THEN 'creator'
+        WHEN wr.buyer_id IS NOT NULL THEN 'buyer_refund'
         ELSE 'unknown'
       END AS entity_type,
-      COALESCE(NULLIF(s.shop_name, ''), NULLIF(s.full_name, ''), NULLIF(wr.mpesa_name, ''), 'Seller') AS entity_name,
-      s.email AS entity_email,
-      s.whatsapp_number AS entity_phone,
-      s.balance AS current_balance
+      COALESCE(NULLIF(s.shop_name, ''), NULLIF(s.full_name, ''), NULLIF(CONCAT_WS(' ', c.first_name, c.last_name), ''), NULLIF(b.full_name, ''), NULLIF(wr.mpesa_name, ''), 'Withdrawal user') AS entity_name,
+      COALESCE(s.email, c.email, b.email) AS entity_email,
+      COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone,
+      COALESCE(s.balance, c.balance, b.refunds) AS current_balance
     FROM withdrawal_requests wr
     LEFT JOIN sellers s ON wr.seller_id = s.id
+    LEFT JOIN creators c ON wr.creator_id = c.id
+    LEFT JOIN buyers b ON wr.buyer_id = b.id
     ${where}
     ORDER BY wr.created_at DESC
     LIMIT 500
@@ -46,10 +50,12 @@ export async function findAllWithSeller({ status } = {}) {
 export async function findByIdWithSeller(id) {
   const sql = `
     SELECT wr.*,
-           s.whatsapp_number AS entity_phone,
-           s.balance AS entity_balance
+           COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone,
+           COALESCE(s.balance, c.balance, b.refunds) AS entity_balance
     FROM withdrawal_requests wr
     LEFT JOIN sellers s ON wr.seller_id = s.id
+    LEFT JOIN creators c ON wr.creator_id = c.id
+    LEFT JOIN buyers b ON wr.buyer_id = b.id
     WHERE wr.id = $1
   `;
   const { rows } = await query(sql, [id]);
@@ -75,10 +81,12 @@ const DEFAULT_EXECUTOR = { query };
 export async function findByIdWithSellerForUpdate(id, executor = DEFAULT_EXECUTOR) {
   const sql = `
     SELECT wr.*,
-           s.whatsapp_number AS entity_phone,
-           s.balance AS entity_balance
+           COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone,
+           COALESCE(s.balance, c.balance, b.refunds) AS entity_balance
     FROM withdrawal_requests wr
     LEFT JOIN sellers s ON wr.seller_id = s.id
+    LEFT JOIN creators c ON wr.creator_id = c.id
+    LEFT JOIN buyers b ON wr.buyer_id = b.id
     WHERE wr.id = $1
     FOR UPDATE OF wr
   `;

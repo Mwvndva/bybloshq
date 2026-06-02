@@ -39,9 +39,15 @@ class WithdrawalRetryWorkerService {
         if (rows.length) {
           const ids = rows.map(row => row.id);
           const joined = await claimClient.query(
-            `SELECT wr.*, s.full_name, s.whatsapp_number
+            `SELECT wr.*,
+                    COALESCE(s.full_name, CONCAT_WS(' ', c.first_name, c.last_name), b.full_name) AS full_name,
+                    COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS whatsapp_number,
+                    b.mobile_payment AS buyer_mobile_payment,
+                    c.mpesa_number AS creator_mpesa_number
              FROM withdrawal_requests wr
-             JOIN sellers s ON wr.seller_id = s.id
+             LEFT JOIN sellers s ON wr.seller_id = s.id
+             LEFT JOIN creators c ON wr.creator_id = c.id
+             LEFT JOIN buyers b ON wr.buyer_id = b.id
              WHERE wr.id = ANY($1::int[])`,
             [ids]
           );
@@ -65,9 +71,11 @@ class WithdrawalRetryWorkerService {
       for (let i = 0; i < pending.length; i++) {
         const request = pending[i];
         const entity = {
-          id: request.seller_id,
+          id: request.seller_id || request.creator_id || request.buyer_id,
+          entity_type: request.buyer_id ? 'buyer_refund' : request.creator_id ? 'creator' : 'seller',
           full_name: request.full_name,
-          whatsapp_number: request.whatsapp_number
+          whatsapp_number: request.whatsapp_number,
+          mpesa_number: request.creator_mpesa_number || request.buyer_mobile_payment
         };
 
         await withdrawalService._callProviderAndUpdate(request, entity, Number.parseFloat(request.amount), request.mpesa_number)

@@ -385,6 +385,8 @@ const getAllWithdrawalRequests = async (req, res, next) => {
         entityPhone: r.entity_phone,
         currentBalance: parseFloat(r.current_balance || 0),
         sellerId: r.seller_id,
+        creatorId: r.creator_id,
+        buyerId: r.buyer_id,
         failureReason: r.metadata?.api_error || r.metadata?.remarks || null,
         mpesaReceipt: r.metadata?.mpesa_receipt || null,
         reconciliationFlag: r.metadata?.reconciliation_flag || null,
@@ -490,6 +492,10 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
 
       if (lockedRequest.seller_id) {
         await sellerRepository.lockById(lockedRequest.seller_id, client);
+      } else if (lockedRequest.creator_id) {
+        await client.query('SELECT id FROM creators WHERE id = $1 FOR UPDATE', [lockedRequest.creator_id]);
+      } else if (lockedRequest.buyer_id) {
+        await client.query('SELECT id FROM buyers WHERE id = $1 FOR UPDATE', [lockedRequest.buyer_id]);
       }
 
       request = lockedRequest;
@@ -505,14 +511,32 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
       let newBalance = null;
       if (status === 'failed') {
         newBalance = await payoutService.refundToWallet(client, request);
-      } else if (status === 'completed' && request.seller_id) {
-        await client.query(
-          `UPDATE sellers
-           SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
-               updated_at = NOW()
-           WHERE id = $2`,
-          [getWithdrawalReservedAmount(request), request.seller_id]
-        );
+      } else if (status === 'completed') {
+        if (request.seller_id) {
+          await client.query(
+            `UPDATE sellers
+             SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                 updated_at = NOW()
+             WHERE id = $2`,
+            [getWithdrawalReservedAmount(request), request.seller_id]
+          );
+        } else if (request.creator_id) {
+          await client.query(
+            `UPDATE creators
+             SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                 updated_at = NOW()
+             WHERE id = $2`,
+            [getWithdrawalReservedAmount(request), request.creator_id]
+          );
+        } else if (request.buyer_id) {
+          await client.query(
+            `UPDATE buyers
+             SET refund_withdrawal_reserved_balance = GREATEST(COALESCE(refund_withdrawal_reserved_balance, 0) - $1, 0),
+                 updated_at = NOW()
+             WHERE id = $2`,
+            [getWithdrawalReservedAmount(request), request.buyer_id]
+          );
+        }
       }
 
       const updatedEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.UPDATED, {

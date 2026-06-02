@@ -2,8 +2,7 @@ import BuyerService from '../services/buyer.service.js';
 import Buyer from '../models/buyer.model.js';
 import User from '../models/user.model.js';
 import { AppError } from '../shared/utils/errorHandler.js';
-import { sanitizeBuyer, sanitizeOrder } from '../shared/utils/sanitize.js';
-import * as refundRequestRepository from '../repositories/refundRequest.repository.js';
+import { sanitizeBuyer, sanitizeOrder, sanitizeWithdrawalRequest } from '../shared/utils/sanitize.js';
 import logger from '../shared/utils/logger.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
@@ -11,6 +10,7 @@ import { signToken, verifyToken, getTokenFromRequest } from '../shared/utils/jwt
 import OrderService from "../services/order.service.js";
 import OrderModel from "../models/order.model.js";
 import { OrderStatus } from "../shared/constants/enums.js";
+import WithdrawalService from '../services/withdrawal.service.js';
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res, next) => {
@@ -491,12 +491,15 @@ export const checkBuyerByPhone = async (req, res, next) => {
 export const getPendingRefundRequests = async (req, res, next) => {
   try {
     const buyerId = req.user.buyerId;
-    const pendingRequests = await refundRequestRepository.findPendingByBuyerId(buyerId);
+    const { rows: pendingRequests } = await WithdrawalService.getRefundWithdrawalsForBuyer(buyerId, {
+      status: 'processing',
+      limit: 50
+    });
 
     res.status(200).json({
       status: 'success',
       data: {
-        pendingRequests,
+        pendingRequests: pendingRequests.map(request => sanitizeWithdrawalRequest(request)),
         hasPending: pendingRequests.length > 0
       }
     });
@@ -521,39 +524,21 @@ export const requestRefund = async (req, res, next) => {
       return next(new AppError('Invalid refund amount', 400));
     }
 
-    // Get buyer's details and check available refunds
-    const buyer = await Buyer.findById(buyerId);
-    if (!buyer) {
-      return next(new AppError('Buyer not found', 404));
-    }
-
-    const availableRefunds = parseFloat(buyer.refunds || 0);
-    if (availableRefunds < amount) {
-      return next(new AppError(`Insufficient refund balance. Available: KSh ${availableRefunds}`, 400));
-    }
-
-    // Use buyer's existing details for refund
-    const paymentMethod = 'M-Pesa'; // Default to M-Pesa for Kenya
-    const paymentDetailsJson = JSON.stringify({
-      phone: buyer.mobilePayment || buyer.mobile_payment || buyer.whatsappNumber || buyer.whatsapp_number,
-      name: buyer.fullName || buyer.full_name,
-      email: buyer.email
-    });
-
-    const created = await refundRequestRepository.createForBuyer({
-      buyerId,
+    const request = await WithdrawalService.createWithdrawalRequest({
+      entityId: buyerId,
+      entityType: 'buyer_refund',
       amount,
-      paymentMethod,
-      paymentDetails: paymentDetailsJson
+      idempotencyKey: req.get('Idempotency-Key') || req.body.idempotencyKey
     });
 
-    logger.info('Refund request created:', created.id);
+    logger.info('Refund withdrawal request created:', request.id);
 
     res.status(201).json({
       status: 'success',
-      message: 'Refund request submitted successfully',
+      message: 'Refund withdrawal submitted successfully. You will be notified once processed.',
       data: {
-        requestId: created.id
+        requestId: request.id,
+        withdrawal: sanitizeWithdrawalRequest(request)
       }
     });
   } catch (error) {

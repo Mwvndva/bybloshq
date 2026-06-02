@@ -693,6 +693,261 @@ test('Paystack transfer success completes withdrawal without refunding wallet', 
     ]);
 });
 
+test('creator withdrawal creation reserves balance in shared withdrawal_requests', async () => {
+    const {
+        pool,
+        WithdrawalService,
+        eventBus
+    } = await runtime();
+
+    const creator = {
+        id: 44,
+        balance: '500.00',
+        withdrawal_reserved_balance: '0.00',
+        full_name: 'Amani Creator',
+        mpesa_number: '0712345678',
+        whatsapp_number: '0712345678',
+        entity_type: 'creator'
+    };
+    const request = {
+        id: 144,
+        seller_id: null,
+        creator_id: 44,
+        amount: '100.00',
+        mpesa_number: '254712345678',
+        mpesa_name: 'Amani Creator',
+        status: 'processing',
+        idempotency_key: 'CREATOR-WD-1',
+        metadata: { withdrawal_fee: 21, total_deducted: 121, entity_type: 'creator' },
+        created_at: new Date()
+    };
+    const client = new FakeClient([
+        respond(text => /FROM creators/.test(text) && /FOR UPDATE/.test(text), [creator]),
+        respond(text => /FROM withdrawal_requests/.test(text) && /creator_id = \$1/.test(text), []),
+        respond(text => /UPDATE creators/.test(text) && /withdrawal_reserved_balance = COALESCE/.test(text), []),
+        respond(text => /INSERT INTO withdrawal_requests/.test(text) && /seller_id, creator_id/.test(text), [request])
+    ]);
+    const dispatched = [];
+
+    await withPatches([
+        [pool, 'connect', async () => client],
+        [eventBus, 'enqueueInTransaction', async (_client, event, data) => ({ eventId: data.eventId || `${event}:test` })],
+        [eventBus, 'dispatchAfterCommit', eventId => dispatched.push(eventId)],
+        [WithdrawalService, '_callProviderAndUpdate', async () => {}]
+    ], async () => {
+        const result = await WithdrawalService.createWithdrawalRequest({
+            entityId: 44,
+            entityType: 'creator',
+            amount: 100,
+            idempotencyKey: 'CREATOR-WD-1'
+        });
+
+        assert.equal(result.creator_id, 44);
+        assert.equal(result.seller_id, null);
+    });
+
+    assert.ok(indexOfQuery(client, /SELECT id, balance, withdrawal_reserved_balance/) < indexOfQuery(client, /UPDATE creators/));
+    assert.ok(indexOfQuery(client, /UPDATE creators/) < indexOfQuery(client, /INSERT INTO withdrawal_requests/));
+    assert.deepEqual(client.queries[indexOfQuery(client, /UPDATE creators/)].params, [121, 44]);
+    assert.deepEqual(client.queries[indexOfQuery(client, /INSERT INTO withdrawal_requests/)].params.slice(0, 7), [
+        null,
+        44,
+        null,
+        100,
+        '0712345678',
+        'Amani Creator',
+        'CREATOR-WD-1'
+    ]);
+    assert.equal(
+        client.queries[indexOfQuery(client, /INSERT INTO withdrawal_requests/)].params[7],
+        JSON.stringify({ withdrawal_fee: 21, total_deducted: 121, entity_type: 'creator' })
+    );
+    assert.deepEqual(dispatched, ['withdrawal.created:144']);
+});
+
+test('Paystack transfer success releases creator withdrawal reserve', async () => {
+    const {
+        pool,
+        PayoutCallbackStateMachineService,
+        payoutService,
+        eventBus
+    } = await runtime();
+
+    const request = {
+        id: 145,
+        seller_id: null,
+        creator_id: 44,
+        amount: '100.00',
+        status: 'processing',
+        provider_reference: 'TRF-CREATOR-SUCCESS',
+        idempotency_key: 'CREATOR-WD-2',
+        entity_phone: '0712345678',
+        metadata: {
+            withdrawal_fee: 21,
+            total_deducted: 121
+        }
+    };
+    const client = new FakeClient([
+        respond(text => /WITH matched_ids AS/.test(text) && /FOR UPDATE OF wr/.test(text), [request]),
+        respond(text => /SELECT id FROM creators WHERE id = \$1 FOR UPDATE/.test(text), [{ id: 44 }]),
+        respond(text => /UPDATE withdrawal_requests/.test(text) && /status = \$1/.test(text), [{ ...request, status: 'completed' }]),
+        respond(text => /UPDATE creators/.test(text) && /withdrawal_reserved_balance/.test(text), [{ id: 44 }]),
+        respond(text => /UPDATE payout_provider_attempts/.test(text), [])
+    ]);
+
+    await withPatches([
+        [pool, 'connect', async () => client],
+        [payoutService, 'refundToWallet', async () => {
+            throw new Error('refundToWallet must not run on transfer.success');
+        }],
+        [eventBus, 'enqueueInTransaction', async (_client, event, data) => ({ eventId: data.eventId || `${event}:test` })],
+        [eventBus, 'dispatchManyAfterCommit', () => {}]
+    ], async () => {
+        const result = await PayoutCallbackStateMachineService.handleProviderCallback({
+            paystack_event: 'transfer.success',
+            transaction_reference: 'TRF-CREATOR-SUCCESS',
+            client_reference: 'CREATOR-WD-2',
+            status: 'success',
+            amount: '100.00',
+            mpesa_receipt: 'MPE-CREATOR'
+        }, { replayEventId: 'paystack:transfer.success:TRF-CREATOR-SUCCESS' });
+
+        assert.equal(result.status, 'completed');
+        assert.equal(result.withdrawalId, 145);
+    });
+
+    assert.ok(indexOfQuery(client, /SELECT id FROM creators/) < indexOfQuery(client, /UPDATE withdrawal_requests/));
+    assert.ok(indexOfQuery(client, /UPDATE withdrawal_requests/) < indexOfQuery(client, /UPDATE creators/));
+    assert.deepEqual(client.queries[indexOfQuery(client, /UPDATE creators/)].params, [121, 44]);
+});
+
+test('buyer refund withdrawal reserves refunds plus withdrawal fee in shared withdrawal_requests', async () => {
+    const {
+        pool,
+        WithdrawalService,
+        eventBus
+    } = await runtime();
+
+    const buyer = {
+        id: 61,
+        balance: '500.00',
+        withdrawal_reserved_balance: '0.00',
+        full_name: 'Nairobi Buyer',
+        mobile_payment: '0711111111',
+        whatsapp_number: '0711111111',
+        mpesa_number: null,
+        entity_type: 'buyer_refund'
+    };
+    const request = {
+        id: 161,
+        seller_id: null,
+        creator_id: null,
+        buyer_id: 61,
+        amount: '100.00',
+        mpesa_number: '0711111111',
+        mpesa_name: 'Nairobi Buyer',
+        status: 'processing',
+        idempotency_key: 'BUYER-REFUND-WD-1',
+        metadata: { withdrawal_fee: 21, total_deducted: 121, entity_type: 'buyer_refund', source: 'buyer_refund_withdrawal' },
+        created_at: new Date()
+    };
+    const client = new FakeClient([
+        respond(text => /FROM buyers/.test(text) && /refunds AS balance/.test(text) && /FOR UPDATE/.test(text), [buyer]),
+        respond(text => /FROM withdrawal_requests/.test(text) && /buyer_id = \$1/.test(text), []),
+        respond(text => /UPDATE buyers/.test(text) && /refund_withdrawal_reserved_balance = COALESCE/.test(text), []),
+        respond(text => /INSERT INTO withdrawal_requests/.test(text) && /seller_id, creator_id, buyer_id/.test(text), [request])
+    ]);
+
+    await withPatches([
+        [pool, 'connect', async () => client],
+        [eventBus, 'enqueueInTransaction', async (_client, event, data) => ({ eventId: data.eventId || `${event}:test` })],
+        [eventBus, 'dispatchAfterCommit', () => {}],
+        [WithdrawalService, '_callProviderAndUpdate', async () => {}]
+    ], async () => {
+        const result = await WithdrawalService.createWithdrawalRequest({
+            entityId: 61,
+            entityType: 'buyer_refund',
+            amount: 100,
+            idempotencyKey: 'BUYER-REFUND-WD-1'
+        });
+
+        assert.equal(result.buyer_id, 61);
+        assert.equal(result.seller_id, null);
+        assert.equal(result.creator_id, null);
+    });
+
+    assert.ok(indexOfQuery(client, /SELECT id,\s+refunds AS balance/) < indexOfQuery(client, /UPDATE buyers/));
+    assert.ok(indexOfQuery(client, /UPDATE buyers/) < indexOfQuery(client, /INSERT INTO withdrawal_requests/));
+    assert.deepEqual(client.queries[indexOfQuery(client, /UPDATE buyers/)].params, [121, 61]);
+    assert.deepEqual(client.queries[indexOfQuery(client, /INSERT INTO withdrawal_requests/)].params.slice(0, 8), [
+        null,
+        null,
+        61,
+        100,
+        '0711111111',
+        'Nairobi Buyer',
+        'BUYER-REFUND-WD-1',
+        JSON.stringify({ withdrawal_fee: 21, total_deducted: 121, entity_type: 'buyer_refund', source: 'buyer_refund_withdrawal' })
+    ]);
+});
+
+test('Paystack transfer success releases buyer refund withdrawal reserve', async () => {
+    const {
+        pool,
+        PayoutCallbackStateMachineService,
+        payoutService,
+        eventBus
+    } = await runtime();
+
+    const request = {
+        id: 162,
+        seller_id: null,
+        creator_id: null,
+        buyer_id: 61,
+        amount: '100.00',
+        status: 'processing',
+        provider_reference: 'TRF-BUYER-REFUND-SUCCESS',
+        idempotency_key: 'BUYER-REFUND-WD-2',
+        entity_phone: '0711111111',
+        metadata: {
+            withdrawal_fee: 21,
+            total_deducted: 121
+        }
+    };
+    const client = new FakeClient([
+        respond(text => /WITH matched_ids AS/.test(text) && /FOR UPDATE OF wr/.test(text), [request]),
+        respond(text => /SELECT id FROM buyers WHERE id = \$1 FOR UPDATE/.test(text), [{ id: 61 }]),
+        respond(text => /UPDATE withdrawal_requests/.test(text) && /status = \$1/.test(text), [{ ...request, status: 'completed' }]),
+        respond(text => /UPDATE buyers/.test(text) && /refund_withdrawal_reserved_balance/.test(text), [{ id: 61 }]),
+        respond(text => /UPDATE payout_provider_attempts/.test(text), [])
+    ]);
+
+    await withPatches([
+        [pool, 'connect', async () => client],
+        [payoutService, 'refundToWallet', async () => {
+            throw new Error('refundToWallet must not run on transfer.success');
+        }],
+        [eventBus, 'enqueueInTransaction', async (_client, event, data) => ({ eventId: data.eventId || `${event}:test` })],
+        [eventBus, 'dispatchManyAfterCommit', () => {}]
+    ], async () => {
+        const result = await PayoutCallbackStateMachineService.handleProviderCallback({
+            paystack_event: 'transfer.success',
+            transaction_reference: 'TRF-BUYER-REFUND-SUCCESS',
+            client_reference: 'BUYER-REFUND-WD-2',
+            status: 'success',
+            amount: '100.00',
+            mpesa_receipt: 'MPE-BUYER'
+        }, { replayEventId: 'paystack:transfer.success:TRF-BUYER-REFUND-SUCCESS' });
+
+        assert.equal(result.status, 'completed');
+        assert.equal(result.withdrawalId, 162);
+    });
+
+    assert.ok(indexOfQuery(client, /SELECT id FROM buyers/) < indexOfQuery(client, /UPDATE withdrawal_requests/));
+    assert.ok(indexOfQuery(client, /UPDATE withdrawal_requests/) < indexOfQuery(client, /UPDATE buyers/));
+    assert.deepEqual(client.queries[indexOfQuery(client, /UPDATE buyers/)].params, [121, 61]);
+});
+
 test('Paystack transfer failure refunds seller wallet once', async () => {
     const {
         pool,

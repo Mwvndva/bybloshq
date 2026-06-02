@@ -6,8 +6,8 @@ import { signToken } from '../shared/utils/jwt.js';
 import { sendEmail, sendVerificationEmail } from '../shared/utils/email.js';
 import Fees from '../config/fees.js';
 import logger from '../shared/utils/logger.js';
-import payoutService from './payout.service.js';
 import whatsappService from './whatsapp.service.js';
+import WithdrawalService from './withdrawal.service.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
 const INVITE_EXPIRY_DAYS = 14;
@@ -857,14 +857,7 @@ class CreatorService {
       [creatorId]
     );
 
-    const { rows: withdrawals } = await pool.query(
-      `SELECT id, amount, withdrawal_fee, total_deducted, mpesa_number, status, provider_reference, created_at
-       FROM creator_withdrawal_requests
-       WHERE creator_id = $1
-       ORDER BY created_at DESC
-       LIMIT 10`,
-      [creatorId]
-    );
+    const { rows: withdrawals } = await WithdrawalService.getWithdrawalsForCreator(creatorId, { limit: 10 });
 
     return {
       creator,
@@ -901,108 +894,12 @@ class CreatorService {
   }
 
   static async createWithdrawalRequest({ creatorId, amount, idempotencyKey }) {
-    const validatedAmount = payoutService.validateAmount(amount);
-    const normalizedIdempotencyKey = String(idempotencyKey || '').trim().slice(0, 120);
-    if (!normalizedIdempotencyKey) throw new Error('Idempotency-Key header is required.');
-
-    const withdrawalFee = Fees.calculateWithdrawalFee(validatedAmount);
-    const totalDeducted = roundMoney(validatedAmount + withdrawalFee);
-    const client = await pool.connect();
-    let request;
-    let creator;
-
-    try {
-      await client.query('BEGIN');
-      const { rows } = await client.query(
-        `SELECT id, first_name, last_name, mpesa_number, balance
-         FROM creators
-         WHERE id = $1 AND status = 'active'
-         FOR UPDATE`,
-        [creatorId]
-      );
-      creator = rows[0];
-      if (!creator) throw new Error('Creator profile not found.');
-
-      const { rows: existing } = await client.query(
-        `SELECT * FROM creator_withdrawal_requests
-         WHERE creator_id = $1 AND idempotency_key = $2
-         FOR UPDATE`,
-        [creatorId, normalizedIdempotencyKey]
-      );
-      if (existing[0]) {
-        await client.query('COMMIT');
-        return existing[0];
-      }
-
-      if (Number(creator.balance || 0) < totalDeducted) {
-        throw new Error(`Insufficient balance. Required KES ${totalDeducted.toLocaleString()} including withdrawal charge.`);
-      }
-
-      await client.query(
-        `UPDATE creators SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
-        [totalDeducted, creatorId]
-      );
-
-      const mpesaName = `${creator.first_name || ''} ${creator.last_name || ''}`.trim() || 'Byblos Creator';
-      const insert = await client.query(
-        `INSERT INTO creator_withdrawal_requests
-           (creator_id, amount, withdrawal_fee, total_deducted, mpesa_number, mpesa_name, idempotency_key, metadata)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
-         RETURNING *`,
-        [
-          creatorId,
-          validatedAmount,
-          withdrawalFee,
-          totalDeducted,
-          payoutService.normalizePhoneForPayout(creator.mpesa_number),
-          mpesaName,
-          normalizedIdempotencyKey,
-          JSON.stringify({ source: 'creator_dashboard' })
-        ]
-      );
-      request = insert.rows[0];
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-
-    payoutService.initiatePayout({
-      phone_number: request.mpesa_number,
-      amount: validatedAmount,
-      narration: `Byblos creator withdrawal ${request.id}`,
-      idempotency_key: normalizedIdempotencyKey,
-      recipient_name: request.mpesa_name
-    }).then(async (providerResult) => {
-      await pool.query(
-        `UPDATE creator_withdrawal_requests
-         SET status = 'processing',
-             provider_reference = $2,
-             metadata = metadata || $3::jsonb,
-             updated_at = NOW()
-         WHERE id = $1`,
-        [request.id, providerResult.provider_reference || providerResult.reference || null, JSON.stringify({ provider_result: providerResult })]
-      );
-    }).catch(async (error) => {
-      logger.error('[CREATOR_WITHDRAWAL] Payout failed:', error.message);
-      await pool.query(
-        `UPDATE creator_withdrawal_requests
-         SET status = 'failed',
-             metadata = metadata || $2::jsonb,
-             updated_at = NOW(),
-             processed_at = NOW()
-         WHERE id = $1`,
-        [request.id, JSON.stringify({ provider_error: { message: error.message, code: error.code || null } })]
-      );
-      await pool.query(
-        `UPDATE creators SET balance = balance + $1, updated_at = NOW() WHERE id = $2`,
-        [request.total_deducted, creatorId]
-      );
+    return WithdrawalService.createWithdrawalRequest({
+      entityId: creatorId,
+      entityType: 'creator',
+      amount,
+      idempotencyKey
     });
-
-    return request;
   }
 }
 

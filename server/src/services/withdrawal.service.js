@@ -30,6 +30,26 @@ function isAmbiguousPayoutProviderError(error) {
     return Number.isFinite(status) && status >= 500;
 }
 
+function getEntityType(requestOrEntity = {}) {
+    if (requestOrEntity.buyer_id || requestOrEntity.entity_type === 'buyer_refund') return 'buyer_refund';
+    if (requestOrEntity.creator_id || requestOrEntity.entity_type === 'creator') return 'creator';
+    return 'seller';
+}
+
+function getEntityLabel(entity = {}) {
+    const entityType = getEntityType(entity);
+    if (entity.full_name || entity.name || entity.mpesa_name) {
+        return entity.full_name || entity.name || entity.mpesa_name;
+    }
+    if (entityType === 'buyer_refund') return 'Byblos Buyer';
+    if (entityType === 'creator') return 'Byblos Creator';
+    return 'ByblosHQ Seller';
+}
+
+function getEntityPhone(entity = {}) {
+    return entity.whatsapp_number || entity.mpesa_number || entity.mobile_payment || null;
+}
+
 /**
  * WithdrawalService
  * 
@@ -77,9 +97,9 @@ class WithdrawalService {
             const requestPayload = {
                 phone_number: phone,
                 amount,
-                narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`,
+                narration: `Withdrawal for ${getEntityLabel(entity)}`,
                 idempotency_key: request.idempotency_key,
-                recipient_name: request.mpesa_name || entity.full_name || 'ByblosHQ Seller'
+                recipient_name: request.mpesa_name || getEntityLabel(entity)
             };
 
             if (existing) {
@@ -96,9 +116,9 @@ class WithdrawalService {
             } else {
                 await client.query(
                     `INSERT INTO payout_provider_attempts
-                        (withdrawal_request_id, seller_id, idempotency_key, status, attempts, request_payload, last_attempt_at)
-                     VALUES ($1, $2, $3, 'provider_call_started', 1, $4, NOW())`,
-                    [request.id, request.seller_id, request.idempotency_key, JSON.stringify(requestPayload)]
+                        (withdrawal_request_id, seller_id, creator_id, buyer_id, idempotency_key, status, attempts, request_payload, last_attempt_at)
+                     VALUES ($1, $2, $3, $4, $5, 'provider_call_started', 1, $6, NOW())`,
+                    [request.id, request.seller_id || null, request.creator_id || null, request.buyer_id || null, request.idempotency_key, JSON.stringify(requestPayload)]
                 );
             }
 
@@ -169,18 +189,26 @@ class WithdrawalService {
             }
 
             const { rows: [request] } = await client.query(
-                `SELECT wr.*, s.whatsapp_number as entity_phone 
+                `SELECT wr.*,
+                        COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number) as entity_phone
                  FROM withdrawal_requests wr 
                  LEFT JOIN sellers s ON wr.seller_id = s.id
+                 LEFT JOIN creators c ON wr.creator_id = c.id
                  WHERE wr.id = $1 FOR UPDATE OF wr`,
                 [requestId]
             );
 
             if (!request) throw new Error('Withdrawal request not found');
 
-            // FIXED BUG-WD-02: Lock sellers row to prevent race conditions during balance updates
+            // Lock wallet owner row to prevent race conditions during balance updates.
             if (['completed', 'failed'].includes(newStatus)) {
-                await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
+                if (request.seller_id) {
+                    await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
+                } else if (request.creator_id) {
+                    await client.query('SELECT id FROM creators WHERE id = $1 FOR UPDATE', [request.creator_id]);
+                } else if (request.buyer_id) {
+                    await client.query('SELECT id FROM buyers WHERE id = $1 FOR UPDATE', [request.buyer_id]);
+                }
             }
 
             // Prevent re-processing terminal states (CRITICAL FIX: STATE-TRANSITIONS)
@@ -213,18 +241,36 @@ class WithdrawalService {
             if (newStatus === 'failed' && !skipRefund) {
                 // ENSURE: refundToWallet uses the SAME client for atomicity
                 newBalance = await payoutService.refundToWallet(client, request);
-                logger.info(`[WithdrawalService] Request ${requestId} failed. Refunded KES ${request.amount} to seller ${request.seller_id}`);
+                logger.info(`[WithdrawalService] Request ${requestId} failed. Refunded KES ${request.amount} to ${getEntityType(request)} ${request.seller_id || request.creator_id}`);
             } else if (newStatus === 'failed') {
                 logger.warn(`[WithdrawalService] Request ${requestId} marked failed without refund: ${remarks || 'skipRefund=true'}`);
             } else if (newStatus === 'completed') {
                 const reservedAmount = getWithdrawalReservedAmount(request);
-                await client.query(
-                    `UPDATE sellers
-                     SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
-                         updated_at = NOW()
-                     WHERE id = $2`,
-                    [reservedAmount, request.seller_id]
-                );
+                if (request.seller_id) {
+                    await client.query(
+                        `UPDATE sellers
+                         SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                             updated_at = NOW()
+                         WHERE id = $2`,
+                        [reservedAmount, request.seller_id]
+                    );
+                } else if (request.creator_id) {
+                    await client.query(
+                        `UPDATE creators
+                         SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                             updated_at = NOW()
+                         WHERE id = $2`,
+                        [reservedAmount, request.creator_id]
+                    );
+                } else if (request.buyer_id) {
+                    await client.query(
+                        `UPDATE buyers
+                         SET refund_withdrawal_reserved_balance = GREATEST(COALESCE(refund_withdrawal_reserved_balance, 0) - $1, 0),
+                             updated_at = NOW()
+                         WHERE id = $2`,
+                        [reservedAmount, request.buyer_id]
+                    );
+                }
             }
 
             const updatedEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.UPDATED, {
@@ -272,21 +318,20 @@ class WithdrawalService {
      * Create and initiate a withdrawal request.
      *
      * @param {Object} params
-     * @param {number}  params.entityId    - seller.id
-     * @param {string}  params.entityType  - 'seller'
+     * @param {number}  params.entityId    - seller.id, creator.id, or buyer.id
+     * @param {string}  params.entityType  - 'seller' | 'creator' | 'buyer_refund'
      * @returns {Promise<Object>} withdrawal_requests row
      */
     async createWithdrawalRequest({ entityId, entityType, amount, mpesaNumber, mpesaName, idempotencyKey }) {
 
         // --- Phase 1: Validate inputs before touching DB ---
         const validatedAmount = payoutService.validateAmount(amount);
-        const normalizedPhone = payoutService.normalizePhoneForPayout(mpesaNumber);
 
-        if (!mpesaName?.trim()) {
-            throw new Error('M-Pesa registered name is required');
+        if (!['seller', 'creator', 'buyer_refund'].includes(entityType)) {
+            throw new Error(`Invalid entityType: ${entityType}. Must be 'seller', 'creator', or 'buyer_refund'.`);
         }
-        if (entityType !== 'seller') {
-            throw new Error(`Invalid entityType: ${entityType}. Must be 'seller'.`);
+        if (entityType === 'seller' && !mpesaName?.trim()) {
+            throw new Error('M-Pesa registered name is required');
         }
         if (typeof idempotencyKey !== 'string' || !idempotencyKey.trim()) {
             throw new Error('Idempotency-Key header is required');
@@ -298,19 +343,42 @@ class WithdrawalService {
         let request;
         let entity;
         let createdEventId = null;
+        let normalizedPhone = null;
 
         try {
             await client.query('BEGIN');
 
             // Lock entity row and fetch current balance
-            const { rows } = await client.query(
-                `SELECT id, balance, pending_settlement_balance, withdrawal_reserved_balance,
-                        full_name, whatsapp_number
-                 FROM sellers
-                 WHERE id = $1
-                 FOR UPDATE`,
-                [entityId]
-            );
+            const entityQuery = entityType === 'buyer_refund'
+                ? `SELECT id,
+                          refunds AS balance,
+                          refund_withdrawal_reserved_balance AS withdrawal_reserved_balance,
+                          full_name,
+                          mobile_payment,
+                          whatsapp_number,
+                          NULL::text AS mpesa_number,
+                          'buyer_refund' AS entity_type
+                   FROM buyers
+                   WHERE id = $1
+                   FOR UPDATE`
+                : entityType === 'creator'
+                ? `SELECT id, balance, withdrawal_reserved_balance,
+                          CONCAT_WS(' ', first_name, last_name) AS full_name,
+                          mpesa_number,
+                          whatsapp_number,
+                          'creator' AS entity_type
+                   FROM creators
+                   WHERE id = $1 AND status = 'active'
+                   FOR UPDATE`
+                : `SELECT id, balance, pending_settlement_balance, withdrawal_reserved_balance,
+                          full_name,
+                          whatsapp_number,
+                          NULL::text AS mpesa_number,
+                          'seller' AS entity_type
+                   FROM sellers
+                   WHERE id = $1
+                   FOR UPDATE`;
+            const { rows } = await client.query(entityQuery, [entityId]);
             const entityRow = rows[0];
 
             if (!entityRow) {
@@ -318,12 +386,23 @@ class WithdrawalService {
             }
 
             entity = entityRow;
+            const payoutPhone = entityType === 'creator'
+                ? entity.mpesa_number
+                : entityType === 'buyer_refund'
+                    ? entity.mobile_payment || entity.whatsapp_number
+                    : mpesaNumber;
+            normalizedPhone = payoutService.normalizePhoneForPayout(payoutPhone);
+            const normalizedName = entityType === 'creator'
+                ? getEntityLabel(entity)
+                : entityType === 'buyer_refund'
+                    ? getEntityLabel(entity)
+                : mpesaName.trim();
 
             const { rows: existingRequests } = await client.query(
-                `SELECT id, amount, seller_id, mpesa_number, mpesa_name, status, idempotency_key,
+                `SELECT id, amount, seller_id, creator_id, buyer_id, mpesa_number, mpesa_name, status, idempotency_key,
                         provider_reference, metadata, created_at
                  FROM withdrawal_requests
-                 WHERE seller_id = $1
+                 WHERE ${entityType === 'buyer_refund' ? 'buyer_id' : entityType === 'creator' ? 'creator_id' : 'seller_id'} = $1
                    AND idempotency_key = $2
                  FOR UPDATE`,
                 [entityId, normalizedIdempotencyKey]
@@ -332,7 +411,8 @@ class WithdrawalService {
                 request = existingRequests[0];
                 await client.query('COMMIT');
                 logger.info('[WithdrawalService] Reused existing withdrawal request for idempotency key', {
-                    sellerId: entityId,
+                    entityId,
+                    entityType,
                     withdrawalId: request.id
                 });
                 return request;
@@ -346,34 +426,52 @@ class WithdrawalService {
                 throw new Error(
                     `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
                     `Required: KES ${deductionAmount.toLocaleString()} including withdrawal charge. ` +
-                    'Recent sales may still be pending Paystack settlement.'
+                    (entityType === 'seller'
+                        ? 'Recent sales may still be pending Paystack settlement.'
+                        : entityType === 'buyer_refund'
+                            ? 'Some refund funds may already be reserved for another withdrawal.'
+                            : 'Some earnings may already be reserved for another withdrawal.')
                 );
             }
 
             // Reserve available funds while Paystack processes the transfer.
-            await client.query(
-                `UPDATE sellers
+            const reserveSql = entityType === 'buyer_refund'
+                ? `UPDATE buyers
+                   SET refunds = refunds - $1,
+                       refund_withdrawal_reserved_balance = COALESCE(refund_withdrawal_reserved_balance, 0) + $1,
+                       updated_at = NOW()
+                   WHERE id = $2`
+                : entityType === 'creator'
+                ? `UPDATE creators
+                   SET balance = balance - $1,
+                       withdrawal_reserved_balance = COALESCE(withdrawal_reserved_balance, 0) + $1,
+                       updated_at = NOW()
+                   WHERE id = $2`
+                : `UPDATE sellers
                  SET balance = balance - $1,
                      withdrawal_reserved_balance = COALESCE(withdrawal_reserved_balance, 0) + $1,
                      updated_at = NOW()
-                 WHERE id = $2`,
-                [deductionAmount, entityId]
-            );
+                 WHERE id = $2`;
+            await client.query(reserveSql, [deductionAmount, entityId]);
 
             const insertResult = await client.query(
                 `INSERT INTO withdrawal_requests 
-                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, idempotency_key, metadata, created_at)
-                 VALUES ($1, $2, $3, $4, 'processing', TRUE, $5, $6::jsonb, NOW())
-                 RETURNING id, amount, seller_id, mpesa_number, mpesa_name, status, idempotency_key, metadata, created_at`,
+                    (seller_id, creator_id, buyer_id, amount, mpesa_number, mpesa_name, status, api_call_pending, idempotency_key, metadata, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, 'processing', TRUE, $7, $8::jsonb, NOW())
+                 RETURNING id, amount, seller_id, creator_id, buyer_id, mpesa_number, mpesa_name, status, idempotency_key, metadata, created_at`,
                 [
-                    entityId,
+                    entityType === 'seller' ? entityId : null,
+                    entityType === 'creator' ? entityId : null,
+                    entityType === 'buyer_refund' ? entityId : null,
                     validatedAmount,
                     normalizedPhone,
-                    mpesaName.trim(),
+                    normalizedName,
                     normalizedIdempotencyKey,
                     JSON.stringify({
                         withdrawal_fee: withdrawalFee,
-                        total_deducted: deductionAmount
+                        total_deducted: deductionAmount,
+                        entity_type: entityType,
+                        source: entityType === 'buyer_refund' ? 'buyer_refund_withdrawal' : undefined
                     })
                 ]
             );
@@ -383,7 +481,7 @@ class WithdrawalService {
             const createdEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.CREATED, {
                 eventId: `withdrawal.created:${request.id}`,
                 withdrawal: request,
-                seller: entity
+                seller: { whatsapp_number: getEntityPhone(entity) }
             });
             createdEventId = createdEvent.eventId;
 
@@ -454,9 +552,9 @@ class WithdrawalService {
             const providerResponse = await payoutService.initiatePayout({
                 phone_number: phone,
                 amount,
-                narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`,
+                narration: `Withdrawal for ${getEntityLabel(entity)}`,
                 idempotency_key: request.idempotency_key,
-                recipient_name: request.mpesa_name || entity.full_name || 'ByblosHQ Seller'
+                recipient_name: request.mpesa_name || getEntityLabel(entity)
             });
 
             // Store the provider reference for webhook reconciliation.
@@ -570,7 +668,13 @@ class WithdrawalService {
                     return;
                 }
 
-                await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [currentRequest.seller_id]);
+                if (currentRequest.seller_id) {
+                    await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [currentRequest.seller_id]);
+                } else if (currentRequest.creator_id) {
+                    await client.query('SELECT id FROM creators WHERE id = $1 FOR UPDATE', [currentRequest.creator_id]);
+                } else if (currentRequest.buyer_id) {
+                    await client.query('SELECT id FROM buyers WHERE id = $1 FOR UPDATE', [currentRequest.buyer_id]);
+                }
                 const newBalance = await payoutService.refundToWallet(client, currentRequest);
 
                 await client.query(
@@ -627,9 +731,13 @@ class WithdrawalService {
         logger.info(`[WithdrawalService] Reconciling requests stuck > ${hoursAgo} hours`);
 
         const { rows: stuck } = await pool.query(
-            `SELECT wr.*, s.full_name as seller_name, s.whatsapp_number
+            `SELECT wr.*,
+                    COALESCE(s.full_name, CONCAT_WS(' ', c.first_name, c.last_name), b.full_name) AS entity_name,
+                    COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS whatsapp_number
              FROM withdrawal_requests wr
              LEFT JOIN sellers s ON wr.seller_id = s.id
+             LEFT JOIN creators c ON wr.creator_id = c.id
+             LEFT JOIN buyers b ON wr.buyer_id = b.id
              WHERE wr.status = 'processing'
                AND wr.created_at < NOW() - ($1 * INTERVAL '1 hour')
                AND wr.created_at > NOW() - INTERVAL '48 hours'
@@ -774,6 +882,108 @@ class WithdrawalService {
         return {
             rows: dataResult.rows,
             total: Number.parseInt(countResult.rows[0].total, 10),
+        };
+    }
+
+    /**
+     * Return paginated withdrawal history for a creator.
+     * @param {number} creatorId
+     * @param {{ limit: number, offset: number, status: string|null }} opts
+     * @returns {Promise<{ rows: Object[], total: number }>}
+     */
+    async getWithdrawalsForCreator(creatorId, { limit = 10, offset = 0, status = null } = {}) {
+        const params = [creatorId];
+        const clauses = ['wr.creator_id = $1'];
+
+        if (status) {
+            params.push(status);
+            clauses.push(`wr.status = $${params.length}`);
+        }
+
+        const where = clauses.join(' AND ');
+
+        const [dataResult, countResult] = await Promise.all([
+            pool.query(
+                `SELECT
+                   wr.id,
+                   wr.amount,
+                   (wr.metadata->>'withdrawal_fee')::numeric AS withdrawal_fee,
+                   (wr.metadata->>'total_deducted')::numeric AS total_deducted,
+                   wr.mpesa_number,
+                   wr.mpesa_name,
+                   wr.status,
+                   wr.provider_reference,
+                   wr.created_at,
+                   wr.processed_at,
+                   wr.processed_by,
+                   wr.updated_at,
+                   wr.mpesa_receipt
+                 FROM withdrawal_requests wr
+                 WHERE ${where}
+                 ORDER BY wr.created_at DESC
+                 LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+                [...params, limit, offset]
+            ),
+            pool.query(
+                `SELECT COUNT(*) AS total FROM withdrawal_requests wr WHERE ${where}`,
+                params
+            )
+        ]);
+
+        return {
+            rows: dataResult.rows,
+            total: Number.parseInt(countResult.rows[0].total, 10)
+        };
+    }
+
+    /**
+     * Return paginated refund withdrawal history for a buyer.
+     * @param {number} buyerId
+     * @param {{ limit: number, offset: number, status: string|null }} opts
+     * @returns {Promise<{ rows: Object[], total: number }>}
+     */
+    async getRefundWithdrawalsForBuyer(buyerId, { limit = 20, offset = 0, status = null } = {}) {
+        const params = [buyerId];
+        const clauses = ['wr.buyer_id = $1'];
+
+        if (status) {
+            params.push(status);
+            clauses.push(`wr.status = $${params.length}`);
+        }
+
+        const where = clauses.join(' AND ');
+
+        const [dataResult, countResult] = await Promise.all([
+            pool.query(
+                `SELECT
+                   wr.id,
+                   wr.amount,
+                   (wr.metadata->>'withdrawal_fee')::numeric AS withdrawal_fee,
+                   (wr.metadata->>'total_deducted')::numeric AS total_deducted,
+                   wr.mpesa_number,
+                   wr.mpesa_name,
+                   wr.status,
+                   wr.provider_reference,
+                   wr.created_at,
+                   wr.processed_at,
+                   wr.processed_by,
+                   wr.updated_at,
+                   wr.mpesa_receipt
+                 FROM withdrawal_requests wr
+                 WHERE ${where}
+                 ORDER BY wr.created_at DESC
+                 LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+                [...params, limit, offset]
+            ),
+            pool.query(
+                `SELECT COUNT(*) AS total FROM withdrawal_requests wr WHERE ${where}`,
+                params
+            )
+        ]);
+
+        return {
+            rows: dataResult.rows,
+            total: Number.parseInt(countResult.rows[0].total, 10)
         };
     }
 

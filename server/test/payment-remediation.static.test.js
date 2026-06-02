@@ -182,7 +182,7 @@ test('withdrawals consume caller idempotency keys instead of random-only keys', 
   assert.match(controller, /req\.headers\['idempotency-key'\]/);
   assert.match(controller, /Idempotency-Key header is required/);
   assert.match(service, /Idempotency-Key header is required/);
-  assert.match(service, /WHERE seller_id = \$1\s+AND idempotency_key = \$2/);
+  assert.match(service, /WHERE \$\{entityType === 'buyer_refund' \? 'buyer_id' : entityType === 'creator' \? 'creator_id' : 'seller_id'\} = \$1\s+AND idempotency_key = \$2/);
   assert.doesNotMatch(service, /Math\.random\(\)/);
   assert.match(sellerWithdrawalsApi, /idempotencyKey:\s*string/);
   assert.match(sellerWithdrawalsApi, /Withdrawal idempotency key is required/);
@@ -345,6 +345,54 @@ test('seller wallet is settlement-aware from escrow through withdrawal reserve',
   assert.match(sellerAnalyticsRepository, /next_settlement_at/);
 });
 
+test('creator withdrawals use the shared withdrawal ledger and callback reserve path', () => {
+  const migration = read('migrations/20260602120000_unify_creator_withdrawals.sql');
+  const creatorController = read('src/controllers/creator.controller.js');
+  const creatorService = read('src/services/creator.service.js');
+  const withdrawalService = read('src/services/withdrawal.service.js');
+  const payoutService = read('src/services/payout.service.js');
+  const callbackStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+  const retryWorker = read('src/services/withdrawalRetryWorker.service.js');
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS creator_id INTEGER REFERENCES creators/);
+  assert.match(migration, /ALTER COLUMN seller_id DROP NOT NULL/);
+  assert.match(migration, /withdrawal_requests_one_entity_check/);
+  assert.match(migration, /withdrawal_requests_creator_idempotency_unique/);
+  assert.match(migration, /backfilled_from_creator_withdrawal_requests/);
+  assert.match(creatorController, /WithdrawalService\.createWithdrawalRequest\(\{[\s\S]*entityType:\s*'creator'/);
+  assert.match(creatorService, /WithdrawalService\.getWithdrawalsForCreator/);
+  assert.match(creatorService, /return WithdrawalService\.createWithdrawalRequest\(\{[\s\S]*entityType:\s*'creator'/);
+  assert.doesNotMatch(creatorService, /payoutService\.initiatePayout/);
+  assert.match(withdrawalService, /UPDATE creators[\s\S]*withdrawal_reserved_balance = COALESCE\(withdrawal_reserved_balance, 0\) \+ \$1/);
+  assert.match(withdrawalService, /INSERT INTO withdrawal_requests[\s\S]*seller_id, creator_id/);
+  assert.match(payoutService, /UPDATE creators[\s\S]*withdrawal_reserved_balance = GREATEST\(COALESCE\(withdrawal_reserved_balance, 0\) - \$1, 0\)[\s\S]*balance = COALESCE\(balance, 0\) \+ \$1/);
+  assert.match(callbackStateMachine, /LEFT JOIN creators c ON c\.id = wr\.creator_id/);
+  assert.match(callbackStateMachine, /UPDATE creators[\s\S]*withdrawal_reserved_balance = GREATEST\(COALESCE\(withdrawal_reserved_balance, 0\) - \$1, 0\)/);
+  assert.match(retryWorker, /LEFT JOIN creators c ON wr\.creator_id = c\.id/);
+});
+
+test('buyer refund withdrawals use Paystack withdrawal ledger with fees instead of admin manual payout', () => {
+  const migration = read('migrations/20260602120000_unify_creator_withdrawals.sql');
+  const buyerController = read('src/controllers/buyer.controller.js');
+  const refundController = read('src/controllers/refund.controller.js');
+  const withdrawalService = read('src/services/withdrawal.service.js');
+  const payoutService = read('src/services/payout.service.js');
+  const callbackStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+
+  assert.match(migration, /refund_withdrawal_reserved_balance/);
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS buyer_id INTEGER REFERENCES buyers/);
+  assert.match(migration, /withdrawal_requests_buyer_refund_idempotency_unique/);
+  assert.match(buyerController, /WithdrawalService\.createWithdrawalRequest\(\{[\s\S]*entityType:\s*'buyer_refund'/);
+  assert.match(buyerController, /WithdrawalService\.getRefundWithdrawalsForBuyer/);
+  assert.doesNotMatch(buyerController, /refundRequestRepository\.createForBuyer/);
+  assert.match(refundController, /Manual refund payout confirmation is disabled/);
+  assert.doesNotMatch(refundController, /decrementRefundBalance/);
+  assert.match(withdrawalService, /UPDATE buyers[\s\S]*refunds = refunds - \$1[\s\S]*refund_withdrawal_reserved_balance = COALESCE\(refund_withdrawal_reserved_balance, 0\) \+ \$1/);
+  assert.match(withdrawalService, /Fees\.calculateWithdrawalFee\(validatedAmount\)/);
+  assert.match(payoutService, /UPDATE buyers[\s\S]*refund_withdrawal_reserved_balance = GREATEST\(COALESCE\(refund_withdrawal_reserved_balance, 0\) - \$1, 0\)[\s\S]*refunds = COALESCE\(refunds, 0\) \+ \$1/);
+  assert.match(callbackStateMachine, /UPDATE buyers[\s\S]*refund_withdrawal_reserved_balance = GREATEST\(COALESCE\(refund_withdrawal_reserved_balance, 0\) - \$1, 0\)/);
+});
+
 test('fulfillment retry cron routes through fulfillment queue', () => {
   const cron = read('src/cron/paymentCron.js');
 
@@ -464,7 +512,7 @@ test('external notification side effects are emitted through EventBus from criti
   assert.match(fulfillmentQueue, /AppEvents\.ORDER\.FULFILLED/);
   assert.match(withdrawalService, /AppEvents\.WITHDRAWAL\.CREATED/);
   assert.match(withdrawalService, /AppEvents\.WITHDRAWAL\.UPDATED/);
-  assert.match(refundController, /AppEvents\.REFUND\.APPROVED/);
+  assert.match(refundController, /Manual refund payout confirmation is disabled/);
   assert.match(refundController, /AppEvents\.REFUND\.REJECTED/);
   assert.match(referralService, /AppEvents\.REFERRAL\.REWARD_CREATED/);
   assert.match(events, /notifyBuyerDigitalDelivery/);
@@ -516,7 +564,7 @@ test('important post-commit lifecycle events prefer durable outbox rows', () => 
   assert.match(withdrawalService, /enqueueInTransaction\(client,\s*AppEvents\.WITHDRAWAL\.CREATED/);
   assert.match(withdrawalService, /enqueueInTransaction\(client,\s*AppEvents\.WITHDRAWAL\.UPDATED/);
   assert.match(payoutStateMachine, /enqueueInTransaction\(\s*client,\s*AppEvents\.WITHDRAWAL\.COMPENSATION_REQUIRED/);
-  assert.match(refundController, /enqueueInTransaction\(client,\s*AppEvents\.REFUND\.APPROVED/);
+  assert.match(refundController, /Manual refund payout confirmation is disabled/);
   assert.match(refundController, /enqueueAndDispatch\(AppEvents\.REFUND\.REJECTED/);
   assert.match(adminController, /enqueueInTransaction\(client,\s*AppEvents\.WITHDRAWAL\.UPDATED/);
   assert.match(referralService, /enqueueInTransaction\(client,\s*AppEvents\.REFERRAL\.REWARD_CREATED/);
