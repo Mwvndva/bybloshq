@@ -155,6 +155,9 @@ export const sanitizeProduct = (product) => {
         digital_file_name: p.digital_file_name || p.digitalFileName || null, // filename ok, path not ok
         product_type: p.product_type || p.productType || 'physical',
         service_options: p.service_options || p.serviceOptions || null,
+        is_custom_product: !!(p.is_custom_product || p.isCustomProduct),
+        production_days: p.production_days ?? p.productionDays ?? null,
+        customization_prompt: p.customization_prompt || p.customizationPrompt || null,
         track_inventory: !!(p.track_inventory),          // boolean, not the quantity
         quantity: p.track_inventory ? (p.quantity ?? null) : null, // only show if tracking
         low_stock_threshold: p.track_inventory ? (p.low_stock_threshold ?? 5) : null,
@@ -185,6 +188,9 @@ export const sanitizePublicProduct = (product) => {
         is_digital: !!(p.is_digital || p.isDigital),
         product_type: p.product_type || p.productType || 'physical',
         service_options: p.service_options || p.serviceOptions || null,
+        is_custom_product: !!(p.is_custom_product || p.isCustomProduct),
+        production_days: p.production_days ?? p.productionDays ?? null,
+        customization_prompt: p.customization_prompt || p.customizationPrompt || null,
         is_sold: !!(p.is_sold || p.isSold || p.status === 'sold'),
         created_at: p.created_at || p.createdAt,
         // NEVER: digital_file_path, quantity, low_stock_threshold, track_inventory, seller_id (if nested)

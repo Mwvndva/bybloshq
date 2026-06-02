@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Phone, Loader2, MapPin, Truck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import LocationPicker from '@/components/common/LocationPicker';
@@ -41,6 +42,9 @@ interface PhoneCheckModalProps {
   onPhoneSubmit: (phone: string, delivery?: DoorDeliverySelection) => void;
   isLoading?: boolean;
   isPhysicalProduct?: boolean;
+  isCustomProduct?: boolean;
+  productionDays?: number | null;
+  customizationPrompt?: string | null;
   purchaseDetails?: {
     shopName: string;
     productName: string;
@@ -54,6 +58,9 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   onPhoneSubmit,
   isLoading = false,
   isPhysicalProduct = false,
+  isCustomProduct = false,
+  productionDays = null,
+  customizationPrompt = null,
   purchaseDetails
 }) => {
   const [phone, setPhone] = useState('');
@@ -67,6 +74,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   const [deliveryQuote, setDeliveryQuote] = useState<DoorDeliverySelection['quote'] | null>(null);
   const [quoteError, setQuoteError] = useState('');
   const [isQuoteLoading, setIsQuoteLoading] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState('');
 
   const productPrice = Number(purchaseDetails?.productPrice || 0);
   const canUseDoorDelivery = Boolean(isPhysicalProduct && productPrice > 0);
@@ -82,6 +90,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       setDeliveryQuote(null);
       setQuoteError('');
       setIsQuoteLoading(false);
+      setCustomInstructions('');
     }
   }, [isOpen]);
 
@@ -186,13 +195,22 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       }
     }
 
+    if (isCustomProduct && !customInstructions.trim()) {
+      setError('Please describe what you want customized before paying.');
+      return;
+    }
+
     onPhoneSubmit(phone.trim(), wantsDoorDelivery ? {
       doorDelivery: true,
       address: preciseDeliveryLocation?.address,
       lat: preciseDeliveryLocation?.lat,
       lng: preciseDeliveryLocation?.lng,
-      quote: deliveryQuote ?? undefined
-    } : { doorDelivery: false });
+      quote: deliveryQuote ?? undefined,
+      customInstructions: isCustomProduct ? customInstructions.trim() : undefined
+    } as DoorDeliverySelection & { customInstructions?: string } : {
+      doorDelivery: false,
+      customInstructions: isCustomProduct ? customInstructions.trim() : undefined
+    } as DoorDeliverySelection & { customInstructions?: string });
   };
 
   return (
@@ -248,6 +266,11 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                   <p className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-slate-600">
                     This 2% charge helps keep checkout protected, receipts clear, and your order tracked safely.
                   </p>
+                  {isCustomProduct && (
+                    <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-slate-700">
+                      Custom product: made in up to {productionDays || 1} {(productionDays || 1) === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
+                    </div>
+                  )}
                   {doorDeliveryEnabled && (
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-xs font-semibold text-slate-500">Delivery fee</span>
@@ -320,6 +343,26 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                 </div>
               )}
 
+              {isCustomProduct && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
+                  <Label htmlFor="custom-instructions" className="ml-1 text-xs font-semibold text-slate-700">Customization details</Label>
+                  <p className="text-[11px] font-medium leading-relaxed text-slate-500">
+                    {customizationPrompt || 'Tell the seller exactly what you want customized.'}
+                  </p>
+                  <Textarea
+                    id="custom-instructions"
+                    value={customInstructions}
+                    onChange={(event) => setCustomInstructions(event.target.value)}
+                    disabled={isLoading}
+                    required
+                    maxLength={500}
+                    placeholder="Example: Black cap, white embroidery, phrase: WUEH"
+                    className="min-h-[92px] rounded-xl border-slate-200 bg-white px-4 text-sm text-slate-950 placeholder:text-slate-400 focus-visible:ring-yellow-400"
+                  />
+                  <p className="text-[10px] font-medium text-slate-400">{customInstructions.length}/500</p>
+                </div>
+              )}
+
               <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
@@ -362,4 +405,3 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 };
 
 export default PhoneCheckModal;
-

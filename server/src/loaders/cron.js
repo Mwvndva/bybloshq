@@ -2,6 +2,7 @@ import { schedulePaymentProcessing } from '../cron/paymentCron.js';
 import { schedulePayoutReconciliation } from '../cron/payoutCleanup.js';
 import { scheduleReferralRewards } from '../cron/referralCron.js';
 import { scheduleSettlementPromotion } from '../cron/settlementCron.js';
+import { scheduleOrderDeadlineChecks } from '../cron/orderDeadlineCron.js';
 import logger from '../shared/utils/logger.js';
 
 export default async () => {
@@ -43,13 +44,23 @@ export default async () => {
         }
     }
 
-    // 5c. Settlement promotion
+    // 5c. Promote Paystack-settled seller earnings into withdrawable balance
     if (process.env.ENABLE_SETTLEMENT_PROMOTION_CRON !== 'false') {
         try {
             scheduleSettlementPromotion();
             logger.info('Settlement promotion cron started');
         } catch (err) {
             logger.error('Failed to start settlement promotion cron:', err.message);
+        }
+    }
+
+    // 5d. Order deadline checks, including custom production SLA reminders/refunds
+    if (process.env.ENABLE_ORDER_DEADLINE_CRON !== 'false') {
+        try {
+            scheduleOrderDeadlineChecks();
+            logger.info('Order deadline cron started');
+        } catch (err) {
+            logger.error('Failed to start order deadline cron:', err.message);
         }
     }
 
@@ -73,4 +84,3 @@ export default async () => {
         }
     }
 };
-

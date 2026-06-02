@@ -17,6 +17,10 @@ export interface ProductEditFormData {
   imagePreview: string;
   extraFiles: File[];
   extraPreviews: string[];
+  product_type?: 'physical' | 'digital' | 'service';
+  is_custom_product: boolean;
+  production_days: string;
+  customization_prompt: string;
 }
 
 interface ProductEditDialogProps {
@@ -122,6 +126,55 @@ export function ProductEditDialog({
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.product_type === 'physical' && (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-3">
+                  <label className="flex items-center justify-between gap-3">
+                    <span>
+                      <span className="block text-white text-xs font-semibold">Custom product</span>
+                      <span className="block text-[10px] text-white/60">Require buyer instructions and show production time.</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={formData.is_custom_product}
+                      onChange={(event) => onFormDataChange({ ...formData, is_custom_product: event.target.checked })}
+                      className="h-4 w-4 accent-yellow-400"
+                    />
+                  </label>
+
+                  {formData.is_custom_product && (
+                    <>
+                      <div>
+                        <Label className="text-white text-xs">Production days</Label>
+                        <Select
+                          value={formData.production_days}
+                          onValueChange={(value) => onFormDataChange({ ...formData, production_days: value })}
+                        >
+                          <SelectTrigger className="bg-black border-white/20 text-white h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-black border-white/20">
+                            {[1, 2, 3, 4, 5].map(day => (
+                              <SelectItem key={day} value={String(day)} className="text-white hover:bg-white/5">
+                                {day} {day === 1 ? 'day' : 'days'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-white text-xs">Buyer instruction prompt</Label>
+                        <Textarea
+                          value={formData.customization_prompt}
+                          onChange={(event) => onFormDataChange({ ...formData, customization_prompt: event.target.value })}
+                          className="bg-black border-white/20 text-white min-h-[60px] text-sm"
+                          placeholder="Tell the seller exactly what you want customized."
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               <div>
                 <div className="flex items-center justify-between mb-2">

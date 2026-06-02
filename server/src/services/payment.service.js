@@ -115,6 +115,17 @@ const assertPickupLocation = (location = {}) => {
 
 const COMPLETED_PAYMENT_STATUSES = new Set(['completed', 'success', 'paid']);
 const ACTIVE_PICKUP_STATUSES = new Set(['pending', 'assigned', 'started', 'picked_up', 'dropped_at_hub', 'out_for_delivery', 'delivered']);
+const DEFAULT_CUSTOMIZATION_PROMPT = 'Tell the seller exactly what you want customized.';
+
+function normalizeCustomInstructions(metadata = {}) {
+    const custom = metadata.customization || metadata.custom || {};
+    const instructions = custom.instructions
+        || custom.custom_instructions
+        || metadata.custom_instructions
+        || metadata.customInstructions
+        || '';
+    return String(instructions || '').trim();
+}
 
 export class PaymentService {
     constructor() {
@@ -1418,6 +1429,19 @@ export class PaymentService {
         const isDigitalProduct = product.is_digital === true || productType === 'digital';
         const isServiceProduct = productType === 'service';
         const isPhysicalProduct = !isDigitalProduct && !isServiceProduct;
+        const isCustomProduct = isPhysicalProduct && product.is_custom_product === true;
+        const productionDays = isCustomProduct ? Number.parseInt(product.production_days, 10) : null;
+        const customInstructions = normalizeCustomInstructions(metadata);
+
+        if (isCustomProduct) {
+            if (!Number.isInteger(productionDays) || productionDays < 1 || productionDays > 5) {
+                throw new Error('Custom product is misconfigured. Please contact the seller.');
+            }
+            if (!customInstructions) {
+                throw new Error('Customization instructions are required for this custom product.');
+            }
+        }
+
         const deliveryRequest = metadata.delivery || {};
         const wantsDoorDelivery = isDoorDeliveryRequested(deliveryRequest, metadata);
         let deliveryQuote = null;
@@ -1506,6 +1530,14 @@ export class PaymentService {
                 is_digital: product.is_digital,
                 product_id: service.id,
                 product_name: product.name,
+                custom_product: isCustomProduct ? {
+                    is_custom_product: true,
+                    production_days: productionDays,
+                    customization_prompt: product.customization_prompt || DEFAULT_CUSTOMIZATION_PROMPT,
+                    buyer_instructions: customInstructions,
+                    delivery_starts_after_seller_handoff: true,
+                    source_product_id: product.id
+                } : null,
                 creator_attribution: creatorAttribution,
                 pricing: {
                     ...(metadata.pricing || {}),
@@ -1552,6 +1584,16 @@ export class PaymentService {
                     productType: product.product_type,
                     isDigital: product.is_digital,
                     serviceLocations: product.service_locations
+                    ,
+                    metadata: isCustomProduct ? {
+                        custom_product: {
+                            is_custom_product: true,
+                            production_days: productionDays,
+                            customization_prompt: product.customization_prompt || DEFAULT_CUSTOMIZATION_PROMPT,
+                            buyer_instructions: customInstructions,
+                            delivery_starts_after_seller_handoff: true
+                        }
+                    } : {}
                 }]
             }
         };
@@ -1583,6 +1625,7 @@ export class PaymentService {
                     product_id: service.id,
                     seller_id: product.seller_id,
                     product_type: product.product_type,
+                    custom_product: orderData.metadata.custom_product,
                     product_subtotal: productSubtotal,
                     buyer_delivery_fee: buyerDeliveryFee,
                     buyer_service_charge_rate: PRODUCT_SERVICE_CHARGE_RATE,
@@ -1843,7 +1886,6 @@ export class PaymentService {
 }
 
 export default new PaymentService();
-
 
 
 

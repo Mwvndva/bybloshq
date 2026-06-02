@@ -110,6 +110,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
   const checkoutAttemptTokenRef = useRef<string | null>(null);
   const doorDeliverySelectionRef = useRef<DoorDeliverySelection | null>(null);
+  const customInstructionsRef = useRef<string | null>(null);
 
   const getCheckoutAttemptToken = () => {
     if (!checkoutAttemptTokenRef.current) {
@@ -121,6 +122,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
+  const isCustomProduct = isPhysical && Boolean((product as any).is_custom_product || (product as any).isCustomProduct);
+  const productionDays = Number((product as any).production_days || (product as any).productionDays || 0) || null;
+  const customizationPrompt = (product as any).customization_prompt || (product as any).customizationPrompt || null;
 
   const isWishlisted = isInWishlist(product.id);
   const toggleWishlist = async (e: MouseEvent) => {
@@ -212,10 +216,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
     }
   };
 
-  const handlePhoneSubmit = async (phone: string, delivery?: DoorDeliverySelection) => {
+  const handlePhoneSubmit = async (phone: string, delivery?: DoorDeliverySelection & { customInstructions?: string }) => {
     setIsCheckingPhone(true);
     try {
       doorDeliverySelectionRef.current = isPhysical && delivery?.doorDelivery ? delivery : null;
+      customInstructionsRef.current = isCustomProduct ? (delivery?.customInstructions || '').trim() : null;
+      if (isCustomProduct && !customInstructionsRef.current) {
+        toast({
+          title: 'Customization required',
+          description: 'Please describe what you want customized before paying.',
+          variant: 'destructive'
+        });
+        return;
+      }
       // FIX (Task 21): Normalize phone number before checking status
       const normalizedPhone = normalizePhone(phone);
       const result = await buyerApi.checkBuyerByPhone(normalizedPhone);
@@ -386,6 +399,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         buyerLocation: activeBooking?.buyerLocation
       });
       const wantsDoorDelivery = isPhysical && doorDeliverySelection?.doorDelivery === true;
+      const customInstructions = isCustomProduct ? customInstructionsRef.current : null;
+      if (isCustomProduct && !customInstructions) {
+        toast({
+          title: 'Customization required',
+          description: 'Please describe what you want customized before paying.',
+          variant: 'destructive'
+        });
+        return;
+      }
       const doorDeliveryLocation = wantsDoorDelivery
         ? toBuyerLocationPayload(doorDeliverySelection?.address, {
           lat: doorDeliverySelection?.lat,
@@ -447,6 +469,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
           buyer_location: activeBooking.buyerLocation,
           creator_code: creatorCode,
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
+          customization: isCustomProduct ? {
+            is_custom_product: true,
+            production_days: productionDays,
+            customization_prompt: customizationPrompt,
+            instructions: customInstructions
+          } : undefined,
           delivery: wantsDoorDelivery ? {
             doorDelivery: true,
             door_delivery: true,
@@ -458,6 +486,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         } : {
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
           creator_code: creatorCode,
+          customization: isCustomProduct ? {
+            is_custom_product: true,
+            production_days: productionDays,
+            customization_prompt: customizationPrompt,
+            instructions: customInstructions
+          } : undefined,
           delivery: wantsDoorDelivery ? {
             doorDelivery: true,
             door_delivery: true,

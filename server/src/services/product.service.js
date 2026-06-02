@@ -13,7 +13,8 @@ class ProductService {
         const {
             name, price, description, image, image_url, aesthetic = 'noir',
             is_digital = false, digital_file_path, digital_file_name, digital_file_size,
-            product_type = 'physical', service_locations, service_options
+            product_type = 'physical', service_locations, service_options,
+            is_custom_product = false, production_days, customization_prompt
         } = data;
 
         // Validation Logic
@@ -43,6 +44,15 @@ class ProductService {
 
         if (product_type === 'service' && (!service_options || !service_options.availability_days)) {
             throw new Error('Availability days are required for services');
+        }
+
+        const customProduct = product_type === 'physical' && is_custom_product === true;
+        const productionDaysValue = customProduct ? Number.parseInt(production_days, 10) : null;
+        if (is_custom_product === true && product_type !== 'physical') {
+            throw new Error('Only physical products can be custom products');
+        }
+        if (customProduct && (!Number.isInteger(productionDaysValue) || productionDaysValue < 1 || productionDaysValue > 5)) {
+            throw new Error('Custom physical products require production days between 1 and 5');
         }
 
         // Image Handling - now optional
@@ -111,7 +121,12 @@ class ProductService {
             digital_file_size: digital_file_size || null,
             product_type: finalProductType,
             service_locations: service_locations || null,
-            service_options: service_options || null
+            service_options: service_options || null,
+            is_custom_product: finalProductType === 'physical' ? customProduct : false,
+            production_days: finalProductType === 'physical' && customProduct ? productionDaysValue : null,
+            customization_prompt: finalProductType === 'physical' && customProduct
+                ? String(customization_prompt || 'Tell the seller exactly what you want customized.').trim().slice(0, 240)
+                : null
         };
 
         // Ensure images is always stored as a stringified array
@@ -181,6 +196,28 @@ class ProductService {
                 updateFields.images = Array.isArray(images) ? JSON.stringify(images) : images;
             }
             if (aesthetic !== undefined) updateFields.aesthetic = aesthetic;
+            if (data.is_custom_product !== undefined || data.production_days !== undefined || data.customization_prompt !== undefined || data.product_type !== undefined) {
+                const existing = await ProductModel.findById(productId);
+                if (!existing) throw new Error('Product not found');
+                if (existing.seller_id !== sellerId) throw new Error('Unauthorized');
+
+                const nextProductType = data.product_type || existing.product_type || 'physical';
+                const nextCustom = nextProductType === 'physical' && data.is_custom_product === true;
+                const nextProductionDays = nextCustom ? Number.parseInt(data.production_days ?? existing.production_days, 10) : null;
+
+                if (data.is_custom_product === true && nextProductType !== 'physical') {
+                    throw new Error('Only physical products can be custom products');
+                }
+                if (nextCustom && (!Number.isInteger(nextProductionDays) || nextProductionDays < 1 || nextProductionDays > 5)) {
+                    throw new Error('Custom physical products require production days between 1 and 5');
+                }
+
+                updateFields.is_custom_product = nextCustom;
+                updateFields.production_days = nextCustom ? nextProductionDays : null;
+                updateFields.customization_prompt = nextCustom
+                    ? String(data.customization_prompt || existing.customization_prompt || 'Tell the seller exactly what you want customized.').trim().slice(0, 240)
+                    : null;
+            }
 
             // Status & SoldAt logic
             const hasSoldAt = true; // sold_at column exists per schema (20260208_unified_schema_v3.sql)
@@ -311,5 +348,4 @@ class ProductService {
 }
 
 export default ProductService;
-
 

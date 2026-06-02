@@ -125,7 +125,8 @@ class OrderReadService {
   static async getFulfillmentNotificationDetails(orderId) {
     const fullOrderResult = await pool.query(
       `SELECT o.id, o.order_number, o.total_amount, o.status, o.order_type, o.fulfillment_type, 
-              o.metadata, o.buyer_id, o.seller_id, o.location_address, o.location_lat, o.location_lng,
+              o.metadata, o.custom_production_deadline_at, o.custom_production_grace_deadline_at,
+              o.buyer_id, o.seller_id, o.location_address, o.location_lat, o.location_lng,
               o.service_title, o.service_requirements, o.payment_status, o.payment_method, o.payment_reference,
               o.notification_sent, o.total_quantity,
               b.full_name AS buyer_name, b.mobile_payment AS buyer_mobile_payment,

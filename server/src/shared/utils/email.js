@@ -286,7 +286,10 @@ export const sendProductOrderConfirmationEmail = async (email, orderData) => {
         locationLabel: orderData.metadata.location_type === 'seller_visits_buyer' ? 'Client Location' : 'Service Location'
       } : null,
       downloadUrl: orderData.metadata?.download_url || null,
-      downloadUrls: orderData.metadata?.download_urls || []
+      downloadUrls: orderData.metadata?.download_urls || [],
+      custom_product: orderData.custom_product || orderData.customProduct || orderData.metadata?.custom_product || null,
+      custom_production_deadline_at: orderData.custom_production_deadline_at || orderData.customProductionDeadlineAt || orderData.metadata?.custom_production_deadline_at || null,
+      custom_production_grace_deadline_at: orderData.custom_production_grace_deadline_at || orderData.customProductionGraceDeadlineAt || orderData.metadata?.custom_production_grace_deadline_at || null
     };
 
     const html = await readTemplate('product-order-confirmation', templateData);
@@ -364,7 +367,10 @@ export const sendPaymentReceiptEmail = async (email, orderData, isSeller = false
       totalAmount: orderData.total_amount,
       paymentMethod: orderData.payment_method || 'mpesa',
       transactionId,
-      isSeller
+      isSeller,
+      custom_product: orderData.custom_product || orderData.customProduct || orderData.metadata?.custom_product || null,
+      custom_production_deadline_at: orderData.custom_production_deadline_at || orderData.customProductionDeadlineAt || orderData.metadata?.custom_production_deadline_at || null,
+      custom_production_grace_deadline_at: orderData.custom_production_grace_deadline_at || orderData.customProductionGraceDeadlineAt || orderData.metadata?.custom_production_grace_deadline_at || null
     };
 
     const html = await readTemplate('product-payment-receipt', templateData);

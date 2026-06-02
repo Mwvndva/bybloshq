@@ -234,6 +234,217 @@ class OrderDeadlineService {
         }
     }
 
+    buildCustomProductionSelect({ reminderWindow = false, expired = false } = {}) {
+        const timePredicate = reminderWindow
+            ? `po.custom_production_deadline_at <= NOW() + INTERVAL '12 hours'
+               AND po.custom_production_deadline_at > NOW()`
+            : expired
+                ? `po.custom_production_grace_deadline_at < NOW()`
+                : 'TRUE';
+
+        return `
+            SELECT po.*,
+                   b.whatsapp_number as buyer_whatsapp,
+                   b.full_name as buyer_name,
+                   b.email as buyer_email,
+                   s.whatsapp_number as seller_whatsapp,
+                   s.full_name as seller_name,
+                   s.physical_address as physical_address
+            FROM product_orders po
+            LEFT JOIN buyers b ON po.buyer_id = b.id
+            LEFT JOIN sellers s ON po.seller_id = s.id
+            WHERE po.custom_production_deadline_at IS NOT NULL
+              AND po.custom_production_grace_deadline_at IS NOT NULL
+              AND po.auto_cancelled_reason IS NULL
+              AND po.status IN ('PAID', 'AWAITING_SELLER_ACTION', 'FULFILLING')
+              AND ${timePredicate}
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM logistics_requests lr
+                  WHERE lr.order_id = po.id
+                    AND COALESCE(lr.status, '') NOT IN ('cancelled', 'failed', 'CANCELLED', 'FAILED')
+              )
+              AND COALESCE(po.metadata->'seller_handoff'->>'status', 'not_selected') IN ('not_selected', 'awaiting_seller_choice')
+        `;
+    }
+
+    async checkCustomProductionReminders() {
+        try {
+            const { rows: candidates } = await pool.query(
+                `${this.buildCustomProductionSelect({ reminderWindow: true })}
+                 AND po.custom_production_reminder_sent_at IS NULL
+                 ORDER BY po.custom_production_deadline_at ASC
+                 LIMIT 100`
+            );
+
+            const remindedOrders = [];
+            for (const order of candidates) {
+                const client = await pool.connect();
+                let reminderEventId = null;
+                try {
+                    await client.query('BEGIN');
+
+                    const { rows: lockedOrders } = await client.query(
+                        `${this.buildCustomProductionSelect({ reminderWindow: true })}
+                         AND po.custom_production_reminder_sent_at IS NULL
+                         AND po.id = $1
+                         FOR UPDATE SKIP LOCKED`,
+                        [order.id]
+                    );
+
+                    if (lockedOrders.length === 0) {
+                        await client.query('ROLLBACK');
+                        continue;
+                    }
+
+                    const lockedOrder = lockedOrders[0];
+                    await client.query(
+                        `UPDATE product_orders
+                         SET custom_production_reminder_sent_at = NOW(),
+                             updated_at = NOW()
+                         WHERE id = $1
+                           AND custom_production_reminder_sent_at IS NULL`,
+                        [lockedOrder.id]
+                    );
+
+                    const event = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.CUSTOM_PRODUCTION_REMINDER, {
+                        eventId: `order.custom-production-reminder:${lockedOrder.id}`,
+                        order: lockedOrder
+                    });
+                    reminderEventId = event.eventId;
+
+                    await client.query('COMMIT');
+                    eventBus.dispatchAfterCommit(reminderEventId, 'OrderDeadlineService.checkCustomProductionReminders');
+                    remindedOrders.push(lockedOrder);
+                } catch (error) {
+                    await client.query('ROLLBACK').catch(() => {});
+                    logger.error(`Failed to send custom production reminder for order ${order.order_number}:`, error);
+                } finally {
+                    client.release();
+                }
+            }
+
+            return {
+                processedCount: remindedOrders.length,
+                orders: remindedOrders.map(o => o.order_number)
+            };
+        } catch (error) {
+            logger.error('Error checking custom production reminders:', error);
+            throw error;
+        }
+    }
+
+    async checkExpiredCustomProductionDeadlines() {
+        try {
+            const { rows: candidates } = await pool.query(
+                `${this.buildCustomProductionSelect({ expired: true })}
+                 ORDER BY po.custom_production_grace_deadline_at ASC
+                 LIMIT 100`
+            );
+
+            const expiredOrders = [];
+            const reason = 'Seller missed custom production deadline and 1-day grace period';
+
+            for (const order of candidates) {
+                const client = await pool.connect();
+                let expiredEventId = null;
+                let cancelledEventId = null;
+                try {
+                    await client.query('BEGIN');
+
+                    const { rows: lockedOrders } = await client.query(
+                        `${this.buildCustomProductionSelect({ expired: true })}
+                         AND po.id = $1
+                         FOR UPDATE SKIP LOCKED`,
+                        [order.id]
+                    );
+
+                    if (lockedOrders.length === 0) {
+                        await client.query('ROLLBACK');
+                        continue;
+                    }
+
+                    const lockedOrder = lockedOrders[0];
+                    await client.query(
+                        `UPDATE product_orders
+                         SET status = 'CANCELLED',
+                             payment_status = 'failed',
+                             auto_cancelled_reason = $1,
+                             cancelled_at = NOW(),
+                             updated_at = NOW(),
+                             metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+                         WHERE id = $3
+                           AND auto_cancelled_reason IS NULL`,
+                        [
+                            reason,
+                            JSON.stringify({
+                                custom_production_auto_refund: {
+                                    reason,
+                                    refunded_to: 'buyer_refund_balance',
+                                    refunded_at: new Date().toISOString()
+                                }
+                            }),
+                            lockedOrder.id
+                        ]
+                    );
+
+                    if (lockedOrder.buyer_id) {
+                        await client.query('SELECT id FROM buyers WHERE id = $1 FOR UPDATE', [lockedOrder.buyer_id]);
+                        await client.query(
+                            `UPDATE buyers
+                             SET refunds = COALESCE(refunds, 0) + $1,
+                                 updated_at = NOW()
+                             WHERE id = $2`,
+                            [lockedOrder.total_amount, lockedOrder.buyer_id]
+                        );
+                    }
+
+                    const refreshedOrder = {
+                        ...lockedOrder,
+                        status: 'CANCELLED',
+                        payment_status: 'failed',
+                        auto_cancelled_reason: reason
+                    };
+
+                    const expiredEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.CUSTOM_PRODUCTION_EXPIRED, {
+                        eventId: `order.custom-production-expired:${lockedOrder.id}`,
+                        order: refreshedOrder,
+                        reason
+                    });
+                    expiredEventId = expiredEvent.eventId;
+
+                    const cancelledEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.CANCELLED, {
+                        eventId: `order.cancelled:${lockedOrder.id}:custom-production-expired`,
+                        order: refreshedOrder,
+                        cancelledBy: 'custom_production_deadline',
+                        reason
+                    });
+                    cancelledEventId = cancelledEvent.eventId;
+
+                    await client.query('COMMIT');
+                    eventBus.dispatchManyAfterCommit(
+                        [expiredEventId, cancelledEventId],
+                        'OrderDeadlineService.checkExpiredCustomProductionDeadlines'
+                    );
+                    expiredOrders.push(lockedOrder);
+                } catch (error) {
+                    await client.query('ROLLBACK').catch(() => {});
+                    logger.error(`Failed to expire custom production order ${order.order_number}:`, error);
+                } finally {
+                    client.release();
+                }
+            }
+
+            return {
+                processedCount: expiredOrders.length,
+                orders: expiredOrders.map(o => o.order_number)
+            };
+        } catch (error) {
+            logger.error('Error checking expired custom production deadlines:', error);
+            throw error;
+        }
+    }
+
     /**
      * Cancel order and process refund
      * @param {any} order
@@ -337,6 +548,8 @@ class OrderDeadlineService {
      *   reservations: {processedCount: number, orders: any[]},
      *   sellerDeadlines: {processedCount: number, orders: any[]},
      *   buyerDeadlines: {processedCount: number, orders: any[]},
+     *   customProductionReminders: {processedCount: number, orders: any[]},
+     *   customProductionDeadlines: {processedCount: number, orders: any[]},
      *   servicePayments: {processedCount: number, orders: any[]}
      * }>}
      */
@@ -347,12 +560,16 @@ class OrderDeadlineService {
          *  reservations: {processedCount: number, orders: any[]},
          *  sellerDeadlines: {processedCount: number, orders: any[]},
          *  buyerDeadlines: {processedCount: number, orders: any[]},
+         *  customProductionReminders: {processedCount: number, orders: any[]},
+         *  customProductionDeadlines: {processedCount: number, orders: any[]},
          *  servicePayments: {processedCount: number, orders: any[]}
          * }} */
         const results = {
             reservations: { processedCount: 0, orders: [] },
             sellerDeadlines: { processedCount: 0, orders: [] },
             buyerDeadlines: { processedCount: 0, orders: [] },
+            customProductionReminders: { processedCount: 0, orders: [] },
+            customProductionDeadlines: { processedCount: 0, orders: [] },
             servicePayments: { processedCount: 0, orders: [] }
         };
 
@@ -360,12 +577,16 @@ class OrderDeadlineService {
             results.reservations = await this.checkExpiredReservations();
             results.sellerDeadlines = await this.checkExpiredSellerDeadlines();
             results.buyerDeadlines = await this.checkExpiredBuyerDeadlines();
+            results.customProductionReminders = await this.checkCustomProductionReminders();
+            results.customProductionDeadlines = await this.checkExpiredCustomProductionDeadlines();
             results.servicePayments = await this.checkServicePaymentRelease();
 
             const totalProcessed =
                 results.reservations.processedCount +
                 results.sellerDeadlines.processedCount +
                 results.buyerDeadlines.processedCount +
+                results.customProductionReminders.processedCount +
+                results.customProductionDeadlines.processedCount +
                 results.servicePayments.processedCount;
 
             if (totalProcessed > 0) {
@@ -381,5 +602,3 @@ class OrderDeadlineService {
 }
 
 export default new OrderDeadlineService();
-
-

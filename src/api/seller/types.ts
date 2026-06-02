@@ -61,6 +61,9 @@ export interface Product {
   digital_file_path?: string;
   digital_file_name?: string;
   productType?: ProductType;
+  is_custom_product?: boolean;
+  production_days?: number | null;
+  customization_prompt?: string | null;
 }
 
 export interface SellerAnalytics {
@@ -69,11 +72,6 @@ export interface SellerAnalytics {
   totalRevenue: number;
   totalPayout: number;
   balance: number;
-  availableBalance?: number;
-  pendingSettlementBalance?: number;
-  withdrawalReservedBalance?: number;
-  refundReservedBalance?: number;
-  nextSettlementAt?: string | null;
   clientCount: number;
   creatorCount: number;
   creatorGeneratedSales: number;

@@ -27,7 +27,11 @@ const createInitialEditFormData = (): ProductEditFormData => ({
   image: null,
   imagePreview: '',
   extraFiles: [],
-  extraPreviews: []
+  extraPreviews: [],
+  product_type: 'physical',
+  is_custom_product: false,
+  production_days: '1',
+  customization_prompt: 'Tell the seller exactly what you want customized.'
 });
 
 const processImage = async (file: File): Promise<string> => {
@@ -213,7 +217,11 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
         image: null,
         imagePreview: product.image_url || '',
         extraFiles: [],
-        extraPreviews: product.images || []
+        extraPreviews: product.images || [],
+        product_type: (product.product_type || product.productType || 'physical') as any,
+        is_custom_product: Boolean(product.is_custom_product || product.isCustomProduct),
+        production_days: String(product.production_days || product.productionDays || 1),
+        customization_prompt: product.customization_prompt || product.customizationPrompt || 'Tell the seller exactly what you want customized.'
       });
       setShowEditModal(true);
     } catch (error) {
@@ -250,6 +258,26 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
       return;
     }
 
+    if (editFormData.product_type === 'physical' && editFormData.is_custom_product) {
+      const productionDays = Number.parseInt(editFormData.production_days, 10);
+      if (!Number.isInteger(productionDays) || productionDays < 1 || productionDays > 5) {
+        toast({
+          title: 'Error',
+          description: 'Select custom production time from 1 to 5 days.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (!editFormData.customization_prompt.trim()) {
+        toast({
+          title: 'Error',
+          description: 'Add the buyer instruction prompt for this custom product.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setIsSavingEdit(true);
 
     try {
@@ -258,7 +286,11 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
         price: priceValue,
         description: editFormData.description.trim(),
         aesthetic: editFormData.aesthetic,
-        images: editFormData.extraPreviews.length > 0 ? editFormData.extraPreviews : []
+        images: editFormData.extraPreviews.length > 0 ? editFormData.extraPreviews : [],
+        product_type: editFormData.product_type || 'physical',
+        is_custom_product: editFormData.product_type === 'physical' ? editFormData.is_custom_product : false,
+        production_days: editFormData.product_type === 'physical' && editFormData.is_custom_product ? Number.parseInt(editFormData.production_days, 10) : null,
+        customization_prompt: editFormData.product_type === 'physical' && editFormData.is_custom_product ? editFormData.customization_prompt.trim() : null
       };
 
       if (editFormData.image) {

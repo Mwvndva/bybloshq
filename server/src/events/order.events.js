@@ -107,6 +107,23 @@ eventBus.on(AppEvents.ORDER.CANCELLED, async ({ eventId, order, items, seller, b
     ]);
 });
 
+eventBus.on(AppEvents.ORDER.CUSTOM_PRODUCTION_REMINDER, async ({ eventId, order }) => {
+    logger.info(`[Event:CustomProductionReminder] Processing for Order #${order.id}`);
+    await deliverAll('Event:CustomProductionReminder', eventId, [
+        { key: `order:${order.id}:buyer:custom-production-reminder`, run: () => whatsappService.sendCustomProductionReminder(order, 'buyer') },
+        { key: `order:${order.id}:seller:custom-production-reminder`, run: () => whatsappService.sendCustomProductionReminder(order, 'seller') },
+        { key: `order:${order.id}:mzigo:custom-production-reminder`, run: () => whatsappService.sendCustomProductionReminder(order, 'partner') }
+    ]);
+});
+
+eventBus.on(AppEvents.ORDER.CUSTOM_PRODUCTION_EXPIRED, async ({ eventId, order, reason }) => {
+    logger.info(`[Event:CustomProductionExpired] Processing for Order #${order.id}`);
+    await deliverAll('Event:CustomProductionExpired', eventId, [
+        { key: `order:${order.id}:buyer:custom-production-expired`, run: () => whatsappService.sendCustomProductionExpiredNotification(order, 'buyer', reason) },
+        { key: `order:${order.id}:seller:custom-production-expired`, run: () => whatsappService.sendCustomProductionExpiredNotification(order, 'seller', reason) }
+    ]);
+});
+
 eventBus.on(AppEvents.INVENTORY.LOW_STOCK, async ({ sellerPhone, productName, currentQuantity, threshold }) => {
     if (!sellerPhone) return;
     const message = `LOW STOCK ALERT\n\nProduct: *${productName}*\nCurrent Stock: *${currentQuantity} units*\nThreshold: ${threshold} units\n\nPlease restock soon to avoid running out.`;

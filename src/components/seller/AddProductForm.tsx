@@ -45,6 +45,9 @@ interface FormData {
   digital_file_size: number | null;
   product_type: 'physical' | 'digital' | 'service';
   service_options: ServiceOptions;
+  is_custom_product: boolean;
+  production_days: string;
+  customization_prompt: string;
 }
 
 const formDataDefaults: FormData = {
@@ -60,6 +63,9 @@ const formDataDefaults: FormData = {
   digital_file_path: '',
   digital_file_size: null,
   product_type: 'physical',
+  is_custom_product: false,
+  production_days: '1',
+  customization_prompt: 'Tell the seller exactly what you want customized.',
   service_options: {
     availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     location_type: 'buyer_visits_seller',
@@ -172,6 +178,17 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         return;
       }
     }
+    if (step === 3 && formData.product_type === 'physical' && formData.is_custom_product) {
+      const days = Number.parseInt(formData.production_days, 10);
+      if (!Number.isInteger(days) || days < 1 || days > 5) {
+        toast({ title: 'Production days required', description: 'Select a production time from 1 to 5 days.', variant: 'destructive' });
+        return;
+      }
+      if (!formData.customization_prompt.trim()) {
+        toast({ title: 'Prompt required', description: 'Add the question buyers should answer for this custom product.', variant: 'destructive' });
+        return;
+      }
+    }
     setStep(s => s + 1);
   };
 
@@ -208,6 +225,9 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         sellerId: sellerProfile?.id,
         is_digital: formData.product_type === 'digital',
         product_type: formData.product_type,
+        is_custom_product: formData.product_type === 'physical' ? formData.is_custom_product : false,
+        production_days: formData.product_type === 'physical' && formData.is_custom_product ? Number.parseInt(formData.production_days, 10) : null,
+        customization_prompt: formData.product_type === 'physical' && formData.is_custom_product ? formData.customization_prompt : null,
         digital_file_path: digitalFilePath,
         digital_file_name: digitalFileName,
         digital_file_size: digitalFileSize,
@@ -419,6 +439,55 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
             </div>
           </div>
         )}
+
+        {formData.product_type === 'physical' && (
+          <div className="space-y-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
+            <label className="flex items-center justify-between gap-3">
+              <span>
+                <span className="block text-xs font-bold text-white uppercase">Custom product</span>
+                <span className="block text-[11px] text-white/70">Buyer must submit custom instructions before payment.</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={formData.is_custom_product}
+                onChange={event => setFormData(p => ({ ...p, is_custom_product: event.target.checked }))}
+                className="h-5 w-5 accent-yellow-400"
+              />
+            </label>
+
+            {formData.is_custom_product && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold text-white uppercase">Production days</Label>
+                  <Select value={formData.production_days} onValueChange={value => setFormData(p => ({ ...p, production_days: value }))}>
+                    <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-[100] rounded-xl border-yellow-400/40 bg-zinc-950 text-white shadow-2xl shadow-black/70">
+                      {[1, 2, 3, 4, 5].map(day => (
+                        <SelectItem key={day} value={String(day)} className="text-white focus:bg-yellow-400 focus:text-black">
+                          {day} {day === 1 ? 'day' : 'days'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold text-white uppercase">Buyer instruction prompt</Label>
+                  <Textarea
+                    value={formData.customization_prompt}
+                    onChange={event => setFormData(p => ({ ...p, customization_prompt: event.target.value }))}
+                    className="bg-white/5 border-white/10 text-white rounded-xl min-h-[72px] focus:ring-yellow-400"
+                    placeholder="Tell the seller exactly what you want customized."
+                  />
+                </div>
+                <p className="text-[11px] text-yellow-100/80">
+                  Buyers will see: Made in up to {formData.production_days} {Number(formData.production_days) === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {formData.product_type === 'digital' && (
@@ -459,6 +528,11 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
             <CheckCircle2 className="h-3 w-3 text-green-500" />
             <span>Safe Checkout</span>
           </div>
+          {formData.product_type === 'physical' && formData.is_custom_product && (
+            <p className="text-xs font-semibold text-yellow-100">
+              Custom product: made in up to {formData.production_days} {Number(formData.production_days) === 1 ? 'day' : 'days'}. Delivery starts after seller handoff.
+            </p>
+          )}
         </div>
       </div>
     </div>

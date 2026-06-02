@@ -640,6 +640,104 @@ class WhatsAppService {
         };
     }
 
+    parseOrderMetadata(metadata) {
+        if (!metadata) return {};
+        if (typeof metadata === 'object') return metadata;
+        try {
+            return JSON.parse(metadata);
+        } catch {
+            return {};
+        }
+    }
+
+    getCustomProductionContext(order = {}) {
+        const metadata = this.parseOrderMetadata(order.metadata);
+        const customProduct = order.customProduct
+            || order.custom_product
+            || metadata.custom_product
+            || null;
+        if (!customProduct?.is_custom_product && !customProduct?.isCustomProduct) {
+            return null;
+        }
+
+        const productionDays = Number.parseInt(
+            customProduct.production_days || customProduct.productionDays || order.production_days || 0,
+            10
+        );
+        const deadline = order.customProductionDeadlineAt
+            || order.custom_production_deadline_at
+            || metadata.custom_production_deadline_at
+            || customProduct.production_deadline_at
+            || customProduct.productionDeadlineAt
+            || null;
+        const graceDeadline = order.customProductionGraceDeadlineAt
+            || order.custom_production_grace_deadline_at
+            || metadata.custom_production_grace_deadline_at
+            || customProduct.production_grace_deadline_at
+            || customProduct.productionGraceDeadlineAt
+            || null;
+
+        return {
+            productionDays: Number.isInteger(productionDays) && productionDays > 0 ? productionDays : null,
+            prompt: customProduct.customization_prompt || customProduct.customizationPrompt || 'Customization instructions',
+            instructions: customProduct.buyer_instructions || customProduct.buyerInstructions || customProduct.instructions || '',
+            deadline,
+            graceDeadline
+        };
+    }
+
+    formatDateTimeForMessage(value) {
+        if (!value) return 'Check your dashboard';
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Check your dashboard';
+        return date.toLocaleString('en-KE', {
+            timeZone: 'Africa/Nairobi',
+            dateStyle: 'medium',
+            timeStyle: 'short'
+        });
+    }
+
+    buildCustomProductionCopy(order, recipientRole = 'buyer') {
+        const custom = this.getCustomProductionContext(order);
+        if (!custom) return '';
+
+        const daysText = custom.productionDays
+            ? `Made in up to ${custom.productionDays} day${custom.productionDays === 1 ? '' : 's'}.`
+            : 'This is a custom order.';
+        const deadlineText = `Expected ready by: ${this.formatDateTimeForMessage(custom.deadline)}.`;
+        const instructionsText = custom.instructions
+            ? `Buyer instructions: ${custom.instructions}`
+            : '';
+
+        if (recipientRole === 'seller') {
+            return [
+                '*Custom order:* Make this before handoff.',
+                daysText,
+                deadlineText,
+                instructionsText,
+                'After production, choose Mzigo Ego drop-off or request Mzigo pickup in your dashboard.'
+            ].filter(Boolean).join('\n');
+        }
+
+        if (recipientRole === 'partner') {
+            return [
+                '*Custom order:* Verify package against buyer instructions at handoff.',
+                daysText,
+                deadlineText,
+                instructionsText,
+                'Delivery starts after the seller hands it to Mzigo Ego.'
+            ].filter(Boolean).join('\n');
+        }
+
+        return [
+            '*Custom order:* The seller is making this item.',
+            daysText,
+            deadlineText,
+            'Delivery starts after seller handoff.',
+            instructionsText
+        ].filter(Boolean).join('\n');
+    }
+
     /**
      * Central message builder using the Normalized Order Payload (Single Source of Truth)
      */
@@ -682,6 +780,11 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
             : `- ${service.title} (x${service.quantity})`;
 
         message += `\n${itemsList}\n`;
+
+        const customProductionCopy = this.buildCustomProductionCopy(order, isSeller ? 'seller' : 'buyer');
+        if (customProductionCopy) {
+            message += `\n${customProductionCopy}\n`;
+        }
 
         // SCENARIO-BASED INSTRUCTIONS & LOCATIONS
         const instructions = this.getLifecycleInstruction(status || 'CONFIRMED', isSeller ? 'seller' : 'buyer', type, hasPhysicalShop);
@@ -756,6 +859,8 @@ Amount: *KSh ${total.toLocaleString('en-KE', { minimumFractionDigits: 2, maximum
 *Items:*
 ${itemsList || '- Order item'}
 
+${this.buildCustomProductionCopy(order, 'buyer') || ''}
+
 _Your Byblos dashboard remains the source of truth for order status._
 `.trim();
 
@@ -805,6 +910,7 @@ _Keep this message private. Your buyer dashboard also has your downloads._
         const hasPhysicalShop = fulfillmentContext.hasPhysicalShop;
 
         const instructions = this.getLifecycleInstruction(normalizedStatus, 'buyer', type, hasPhysicalShop);
+        const customProductionCopy = this.buildCustomProductionCopy(order, 'buyer');
         let locationDetails = '';
 
         const isShopPickup = isPhysical && hasPhysicalShop;
@@ -877,7 +983,7 @@ _Keep this message private. Your buyer dashboard also has your downloads._
 Type: *${typeLabel}*
 New Status: *${newStatus.replace(/_/g, ' ')}*
 
-${locationSection}${instructions ? `${instructions}\n` : ''}
+${customProductionCopy ? `${customProductionCopy}\n\n` : ''}${locationSection}${instructions ? `${instructions}\n` : ''}
 _Check your dashboard for full details._
 `.trim();
 
@@ -897,6 +1003,7 @@ _Check your dashboard for full details._
         const hasPhysicalShop = fulfillmentContext.hasPhysicalShop;
 
         const instructions = this.getLifecycleInstruction(normalizedStatus, 'seller', type, hasPhysicalShop);
+        const customProductionCopy = this.buildCustomProductionCopy(order, 'seller');
         let locationDetails = '';
 
         const isMobileService = isService && !hasPhysicalShop;
@@ -944,7 +1051,7 @@ _Check your dashboard for full details._
 ✅ *Status Update: #${order.orderNumber}*${suBooking}
 New Status: *${newStatus.replace(/_/g, ' ')}*
 
-${sellerLocationSection}${instructions ? `${instructions}\n` : ''}
+${customProductionCopy ? `${customProductionCopy}\n\n` : ''}${sellerLocationSection}${instructions ? `${instructions}\n` : ''}
 _Managed via your dashboard._
 `.trim();
 
@@ -1070,6 +1177,7 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
         const itemSummary = Array.isArray(order.items) && order.items.length
             ? order.items.map(item => `${item.name || 'Item'} x${item.quantity || 1}`).join(', ')
             : 'Package';
+        const customProductionCopy = this.buildCustomProductionCopy(order, recipientRole);
         const trackingLink = recipientRole === 'seller'
             ? context?.trackingLinks?.seller?.url
             : context?.trackingLinks?.buyer?.url;
@@ -1081,6 +1189,7 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
 Order: *#${orderNumber}*
 Package: *${packageCode}*
 Items: ${itemSummary}
+${customProductionCopy ? `\n${customProductionCopy}` : ''}
 
 *Seller*
 Name: ${seller.name || 'Seller'}
@@ -1149,6 +1258,7 @@ _WhatsApp is notification only. Byblos tracking is the source of truth._
 Order: *#${orderNumber}*
 Package: *${packageCode}*
 Items: ${itemSummary}
+${customProductionCopy ? `\n${customProductionCopy}` : ''}
 
 Buyer: ${buyer.name || 'Buyer'}
 Seller: ${seller.name || 'Seller'}
@@ -1233,6 +1343,72 @@ _Refund added to your balance. View on your dashboard._
         return this.sendMessage(buyerWhatsApp, message);
     }
 
+    getCustomProductionRecipientPhone(order, recipientRole) {
+        if (recipientRole === 'seller') {
+            return order.seller_whatsapp || order.seller_whatsapp_number || order.seller?.phone || order.seller?.whatsapp_number;
+        }
+        if (recipientRole === 'partner') {
+            return order.partner_whatsapp || order.partner_whatsapp_number || this.COURIER_NUMBER;
+        }
+        return order.buyer_whatsapp || order.buyer_whatsapp_number || order.buyer?.phone || order.buyer?.whatsapp_number || order.phone;
+    }
+
+    async sendCustomProductionReminder(order, recipientRole = 'buyer') {
+        const phone = this.getCustomProductionRecipientPhone(order, recipientRole);
+        if (!phone || phone === 'N/A') return false;
+
+        const orderNumber = order.orderNumber || order.order_number || order.id;
+        const customProductionCopy = this.buildCustomProductionCopy(order, recipientRole);
+        const title = recipientRole === 'partner'
+            ? 'Custom order handoff reminder'
+            : 'Custom order deadline reminder';
+
+        const action = (() => {
+            if (recipientRole === 'seller') {
+                return `Action: Finish the order, then choose Mzigo Ego drop-off or request Mzigo pickup. ${this.sellerPickupCbdSummary()}`;
+            }
+            if (recipientRole === 'partner') {
+                return 'Action: Be ready to verify the package against the buyer instructions when the seller hands it to Mzigo Ego.';
+            }
+            return 'Action: The seller should hand the package to Mzigo Ego after production. Delivery starts after seller handoff.';
+        })();
+
+        const message = `
+*${title}: #${orderNumber}*
+
+${customProductionCopy}
+
+${action}
+_WhatsApp is notification only. Byblos dashboard is the source of truth._
+`.trim();
+
+        return this.sendMessage(phone, message);
+    }
+
+    async sendCustomProductionExpiredNotification(order, recipientRole = 'buyer', reason = null) {
+        const phone = this.getCustomProductionRecipientPhone(order, recipientRole);
+        if (!phone || phone === 'N/A') return false;
+
+        const orderNumber = order.orderNumber || order.order_number || order.id;
+        const amount = Number.parseFloat(order.total_amount || order.totalAmount || 0);
+        const customProductionCopy = this.buildCustomProductionCopy(order, recipientRole);
+        const buyerText = `The production deadline and 1-day grace period expired. KSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your Byblos refund balance.`;
+        const sellerText = 'The production deadline and 1-day grace period expired. The order has been cancelled and the buyer refund balance was credited.';
+
+        const message = `
+*Custom order cancelled: #${orderNumber}*
+
+${recipientRole === 'seller' ? sellerText : buyerText}
+${reason ? `\nReason: ${reason}` : ''}
+
+${customProductionCopy || ''}
+
+_Do not hand off this order after cancellation._
+`.trim();
+
+        return this.sendMessage(phone, message);
+    }
+
     async sendSellerOrderCancellationNotification(order, seller, cancelledBy) {
         const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
         if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
@@ -1269,5 +1445,3 @@ _Order refunded. Do not ship._
 }
 
 export default new WhatsAppService();
-
-

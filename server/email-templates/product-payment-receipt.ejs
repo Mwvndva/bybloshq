@@ -196,6 +196,25 @@
                         </p>
             </div>
 
+            <% if (locals.customProduct || locals.custom_product) { const custom = locals.customProduct || locals.custom_product; %>
+                <div style="background: #fff7ed; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #92400e;">
+                        <strong>Custom production:</strong> Made in up to <%= custom.production_days %> <%= custom.production_days === 1 ? 'day' : 'days' %>.
+                        Delivery starts after seller handoff.
+                    </p>
+                    <% if (custom.buyer_instructions) { %>
+                        <p style="margin: 0; font-size: 13px; color: #92400e;">
+                            <strong>Your instructions:</strong> <%= custom.buyer_instructions %>
+                        </p>
+                    <% } %>
+                    <% if (locals.custom_production_deadline_at) { %>
+                        <p style="margin: 8px 0 0 0; font-size: 12px; color: #92400e;">
+                            Expected ready by: <%= new Date(custom_production_deadline_at).toLocaleString('en-KE') %>
+                        </p>
+                    <% } %>
+                </div>
+            <% } %>
+
             <div
                 style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin: 20px 0;">
                 <p style="margin: 0; font-size: 14px; color: #0369a1;">

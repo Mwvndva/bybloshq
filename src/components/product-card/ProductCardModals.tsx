@@ -37,7 +37,7 @@ interface ProductCardModalsProps {
   onBuyerModalClose: () => void;
   onBookingModalClose: () => void;
   onPaymentModalClose: () => void;
-  onPhoneSubmit: (phone: string, delivery?: DoorDeliverySelection) => Promise<void>;
+  onPhoneSubmit: (phone: string, delivery?: DoorDeliverySelection & { customInstructions?: string }) => Promise<void>;
   onBuyerInfoSubmit: (buyerInfo: BuyerInfo, shouldSkipSave: boolean) => Promise<void>;
   onBookingConfirm: (data: {
     date: Date;
@@ -79,6 +79,9 @@ export function ProductCardModals({
         onPhoneSubmit={onPhoneSubmit}
         isLoading={isCheckingPhone}
         isPhysicalProduct={isPhysicalProduct}
+        isCustomProduct={Boolean((product as any).is_custom_product || (product as any).isCustomProduct)}
+        productionDays={(product as any).production_days || (product as any).productionDays || null}
+        customizationPrompt={(product as any).customization_prompt || (product as any).customizationPrompt || null}
         purchaseDetails={{
           shopName: displaySellerName,
           productName: product.name,
