@@ -101,23 +101,38 @@ function isSellerPickupFeePayment(metadata = {}) {
 function resolveCustomProductionPatch(orderRow = {}, paidAt = new Date()) {
     const metadata = parseJson(orderRow.metadata);
     const customProduct = metadata.custom_product || {};
-    if (customProduct.is_custom_product !== true) return null;
+    const preHandoffSla = metadata.pre_handoff_sla || null;
+    const hasCustomProduct = customProduct.is_custom_product === true;
+    const hasPreHandoffSla = preHandoffSla?.type === 'custom_production' || preHandoffSla?.type === 'import_waiting';
+    if (!hasCustomProduct && !hasPreHandoffSla) return null;
 
-    const productionDays = Number.parseInt(customProduct.production_days, 10);
-    if (!Number.isInteger(productionDays) || productionDays < 1 || productionDays > 5) return null;
+    const readyDays = Number.parseInt(
+        preHandoffSla?.ready_days
+        || preHandoffSla?.production_days
+        || preHandoffSla?.import_days
+        || customProduct.production_days,
+        10
+    );
+    if (!Number.isInteger(readyDays) || readyDays < 1 || readyDays > 30) return null;
 
-    const productionDeadline = new Date(paidAt.getTime() + productionDays * 24 * 60 * 60 * 1000);
+    const productionDeadline = new Date(paidAt.getTime() + readyDays * 24 * 60 * 60 * 1000);
     const graceDeadline = new Date(productionDeadline.getTime() + 24 * 60 * 60 * 1000);
+    const nextPreHandoffSla = preHandoffSla ? {
+        ...preHandoffSla,
+        ready_deadline_at: productionDeadline.toISOString(),
+        ready_grace_deadline_at: graceDeadline.toISOString()
+    } : null;
 
     return {
         productionDeadline,
         graceDeadline,
         metadataPatch: {
-            custom_product: {
+            ...(nextPreHandoffSla ? { pre_handoff_sla: nextPreHandoffSla } : {}),
+            custom_product: hasCustomProduct ? {
                 ...customProduct,
                 production_deadline_at: productionDeadline.toISOString(),
                 production_grace_deadline_at: graceDeadline.toISOString()
-            }
+            } : customProduct
         }
     };
 }

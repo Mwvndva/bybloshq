@@ -652,35 +652,53 @@ class WhatsAppService {
 
     getCustomProductionContext(order = {}) {
         const metadata = this.parseOrderMetadata(order.metadata);
+        const preHandoffSla = order.preHandoffSla
+            || order.pre_handoff_sla
+            || metadata.pre_handoff_sla
+            || null;
         const customProduct = order.customProduct
             || order.custom_product
             || metadata.custom_product
             || null;
-        if (!customProduct?.is_custom_product && !customProduct?.isCustomProduct) {
+        if (!preHandoffSla && !customProduct?.is_custom_product && !customProduct?.isCustomProduct) {
             return null;
         }
 
         const productionDays = Number.parseInt(
-            customProduct.production_days || customProduct.productionDays || order.production_days || 0,
+            preHandoffSla?.ready_days
+            || preHandoffSla?.production_days
+            || preHandoffSla?.import_days
+            || customProduct?.production_days
+            || customProduct?.productionDays
+            || order.production_days
+            || 0,
             10
         );
         const deadline = order.customProductionDeadlineAt
             || order.custom_production_deadline_at
             || metadata.custom_production_deadline_at
-            || customProduct.production_deadline_at
-            || customProduct.productionDeadlineAt
+            || preHandoffSla?.ready_deadline_at
+            || preHandoffSla?.production_deadline_at
+            || preHandoffSla?.import_deadline_at
+            || customProduct?.production_deadline_at
+            || customProduct?.productionDeadlineAt
             || null;
         const graceDeadline = order.customProductionGraceDeadlineAt
             || order.custom_production_grace_deadline_at
             || metadata.custom_production_grace_deadline_at
-            || customProduct.production_grace_deadline_at
-            || customProduct.productionGraceDeadlineAt
+            || preHandoffSla?.ready_grace_deadline_at
+            || preHandoffSla?.production_grace_deadline_at
+            || customProduct?.production_grace_deadline_at
+            || customProduct?.productionGraceDeadlineAt
             || null;
+        const type = preHandoffSla?.type || 'custom_production';
 
         return {
+            type,
             productionDays: Number.isInteger(productionDays) && productionDays > 0 ? productionDays : null,
-            prompt: customProduct.customization_prompt || customProduct.customizationPrompt || 'Customization instructions',
-            instructions: customProduct.buyer_instructions || customProduct.buyerInstructions || customProduct.instructions || '',
+            prompt: customProduct?.customization_prompt || customProduct?.customizationPrompt || 'Customization instructions',
+            instructions: customProduct?.buyer_instructions || customProduct?.buyerInstructions || customProduct?.instructions || '',
+            note: preHandoffSla?.note || '',
             deadline,
             graceDeadline
         };
@@ -716,9 +734,10 @@ class WhatsAppService {
         const custom = this.getCustomProductionContext(order);
         if (!custom) return '';
 
+        const isImported = custom.type === 'import_waiting';
         const daysText = custom.productionDays
-            ? `Made in up to ${custom.productionDays} day${custom.productionDays === 1 ? '' : 's'}`
-            : 'Custom order';
+            ? `${isImported ? 'Ready in up to' : 'Made in up to'} ${custom.productionDays} day${custom.productionDays === 1 ? '' : 's'}`
+            : (isImported ? 'Imported item' : 'Custom order');
         const deadlineText = this.formatDateTimeForMessage(custom.deadline);
         const instructionsText = custom.instructions
             ? this.formatLine('Buyer instructions', custom.instructions)
@@ -726,21 +745,23 @@ class WhatsAppService {
 
         if (recipientRole === 'seller') {
             return this.compactMessage([
-                '*Custom order*',
+                isImported ? '*Imported / pre-order item*' : '*Custom order*',
                 [
-                    this.formatLine('Production time', daysText),
+                    this.formatLine(isImported ? 'Estimated ready time' : 'Production time', daysText),
                     this.formatLine('Ready by', deadlineText)
                 ].filter(Boolean).join('\n'),
                 instructionsText,
-                '*After making it:*\nChoose Mzigo Ego drop-off or request Mzigo pickup in your seller dashboard.'
+                isImported
+                    ? '*After receiving it:*\nChoose Mzigo Ego drop-off or request Mzigo pickup in your seller dashboard.'
+                    : '*After making it:*\nChoose Mzigo Ego drop-off or request Mzigo pickup in your seller dashboard.'
             ]);
         }
 
         if (recipientRole === 'partner') {
             return this.compactMessage([
-                '*Custom order*',
+                isImported ? '*Imported / pre-order item*' : '*Custom order*',
                 [
-                    this.formatLine('Production time', daysText),
+                    this.formatLine(isImported ? 'Estimated ready time' : 'Production time', daysText),
                     this.formatLine('Ready by', deadlineText)
                 ].filter(Boolean).join('\n'),
                 instructionsText,
@@ -749,10 +770,10 @@ class WhatsAppService {
         }
 
         return this.compactMessage([
-            '*Custom order*',
-            'The seller is making your item.',
+            isImported ? '*Imported / pre-order item*' : '*Custom order*',
+            isImported ? 'The seller is waiting for this item to arrive.' : 'The seller is making your item.',
             [
-                this.formatLine('Production time', daysText),
+                this.formatLine(isImported ? 'Estimated ready time' : 'Production time', daysText),
                 this.formatLine('Expected ready by', deadlineText)
             ].filter(Boolean).join('\n'),
             'Delivery starts after the seller hands the item to Mzigo Ego.',
@@ -1405,8 +1426,10 @@ _Refund added to your balance. View on your dashboard._
         const orderNumber = order.orderNumber || order.order_number || order.id;
         const amount = Number.parseFloat(order.total_amount || order.totalAmount || 0);
         const customProductionCopy = this.buildCustomProductionCopy(order, recipientRole);
-        const buyerText = `The seller missed the custom production deadline and the 1-day grace period.\n\nKSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your Byblos refund balance.`;
-        const sellerText = 'The custom production deadline and 1-day grace period expired.\n\nThe order has been cancelled.\n\nThe buyer refund balance was credited.';
+        const customContext = this.getCustomProductionContext(order);
+        const isImported = customContext?.type === 'import_waiting';
+        const buyerText = `The seller missed the ${isImported ? 'import ready' : 'custom production'} deadline and the 1-day grace period.\n\nKSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your Byblos refund balance.`;
+        const sellerText = `The ${isImported ? 'import ready' : 'custom production'} deadline and 1-day grace period expired.\n\nThe order has been cancelled.\n\nThe buyer refund balance was credited.`;
 
         const message = this.compactMessage([
             `*Custom order cancelled: #${orderNumber}*`,

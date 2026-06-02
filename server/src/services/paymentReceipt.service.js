@@ -140,9 +140,10 @@ function buildEmailPayload({ payment, order, fullOrder, items }) {
     created_at: fullOrder.created_at || order?.created_at || paidAt,
     metadata: orderMetadata,
     payment_metadata: paymentMetadata,
+    pre_handoff_sla: orderMetadata.pre_handoff_sla || null,
     custom_product: orderMetadata.custom_product || null,
-    custom_production_deadline_at: fullOrder.custom_production_deadline_at || orderMetadata.custom_product?.production_deadline_at || null,
-    custom_production_grace_deadline_at: fullOrder.custom_production_grace_deadline_at || orderMetadata.custom_product?.production_grace_deadline_at || null,
+    custom_production_deadline_at: fullOrder.custom_production_deadline_at || orderMetadata.pre_handoff_sla?.ready_deadline_at || orderMetadata.custom_product?.production_deadline_at || null,
+    custom_production_grace_deadline_at: fullOrder.custom_production_grace_deadline_at || orderMetadata.pre_handoff_sla?.ready_grace_deadline_at || orderMetadata.custom_product?.production_grace_deadline_at || null,
     items
   };
 }

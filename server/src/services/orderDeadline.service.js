@@ -343,7 +343,7 @@ class OrderDeadlineService {
             );
 
             const expiredOrders = [];
-            const reason = 'Seller missed custom production deadline and 1-day grace period';
+            const reason = 'Seller missed pre-handoff ready deadline and 1-day grace period';
 
             for (const order of candidates) {
                 const client = await pool.connect();

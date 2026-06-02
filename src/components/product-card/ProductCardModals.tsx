@@ -23,6 +23,9 @@ interface ProductCardModalsProps {
   isCustomProduct: boolean;
   productionDays?: number | null;
   customizationPrompt?: string | null;
+  isImportedProduct?: boolean;
+  importDays?: number | null;
+  importNote?: string | null;
   paymentModalData: {
     isOpen: boolean;
     orderNumber: string | null;
@@ -68,6 +71,9 @@ export function ProductCardModals({
   isCustomProduct,
   productionDays = null,
   customizationPrompt = null,
+  isImportedProduct = false,
+  importDays = null,
+  importNote = null,
   paymentModalData,
   onPhoneCheckClose,
   onBuyerModalClose,
@@ -88,6 +94,9 @@ export function ProductCardModals({
         isCustomProduct={isCustomProduct}
         productionDays={productionDays}
         customizationPrompt={customizationPrompt}
+        isImportedProduct={isImportedProduct}
+        importDays={importDays}
+        importNote={importNote}
         purchaseDetails={{
           shopName: displaySellerName,
           productName: product.name,

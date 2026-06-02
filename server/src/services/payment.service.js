@@ -1431,6 +1431,8 @@ export class PaymentService {
         const isPhysicalProduct = !isDigitalProduct && !isServiceProduct;
         const isCustomProduct = isPhysicalProduct && product.is_custom_product === true;
         const productionDays = isCustomProduct ? Number.parseInt(product.production_days, 10) : null;
+        const isImportedProduct = isPhysicalProduct && product.is_imported_product === true;
+        const importDays = isImportedProduct ? Number.parseInt(product.import_days, 10) : null;
         const customInstructions = normalizeCustomInstructions(metadata);
 
         if (isCustomProduct) {
@@ -1439,6 +1441,14 @@ export class PaymentService {
             }
             if (!customInstructions) {
                 throw new Error('Customization instructions are required for this custom product.');
+            }
+        }
+        if (isImportedProduct) {
+            if (![7, 14, 21, 30].includes(importDays)) {
+                throw new Error('Imported product is misconfigured. Please contact the seller.');
+            }
+            if (isCustomProduct) {
+                throw new Error('Product cannot be both custom and imported.');
             }
         }
 
@@ -1506,6 +1516,28 @@ export class PaymentService {
             sellerId: Number.parseInt(product.seller_id, 10),
             productSubtotal
         });
+        const preHandoffSla = isCustomProduct
+            ? {
+                type: 'custom_production',
+                label: 'Custom order',
+                ready_days: productionDays,
+                production_days: productionDays,
+                customization_prompt: product.customization_prompt || DEFAULT_CUSTOMIZATION_PROMPT,
+                buyer_instructions: customInstructions,
+                delivery_starts_after_seller_handoff: true,
+                source_product_id: product.id
+            }
+            : isImportedProduct
+                ? {
+                    type: 'import_waiting',
+                    label: 'Imported / pre-order item',
+                    ready_days: importDays,
+                    import_days: importDays,
+                    note: product.import_note || 'Imported item. Delivery starts after seller handoff.',
+                    delivery_starts_after_seller_handoff: true,
+                    source_product_id: product.id
+                }
+                : null;
 
         // 4. Create Order (PIN-02: UNIFIED ORDER CONTEXT)
         const provider = this.provider;
@@ -1530,6 +1562,7 @@ export class PaymentService {
                 is_digital: product.is_digital,
                 product_id: service.id,
                 product_name: product.name,
+                pre_handoff_sla: preHandoffSla,
                 custom_product: isCustomProduct ? {
                     is_custom_product: true,
                     production_days: productionDays,
@@ -1585,14 +1618,17 @@ export class PaymentService {
                     isDigital: product.is_digital,
                     serviceLocations: product.service_locations
                     ,
-                    metadata: isCustomProduct ? {
-                        custom_product: {
-                            is_custom_product: true,
-                            production_days: productionDays,
-                            customization_prompt: product.customization_prompt || DEFAULT_CUSTOMIZATION_PROMPT,
-                            buyer_instructions: customInstructions,
-                            delivery_starts_after_seller_handoff: true
-                        }
+                    metadata: preHandoffSla ? {
+                        pre_handoff_sla: preHandoffSla,
+                        ...(isCustomProduct ? {
+                            custom_product: {
+                                is_custom_product: true,
+                                production_days: productionDays,
+                                customization_prompt: product.customization_prompt || DEFAULT_CUSTOMIZATION_PROMPT,
+                                buyer_instructions: customInstructions,
+                                delivery_starts_after_seller_handoff: true
+                            }
+                        } : {})
                     } : {}
                 }]
             }
@@ -1625,6 +1661,7 @@ export class PaymentService {
                     product_id: service.id,
                     seller_id: product.seller_id,
                     product_type: product.product_type,
+                    pre_handoff_sla: preHandoffSla,
                     custom_product: orderData.metadata.custom_product,
                     product_subtotal: productSubtotal,
                     buyer_delivery_fee: buyerDeliveryFee,
@@ -1886,6 +1923,5 @@ export class PaymentService {
 }
 
 export default new PaymentService();
-
 
 

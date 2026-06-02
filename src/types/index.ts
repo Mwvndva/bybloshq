@@ -79,6 +79,12 @@ export interface Product {
   productionDays?: number | null;
   customization_prompt?: string | null;
   customizationPrompt?: string | null;
+  is_imported_product?: boolean;
+  isImportedProduct?: boolean;
+  import_days?: number | null;
+  importDays?: number | null;
+  import_note?: string | null;
+  importNote?: string | null;
   service_locations?: string;
   service_options?: {
     availability_days?: string[];

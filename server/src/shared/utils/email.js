@@ -287,9 +287,10 @@ export const sendProductOrderConfirmationEmail = async (email, orderData) => {
       } : null,
       downloadUrl: orderData.metadata?.download_url || null,
       downloadUrls: orderData.metadata?.download_urls || [],
+      pre_handoff_sla: orderData.pre_handoff_sla || orderData.preHandoffSla || orderData.metadata?.pre_handoff_sla || null,
       custom_product: orderData.custom_product || orderData.customProduct || orderData.metadata?.custom_product || null,
-      custom_production_deadline_at: orderData.custom_production_deadline_at || orderData.customProductionDeadlineAt || orderData.metadata?.custom_production_deadline_at || null,
-      custom_production_grace_deadline_at: orderData.custom_production_grace_deadline_at || orderData.customProductionGraceDeadlineAt || orderData.metadata?.custom_production_grace_deadline_at || null
+      custom_production_deadline_at: orderData.custom_production_deadline_at || orderData.customProductionDeadlineAt || orderData.metadata?.pre_handoff_sla?.ready_deadline_at || orderData.metadata?.custom_production_deadline_at || null,
+      custom_production_grace_deadline_at: orderData.custom_production_grace_deadline_at || orderData.customProductionGraceDeadlineAt || orderData.metadata?.pre_handoff_sla?.ready_grace_deadline_at || orderData.metadata?.custom_production_grace_deadline_at || null
     };
 
     const html = await readTemplate('product-order-confirmation', templateData);
@@ -368,9 +369,10 @@ export const sendPaymentReceiptEmail = async (email, orderData, isSeller = false
       paymentMethod: orderData.payment_method || 'mpesa',
       transactionId,
       isSeller,
+      pre_handoff_sla: orderData.pre_handoff_sla || orderData.preHandoffSla || orderData.metadata?.pre_handoff_sla || null,
       custom_product: orderData.custom_product || orderData.customProduct || orderData.metadata?.custom_product || null,
-      custom_production_deadline_at: orderData.custom_production_deadline_at || orderData.customProductionDeadlineAt || orderData.metadata?.custom_production_deadline_at || null,
-      custom_production_grace_deadline_at: orderData.custom_production_grace_deadline_at || orderData.customProductionGraceDeadlineAt || orderData.metadata?.custom_production_grace_deadline_at || null
+      custom_production_deadline_at: orderData.custom_production_deadline_at || orderData.customProductionDeadlineAt || orderData.metadata?.pre_handoff_sla?.ready_deadline_at || orderData.metadata?.custom_production_deadline_at || null,
+      custom_production_grace_deadline_at: orderData.custom_production_grace_deadline_at || orderData.customProductionGraceDeadlineAt || orderData.metadata?.pre_handoff_sla?.ready_grace_deadline_at || orderData.metadata?.custom_production_grace_deadline_at || null
     };
 
     const html = await readTemplate('product-payment-receipt', templateData);
