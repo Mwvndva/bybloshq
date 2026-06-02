@@ -95,8 +95,21 @@ class PaymentController {
       });
     } catch (error) {
       logger.error('[PaymentController] Product payment initiation failed:', error);
+      const clientErrorMessages = [
+        'Checkout idempotency token is required',
+        'Product not found',
+        'Seller is not accepting orders',
+        'Custom product is misconfigured. Please contact the seller.',
+        'Customization instructions are required for this custom product.',
+        'Door delivery is only available for physical products.',
+        'Door delivery address is required.',
+        'Door delivery coordinates are required.',
+        'Invalid order amount after secure calculation',
+        'Product not available'
+      ];
+      const statusCode = clientErrorMessages.includes(error.message) ? 400 : 500;
 
-      res.status(500).json({
+      res.status(statusCode).json({
         status: 'error',
         message: 'Product payment initiation failed',
         error: error.message

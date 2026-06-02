@@ -81,6 +81,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<BuyerLocationPayload | null>(null);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
+  const [forceCustomCheckout, setForceCustomCheckout] = useState(false);
 
   const { isDigital, isService, isPhysical, isHybrid, isOutOfStock, isSold } = getProductFlags(product);
   const cardTheme = (theme || seller?.theme || product.seller?.theme || 'default') as Theme;
@@ -125,6 +126,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   const isCustomProduct = isPhysical && Boolean((product as any).is_custom_product || (product as any).isCustomProduct);
   const productionDays = Number((product as any).production_days || (product as any).productionDays || 0) || null;
   const customizationPrompt = (product as any).customization_prompt || (product as any).customizationPrompt || null;
+  const effectiveIsCustomProduct = isCustomProduct || (isPhysical && forceCustomCheckout);
+  const effectiveProductionDays = productionDays || (effectiveIsCustomProduct ? 1 : null);
+  const effectiveCustomizationPrompt = customizationPrompt || 'Tell the seller exactly what you want customized.';
 
   const isWishlisted = isInWishlist(product.id);
   const toggleWishlist = async (e: MouseEvent) => {
@@ -220,8 +224,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
     setIsCheckingPhone(true);
     try {
       doorDeliverySelectionRef.current = isPhysical && delivery?.doorDelivery ? delivery : null;
-      customInstructionsRef.current = isCustomProduct ? (delivery?.customInstructions || '').trim() : null;
-      if (isCustomProduct && !customInstructionsRef.current) {
+      customInstructionsRef.current = effectiveIsCustomProduct ? (delivery?.customInstructions || '').trim() : null;
+      if (effectiveIsCustomProduct && !customInstructionsRef.current) {
         toast({
           title: 'Customization required',
           description: 'Please describe what you want customized before paying.',
@@ -399,8 +403,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         buyerLocation: activeBooking?.buyerLocation
       });
       const wantsDoorDelivery = isPhysical && doorDeliverySelection?.doorDelivery === true;
-      const customInstructions = isCustomProduct ? customInstructionsRef.current : null;
-      if (isCustomProduct && !customInstructions) {
+      const customInstructions = effectiveIsCustomProduct ? customInstructionsRef.current : null;
+      if (effectiveIsCustomProduct && !customInstructions) {
         toast({
           title: 'Customization required',
           description: 'Please describe what you want customized before paying.',
@@ -469,10 +473,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
           buyer_location: activeBooking.buyerLocation,
           creator_code: creatorCode,
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
-          customization: isCustomProduct ? {
+          customization: effectiveIsCustomProduct ? {
             is_custom_product: true,
-            production_days: productionDays,
-            customization_prompt: customizationPrompt,
+            production_days: effectiveProductionDays,
+            customization_prompt: effectiveCustomizationPrompt,
             instructions: customInstructions
           } : undefined,
           delivery: wantsDoorDelivery ? {
@@ -486,10 +490,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         } : {
           product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
           creator_code: creatorCode,
-          customization: isCustomProduct ? {
+          customization: effectiveIsCustomProduct ? {
             is_custom_product: true,
-            production_days: productionDays,
-            customization_prompt: customizationPrompt,
+            production_days: effectiveProductionDays,
+            customization_prompt: effectiveCustomizationPrompt,
             instructions: customInstructions
           } : undefined,
           delivery: wantsDoorDelivery ? {
@@ -551,6 +555,23 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
       // Extract error message from response
       const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Could not initiate payment';
+      const requiresCustomization = /customization instructions are required/i.test(errorMessage);
+
+      if (requiresCustomization && isPhysical) {
+        setForceCustomCheckout(true);
+        customInstructionsRef.current = null;
+        checkoutAttemptTokenRef.current = null;
+        setIsBuyerModalOpen(false);
+        setIsPhoneCheckModalOpen(true);
+        toast({
+          title: 'Customization required',
+          description: 'Add the product details the seller needs before paying.',
+          variant: 'destructive',
+          duration: 8000
+        });
+        setIsProcessingPurchase(false);
+        return;
+      }
 
       // Check for specific error types
       const isNetworkError = errorMessage.includes('socket hang up') ||
@@ -675,6 +696,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         shouldSkipSave={shouldSkipSave}
         paymentModalData={paymentModalData}
         isPhysicalProduct={isPhysical}
+        isCustomProduct={effectiveIsCustomProduct}
+        productionDays={effectiveProductionDays}
+        customizationPrompt={effectiveCustomizationPrompt}
         onPhoneCheckClose={() => setIsPhoneCheckModalOpen(false)}
         onBuyerModalClose={() => setIsBuyerModalOpen(false)}
         onBookingModalClose={() => setIsBookingModalOpen(false)}

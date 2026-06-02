@@ -1555,7 +1555,8 @@ test('custom physical products validate production SLA and buyer instructions at
   assert.match(phoneModal, /Please describe what you want customized before paying/);
   assert.match(phoneModal, /Custom product: made in up to/);
   assert.match(phoneModal, /Delivery starts after seller handoff/);
-  assert.match(productCard, /customization:\s*isCustomProduct/);
+  assert.match(productCard, /customization:\s*effectiveIsCustomProduct/);
+  assert.match(productCard, /setForceCustomCheckout\(true\)/);
   assert.match(addProductForm, /Select a production time from 1 to 5 days/);
   assert.match(editDialog, /Custom product/);
 });
