@@ -1571,7 +1571,7 @@ export class PaymentService {
                     delivery_starts_after_seller_handoff: true,
                     source_product_id: product.id
                 } : null,
-                creator_attribution: creatorAttribution,
+                ...(creatorAttribution ? { creator_attribution: creatorAttribution } : {}),
                 pricing: {
                     ...(metadata.pricing || {}),
                     product_subtotal: productSubtotal,
@@ -1580,7 +1580,7 @@ export class PaymentService {
                     buyer_service_charge: productServiceCharge,
                     product_service_charge_rate: PRODUCT_SERVICE_CHARGE_RATE,
                     product_service_charge: productServiceCharge,
-                    creator_attribution: creatorAttribution,
+                    ...(creatorAttribution ? { creator_attribution: creatorAttribution } : {}),
                     payment_base_total: paymentBaseTotal,
                     payable_total: payableTotal,
                     seller_payout_base: productSubtotal,
@@ -1923,5 +1923,4 @@ export class PaymentService {
 }
 
 export default new PaymentService();
-
 

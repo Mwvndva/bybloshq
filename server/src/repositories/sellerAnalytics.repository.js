@@ -71,7 +71,8 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       WHERE o.seller_id = s.id
         AND o.payment_status = 'completed'
         AND o.status::text <> ALL($2::text[])
-        AND COALESCE(o.metadata, '{}'::jsonb) ? 'creator_attribution'
+        AND NULLIF(o.metadata->'creator_attribution'->>'creator_id', '') IS NOT NULL
+        AND COALESCE((o.metadata->'creator_attribution'->>'commission_amount')::numeric, 0) > 0
     ) creator_sales ON true
     LEFT JOIN LATERAL (
       SELECT MIN(p.available_at) AS next_settlement_at
