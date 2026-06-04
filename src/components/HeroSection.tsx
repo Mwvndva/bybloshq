@@ -8,7 +8,7 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden bg-[#f8f7f2] py-24 sm:py-28 lg:py-32">
+    <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden bg-white py-24 sm:py-28 lg:py-32">
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
         <Link to="/creator/login">
           <Button className="rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-900 shadow-[0_10px_28px_rgba(17,17,17,0.08)] transition-all duration-300 hover:bg-yellow-400 hover:text-black sm:px-5 sm:py-2.5 sm:text-sm">
@@ -20,8 +20,8 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
       <div
         className="absolute inset-0 z-0 opacity-70"
         style={{
-          background: 'linear-gradient(180deg, #ffffff 0%, #f8f7f2 72%, #f3f1ea 100%)',
-          backgroundColor: '#f8f7f2'
+          background: '#ffffff',
+          backgroundColor: '#ffffff'
         }}
       />
 
@@ -32,7 +32,7 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
             <img
               src="/byblos-mark.png"
               alt="Byblos logo"
-              className="mx-auto h-auto w-[min(72vw,340px)] sm:w-[min(58vw,460px)] lg:w-[520px]"
+              className="mx-auto h-auto w-[min(58vw,260px)] sm:w-[min(44vw,340px)] lg:w-[400px]"
             />
 
             <h1 className="text-3xl font-light leading-none tracking-normal text-stone-950 sm:text-5xl md:text-6xl lg:text-7xl">
