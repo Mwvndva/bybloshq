@@ -52,8 +52,8 @@ export function ProductsTab({
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-full max-w-full sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none h-[100dvh] sm:h-auto overflow-hidden">
-              <div className="product-modal-light bg-black border-x border-y sm:border border-white/15 rounded-none sm:rounded-[2.5rem] h-full sm:h-auto overflow-hidden shadow-2xl flex flex-col">
+            <DialogContent className="inset-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-none bg-transparent p-0 shadow-none focus-visible:outline-none sm:left-1/2 sm:top-1/2 sm:h-[min(92dvh,760px)] sm:w-[min(94vw,640px)] sm:translate-x-[-50%] sm:translate-y-[-50%]">
+              <div className="product-modal-light flex h-full min-h-0 flex-col overflow-hidden rounded-none border-x border-y border-white/15 bg-black shadow-2xl sm:rounded-[2rem] sm:border">
                 <AddProductForm
                   onSuccess={() => {
                     fetchProducts();
