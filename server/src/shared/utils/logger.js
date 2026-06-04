@@ -51,14 +51,8 @@ try {
 
 // Create a simple console logger
 if (!logger) {
-  logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-  format: winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.errors({ stack: true }), // Include stack trace
-    winston.format.json() // Production logs should be JSON
-  ),
-  transports: [
+  const fileTransportsDisabled = process.env.DISABLE_FILE_LOGS === 'true' || process.env.NODE_ENV === 'test';
+  const transports = [
     // Console transport - Always enabled for Docker visibility
     new winston.transports.Console({
       format: winston.format.combine(
@@ -68,27 +62,39 @@ if (!logger) {
           return `${timestamp} ${level}: ${message}${stackMessage}`;
         })
       )
-    }),
+    })
+  ];
 
+  if (!fileTransportsDisabled) {
+    transports.push(
+      // Daily Rotate File for errors
+      new DailyRotateFile({
+        filename: path.join(logsDir, 'error-%DATE%.log'),
+        datePattern: 'YYYY-MM-DD',
+        zippedArchive: true,
+        maxSize: '20m',
+        maxFiles: '14d',
+        level: 'error',
+      }),
+      // Daily Rotate File for all logs
+      new DailyRotateFile({
+        filename: path.join(logsDir, 'combined-%DATE%.log'),
+        datePattern: 'YYYY-MM-DD',
+        zippedArchive: true,
+        maxSize: '20m',
+        maxFiles: '14d',
+      })
+    );
+  }
 
-    // Daily Rotate File for errors
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'error-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      zippedArchive: true,
-      maxSize: '20m',
-      maxFiles: '14d',
-      level: 'error',
-    }),
-    // Daily Rotate File for all logs
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'combined-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      zippedArchive: true,
-      maxSize: '20m',
-      maxFiles: '14d',
-    }),
-  ],
+  logger = winston.createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }), // Include stack trace
+    winston.format.json() // Production logs should be JSON
+  ),
+  transports,
   exitOnError: false, // Don't exit on handled exceptions
   });
 }

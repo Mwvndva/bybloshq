@@ -12,7 +12,7 @@ import referralRoutes from './referral_routes.js';
 import { createWithdrawal, getWithdrawals, getWithdrawalById } from '../controllers/withdrawal.controller.js';
 
 import { authLimiter } from '../middleware/authRateLimiter.js';
-import { uploadRateLimiter } from '../middleware/rateLimiting.js';
+import { uploadRateLimiter, withdrawalRateLimiter } from '../middleware/rateLimiting.js';
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
 import digitalUpload from '../middleware/digitalUpload.js';
 import { validate } from '../middleware/validate.js';
@@ -124,7 +124,7 @@ router.post('/products/upload-digital',
 );
 
 // Withdrawal requests
-router.post('/withdrawal-request', createWithdrawal);
+router.post('/withdrawal-request', withdrawalRateLimiter, createWithdrawal);
 router.get('/withdrawal-requests', getWithdrawals);
 router.get('/withdrawal-requests/:id', getWithdrawalById);
 

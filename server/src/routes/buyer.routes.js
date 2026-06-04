@@ -5,6 +5,7 @@ import { AppError } from '../shared/utils/errorHandler.js';
 import wishlistRoutes from './wishlist.routes.js';
 import { validateRegistration, validateLogin } from '../middleware/authValidation.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
+import { withdrawalRateLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ router.get('/profile', buyerController.getProfile);
 router.patch('/update-profile', buyerController.updateProfile);
 
 // Request refund withdrawal
-router.post('/refund-request', buyerController.requestRefund);
+router.post('/refund-request', withdrawalRateLimiter, buyerController.requestRefund);
 
 // Get pending refund requests
 router.get('/refund-requests/pending', buyerController.getPendingRefundRequests);

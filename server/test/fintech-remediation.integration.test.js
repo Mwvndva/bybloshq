@@ -445,7 +445,7 @@ test('withdrawal before settlement fails with insufficient available balance cop
                 mpesaName: 'Seller',
                 idempotencyKey: 'WD-PENDING-SETTLEMENT'
             }),
-            /Recent sales may still be pending Paystack settlement/
+            /Recent sales may still be preparing for withdrawal/
         );
     });
 

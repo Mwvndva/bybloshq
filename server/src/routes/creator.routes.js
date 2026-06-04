@@ -1,6 +1,7 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
+import { withdrawalRateLimiter } from '../middleware/rateLimiting.js';
 import * as creatorController from '../controllers/creator.controller.js';
 
 const router = express.Router();
@@ -21,6 +22,6 @@ router.post('/shop-requests/:inviteId/accept', creatorController.acceptShopReque
 router.post('/shop-requests/:inviteId/deny', creatorController.denyShopRequest);
 router.get('/referral/dashboard', creatorController.getReferralDashboard);
 router.post('/referral/generate-code', creatorController.generateReferralCode);
-router.post('/withdrawals', creatorController.requestWithdrawal);
+router.post('/withdrawals', withdrawalRateLimiter, creatorController.requestWithdrawal);
 
 export default router;
