@@ -427,7 +427,7 @@ class WithdrawalService {
                     `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
                     `Required: KES ${deductionAmount.toLocaleString()} including withdrawal charge. ` +
                     (entityType === 'seller'
-                        ? 'Recent sales may still be pending Paystack settlement.'
+                        ? 'Recent sales may still be preparing for withdrawal.'
                         : entityType === 'buyer_refund'
                             ? 'Some refund funds may already be reserved for another withdrawal.'
                             : 'Some earnings may already be reserved for another withdrawal.')

@@ -37,7 +37,7 @@ function courierOrder(overrides = {}) {
 test('courier order from seller with physical address uses door delivery copy in payment notification', () => {
   const message = whatsappService.buildWhatsAppMessage(courierOrder(), 'buyer');
 
-  assert.match(message, /Door delivery: Mzigo Ego will check the package and deliver it to your address/);
+  assert.match(message, /\*Delivery:\*\nMzigo Ego checks the package, then delivers it to your address\./);
   assert.doesNotMatch(message, /At Shop|Shop:/);
   assert.doesNotMatch(message, /collect your order at the shop/i);
 });
