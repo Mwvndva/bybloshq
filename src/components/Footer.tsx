@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 
 const Footer = () => {
@@ -24,22 +23,15 @@ const Footer = () => {
             <span>Instagram</span>
           </a>
 
-          <Link
-            to="/seller"
-            className="inline-flex rounded-full border border-stone-200 bg-[#f8f7f2] px-4 py-1.5 text-stone-950 transition-colors hover:border-yellow-300 hover:bg-yellow-100"
-          >
-            Sell on Byblos
-          </Link>
-
           <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-widest">
             <span className="text-stone-500">Partners:</span>
             <span className="text-stone-800 italic font-serif">Mzigoego</span>
-            <span className="text-stone-800 italic">Payment Provider</span>
+            <span className="text-stone-800 italic">Paystack</span>
             <span className="text-stone-800">EVOLVE</span>
           </div>
 
           <p className="text-[10px] text-stone-500 tracking-widest font-semibold uppercase">
-            &copy; 2025 BYBLOS. ALL RIGHTS RESERVED.
+            &copy; 2026 BYBLOS. ALL RIGHTS RESERVED.
           </p>
         </div>
       </div>

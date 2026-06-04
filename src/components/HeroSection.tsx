@@ -29,7 +29,13 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
         <div className="mx-auto flex max-w-6xl flex-col items-center text-center space-y-8 sm:space-y-10">
 
           <div className="space-y-5">
-            <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light text-stone-950 leading-none tracking-normal">
+            <img
+              src="/byblos-mark.png"
+              alt="Byblos logo"
+              className="mx-auto h-auto w-[min(72vw,340px)] sm:w-[min(58vw,460px)] lg:w-[520px]"
+            />
+
+            <h1 className="text-3xl font-light leading-none tracking-normal text-stone-950 sm:text-5xl md:text-6xl lg:text-7xl">
               BYBLOS
             </h1>
 
