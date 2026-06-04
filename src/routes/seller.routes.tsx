@@ -8,8 +8,6 @@ import { RouteFallback } from '@/components/common/RouteFallback';
 const SellerDashboard = safeLazy(() => import('../components/seller/SellerDashboard'));
 const SellerRegistration = safeLazy(() => import('../components/seller/SellerRegistration'));
 const SellerLogin = safeLazy(() => import('../components/seller/SellerLogin').then(m => m.SellerLogin));
-const AddProductForm = safeLazy(() => import('../components/seller/AddProductForm'));
-const SellerProductsPage = safeLazy(() => import('@/pages/seller/SellerProductsPage'));
 
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 
@@ -78,14 +76,6 @@ export const sellerRoutes: RouteObject[] = [
             ),
           },
         ],
-      },
-      {
-        path: 'products',
-        element: (
-          <Suspense fallback={<RouteFallback />}>
-            <SellerProductsPage />
-          </Suspense>
-        ),
       },
       // Redirects for protected routes
       {

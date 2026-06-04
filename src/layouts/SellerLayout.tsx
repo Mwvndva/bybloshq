@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { SellerDashboardLayout } from '@/layouts/BaseDashboardLayout';
-import { Home, Package, ShoppingBag, Settings } from 'lucide-react';
+import { Home, ShoppingBag, Settings } from 'lucide-react';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 
 export function SellerLayout() {
@@ -9,7 +9,6 @@ export function SellerLayout() {
     const sellerFirstName = seller?.fullName?.trim().split(/\s+/)[0] || seller?.shopName?.trim().split(/\s+/)[0] || 'Seller';
     const navigationItems = [
         { label: 'Dashboard', path: '/seller/dashboard', icon: Home },
-        { label: 'Products', path: '/seller/products', icon: Package },
         { label: 'Orders', path: '/seller/orders', icon: ShoppingBag },
         { label: 'Settings', path: '/seller/settings', icon: Settings },
     ];
