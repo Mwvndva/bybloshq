@@ -1,5 +1,7 @@
 import * as sellerAnalyticsRepository from '../repositories/sellerAnalytics.repository.js';
+import { promoteSettlementsOnce } from '../cron/settlementCron.js';
 import { AppError } from '../shared/utils/errorHandler.js';
+import logger from '../shared/utils/logger.js';
 
 const SELLER_ANALYTICS_EXCLUDED_STATUSES = [
   'CANCELLED',
@@ -25,6 +27,12 @@ export const getSellerAnalytics = async (req, res, next) => {
   const excludedStatuses = SELLER_ANALYTICS_EXCLUDED_STATUSES;
 
   try {
+    try {
+      await promoteSettlementsOnce({ limit: 100 });
+    } catch (settlementError) {
+      logger.error('[AnalyticsController] Settlement refresh before seller analytics failed:', settlementError.message);
+    }
+
     const [
       totalProducts,
       sellerStatsRow,

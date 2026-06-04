@@ -32,6 +32,16 @@ const formatKes = (amount: number) => {
   return new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
 };
 
+const formatSettlementTime = (value: string) => {
+  return new Intl.DateTimeFormat('en-KE', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(new Date(value));
+};
+
 export function WithdrawalsTab({
   balance,
   pendingSettlementBalance = 0,
@@ -57,7 +67,7 @@ export function WithdrawalsTab({
     ? requestedAmount + withdrawalFee
     : 0;
   const nextSettlementLabel = nextSettlementAt
-    ? new Date(nextSettlementAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatSettlementTime(nextSettlementAt)
     : 'Pending schedule';
 
   return (

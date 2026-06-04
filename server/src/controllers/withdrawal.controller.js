@@ -4,6 +4,7 @@
 
 import WithdrawalService from '../services/withdrawal.service.js';
 import payoutService from '../services/payout.service.js';
+import { promoteSettlementsOnce } from '../cron/settlementCron.js';
 import { sanitizeWithdrawalRequest } from '../shared/utils/sanitize.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 import logger from '../shared/utils/logger.js';
@@ -88,6 +89,12 @@ export const getWithdrawals = async (req, res, next) => {
     const statusFilter = ALLOWED_STATUSES.has(req.query.status) ? req.query.status : null;
 
     try {
+        try {
+            await promoteSettlementsOnce({ limit: 100 });
+        } catch (settlementError) {
+            logger.error(`[WithdrawalCtrl] Settlement refresh before withdrawal list failed for seller ${sellerId}:`, settlementError.message);
+        }
+
         const { rows, total } = await WithdrawalService.getWithdrawalsForSeller(
             sellerId, { limit, offset, status: statusFilter },
         );
