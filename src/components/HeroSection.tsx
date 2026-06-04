@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ChevronRight, ShieldCheck, Store, Truck } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 interface HeroSectionProps {
   onExploreClick?: () => void;
 }
@@ -25,24 +25,10 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
         }}
       />
 
-      <div
-        className="absolute inset-0 z-0 opacity-[0.45] pointer-events-none"
-        style={{
-          backgroundImage: 'linear-gradient(#e7e2d6 1px, transparent 1px), linear-gradient(90deg, #e7e2d6 1px, transparent 1px)',
-          backgroundSize: '72px 72px',
-          maskImage: 'linear-gradient(to bottom, transparent, black 20%, black 72%, transparent)',
-        }}
-      />
-
       <div className="relative z-10 w-full px-4 sm:px-8 lg:px-16">
         <div className="mx-auto flex max-w-6xl flex-col items-center text-center space-y-8 sm:space-y-10">
 
           <div className="space-y-5">
-            <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-600 shadow-sm">
-              <ShieldCheck className="h-4 w-4 text-yellow-600" />
-              Trusted checkout for social businesses
-            </div>
-
             <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light text-stone-950 leading-none tracking-normal">
               BYBLOS
             </h1>
@@ -73,20 +59,6 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-          </div>
-
-          <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              { icon: ShieldCheck, label: 'Escrow protected', copy: 'Buyers trust you faster.' },
-              { icon: Truck, label: 'Door delivery', copy: 'Orders move with less stress.' },
-              { icon: Store, label: 'Beautiful shop links', copy: 'Your page looks more professional.' }
-            ].map(({ icon: Icon, label, copy }) => (
-              <div key={label} className="rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-[0_10px_28px_rgba(17,17,17,0.06)]">
-                <Icon className="mb-3 h-5 w-5 text-yellow-600" />
-                <h3 className="text-sm font-semibold text-stone-950">{label}</h3>
-                <p className="mt-1 text-xs leading-5 text-stone-500">{copy}</p>
-              </div>
-            ))}
           </div>
 
         </div>
