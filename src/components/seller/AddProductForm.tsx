@@ -261,13 +261,13 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
   };
 
   const renderStep1 = () => (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
-        <h2 className="text-xl font-bold text-white">Let's start with the basics</h2>
+        <h2 className="text-lg font-bold text-white sm:text-xl">Let's start with the basics</h2>
         <p className="text-white text-sm">What are you selling today?</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
           { id: 'physical', label: 'Physical', icon: Package, desc: 'Shippable goods' },
           { id: 'digital', label: 'Digital', icon: FileText, desc: 'Downloads, Keys' },
@@ -278,20 +278,20 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
             type="button"
             onClick={() => setFormData(p => ({ ...p, product_type: type.id as any, is_digital: type.id === 'digital' }))}
             className={cn(
-              "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 text-center group",
+              "flex min-h-[92px] flex-col items-center justify-center rounded-2xl border-2 p-2 text-center transition-all duration-300 group sm:min-h-[120px] sm:p-4",
               formData.product_type === type.id
                 ? "bg-yellow-400/10 border-yellow-400 text-white shadow-[0_0_20px_rgba(250,204,21,0.1)]"
                 : "bg-white/5 border-white/10 text-white hover:border-white/20 hover:bg-white/10"
             )}
           >
-            <type.icon className={cn("h-8 w-8 mb-2 group-hover:scale-110 transition-transform", formData.product_type === type.id ? "text-white" : "text-white")} />
-            <span className="font-bold text-sm">{type.label}</span>
-            <span className="text-[10px] opacity-60 mt-1">{type.desc}</span>
+            <type.icon className={cn("h-6 w-6 mb-2 transition-transform group-hover:scale-110 sm:h-8 sm:w-8", formData.product_type === type.id ? "text-white" : "text-white")} />
+            <span className="text-xs font-bold sm:text-sm">{type.label}</span>
+            <span className="mt-1 hidden text-[10px] opacity-60 sm:block">{type.desc}</span>
           </button>
         ))}
       </div>
 
-      <div className="space-y-4 pt-4">
+      <div className="space-y-4 pt-2 sm:pt-4">
         <div className="space-y-2">
           <Label className="text-xs font-bold text-white uppercase">Product Name</Label>
           <Input
@@ -326,13 +326,13 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
   );
 
   const renderStep2 = () => (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
-        <h2 className="text-xl font-bold text-white">Visuals & Story</h2>
+        <h2 className="text-lg font-bold text-white sm:text-xl">Visuals & Story</h2>
         <p className="text-white text-sm">Make your product stand out with photos.</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[0, 1, 2].map(slot => {
           const preview = slot === 0 ? imagePreview : extraPreviews[slot - 1];
           const combined = allPreviewsCombined();
@@ -353,7 +353,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
                   isDisabled ? "opacity-30 cursor-not-allowed border-white/5" : "border-white/10 hover:border-yellow-400/50 hover:bg-white/5"
                 )}>
                   {!isDisabled && <input type="file" className="hidden" onChange={e => handleImageChange(e, slot)} accept="image/*" />}
-                  <ImagePlus className="h-6 w-6 text-white mb-1" />
+                  <ImagePlus className="mb-1 h-5 w-5 text-white sm:h-6 sm:w-6" />
                   <span className="text-[10px] text-white">{slot === 0 ? "Main" : "Extra"}</span>
                 </label>
               )}
@@ -381,9 +381,9 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
   );
 
   const renderStep3 = () => (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
-        <h2 className="text-xl font-bold text-white">{formData.product_type.charAt(0).toUpperCase() + formData.product_type.slice(1)} Details</h2>
+        <h2 className="text-lg font-bold text-white sm:text-xl">{formData.product_type.charAt(0).toUpperCase() + formData.product_type.slice(1)} Details</h2>
         <p className="text-white text-sm">Specific information for this type of product.</p>
       </div>
 
@@ -423,8 +423,8 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         )}
 
         {formData.product_type === 'service' && (
-          <div className="space-y-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-4 p-3 bg-white/5 border border-white/10 rounded-2xl sm:p-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-white uppercase">Start Time</Label>
                 <Input type="time" value={formData.service_options.start_time} onChange={e => setFormData(p => ({ ...p, service_options: { ...p.service_options, start_time: e.target.value } }))} className="bg-white/5 border-white/10 text-white rounded-xl" />
@@ -457,9 +457,9 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         )}
 
         {formData.product_type === 'physical' && (
-          <div className="space-y-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
-            <label className="flex items-center justify-between gap-3">
-              <span>
+          <div className="space-y-4 p-3 bg-white/5 border border-white/10 rounded-2xl sm:p-4">
+            <label className="flex items-start justify-between gap-3">
+              <span className="min-w-0 flex-1">
                 <span className="block text-xs font-bold text-white uppercase">Custom product</span>
                 <span className="block text-[11px] text-white/70">Buyer must submit custom instructions before payment.</span>
               </span>
@@ -475,8 +475,8 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
               />
             </label>
 
-            <label className="flex items-center justify-between gap-3">
-              <span>
+            <label className="flex items-start justify-between gap-3">
+              <span className="min-w-0 flex-1">
                 <span className="block text-xs font-bold text-white uppercase">Imported / pre-order item</span>
                 <span className="block text-[11px] text-white/70">Buyer sees the estimated ready time before paying.</span>
               </span>
@@ -562,23 +562,23 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
   );
 
   const renderStep4 = () => (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
-        <h2 className="text-xl font-bold text-white">Review & Publish</h2>
+        <h2 className="text-lg font-bold text-white sm:text-xl">Review & Publish</h2>
         <p className="text-white text-sm">Everything look correct?</p>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden">
-        <div className="aspect-video relative">
+      <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-[2rem] overflow-hidden">
+        <div className="relative aspect-[4/3] sm:aspect-video">
           <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
           <div className="absolute top-3 left-3 flex gap-2">
             <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider">{formData.product_type}</span>
           </div>
         </div>
-        <div className="p-5 space-y-3">
-          <div className="flex justify-between items-start">
-            <h3 className="text-xl font-bold text-white">{formData.name}</h3>
-            <span className="text-xl font-black text-yellow-400">KES {formData.price}</span>
+        <div className="space-y-3 p-4 sm:p-5">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <h3 className="break-words text-lg font-bold text-white sm:text-xl">{formData.name}</h3>
+            <span className="shrink-0 text-lg font-black text-yellow-400 sm:text-xl">KES {formData.price}</span>
           </div>
           <p className="text-sm text-white line-clamp-2">{formData.description}</p>
           <div className="flex items-center gap-2 pt-2 text-[10px] text-white uppercase font-bold">
@@ -604,15 +604,15 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
   );
 
   return (
-    <div className="flex flex-col h-full bg-black sm:bg-transparent overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-black sm:bg-transparent">
       {/* Header with Progress Bar */}
-      <div className="px-6 pt-6 pb-4 space-y-4">
+      <div className="shrink-0 space-y-3 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] sm:space-y-4 sm:px-6 sm:pt-6 sm:pb-4">
         <div className="flex justify-between items-center">
           <div>
             <span className="text-[10px] font-black uppercase text-yellow-400 tracking-widest bg-yellow-400/10 px-2 py-1 rounded">Step {step} of 4</span>
           </div>
           {onClose && (
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-white/10">
               <X className="h-5 w-5 text-white" />
             </button>
           )}
@@ -628,7 +628,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
+      <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6 sm:py-4">
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
@@ -636,14 +636,15 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
       </div>
 
       {/* Footer Navigation */}
-      <div className="p-6 border-t border-white/10 flex justify-between items-center gap-4 bg-black/40 backdrop-blur-xl">
+      <div className="shrink-0 border-t border-white/10 bg-black/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:bg-black/40 sm:p-6">
+        <div className="flex items-center justify-between gap-3 sm:gap-4">
         {step > 1 ? (
           <Button
             variant="outline"
             onClick={prevStep}
-            className="flex-1 h-12 bg-transparent border-white/10 text-white rounded-xl hover:bg-white/5"
+            className="h-11 flex-1 rounded-xl border-white/10 bg-transparent text-sm text-white hover:bg-white/5 sm:h-12"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="mr-1.5 h-4 w-4 sm:mr-2" />
             Back
           </Button>
         ) : (
@@ -653,21 +654,22 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         {step < 4 ? (
           <Button
             onClick={nextStep}
-            className="flex-[2] h-12 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl border border-white/15"
+            className="h-11 flex-[2] rounded-xl border border-white/15 bg-white/10 text-sm font-bold text-white hover:bg-white/15 sm:h-12"
           >
             Continue
-            <ArrowRight className="h-4 w-4 ml-2" />
+            <ArrowRight className="ml-1.5 h-4 w-4 sm:ml-2" />
           </Button>
         ) : (
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="flex-[2] h-12 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl border border-white/15"
+            className="h-11 flex-[2] rounded-xl border border-white/15 bg-white/10 text-sm font-bold text-white hover:bg-white/15 sm:h-12"
           >
             {isLoading ? "Launching..." : "Launch Product"}
-            <Sparkles className="h-4 w-4 ml-2 fill-current" />
+            <Sparkles className="ml-1.5 h-4 w-4 fill-current sm:ml-2" />
           </Button>
         )}
+        </div>
       </div>
     </div>
   );

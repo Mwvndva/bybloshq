@@ -145,8 +145,8 @@ export default function SellerProductsPage() {
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none">
-              <div className="bg-zinc-950 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <DialogContent className="inset-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-none bg-transparent p-0 shadow-none focus-visible:outline-none sm:left-1/2 sm:top-1/2 sm:h-[min(92dvh,760px)] sm:w-[min(94vw,640px)] sm:translate-x-[-50%] sm:translate-y-[-50%]">
+              <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-white/10 bg-zinc-950 shadow-2xl sm:rounded-[2rem]">
                 <AddProductForm
                   onSuccess={() => {
                     fetchProducts();
