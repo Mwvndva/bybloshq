@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CardContent } from '@/components/ui/card';
@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import type { Product, Seller } from '@/types';
 import { cn, formatCurrency, isSellerShopless } from '@/lib/utils';
 import type { ProductCardThemeClasses, Theme } from './productCardUtils';
-import { Calendar, ExternalLink, FileText, Loader2, MapPin, ShoppingCart, Store } from 'lucide-react';
+import { Calendar, ChevronDown, ExternalLink, FileText, Loader2, MapPin, ShoppingCart, Store } from 'lucide-react';
 
 interface ProductCardDetailsProps {
   product: Product;
@@ -42,6 +42,28 @@ export function ProductCardDetails({
   const productionDays = Number((product as any).production_days || (product as any).productionDays || 0);
   const isImportedProduct = Boolean((product as any).is_imported_product || (product as any).isImportedProduct);
   const importDays = Number((product as any).import_days || (product as any).importDays || 0);
+  const descriptionRef = useRef<HTMLDivElement>(null);
+  const [hasMoreDescription, setHasMoreDescription] = useState(false);
+
+  const updateDescriptionOverflow = useCallback(() => {
+    const node = descriptionRef.current;
+    if (!node) return;
+
+    const remainingScroll = node.scrollHeight - node.scrollTop - node.clientHeight;
+    setHasMoreDescription(remainingScroll > 2);
+  }, []);
+
+  useEffect(() => {
+    updateDescriptionOverflow();
+
+    const node = descriptionRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(updateDescriptionOverflow);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [product.description, updateDescriptionOverflow]);
+
   return (
     <CardContent className="flex min-h-0 flex-1 flex-col p-3 sm:p-3.5 md:p-4">
       <h3 className={cn(
@@ -64,7 +86,11 @@ export function ProductCardDetails({
         )}
       </p>
 
-      <div className="no-scrollbar relative mb-2 h-[2.6rem] overflow-y-auto overscroll-contain pr-1 sm:h-[3rem]">
+      <div
+        ref={descriptionRef}
+        className="no-scrollbar relative mb-2 h-[4.6rem] overflow-y-auto overscroll-contain pr-1 sm:h-[5.25rem]"
+        onScroll={updateDescriptionOverflow}
+      >
         {product.description ? (
           <p className={cn("mobile-text text-[11px] leading-snug sm:text-xs", themeClasses.description)}>
             {product.description}
@@ -73,6 +99,14 @@ export function ProductCardDetails({
           <p className={cn("text-[11px] leading-snug opacity-70 sm:text-xs", themeClasses.description)}>
             Product details available at checkout.
           </p>
+        )}
+        {hasMoreDescription && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none sticky bottom-0 -mx-1 mt-[-1.25rem] flex h-5 items-end justify-center bg-gradient-to-t from-[var(--product-card-bg)] via-[var(--product-card-bg)]/90 to-transparent pb-0.5"
+          >
+            <ChevronDown className="h-3.5 w-3.5 animate-bounce text-[var(--product-card-accent)] opacity-80" />
+          </div>
         )}
       </div>
 
