@@ -30,6 +30,11 @@ export default function CreatorLogin() {
     try {
       await creatorApi.login(email, password);
       localStorage.setItem('creatorSessionActive', 'true');
+      toast.success('Login successful', {
+        id: 'creator-login-success',
+        description: 'Welcome back to Byblos.',
+        duration: 2000,
+      });
       navigate('/creator/dashboard');
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Could not log in.'));

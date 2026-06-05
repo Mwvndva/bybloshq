@@ -47,6 +47,12 @@ export function useAuthActions({
       markRoleSessionActive(role);
       markAuthChecked();
 
+      toast.success('Login successful', {
+        id: `${role}-login-success`,
+        description: 'Welcome back to Byblos.',
+        duration: 2000,
+      });
+
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
       if (redirectPath && typeof redirectPath === 'string') {
         sessionStorage.removeItem('redirectAfterLogin');
