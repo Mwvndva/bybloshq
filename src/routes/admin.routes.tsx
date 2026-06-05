@@ -1,8 +1,6 @@
 import { Suspense } from 'react';
 import { RouteObject, Outlet } from 'react-router-dom';
 import { AdminProtectedRoute } from '@/components/auth/AppProtectedRoute';
-import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
 
@@ -43,10 +41,7 @@ export const adminRoutes: RouteObject[] = [
 
 // Create admin layout (no auth provider needed - GlobalAuthProvider handles all roles)
 const AdminLayout = () => (
-  <TooltipProvider>
-    <Toaster />
-    <Outlet />
-  </TooltipProvider>
+  <Outlet />
 );
 
 // Create admin routes with layout
