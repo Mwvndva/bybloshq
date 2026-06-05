@@ -64,9 +64,9 @@ export function ProductCardDetails({
         )}
       </p>
 
-      <div className="relative mb-2 min-h-[2.4rem] sm:min-h-[2.75rem]">
+      <div className="no-scrollbar relative mb-2 h-[2.6rem] overflow-y-auto overscroll-contain pr-1 sm:h-[3rem]">
         {product.description ? (
-          <p className={cn("mobile-text line-clamp-3 text-[11px] leading-snug sm:text-xs", themeClasses.description)}>
+          <p className={cn("mobile-text text-[11px] leading-snug sm:text-xs", themeClasses.description)}>
             {product.description}
           </p>
         ) : (
