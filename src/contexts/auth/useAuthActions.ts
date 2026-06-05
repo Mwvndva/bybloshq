@@ -47,11 +47,13 @@ export function useAuthActions({
       markRoleSessionActive(role);
       markAuthChecked();
 
-      toast.success('Welcome back!', {
-        id: `${role}-login-success`,
-        description: 'You have successfully logged in.',
-        duration: 2000,
-      });
+      if (role !== 'seller') {
+        toast.success('Welcome back!', {
+          id: `${role}-login-success`,
+          description: 'You have successfully logged in.',
+          duration: 2000,
+        });
+      }
 
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
       if (redirectPath && typeof redirectPath === 'string') {
