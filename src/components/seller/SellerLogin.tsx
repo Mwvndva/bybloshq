@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ export function SellerLogin() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [isSendingResetLink, setIsSendingResetLink] = useState(false);
+  const loginInFlightRef = useRef(false);
 
   // Keep the standalone auth route aligned with the light app shell.
   useEffect(() => {
@@ -54,6 +55,9 @@ export function SellerLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loginInFlightRef.current) return;
+
+    loginInFlightRef.current = true;
     setIsLoading(true);
 
     try {
@@ -78,6 +82,7 @@ export function SellerLogin() {
         variant: 'destructive',
       });
     } finally {
+      loginInFlightRef.current = false;
       setIsLoading(false);
     }
   };
