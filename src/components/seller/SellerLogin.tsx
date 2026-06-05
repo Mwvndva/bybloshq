@@ -58,11 +58,6 @@ export function SellerLogin() {
 
     try {
       await login({ email: formData.email, password: formData.password });
-      navigate('/seller/dashboard');
-      toast({
-        title: 'Success',
-        description: 'Successfully logged in',
-      });
     } catch (error: any) {
       // Extract the actual error message and code from the SDK/API response
       const apiError = error?.response?.data;
