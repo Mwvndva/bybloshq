@@ -48,6 +48,7 @@ export function useAuthActions({
       markAuthChecked();
 
       toast.success('Welcome back!', {
+        id: `${role}-login-success`,
         description: 'You have successfully logged in.',
         duration: 2000,
       });
