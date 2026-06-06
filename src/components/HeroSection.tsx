@@ -44,10 +44,6 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
               className="mx-auto h-auto w-[min(52vw,220px)] sm:w-[min(36vw,300px)] lg:w-[340px]"
             />
 
-            <h1 className="text-2xl font-semibold leading-none tracking-normal text-stone-950 sm:text-4xl md:text-5xl lg:text-6xl">
-              BYBLOS
-            </h1>
-
             <p className="mx-auto max-w-4xl text-3xl font-extrabold leading-tight tracking-normal text-stone-950 sm:text-5xl md:text-6xl">
               Start and run your business in Nairobi.
             </p>
