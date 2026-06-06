@@ -66,11 +66,11 @@ export default {
 				}
 			},
 			fontFamily: {
-				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-				serif: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				sans: ['Nunito Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				serif: ['Nunito Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
 				mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-				display: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-				body: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+				display: ['Nunito Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				body: ['Nunito Sans', 'ui-sans-serif', 'system-ui', 'sans-serif']
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
