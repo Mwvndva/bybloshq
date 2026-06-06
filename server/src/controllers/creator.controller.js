@@ -164,7 +164,7 @@ export const getProfile = async (req, res, next) => {
 
 export const getDashboard = async (req, res, next) => {
   try {
-    const dashboard = await CreatorService.getDashboard(req.user.creatorId || req.user.profileId, req.query.period);
+    const dashboard = await CreatorService.getDashboard(req.user.creatorId, req.query.period);
     res.status(200).json({
       status: 'success',
       data: {
@@ -188,7 +188,7 @@ export const getDashboard = async (req, res, next) => {
 export const acceptShopRequest = async (req, res, next) => {
   try {
     const result = await CreatorService.respondToShopRequest({
-      creatorId: req.user.creatorId || req.user.profileId,
+      creatorId: req.user.creatorId,
       inviteId: req.params.inviteId,
       action: 'accept'
     });
@@ -201,7 +201,7 @@ export const acceptShopRequest = async (req, res, next) => {
 export const denyShopRequest = async (req, res, next) => {
   try {
     const result = await CreatorService.respondToShopRequest({
-      creatorId: req.user.creatorId || req.user.profileId,
+      creatorId: req.user.creatorId,
       inviteId: req.params.inviteId,
       action: 'deny'
     });
@@ -213,7 +213,7 @@ export const denyShopRequest = async (req, res, next) => {
 
 export const getReferralDashboard = async (req, res, next) => {
   try {
-    const dashboard = await CreatorService.getReferralDashboard(req.user.creatorId || req.user.profileId);
+    const dashboard = await CreatorService.getReferralDashboard(req.user.creatorId);
     res.status(200).json({ status: 'success', data: dashboard });
   } catch (error) {
     next(error);
@@ -222,7 +222,7 @@ export const getReferralDashboard = async (req, res, next) => {
 
 export const generateReferralCode = async (req, res, next) => {
   try {
-    const referralCode = await CreatorService.generateReferralCode(req.user.creatorId || req.user.profileId);
+    const referralCode = await CreatorService.generateReferralCode(req.user.creatorId);
     res.status(200).json({ status: 'success', data: { referralCode } });
   } catch (error) {
     next(error);
@@ -245,7 +245,7 @@ export const trackLinkClick = async (req, res, next) => {
 export const requestWithdrawal = async (req, res, next) => {
   try {
     const request = await WithdrawalService.createWithdrawalRequest({
-      entityId: req.user.creatorId || req.user.profileId,
+      entityId: req.user.creatorId,
       entityType: 'creator',
       amount: req.body.amount,
       idempotencyKey: req.get('Idempotency-Key') || req.body.idempotencyKey

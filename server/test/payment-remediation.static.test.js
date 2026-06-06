@@ -70,14 +70,15 @@ test('public polling and cron delegate successful completion to CorePaymentServi
   assert.doesNotMatch(paystackNormalizer, /mpesa_receipt:\s*details\.receipt_number \|\| details\.gateway_response/);
 });
 
-test('public order status polling resolves order numbers and surfaces provider failures', () => {
+test('public order status polling resolves order numbers only and surfaces provider failures', () => {
   const publicController = read('src/controllers/public.controller.js');
   const publicOrderStatusRepository = read('src/repositories/publicOrderStatus.repository.js');
   const paymentModal = read('../src/components/PaymentStatusModal.tsx');
   const productCard = read('../src/components/ProductCard.tsx');
 
   assert.match(publicController, /publicOrderStatusRepository\.findStatusByIdentifier\(id\)/);
-  assert.match(publicOrderStatusRepository, /po\.order_number = \$1[\s\S]*OR po\.id::text = \$1/);
+  assert.match(publicOrderStatusRepository, /po\.order_number = \$1/);
+  assert.doesNotMatch(publicOrderStatusRepository, /OR\s+po\.id::text = \$1/);
   assert.match(publicController, /paymentService\.checkTransactionStatus\(reference\)/);
   assert.match(publicController, /CorePaymentService\.completeVerifiedPayment/);
   assert.match(publicController, /source:\s*'public_order_status_poll'/);

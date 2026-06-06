@@ -28,6 +28,9 @@ export default async (app) => {
     // 2. Static Files & Uploads Dir
     const uploadsDir = path.join(process.cwd(), 'uploads');
     await mkdir(uploadsDir, { recursive: true });
+    app.use('/uploads/digital_products', (req, res) => {
+        res.status(404).json({ status: 'error', message: 'Not found' });
+    });
     app.use('/uploads', express.static(uploadsDir, {
         setHeaders: (res, filePath) => {
             if (/\.(jpg|jpeg|png|webp)$/.test(filePath)) {
