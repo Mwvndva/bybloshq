@@ -7,9 +7,10 @@ import * as analyticsController from '../controllers/analytics.controller.js';
 import * as orderController from '../controllers/order.controller.js';
 import { inviteCreator, listSellerInvites } from '../controllers/creator.controller.js';
 import { upload } from '../middleware/upload.js';
-import { protect } from '../middleware/auth.js';
+import { protect, hasPermission } from '../middleware/auth.js';
 import referralRoutes from './referral_routes.js';
 import { createWithdrawal, getWithdrawals, getWithdrawalById } from '../controllers/withdrawal.controller.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 
 import { authLimiter } from '../middleware/authRateLimiter.js';
 import { uploadRateLimiter, withdrawalRateLimiter } from '../middleware/rateLimiting.js';
@@ -18,6 +19,13 @@ import digitalUpload from '../middleware/digitalUpload.js';
 import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
+
+const requireSellerProfile = (req, res, next) => {
+  if (!req.user?.sellerId) {
+    return next(new AppError('Seller profile is required for this route.', 403));
+  }
+  return next();
+};
 
 const sellerPickupRequestSchema = z.object({
   mobilePayment: z.string().min(1, 'Mobile payment number is required').optional(),
@@ -119,6 +127,8 @@ router.patch('/products/:id/inventory', productController.updateInventory);
 
 router.post('/products/upload-digital',
   uploadRateLimiter,
+  requireSellerProfile,
+  hasPermission('manage-products'),
   digitalUpload.single('digital_file'),
   productController.uploadDigitalFile
 );

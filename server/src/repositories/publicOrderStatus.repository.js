@@ -23,13 +23,12 @@ const ORDER_STATUS_SELECT = `
     LIMIT 1
   ) p ON true
   WHERE po.order_number = $1
-     OR po.id::text = $1
   LIMIT 1
 `;
 
 /**
  * Fetches the public order status row joined with the latest matching
- * payment, by order_number or id.
+ * payment, by order_number.
  *
  * @param {string|number} identifier
  * @returns {Promise<object|null>}

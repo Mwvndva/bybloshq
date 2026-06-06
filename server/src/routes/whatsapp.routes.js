@@ -1,8 +1,9 @@
 import express from 'express';
 import whatsappService from '../services/whatsapp.service.js';
-import { protect } from '../middleware/auth.js';
+import { protect, hasPermission } from '../middleware/auth.js';
 
 const router = express.Router();
+const requireAdmin = hasPermission('manage-all');
 
 /**
  * @route   GET /api/whatsapp/status
@@ -43,7 +44,7 @@ router.get('/status', async (req, res) => {
  * @desc    Get QR code for WhatsApp authentication
  * @access  Private (Admin only) - SECURITY: Prevents unauthorized WhatsApp takeover
  */
-router.get('/qr', protect, async (req, res) => {
+router.get('/qr', protect, requireAdmin, async (req, res) => {
   try {
     const qrCode = whatsappService.getQRCode();
     const isReady = whatsappService.isClientReady();
@@ -97,7 +98,7 @@ router.get('/qr', protect, async (req, res) => {
  * @desc    Initialize WhatsApp client
  * @access  Private (Admin only)
  */
-router.post('/initialize', protect, async (req, res) => {
+router.post('/initialize', protect, requireAdmin, async (req, res) => {
   try {
     if (whatsappService.isClientReady()) {
       return res.json({
@@ -129,7 +130,7 @@ router.post('/initialize', protect, async (req, res) => {
  * @desc    Logout from WhatsApp
  * @access  Private (Admin only)
  */
-router.post('/logout', protect, async (req, res) => {
+router.post('/logout', protect, requireAdmin, async (req, res) => {
   try {
     await whatsappService.logout();
 
@@ -151,7 +152,7 @@ router.post('/logout', protect, async (req, res) => {
  * @desc    Send a test message
  * @access  Private (Admin only)
  */
-router.post('/test', protect, async (req, res) => {
+router.post('/test', protect, requireAdmin, async (req, res) => {
   try {
     const { phone, message } = req.body;
 
