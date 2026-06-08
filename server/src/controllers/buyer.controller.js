@@ -330,7 +330,20 @@ export const updateProfile = async (req, res, next) => {
   try {
     // 1) Filter out unwanted fields that are not allowed to be updated directly
     // password is handled separately
-    const { password, passwordConfirm, ...updateData } = req.body;
+    const { password, passwordConfirm, ...rawUpdateData } = req.body;
+    const allowedProfileFields = new Set([
+      'fullName',
+      'mobilePayment',
+      'whatsappNumber',
+      'city',
+      'location',
+      'latitude',
+      'longitude',
+      'fullAddress'
+    ]);
+    const updateData = Object.fromEntries(
+      Object.entries(rawUpdateData).filter(([key]) => allowedProfileFields.has(key))
+    );
 
     // 2) Security: Basic Input Validation for Phones
     const phoneRegex = /^(\+?254|0)?[17]\d{8}$/; // Matches 07xx or 01xx or +2547xx
@@ -444,29 +457,11 @@ export const checkBuyerByPhone = async (req, res, next) => {
       // SECURITY FIX: Do not generate token here
       // const token = signToken(existingBuyer.id, 'buyer');
 
-      const sanitizedBuyer = sanitizeBuyer(existingBuyer);
-
-      // Explicitly include email for checkout validation if present
-      // SECURITY FIX: Don't return the email itself, just a flag
-      if (existingBuyer.email) {
-        // sanitizedBuyer.email = existingBuyer.email; // REMOVED
-        sanitizedBuyer.hasEmail = true;
-      } else {
-        sanitizedBuyer.hasEmail = false;
-      }
-
       res.status(200).json({
         status: 'success',
         data: {
           exists: true,
           buyer: {
-            id: existingBuyer.id,
-            fullName: existingBuyer.fullName || existingBuyer.full_name || '',
-            city: existingBuyer.city || '',
-            location: existingBuyer.full_address || existingBuyer.physical_address || existingBuyer.location || '',
-            fullAddress: existingBuyer.full_address || existingBuyer.physical_address || existingBuyer.location || '',
-            latitude: existingBuyer.latitude,
-            longitude: existingBuyer.longitude,
             hasEmail: !!existingBuyer.email,
           }
         }

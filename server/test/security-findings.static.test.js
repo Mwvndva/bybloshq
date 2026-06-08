@@ -55,3 +55,89 @@ test('public order status no longer accepts internal numeric order ids', () => {
   assert.match(source, /WHERE po\.order_number = \$1/);
   assert.doesNotMatch(source, /po\.id::text\s*=\s*\$1/);
 });
+
+test('buyer profile updates use a strict allowlist and cannot write refund balances', () => {
+  const model = read('server/src/models/buyer.model.js');
+  const controller = read('server/src/controllers/buyer.controller.js');
+
+  assert.match(model, /const fieldMap = \{/);
+  assert.match(model, /const dbField = fieldMap\[key\];/);
+  assert.doesNotMatch(model, /fieldMap\[key\]\s*\|\|\s*key/);
+  assert.doesNotMatch(model, /refunds:\s*['"]refunds['"]/);
+  assert.doesNotMatch(model, /isVerified:\s*['"]is_verified['"]/);
+  assert.match(controller, /const allowedProfileFields = new Set/);
+  assert.match(controller, /allowedProfileFields\.has\(key\)/);
+});
+
+test('public buyer phone lookup returns no buyer identity or location PII', () => {
+  const routes = read('server/src/routes/buyer.routes.js');
+  const controller = read('server/src/controllers/buyer.controller.js');
+
+  assert.match(routes, /router\.post\('\/check-phone', buyerController\.checkBuyerByPhone\)/);
+  assert.match(controller, /hasEmail: !!existingBuyer\.email/);
+  assert.doesNotMatch(controller, /id:\s*existingBuyer\.id/);
+  assert.doesNotMatch(controller, /fullName:\s*existingBuyer/);
+  assert.doesNotMatch(controller, /latitude:\s*existingBuyer/);
+  assert.doesNotMatch(controller, /longitude:\s*existingBuyer/);
+});
+
+test('regular protected auth queries require active users and active seller cross-role hydration', () => {
+  const source = read('server/src/middleware/auth.js');
+
+  assert.match(source, /WHERE u\.id = \$1\s+AND u\.is_active = true\s+AND \(b\.status = 'active'/s);
+  assert.match(source, /WHERE u\.id = \$1\s+AND u\.is_active = true\s+AND COALESCE\(s\.status, 'active'\) = 'active'/s);
+  assert.match(source, /WHERE u\.id = \$1\s+AND u\.is_active = true\s+AND c\.id IS NOT NULL/s);
+  assert.match(source, /SELECT id FROM sellers WHERE user_id = \$1 AND COALESCE\(status, 'active'\) = 'active' LIMIT 1/);
+  assert.match(source, /CacheService\.set\(cacheKey, crossRoles, Math\.ceil\(AUTH_CACHE_TTL_MS \/ 1000\)\)/);
+});
+
+test('login user lookup includes and enforces is_active', () => {
+  const userModel = read('server/src/models/user.model.js');
+  const authService = read('server/src/services/auth.service.js');
+
+  assert.match(userModel, /SELECT id, email, password_hash, role, is_verified, is_active FROM users/);
+  assert.match(authService, /if \(user\.is_active === false\)/);
+  assert.match(authService, /ACCOUNT_DEACTIVATED/);
+});
+
+test('seller protected routes require a real seller profile and invite actions never fall back to profileId', () => {
+  const routes = read('server/src/routes/seller.routes.js');
+  const controller = read('server/src/controllers/creator.controller.js');
+
+  assert.match(routes, /router\.use\(protect\);\s*router\.use\(requireSellerProfile\);/s);
+  assert.match(controller, /sellerId: req\.user\.sellerId/);
+  assert.match(controller, /CreatorService\.listSellerInvites\(req\.user\.sellerId\)/);
+  assert.doesNotMatch(controller, /sellerId\s*\|\|\s*req\.user\.profileId/);
+  assert.doesNotMatch(controller, /listSellerInvites\(req\.user\.sellerId\s*\|\|\s*req\.user\.profileId\)/);
+});
+
+test('WhatsApp admin routes are not globally excluded from CSRF', () => {
+  const expressLoader = read('server/src/loaders/express.js');
+
+  assert.doesNotMatch(expressLoader, /req\.path\.startsWith\('\/api\/whatsapp\/'\)/);
+  assert.doesNotMatch(expressLoader, /req\.path\.startsWith\('\/api\/payments\/initiate-product'\)/);
+  assert.match(expressLoader, /req\.path\.startsWith\('\/api\/payments\/webhook'\)/);
+  assert.match(expressLoader, /req\.path\.startsWith\('\/api\/webhooks\/'\)/);
+});
+
+test('base64 image handling allowlists safe raster types and verifies magic bytes', () => {
+  const source = read('server/src/services/image.service.js');
+  const expressLoader = read('server/src/loaders/express.js');
+
+  assert.match(source, /'image\/jpeg': 'jpg'/);
+  assert.match(source, /'image\/png': 'png'/);
+  assert.match(source, /'image\/webp': 'webp'/);
+  assert.match(source, /hasExpectedMagicBytes\(buffer, mimeType\)/);
+  assert.doesNotMatch(source, /data:image\\\/\(\[a-zA-Z\]\*\)/);
+  assert.match(expressLoader, /X-Content-Type-Options', 'nosniff'/);
+});
+
+test('marketing auth performs a database-backed current-user authorization check', () => {
+  const source = read('server/src/middleware/marketingAuth.js');
+
+  assert.match(source, /import \{ query \} from '\.\.\/shared\/db\/database\.js'/);
+  assert.match(source, /export const protectMarketing = async/);
+  assert.match(source, /AND is_active = true/);
+  assert.match(source, /AND role = ANY\(\$2::text\[\]\)/);
+  assert.match(source, /req\.marketingUser = \{ id: user\.id, email: user\.email, role: user\.role \}/);
+});

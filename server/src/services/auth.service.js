@@ -73,6 +73,15 @@ class AuthService {
         // Renamed 'user' to 'target' for clarity, let's keep 'user' for later logic
         const user = target;
 
+        if (user.is_active === false) {
+            const err = new Error('Your account has been deactivated. Please contact support.');
+            err.statusCode = 403;
+            err.code = 'ACCOUNT_DEACTIVATED';
+            err.email = user.email;
+            err.userType = type || user.role;
+            throw err;
+        }
+
         // Check email verification
         // Sellers must verify before accessing the platform
         // Buyers get a softer check — they can still purchase (for guest checkout compat)

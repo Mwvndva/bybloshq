@@ -123,6 +123,7 @@ export const protect = async (req, res, next) => {
           FROM users u
           LEFT JOIN buyers b ON u.id = b.user_id
           WHERE u.id = $1
+            AND u.is_active = true
             AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
         `;
         break;
@@ -134,6 +135,7 @@ export const protect = async (req, res, next) => {
             FROM users u 
             LEFT JOIN sellers s ON u.id = s.user_id 
             WHERE u.id = $1
+              AND u.is_active = true
               AND COALESCE(s.status, 'active') = 'active'
           `;
         break;
@@ -145,6 +147,7 @@ export const protect = async (req, res, next) => {
             FROM users u
             LEFT JOIN creators c ON u.id = c.user_id
             WHERE u.id = $1
+              AND u.is_active = true
               AND c.id IS NOT NULL
               AND COALESCE(c.status, 'active') = 'active'
           `;
@@ -181,14 +184,14 @@ export const protect = async (req, res, next) => {
         const crossRoleQuery = `
           SELECT 
             (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
-            (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id,
+            (SELECT id FROM sellers WHERE user_id = $1 AND COALESCE(status, 'active') = 'active' LIMIT 1) as seller_id,
             (SELECT id FROM creators WHERE user_id = $1 AND status = 'active' LIMIT 1) as creator_id
         `;
         const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
         crossRoles = crossRoleResult.rows[0];
 
-        // Cache result for 5 minutes (300 seconds)
-        await CacheService.set(cacheKey, crossRoles, 300);
+        // Keep cross-role cache aligned with the auth cache so profile suspensions take effect quickly.
+        await CacheService.set(cacheKey, crossRoles, Math.ceil(AUTH_CACHE_TTL_MS / 1000));
       }
     }
 

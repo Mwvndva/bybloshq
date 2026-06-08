@@ -27,7 +27,7 @@ const sanitizeCreator = (creator = {}) => ({
 export const inviteCreator = async (req, res, next) => {
   try {
     const invite = await CreatorService.inviteCreator({
-      sellerId: req.user.sellerId || req.user.profileId,
+      sellerId: req.user.sellerId,
       invitedByUserId: req.user.userId || req.user.id,
       email: req.body.email
     });
@@ -39,7 +39,7 @@ export const inviteCreator = async (req, res, next) => {
 
 export const listSellerInvites = async (req, res, next) => {
   try {
-    const invites = await CreatorService.listSellerInvites(req.user.sellerId || req.user.profileId);
+    const invites = await CreatorService.listSellerInvites(req.user.sellerId);
     res.status(200).json({ status: 'success', data: { invites } });
   } catch (error) {
     next(error);
