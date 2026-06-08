@@ -7,15 +7,6 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
-  const operatingLoop = [
-    'Create shop',
-    'Add products',
-    'Share link',
-    'Buyer pays',
-    'Fulfill order',
-    'Withdraw'
-  ];
-
   return (
     <section className="relative flex min-h-[calc(100svh-88px)] items-center justify-center overflow-hidden bg-white py-10 sm:min-h-[calc(100svh-73px)] sm:py-12 lg:py-14">
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
@@ -51,22 +42,6 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
             <p className="mx-auto max-w-3xl text-xs leading-5 text-stone-600 sm:text-sm sm:leading-6 md:text-base">
               Create a trusted shop link, sell from Instagram, TikTok, or WhatsApp, collect secure payments, manage orders, delivery, receipts, refunds, and withdrawals in one place.
             </p>
-          </div>
-
-          <div className="grid w-full max-w-4xl grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            {operatingLoop.map((step, index) => (
-              <div
-                key={step}
-                className="rounded-xl border border-stone-200 bg-white/85 px-2.5 py-2 text-left shadow-[0_10px_28px_rgba(17,17,17,0.05)] backdrop-blur-sm sm:px-3"
-              >
-                <p className="text-[9px] font-black uppercase tracking-widest text-yellow-600">
-                  Step {index + 1}
-                </p>
-                <p className="mt-0.5 text-xs font-bold text-stone-950 sm:text-sm">
-                  {step}
-                </p>
-              </div>
-            ))}
           </div>
 
           <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
