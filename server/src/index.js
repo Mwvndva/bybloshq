@@ -40,10 +40,15 @@ async function startServer() {
   // 2b. Initialize Loaders (DB, Express, Cron, Services)
   await loaders(app);
 
-  // 2c. Boot the unified fulfillment-retry cron.
-  const { scheduleFulfillmentRetry } = await import('./cron/paymentCron.js');
-  scheduleFulfillmentRetry();
-  logger.info('[Cron] Unified fulfillment-retry cron registered (checks needs_fulfillment + needs_completion)');
+  // 2c. Boot the unified fulfillment-retry cron unless this is an API-only process.
+  const processRole = String(process.env.BYBLOS_PROCESS_ROLE || 'all').toLowerCase();
+  if (!['api', 'web'].includes(processRole)) {
+    const { scheduleFulfillmentRetry } = await import('./cron/paymentCron.js');
+    scheduleFulfillmentRetry();
+    logger.info('[Cron] Unified fulfillment-retry cron registered (checks needs_fulfillment + needs_completion)');
+  } else {
+    logger.info('[Cron] Unified fulfillment-retry cron skipped for API-only process role', { processRole });
+  }
 
   // 3. Start Listening
   const PORT = process.env.PORT || 3002;

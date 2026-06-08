@@ -90,6 +90,10 @@ class PaystackProviderClient {
         return normalizePaystackChargePayload(rawPayload, explicitReference);
     }
 
+    async initiateCharge(paymentData = {}) {
+        return this.initiatePayment(paymentData);
+    }
+
     async initiatePayment(paymentData = {}) {
         const startTime = Date.now();
         const {
@@ -189,6 +193,10 @@ class PaystackProviderClient {
         }
     }
 
+    async verifyTransaction(reference) {
+        return this.checkTransactionStatus(reference);
+    }
+
     async checkTransactionStatus(reference) {
         try {
             if (!reference) throw new Error('Paystack transaction reference is required');
@@ -237,7 +245,7 @@ class PaystackProviderClient {
         } = options;
 
         for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-            const status = await this.checkTransactionStatus(reference);
+            const status = await this.verifyTransaction(reference);
             if (finalStatuses.includes(String(status.status || '').toLowerCase())) {
                 return status;
             }

@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
+    "start:worker": "node src/worker.js",
     "dev": "nodemon -r dotenv/config src/index.js",
     "build": "npm install",
     "migrate": "node scripts/migrate.js",

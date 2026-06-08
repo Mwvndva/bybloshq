@@ -23,6 +23,7 @@ import logisticsRoutes from './logistics.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import creatorRoutes from './creator.routes.js';
 import locationRoutes from './location.routes.js';
+import notificationRoutes from './notification.routes.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -46,5 +47,6 @@ router.use('/logistics', logisticsRoutes);
 router.use('/tracking', trackingRoutes);
 router.use('/creators', creatorRoutes);
 router.use('/locations', locationRoutes);
+router.use('/notifications', notificationRoutes);
 
 export default router;

@@ -65,6 +65,7 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
+      BYBLOS_PROCESS_ROLE: ${BYBLOS_API_PROCESS_ROLE:-all}
       PORT: 3000
       APP_NAME: ${APP_NAME:-Byblos}
       DB_HOST: postgres
@@ -128,6 +129,75 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # Backend worker for cron, outbox replay, WhatsApp, settlement promotion, and retry jobs
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: byblos-worker
+    profiles:
+      - split-workers
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      BYBLOS_PROCESS_ROLE: worker
+      APP_NAME: ${APP_NAME:-Byblos}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-bybloshqdb}
+      DB_USER: ${DB_USER:-byblos_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSL: "false"
+      REDIS_URL: redis://redis:6379
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-paystack}
+      PAYOUT_PROVIDER: ${PAYOUT_PROVIDER:-paystack}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
+      PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY}
+      PAYSTACK_BASE_URL: ${PAYSTACK_BASE_URL:-https://api.paystack.co}
+      PAYSTACK_WEBHOOK_IPS: ${PAYSTACK_WEBHOOK_IPS:-52.31.139.75,52.49.173.169,52.214.14.220}
+      PAYSTACK_WEBHOOK_URL: ${PAYSTACK_WEBHOOK_URL:-https://bybloshq.space/api/webhooks/paystack}
+      PAYSTACK_PAYMENT_CALLBACK_URL: ${PAYSTACK_PAYMENT_CALLBACK_URL:-https://bybloshq.space/api/webhooks/paystack}
+      PAYSTACK_PAYOUT_CALLBACK_URL: ${PAYSTACK_PAYOUT_CALLBACK_URL:-https://bybloshq.space/api/webhooks/paystack}
+
+      FRONTEND_URL: ${FRONTEND_URL}
+      BACKEND_URL: ${BACKEND_URL}
+
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_SECURE: ${EMAIL_SECURE}
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM_EMAIL: ${EMAIL_FROM_EMAIL}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_VERIFICATION_EXPIRES_HOURS: ${EMAIL_VERIFICATION_EXPIRES_HOURS}
+
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    command: ["npm", "run", "start:worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./server/uploads:/app/uploads
+      - baileys_auth:/app/baileys_auth_info
+    networks:
+      - byblos-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   # Frontend
   frontend:
