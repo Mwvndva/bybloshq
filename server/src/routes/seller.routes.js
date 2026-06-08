@@ -78,6 +78,7 @@ router.post('/logout', sellerController.logout);
 
 // Protected routes (require authentication)
 router.use(protect);
+router.use(requireSellerProfile);
 
 // Seller profile routes
 router.get('/profile', sellerController.getProfile);

@@ -138,28 +138,26 @@ class Buyer {
       location: 'location',
       latitude: 'latitude',
       longitude: 'longitude',
-      fullAddress: 'full_address',
-      isVerified: 'is_verified'
-      // Add other fields as needed
+      fullAddress: 'full_address'
     };
 
     for (const [key, value] of Object.entries(updateData)) {
       // Skip password updates here - handle separately with updatePassword
       if (key === 'password') continue;
 
-      // Convert camelCase to snake_case for database columns
-      const dbField = fieldMap[key] || key;
+      const dbField = fieldMap[key];
+      if (!dbField) continue;
       fields.push(`${dbField} = $${paramIndex}`);
       values.push(value);
       paramIndex++;
     }
 
-    // Add updated_at
-    fields.push('updated_at = NOW()');
-
     if (fields.length === 0) {
       throw new Error('No valid fields to update');
     }
+
+    // Add updated_at
+    fields.push('updated_at = NOW()');
 
     const query = `
       UPDATE buyers 

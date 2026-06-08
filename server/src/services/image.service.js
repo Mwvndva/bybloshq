@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
 import logger from '../shared/utils/logger.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 
 import { uploadToCloudinary, deleteFromCloudinary } from '../shared/utils/cloudinary.js';
 
@@ -37,17 +38,30 @@ class ImageService {
                 return base64String;
             }
 
-            const matches = base64String.match(/^data:image\/([a-zA-Z]*);base64,(.*)$/);
+            const matches = base64String.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
             if (!matches || matches.length !== 3) {
-                throw new Error('Invalid base64 image string');
+                throw new AppError('Invalid base64 image string', 400);
             }
 
-            const extension = matches[1];
-            const imageData = matches[2];
+            const mimeType = matches[1].toLowerCase();
+            const allowedTypes = {
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'image/webp': 'webp'
+            };
+            const extension = allowedTypes[mimeType];
+            if (!extension) {
+                throw new AppError('Unsupported image type. Use JPEG, PNG, or WebP.', 400);
+            }
+
+            const imageData = matches[2].replace(/\s/g, '');
             const buffer = Buffer.from(imageData, 'base64');
+            if (!this.hasExpectedMagicBytes(buffer, mimeType)) {
+                throw new AppError('Image content does not match the declared type.', 400);
+            }
 
             // Using SHA-256 for secure hashing (SonarQube compliance)
-            const hash = crypto.createHash('sha256').update(imageData).digest('hex').substring(0, 12);
+            const hash = crypto.createHash('sha256').update(buffer).digest('hex').substring(0, 12);
             const filename = `${prefix}_${Date.now()}_${hash}.${extension}`;
             const filepath = path.join(this.uploadDir, filename);
 
@@ -93,6 +107,25 @@ class ImageService {
      */
     isBase64Image(str) {
         return str && typeof str === 'string' && str.startsWith('data:image');
+    }
+
+    hasExpectedMagicBytes(buffer, mimeType) {
+        if (!Buffer.isBuffer(buffer) || buffer.length < 12) return false;
+
+        if (mimeType === 'image/jpeg') {
+            return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+        }
+
+        if (mimeType === 'image/png') {
+            return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+        }
+
+        if (mimeType === 'image/webp') {
+            return buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+                buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+        }
+
+        return false;
     }
 
     /**

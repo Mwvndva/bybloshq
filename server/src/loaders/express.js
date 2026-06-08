@@ -33,6 +33,10 @@ export default async (app) => {
     });
     app.use('/uploads', express.static(uploadsDir, {
         setHeaders: (res, filePath) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            if (/\.(html?|svg|xml|js|mjs|css)$/i.test(filePath)) {
+                res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            }
             if (/\.(jpg|jpeg|png|webp)$/.test(filePath)) {
                 res.setHeader('Cache-Control', 'public, max-age=86400');
             }
@@ -180,10 +184,8 @@ export default async (app) => {
 
         const isExcluded =
             req.path.startsWith('/api/payments/webhook') ||
-            req.path.startsWith('/api/payments/initiate-product') ||
             req.path.startsWith('/api/callbacks/') ||
-            req.path.startsWith('/api/webhooks/') ||
-            req.path.startsWith('/api/whatsapp/');
+            req.path.startsWith('/api/webhooks/');
 
         if (isExcluded) return next();
 

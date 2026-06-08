@@ -5,8 +5,9 @@
  */
 import jwt from 'jsonwebtoken'
 import { AppError } from '../shared/utils/errorHandler.js'
+import { query } from '../shared/db/database.js'
 
-export const protectMarketing = (req, res, next) => {
+export const protectMarketing = async (req, res, next) => {
     try {
         const authHeader = req?.headers?.authorization
         if (!authHeader?.startsWith('Bearer ')) {
@@ -20,7 +21,22 @@ export const protectMarketing = (req, res, next) => {
             return next(new AppError('Insufficient permissions for marketing dashboard', 403))
         }
 
-        req.marketingUser = { id: decoded.id, email: decoded.email, role: decoded.role }
+        const { rows } = await query(
+            `SELECT id, email, role, is_active
+             FROM users
+             WHERE id = $1
+               AND is_active = true
+               AND role = ANY($2::text[])
+             LIMIT 1`,
+            [decoded.id, ['marketing', 'admin']]
+        )
+        const user = rows[0]
+
+        if (!user) {
+            return next(new AppError('Insufficient permissions for marketing dashboard', 403))
+        }
+
+        req.marketingUser = { id: user.id, email: user.email, role: user.role }
         next()
     } catch (err) {
         if (err.name === 'TokenExpiredError') {
