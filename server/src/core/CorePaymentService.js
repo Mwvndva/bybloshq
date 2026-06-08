@@ -249,6 +249,21 @@ function requireValidWebhookSignature(signature, rawBody) {
 
 const CorePaymentService = {
 
+    /**
+     * Core-owned product checkout initiation boundary.
+     *
+     * Phase 1/2 centralization note:
+     * - Controllers keep calling PaymentService for compatibility.
+     * - PaymentService.initiateProductPayment delegates here.
+     * - The current implementation lives in PaymentLifecycleService as
+     *   initiateProductPaymentLegacy until helper dependencies are moved into
+     *   focused Core collaborators without changing money behavior.
+     */
+    async initiateProductPayment(normalizedOrder) {
+        const { default: paymentLifecycleService } = await import('../services/paymentLifecycle.service.js');
+        return paymentLifecycleService.initiateProductPaymentLegacy(normalizedOrder);
+    },
+
     async initiatePayment(paymentData) {
         throw new Error('CorePaymentService.initiatePayment is disabled. Use PaymentService.initiatePayment for provider initiation and CorePaymentService.completeVerifiedPayment for completion.');
     },

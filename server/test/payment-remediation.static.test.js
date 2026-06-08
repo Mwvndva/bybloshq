@@ -53,7 +53,7 @@ test('service slot release uses schema column expires_at', () => {
 });
 
 test('public polling and cron delegate successful completion to CorePaymentService', () => {
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const core = read('src/core/CorePaymentService.js');
   const paystackNormalizer = read('src/shared/utils/paystackPaymentNormalizer.js');
 
@@ -92,7 +92,7 @@ test('public order status polling resolves order numbers only and surfaces provi
 });
 
 test('payment service selects configured payin provider and persists provider payment method', () => {
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const paymentMethodMigration = read('migrations/20260510070000_allow_paystack_payment_method.sql');
 
   assert.match(paymentService, /process\.env\.PAYMENT_PROVIDER \|\| 'paystack'/);
@@ -157,7 +157,7 @@ test('admin payment labels are provider-neutral while raw provider payloads rema
 });
 
 test('payment cron claims rows with SKIP LOCKED before provider verification', () => {
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
 
   assert.match(paymentService, /FOR UPDATE SKIP LOCKED/);
   assert.match(paymentService, /cron_claimed_until/);
@@ -325,7 +325,7 @@ test('fulfillment retry cron routes through fulfillment queue', () => {
 
 test('checkout idempotency is persisted in product_orders', () => {
   const orderModel = read('src/models/order.model.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const controller = read('src/controllers/payment.controller.js');
   const productCard = read('../src/components/ProductCard.tsx');
   const migration = read('migrations/20260507231000_final_fintech_stabilization.sql');
@@ -342,7 +342,7 @@ test('checkout idempotency is persisted in product_orders', () => {
 });
 
 test('payment provider attempts are durable before gateway network calls', () => {
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const migration = read('migrations/20260507231000_final_fintech_stabilization.sql');
 
   assert.match(migration, /CREATE TABLE IF NOT EXISTS payment_provider_attempts/);
@@ -355,7 +355,7 @@ test('payment provider attempts are durable before gateway network calls', () =>
 });
 
 test('deterministic gateway initiation failure releases reservations and marks payment/order failed transactionally', () => {
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
 
   assert.match(paymentService, /markPaymentInitiationFailed/);
   assert.match(paymentService, /releaseOrderReservations\(client,\s*orderId\)/);
@@ -365,7 +365,7 @@ test('deterministic gateway initiation failure releases reservations and marks p
 });
 
 test('ambiguous gateway initiation failures stay pending for webhook recovery', () => {
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
 
   assert.match(paymentService, /isAmbiguousPaymentProviderError/);
   assert.match(paymentService, /'TIMEOUT'/);
@@ -397,7 +397,7 @@ test('Paystack production-switch regression plan protects payin, logistics, poll
   const criticalRegression = read('test/critical-systems.regression.test.js');
   const paymentEvents = read('src/events/payment.events.js');
   const logisticsService = read('src/services/logisticsRequest.service.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const payoutStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
 
   assert.match(fintechIntegration, /Paystack accepted charge returns pending status/);
@@ -516,7 +516,7 @@ test('important post-commit lifecycle events prefer durable outbox rows', () => 
     ['referral.service.js', referralService],
     ['CoreOrderService.js', coreOrder],
     ['CorePaymentService.js', read('src/core/CorePaymentService.js')],
-    ['payment.service.js', read('src/services/payment.service.js')],
+    ['payment.service.js', read('src/services/paymentLifecycle.service.js')],
     ['orderDeadline.service.js', read('src/services/orderDeadline.service.js')],
     ['fulfillmentQueue.service.js', read('src/services/fulfillmentQueue.service.js')]
   ].flatMap(([file, source]) =>
@@ -848,7 +848,7 @@ test('door delivery payment totals are recalculated by backend and do not inflat
   const paymentRoutes = read('src/routes/payment.routes.js');
   const paymentController = read('src/controllers/payment.controller.js');
   const core = read('src/core/CorePaymentService.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const paymentEvents = read('src/events/payment.events.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
   const quoteService = read('src/services/logisticsQuote.service.js');
@@ -916,7 +916,7 @@ test('door delivery payment totals are recalculated by backend and do not inflat
 test('seller pickup fee payment activates pickup logistics without mutating product payment state', () => {
   const sellerRoutes = read('src/routes/seller.routes.js');
   const orderController = read('src/controllers/order.controller.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const core = read('src/core/CorePaymentService.js');
   const paymentEvents = read('src/events/payment.events.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
@@ -962,7 +962,7 @@ test('seller pickup fee payment activates pickup logistics without mutating prod
 
 test('provider payment lookups cannot fall through to internal payment ids', () => {
   const core = read('src/core/CorePaymentService.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
 
   assert.match(core, /async function findPaymentByProviderReference/);
   assert.match(core, /async function findPaymentByInternalId/);
@@ -1117,7 +1117,7 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
   const sellerDashboardDataHook = read('../src/components/seller/dashboard/hooks/useSellerDashboardData.ts');
   const sellerDashboardQueryKeys = read('../src/components/seller/dashboard/queryKeys.ts');
   const sellerAnalyticsRepository = read('src/repositories/sellerAnalytics.repository.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const productCard = read('../src/components/ProductCard.tsx');
   const adminDashboard = read('../src/pages/admin/NewDashboardPage.tsx');
 
@@ -1311,7 +1311,7 @@ test('admin logistics oversight can inspect, override, and resolve disputes with
 });
 
 test('logistics regression contracts cover optional delivery, grouping, idempotency, transitions, and milestone dedupe', () => {
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
   const logisticsDashboardService = read('src/services/logisticsDashboard.service.js');
   const logisticsMigration = read('migrations/20260510010000_add_logistics_data_model.sql');
@@ -1540,7 +1540,7 @@ test('custom physical products validate production SLA and buyer instructions at
   const migration = read('migrations/20260602180000_custom_physical_product_sla.sql');
   const productService = read('src/services/product.service.js');
   const productModel = read('src/models/product.model.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const phoneModal = read('../src/components/PhoneCheckModal.tsx');
   const productCard = read('../src/components/ProductCard.tsx');
   const addProductForm = read('../src/components/seller/AddProductForm.tsx');
@@ -1577,7 +1577,7 @@ test('custom physical products validate production SLA and buyer instructions at
 test('imported physical products expose pre-order ready SLA without customization friction', () => {
   const migration = read('migrations/20260602200000_imported_product_preorder_sla.sql');
   const productService = read('src/services/product.service.js');
-  const paymentService = read('src/services/payment.service.js');
+  const paymentService = read('src/services/paymentLifecycle.service.js');
   const paymentController = read('src/controllers/payment.controller.js');
   const sellerController = read('src/controllers/seller.controller.js');
   const core = read('src/core/CorePaymentService.js');

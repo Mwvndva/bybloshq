@@ -35,7 +35,11 @@ async function runtime() {
             import('../src/services/EscrowManager.js'),
             import('../src/services/creator.service.js'),
             import('../src/services/settlement.service.js'),
-            import('../src/services/withdrawal.service.js')
+            import('../src/services/withdrawal.service.js'),
+            import('../src/services/payment.service.js'),
+            import('../src/services/paymentLifecycle.service.js'),
+            import('../src/services/order.service.js'),
+            import('../src/services/logisticsQuote.service.js')
         ]).then(([
             database,
             corePayment,
@@ -50,7 +54,11 @@ async function runtime() {
             escrowManager,
             creatorService,
             settlementService,
-            withdrawalService
+            withdrawalService,
+            paymentService,
+            paymentLifecycleService,
+            orderService,
+            logisticsQuoteService
         ]) => ({
             pool: database.pool,
             CorePaymentService: corePayment.default,
@@ -65,7 +73,11 @@ async function runtime() {
             EscrowManager: escrowManager.default,
             CreatorService: creatorService.default,
             settlementService: settlementService.default,
-            WithdrawalService: withdrawalService.default
+            WithdrawalService: withdrawalService.default,
+            paymentService: paymentService.default,
+            paymentLifecycleService: paymentLifecycleService.default,
+            OrderService: orderService.default,
+            LogisticsQuoteService: logisticsQuoteService.default
         }));
     }
     return runtimePromise;
@@ -143,6 +155,325 @@ function hmacSignature(payload) {
 function indexOfQuery(client, pattern) {
     return client.queries.findIndex(query => pattern.test(query.normalized));
 }
+
+function productRow(overrides = {}) {
+    return {
+        id: 109,
+        seller_id: 77,
+        seller_id_from_seller: 77,
+        seller_status: 'active',
+        seller_name: 'Seller One',
+        shop_name: 'Seller Shop',
+        seller_email: 'seller@example.com',
+        seller_whatsapp_number: '0711111111',
+        seller_city: 'Nairobi',
+        seller_location: 'TRM',
+        seller_physical_address: null,
+        seller_latitude: null,
+        seller_longitude: null,
+        name: 'Phase Four Product',
+        price: '100.00',
+        product_type: 'physical',
+        is_digital: false,
+        status: 'available',
+        is_custom_product: false,
+        production_days: null,
+        is_imported_product: false,
+        import_days: null,
+        ...overrides
+    };
+}
+
+function checkoutPayload(overrides = {}) {
+    return {
+        buyer: {
+            id: 44,
+            name: 'Buyer One',
+            phone: '0712345678',
+            email: 'buyer@example.com'
+        },
+        service: {
+            id: 109,
+            quantity: 1
+        },
+        location: {
+            address: 'TRM',
+            lat: -1.218867,
+            lng: 36.887641
+        },
+        payment: {
+            amount: 999
+        },
+        metadata: {},
+        idempotencyKey: 'checkout:109:phase-4',
+        ...overrides
+    };
+}
+
+test('Core product checkout initiation creates order, payment, provider attempt, and provider pending result', async () => {
+    const {
+        pool,
+        CorePaymentService,
+        paymentLifecycleService,
+        OrderService,
+        CreatorService,
+        LogisticsQuoteService,
+        LogisticsRequestService
+    } = await runtime();
+
+    const client = new FakeClient([
+        respond(text => /INSERT INTO payments/.test(text), [{
+            id: 701,
+            status: 'pending',
+            provider_reference: null
+        }]),
+        respond(text => /INSERT INTO payment_provider_attempts/.test(text), []),
+        respond(text => /UPDATE payments/.test(text) && /metadata = \$2::jsonb/.test(text), []),
+        respond(text => /UPDATE product_orders/.test(text) && /jsonb_set/.test(text), [])
+    ]);
+    const poolQueries = [];
+    const captured = {
+        orderData: null,
+        providerPayload: null,
+        accepted: null,
+        creatorArgs: null
+    };
+
+    await withPatches([
+        [pool, 'query', async (sql, params = []) => {
+            poolQueries.push({ text: String(sql), params });
+            if (/FROM products p/.test(String(sql))) {
+                return { rows: [productRow()], rowCount: 1 };
+            }
+            if (/client_checkout_token = \$1/.test(String(sql))) {
+                return { rows: [], rowCount: 0 };
+            }
+            throw new Error(`Unexpected pool query: ${String(sql).replace(/\s+/g, ' ').trim()}`);
+        }],
+        [pool, 'connect', async () => client],
+        [CreatorService, 'resolveAttribution', async args => {
+            captured.creatorArgs = args;
+            return {
+                creator_id: 12,
+                creator_code: 'CREATOR-12',
+                commission_amount: 1
+            };
+        }],
+        [LogisticsQuoteService, 'quoteBuyerDoorDelivery', () => ({
+            legType: 'delivery',
+            payer: 'buyer',
+            currency: 'KES',
+            rateKesPerKm: 40,
+            distanceKm: 1.6,
+            chargeableDistanceKm: 2,
+            feeAmount: 80,
+            origin: { address: 'Mzigo Hub' },
+            destination: { address: 'Buyer Door' }
+        })],
+        [LogisticsRequestService, 'createDoorDeliveryPaymentPending', async () => ({
+            request: { id: 3001, package_code: 'PKG-3001' },
+            deliveryLeg: { id: 4001 },
+            partner: { id: 5001 }
+        })],
+        [OrderService, 'createOrder', async (orderData, orderClient) => {
+            captured.orderData = orderData;
+            assert.equal(orderClient, client);
+            return { id: 901, order_number: 'BYB-901' };
+        }],
+        [paymentLifecycleService, 'markPaymentProviderAttemptStarted', async paymentId => {
+            assert.equal(paymentId, 701);
+        }],
+        [paymentLifecycleService, 'markPaymentProviderAttemptAccepted', async args => {
+            captured.accepted = args;
+        }],
+        [paymentLifecycleService, 'initiatePayment', async payload => {
+            captured.providerPayload = payload;
+            assert.ok(indexOfQuery(client, /^COMMIT$/) >= 0);
+            return {
+                success: true,
+                reference: 'PAYSTACK-901',
+                status: 'pending',
+                message: 'M-Pesa prompt sent'
+            };
+        }]
+    ], async () => {
+        const result = await CorePaymentService.initiateProductPayment(checkoutPayload({
+            metadata: {
+                creator_code: 'CREATOR-12',
+                delivery: {
+                    doorDelivery: true,
+                    address: 'Buyer Door',
+                    lat: -1.2,
+                    lng: 36.9
+                }
+            }
+        }));
+
+        assert.equal(result.success, true);
+        assert.equal(result.orderId, 901);
+        assert.equal(result.orderNumber, 'BYB-901');
+        assert.equal(result.paymentId, 701);
+        assert.equal(result.paymentResult.reference, 'PAYSTACK-901');
+        assert.equal(result.logistics.request_id, 3001);
+    });
+
+    const paymentInsert = client.queries.find(query => /INSERT INTO payments/.test(query.text));
+    const providerAttempt = client.queries.find(query => /INSERT INTO payment_provider_attempts/.test(query.text));
+    assert.ok(paymentInsert, 'payment row should be inserted');
+    assert.ok(providerAttempt, 'provider attempt row should be inserted before Paystack call');
+    assert.ok(indexOfQuery(client, /^BEGIN$/) < indexOfQuery(client, /INSERT INTO payments/));
+    assert.ok(indexOfQuery(client, /INSERT INTO payments/) < indexOfQuery(client, /INSERT INTO payment_provider_attempts/));
+    assert.ok(indexOfQuery(client, /INSERT INTO payment_provider_attempts/) < indexOfQuery(client, /^COMMIT$/));
+
+    assert.equal(captured.orderData.service.total, 182);
+    assert.equal(paymentInsert.params[4], 182);
+    assert.equal(captured.providerPayload.amount, 182);
+    assert.equal(captured.orderData.metadata.pricing.product_subtotal, 100);
+    assert.equal(captured.orderData.metadata.pricing.buyer_delivery_fee, 80);
+    assert.equal(captured.orderData.metadata.pricing.buyer_service_charge, 2);
+    assert.equal(captured.orderData.metadata.pricing.creator_commission_amount, 1);
+    assert.equal(captured.orderData.metadata.creator_attribution.creator_id, 12);
+    assert.deepEqual(captured.creatorArgs, {
+        code: 'CREATOR-12',
+        sellerId: 77,
+        productSubtotal: 100
+    });
+    assert.equal(captured.accepted.paymentId, 701);
+    assert.equal(captured.accepted.providerReference, 'PAYSTACK-901');
+    assert.equal(providerAttempt.params[1], 901);
+    assert.equal(providerAttempt.params[3], 'checkout:109:phase-4');
+    assert.equal(poolQueries.filter(query => /client_checkout_token = \$1/.test(query.text)).length, 1);
+});
+
+test('duplicate checkout token returns existing payment without duplicating order, payment, or provider call', async () => {
+    const { pool, CorePaymentService, paymentLifecycleService, OrderService } = await runtime();
+    let connectCalled = false;
+    let orderCreateCalled = false;
+    let providerCalled = false;
+
+    await withPatches([
+        [pool, 'query', async (sql, params = []) => {
+            const text = String(sql);
+            if (/FROM products p/.test(text)) {
+                return { rows: [productRow()], rowCount: 1 };
+            }
+            if (/client_checkout_token = \$1/.test(text)) {
+                assert.equal(params[0], 'checkout:109:phase-4');
+                return {
+                    rows: [{
+                        order_id: 902,
+                        order_number: 'BYB-902',
+                        payment_id: 702,
+                        provider_reference: 'PAYSTACK-902',
+                        payment_status: 'pending'
+                    }],
+                    rowCount: 1
+                };
+            }
+            throw new Error(`Unexpected pool query: ${text.replace(/\s+/g, ' ').trim()}`);
+        }],
+        [pool, 'connect', async () => {
+            connectCalled = true;
+            throw new Error('duplicate checkout should not open a transaction');
+        }],
+        [OrderService, 'createOrder', async () => {
+            orderCreateCalled = true;
+            throw new Error('duplicate checkout should not create a new order');
+        }],
+        [paymentLifecycleService, 'initiatePayment', async () => {
+            providerCalled = true;
+            throw new Error('duplicate checkout should not call provider');
+        }]
+    ], async () => {
+        const result = await CorePaymentService.initiateProductPayment(checkoutPayload());
+        assert.equal(result.success, true);
+        assert.equal(result.idempotent, true);
+        assert.equal(result.orderId, 902);
+        assert.equal(result.orderNumber, 'BYB-902');
+        assert.equal(result.paymentId, 702);
+        assert.deepEqual(result.paymentResult, {
+            reference: 'PAYSTACK-902',
+            status: 'pending'
+        });
+    });
+
+    assert.equal(connectCalled, false);
+    assert.equal(orderCreateCalled, false);
+    assert.equal(providerCalled, false);
+});
+
+test('deterministic provider initiation failure marks checkout failed after durable provider attempt', async () => {
+    const {
+        pool,
+        CorePaymentService,
+        paymentLifecycleService,
+        OrderService,
+        CreatorService
+    } = await runtime();
+
+    const client = new FakeClient([
+        respond(text => /INSERT INTO payments/.test(text), [{
+            id: 703,
+            status: 'pending',
+            provider_reference: null
+        }]),
+        respond(text => /INSERT INTO payment_provider_attempts/.test(text), [])
+    ]);
+    const failedAttempts = [];
+    const failedInitiations = [];
+
+    await withPatches([
+        [pool, 'query', async (sql) => {
+            const text = String(sql);
+            if (/FROM products p/.test(text)) {
+                return { rows: [productRow({ price: '100.00' })], rowCount: 1 };
+            }
+            if (/client_checkout_token = \$1/.test(text)) {
+                return { rows: [], rowCount: 0 };
+            }
+            throw new Error(`Unexpected pool query: ${text.replace(/\s+/g, ' ').trim()}`);
+        }],
+        [pool, 'connect', async () => client],
+        [CreatorService, 'resolveAttribution', async () => null],
+        [OrderService, 'createOrder', async () => ({ id: 903, order_number: 'BYB-903' })],
+        [paymentLifecycleService, 'markPaymentProviderAttemptStarted', async () => {}],
+        [paymentLifecycleService, 'markPaymentProviderAttemptFailed', async args => {
+            failedAttempts.push(args);
+        }],
+        [paymentLifecycleService, 'markPaymentInitiationFailed', async args => {
+            failedInitiations.push(args);
+        }],
+        [paymentLifecycleService, 'initiatePayment', async () => {
+            const error = new Error('Paystack rejected charge');
+            error.statusCode = 400;
+            throw error;
+        }]
+    ], async () => {
+        await assert.rejects(
+            CorePaymentService.initiateProductPayment(checkoutPayload({
+                idempotencyKey: 'checkout:109:phase-4-failure'
+            })),
+            /Payment initiation failed before STK push/
+        );
+    });
+
+    assert.ok(indexOfQuery(client, /INSERT INTO payment_provider_attempts/) < indexOfQuery(client, /^COMMIT$/));
+    assert.equal(failedAttempts.length, 1);
+    assert.equal(failedAttempts[0].paymentId, 703);
+    assert.equal(failedAttempts[0].errorPayload.message, 'Paystack rejected charge');
+    assert.equal(failedAttempts[0].errorPayload.status, 400);
+    assert.deepEqual(failedInitiations, [{
+        orderId: 903,
+        paymentId: 703,
+        reason: 'Paystack rejected charge',
+        providerPayload: {
+            message: 'Paystack rejected charge',
+            code: undefined,
+            status: 400,
+            data: undefined
+        }
+    }]);
+});
 
 test('payment webhook completes through one atomic transaction and enqueues fulfillment before commit', async () => {
     const {
@@ -228,7 +559,7 @@ test('Paystack accepted charge returns pending status without completing payment
             };
         }]
     ], async () => {
-        const result = await client.initiatePayment({
+        const result = await client.initiateCharge({
             email: 'buyer@example.com',
             amount: 123.45,
             invoice_id: 'ORDER-123',
@@ -319,7 +650,7 @@ test('pending Paystack charge is checked by status polling but not completed', a
             };
         }]
     ], async () => {
-        const status = await client.checkTransactionStatus('PAYSTACK-PENDING');
+        const status = await client.verifyTransaction('PAYSTACK-PENDING');
         assert.equal(status.status, 'pending');
         assert.equal(status.reference, 'PAYSTACK-PENDING');
         assert.equal(status.amount, 99);
@@ -329,7 +660,7 @@ test('pending Paystack charge is checked by status polling but not completed', a
 });
 
 test('payment cron race guard claims pending rows with SKIP LOCKED and delegates completion', () => {
-    const paymentService = read('src/services/payment.service.js');
+    const paymentService = read('src/services/paymentLifecycle.service.js');
 
     assert.match(paymentService, /WITH claimed AS/);
     assert.match(paymentService, /FOR UPDATE SKIP LOCKED/);
@@ -618,7 +949,7 @@ test('inventory release skips digital products and fails closed on reserved unde
 test('door delivery and seller pickup logistics activate only after completed payment state', () => {
     const paymentEvents = read('src/events/payment.events.js');
     const logisticsService = read('src/services/logisticsRequest.service.js');
-    const paymentService = read('src/services/payment.service.js');
+    const paymentService = read('src/services/paymentLifecycle.service.js');
 
     assert.match(paymentEvents, /eventBus\.on\(AppEvents\.PAYMENT\.COMPLETED[\s\S]*activateDoorDeliveryAfterPayment/);
     assert.match(paymentEvents, /eventBus\.on\(AppEvents\.PAYMENT\.COMPLETED[\s\S]*activateSellerPickupAfterPayment/);
