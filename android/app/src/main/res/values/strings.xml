@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Byblos</string>
+    <string name="title_activity_main">Byblos</string>
+    <string name="package_name">space.bybloshq.app</string>
+    <string name="custom_url_scheme">space.bybloshq.app</string>
+</resources>

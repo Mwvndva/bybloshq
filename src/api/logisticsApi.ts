@@ -1,4 +1,5 @@
 import apiClient from '@/lib/apiClient';
+import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 
 const LOGISTICS_TOKEN_KEY = 'mzigoLogisticsToken';
 const LOGISTICS_PARTNER_KEY = 'mzigoLogisticsPartner';
@@ -153,6 +154,7 @@ export function getStoredLogisticsPartner(): LogisticsPartner | null {
 }
 
 export function clearLogisticsSession() {
+  void unregisterNativePushNotifications('logistics', { headers: logisticsHeaders() }).catch(() => undefined);
   localStorage.removeItem(LOGISTICS_TOKEN_KEY);
   localStorage.removeItem(LOGISTICS_PARTNER_KEY);
 }
@@ -175,6 +177,7 @@ export async function loginLogisticsPartner(email: string, password: string) {
   }
 
   setLogisticsSession(data.token, data.partner);
+  void registerNativePushNotifications('logistics', { headers: logisticsHeaders() });
   return data as { token: string; partner: LogisticsPartner };
 }
 

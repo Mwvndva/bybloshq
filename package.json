@@ -17,9 +17,15 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:app": "node scripts/app-system-audit.mjs",
+    "mobile:sync": "npm run build && npx cap sync android",
+    "mobile:android": "npx cap open android",
+    "mobile:build": "npm run build && npx cap sync android",
     "start": "vite preview --port 3000"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/push-notifications": "^8.1.1",
     "@hookform/resolvers": "^3.10.0",
     "@mui/x-data-grid": "^8.9.1",
     "@radix-ui/react-accordion": "^1.2.0",
@@ -91,6 +97,8 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.0",
     "@eslint/js": "^9.9.0",
     "@faker-js/faker": "^10.0.0",
     "@playwright/test": "^1.52.0",

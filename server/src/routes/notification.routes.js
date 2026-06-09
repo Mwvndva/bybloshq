@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
+import { protectLogistics } from '../middleware/logisticsAuth.js';
 import {
     listNotifications,
     markAllNotificationsRead,
@@ -9,6 +10,10 @@ import {
 } from '../controllers/notification.controller.js';
 
 const router = express.Router();
+
+router.post('/logistics/devices', protectLogistics, registerDevice);
+router.delete('/logistics/devices', protectLogistics, unregisterDevice);
+router.delete('/logistics/devices/:token', protectLogistics, unregisterDevice);
 
 router.use(protect);
 
