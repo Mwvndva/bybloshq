@@ -1,8 +1,8 @@
 import NotificationService from '../services/notification.service.js';
 import logger from '../shared/utils/logger.js';
 
-const currentUserId = (req) => Number(req.user?.userId || req.user?.id);
-const currentRole = (req) => req.user?.role || req.user?.userType;
+const currentUserId = (req) => Number(req.user?.userId || req.user?.id || req.logisticsPartner?.userId);
+const currentRole = (req) => req.logisticsPartner ? 'logistics' : (req.user?.role || req.user?.userType);
 
 export const registerDevice = async (req, res) => {
     try {

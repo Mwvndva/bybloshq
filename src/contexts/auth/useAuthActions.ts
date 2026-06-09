@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import adminApi from '@/api/adminApi';
 import apiClient from '@/lib/apiClient';
 import { clearAllAuthData } from '@/lib/authCleanup';
+import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 import { getApiForRole } from './authApi';
 import { getDashboardPath, getLoginPath } from './authRouting';
 import { clearRoleSessionMarkers, markRoleSessionActive } from './authSession';
@@ -46,6 +47,7 @@ export function useAuthActions({
 
       markRoleSessionActive(role);
       markAuthChecked();
+      void registerNativePushNotifications(role);
 
       toast.success('Login successful', {
         id: `${role}-login-success`,
@@ -89,6 +91,7 @@ export function useAuthActions({
 
       markRoleSessionActive(role);
       markAuthChecked();
+      void registerNativePushNotifications(role);
     } catch (error: any) {
       throw error;
     } finally {
@@ -115,6 +118,7 @@ export function useAuthActions({
 
         markRoleSessionActive('admin');
         markAuthChecked();
+        void registerNativePushNotifications('admin');
 
         toast.success('Welcome Admin', {
           description: 'You have successfully logged in.',
@@ -164,6 +168,7 @@ export function useAuthActions({
 
       markRoleSessionActive(role);
       markAuthChecked();
+      void registerNativePushNotifications(role);
 
       toast.success('Account created!', {
         description: 'Your account has been successfully created.',
@@ -199,6 +204,7 @@ export function useAuthActions({
     const role = user.role;
 
     try {
+      await unregisterNativePushNotifications(role);
       const logoutUrl = role === 'seller'
         ? '/sellers/logout'
         : role === 'admin'
@@ -237,6 +243,7 @@ export function useAuthActions({
 
       markRoleSessionActive(newRole);
       markAuthChecked();
+      void registerNativePushNotifications(newRole);
 
       toast.success('Role Switched', {
         description: `Switched to ${newRole} dashboard`,
@@ -304,6 +311,7 @@ export function useAuthActions({
         profile: profileData,
         isAuthenticated: true
       });
+      void registerNativePushNotifications(role);
     } catch (error: any) {
       throw error;
     }
