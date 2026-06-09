@@ -58,10 +58,13 @@ export default async (app) => {
     logger.info(`🌐 Whitelisted origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'none (using defaults)'}`);
 
     const isLocal = process.env.NODE_ENV !== 'production';
-    const localOrigins = [
+    const nativeAppOrigins = [
         'capacitor://localhost',
         'ionic://localhost',
-        'https://localhost',
+        'https://localhost'
+    ];
+
+    const localOrigins = [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
@@ -99,6 +102,7 @@ export default async (app) => {
 
             const isAllowed =
                 checkOrigin(allowedOrigins, origin) ||
+                checkOrigin(nativeAppOrigins, origin) ||
                 (isLocal && checkOrigin(localOrigins, origin));
 
             if (isAllowed) return callback(null, true);

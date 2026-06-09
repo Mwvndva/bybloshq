@@ -124,9 +124,9 @@ test('native app origins and production CSRF cookies support authenticated app r
   const expressLoader = read('server/src/loaders/express.js');
   const csrfController = read('server/src/controllers/csrf.controller.js');
 
-  assert.match(expressLoader, /'capacitor:\/\/localhost'/);
-  assert.match(expressLoader, /'ionic:\/\/localhost'/);
-  assert.match(expressLoader, /'https:\/\/localhost'/);
+  assert.match(expressLoader, /const nativeAppOrigins = \[/);
+  assert.match(expressLoader, /nativeAppOrigins[\s\S]*'capacitor:\/\/localhost'[\s\S]*'ionic:\/\/localhost'[\s\S]*'https:\/\/localhost'/);
+  assert.match(expressLoader, /checkOrigin\(nativeAppOrigins, origin\)\s*\|\|\s*\(isLocal && checkOrigin\(localOrigins, origin\)\)/);
   assert.match(csrfController, /sameSite:\s*isProduction\s*\?\s*'none'\s*:\s*'lax'/);
 });
 
