@@ -16,7 +16,7 @@ export const getCsrfToken = (req, res) => {
         res.cookie('csrf-token-v2', token, {
             httpOnly: true, // More secure, frontend gets the value from JSON response
             secure: isProduction,
-            sameSite: 'lax',
+            sameSite: isProduction ? 'none' : 'lax',
             path: '/',
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             domain: process.env.COOKIE_DOMAIN || undefined

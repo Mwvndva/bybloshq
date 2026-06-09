@@ -120,6 +120,16 @@ test('WhatsApp admin routes are not globally excluded from CSRF', () => {
   assert.match(expressLoader, /req\.path\.startsWith\('\/api\/webhooks\/'\)/);
 });
 
+test('native app origins and production CSRF cookies support authenticated app requests', () => {
+  const expressLoader = read('server/src/loaders/express.js');
+  const csrfController = read('server/src/controllers/csrf.controller.js');
+
+  assert.match(expressLoader, /'capacitor:\/\/localhost'/);
+  assert.match(expressLoader, /'ionic:\/\/localhost'/);
+  assert.match(expressLoader, /'https:\/\/localhost'/);
+  assert.match(csrfController, /sameSite:\s*isProduction\s*\?\s*'none'\s*:\s*'lax'/);
+});
+
 test('base64 image handling allowlists safe raster types and verifies magic bytes', () => {
   const source = read('server/src/services/image.service.js');
   const expressLoader = read('server/src/loaders/express.js');
