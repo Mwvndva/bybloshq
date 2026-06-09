@@ -1,14 +1,21 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 import { authStateManager } from './authState';
+import { isNativeApp } from './mobileApp';
 
 // Determine Base URL
 // Priority: VITE_API_URL -> localhost logic
 const isDevelopment = import.meta.env.DEV;
 const envApiUrl = import.meta.env.VITE_API_URL;
+const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || envApiUrl || 'https://bybloshq.space';
 
 let baseURL = '';
-if (isDevelopment && !envApiUrl) {
+if (isNativeApp()) {
+    baseURL = nativeApiUrl.replace(/\/$/, '');
+    if (!baseURL.endsWith('/api')) {
+        baseURL += '/api';
+    }
+} else if (isDevelopment && !envApiUrl) {
     baseURL = '/api'; // Use Vite proxy
 } else {
     baseURL = (envApiUrl || '/api').replace(/\/$/, '');
