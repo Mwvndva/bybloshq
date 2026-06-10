@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getFreshCsrfToken, getCachedCsrfToken, setCachedCsrfToken } from '@/lib/apiClient';
+import { buildApiBaseUrl } from '@/lib/apiBaseUrl';
 import { transformProduct, type Product } from './public/productTransforms';
 import { transformSeller, type Seller } from './public/sellerTransforms';
 
@@ -20,15 +21,7 @@ class CustomAxios {
   private instance: any;
 
   constructor() {
-    // Use VITE_API_URL from environment variables or fallback to relative path for development
-    let baseURL = import.meta.env.VITE_API_URL || '/api';
-
-    // Ensure baseURL ends with /api
-    if (!baseURL.endsWith('/api')) {
-      baseURL = baseURL.endsWith('/') ? `${baseURL}api` : `${baseURL}/api`;
-    }
-
-    console.log('API Base URL:', baseURL); // Debug log
+    const baseURL = buildApiBaseUrl();
 
     this.instance = axios.create({
       baseURL,

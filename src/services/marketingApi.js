@@ -5,8 +5,9 @@
  */
 import axios from 'axios'
 import { getFreshCsrfToken, getCachedCsrfToken } from '@/lib/apiClient'
+import { buildApiBaseUrl } from '@/lib/apiBaseUrl'
 
-const BASE_URL = '/api'
+const BASE_URL = buildApiBaseUrl()
 
 const marketingClient = axios.create({
     baseURL: BASE_URL,
