@@ -412,9 +412,11 @@ export default function CreatorDashboard() {
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
             <h2 className="text-xl font-black">Seller referral</h2>
             <p className="mt-1 text-sm font-medium text-white/50">Invite sellers and earn KSh 3 for every product they sell. No time limit.</p>
-            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-yellow-400/25 bg-yellow-300/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="break-all text-sm font-bold text-yellow-50">{referralLink}</p>
-              <Button onClick={() => copy(referralLink)} className="bg-yellow-400 font-black text-black hover:bg-yellow-300">
+            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-yellow-400/35 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <p className="min-w-0 break-all rounded-xl border border-yellow-400/30 bg-yellow-50 px-3 py-2 text-sm font-black leading-relaxed text-slate-950">
+                {referralLink}
+              </p>
+              <Button onClick={() => copy(referralLink)} className="shrink-0 bg-yellow-400 font-black text-black hover:bg-yellow-300">
                 Copy seller link
               </Button>
             </div>
