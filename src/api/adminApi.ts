@@ -297,8 +297,6 @@ export const adminApi = {
         email: String(creator.email || ''),
         mpesaNumber: String(creator.mpesa_number || ''),
         whatsappNumber: String(creator.whatsapp_number || ''),
-        instagramLink: creator.instagram_link || '',
-        tiktokLink: creator.tiktok_link || '',
         balance: Number(creator.balance || 0),
         totalSales: Number(creator.total_sales || 0),
         totalEarnings: Number(creator.total_earnings || 0),

@@ -307,6 +307,9 @@ class CreatorService {
     if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber || !data.whatsappNumber) {
       throw new Error('First name, last name, M-Pesa number, WhatsApp number, and password are required.');
     }
+    if (data.password !== data.confirmPassword) {
+      throw new Error('Passwords do not match.');
+    }
 
     const existingCreator = await this.findByEmail(email);
     if (existingCreator) throw new Error('A creator account already exists for this email.');
@@ -338,8 +341,8 @@ class CreatorService {
 
       const { rows: creatorRows } = await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, instagram_link, tiktok_link, referred_by_creator_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, referred_by_creator_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
         [
           user.id,
@@ -348,8 +351,6 @@ class CreatorService {
           email,
           String(data.mpesaNumber).trim(),
           String(data.whatsappNumber).trim(),
-          data.instagramLink || null,
-          data.tiktokLink || null,
           referredBy?.id || null
         ]
       );
@@ -400,6 +401,9 @@ class CreatorService {
     if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber || !data.whatsappNumber) {
       throw new Error('First name, last name, email, M-Pesa number, WhatsApp number, and password are required.');
     }
+    if (data.password !== data.confirmPassword) {
+      throw new Error('Passwords do not match.');
+    }
 
     const existingCreator = await this.findByEmail(email);
     if (existingCreator) throw new Error('A creator account already exists for this email.');
@@ -431,8 +435,8 @@ class CreatorService {
 
       await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, instagram_link, tiktok_link, referred_by_creator_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, referred_by_creator_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           user.id,
           String(data.firstName).trim(),
@@ -440,8 +444,6 @@ class CreatorService {
           email,
           String(data.mpesaNumber).trim(),
           String(data.whatsappNumber).trim(),
-          data.instagramLink || null,
-          data.tiktokLink || null,
           referredBy?.id || null
         ]
       );

@@ -111,7 +111,7 @@ const ReferralPanel: React.FC<ReferralPanelProps> = ({ totalSales }) => {
                     <p className="text-gray-400 max-w-sm mx-auto mb-6">
                         Complete your first sale to unlock the referral program and start earning rewards.
                     </p>
-                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 py-1 px-3">
+                    <Badge variant="outline" className="bg-yellow-300/10 text-yellow-200 border-yellow-300/30 py-1 px-3">
                         Locked
                     </Badge>
                 </CardContent>
@@ -190,10 +190,10 @@ const ReferralPanel: React.FC<ReferralPanelProps> = ({ totalSales }) => {
                     </div>
                     <CardContent className="p-6 flex flex-col justify-center h-full">
                         <h4 className="text-sm font-medium text-gray-400 mb-1">Total Earned</h4>
-                        <div className="text-3xl font-black text-yellow-400">
+                        <div className="text-3xl font-black text-yellow-200">
                             KES {data.totalReferralEarnings.toLocaleString()}
                         </div>
-                        <p className="text-[10px] text-yellow-400/50 mt-1 uppercase tracking-widest font-bold">
+                        <p className="text-[10px] text-yellow-100/70 mt-1 uppercase tracking-widest font-bold">
                             Squad Bonus
                         </p>
                     </CardContent>

@@ -64,7 +64,7 @@ export function useAuthRevalidation({
 
       if (!profileData) {
         setUser(null);
-        clearRoleSession(currentRole);
+        await clearRoleSession(currentRole);
         return;
       }
 
@@ -74,14 +74,14 @@ export function useAuthRevalidation({
         isAuthenticated: true
       });
 
-      markRoleSessionActive(currentRole);
+      await markRoleSessionActive(currentRole);
       markAuthChecked();
     } catch (error: any) {
       if (currentRole === 'buyer' && (error.response?.status === 404 || error.response?.status === 401)) {
         // Preserve the previous cross-role behavior: seller sessions should not be cleared by a buyer route probe.
       } else {
         setUser(null);
-        clearRoleSession(currentRole);
+        await clearRoleSession(currentRole);
       }
     } finally {
       authStateManager.setRehydrating(false);

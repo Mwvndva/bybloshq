@@ -138,6 +138,7 @@ test('native app API clients share absolute production API base URL logic', () =
   const publicApi = read('src/api/publicApi.ts');
   const adminApi = read('src/api/adminApi.ts');
   const marketingApi = read('src/services/marketingApi.js');
+  const refundRequestsPage = read('src/pages/admin/RefundRequestsPage.tsx');
 
   assert.match(apiBaseUrl, /isNativeApp\(\)/);
   assert.match(apiBaseUrl, /VITE_NATIVE_API_URL[\s\S]*'https:\/\/bybloshq\.space'/);
@@ -146,8 +147,46 @@ test('native app API clients share absolute production API base URL logic', () =
   assert.match(publicApi, /const baseURL = buildApiBaseUrl\(\)/);
   assert.match(adminApi, /const API_BASE_URL = buildApiBaseUrl\(\)/);
   assert.match(marketingApi, /const BASE_URL = buildApiBaseUrl\(\)/);
+  assert.match(refundRequestsPage, /const API_URL = buildApiBaseUrl\(\)/);
   assert.doesNotMatch(publicApi, /import\.meta\.env\.VITE_API_URL \|\| '\/api'/);
   assert.doesNotMatch(marketingApi, /const BASE_URL = '\/api'/);
+  assert.doesNotMatch(refundRequestsPage, /import\.meta\.env\.VITE_API_URL \|\| '\/api'/);
+});
+
+test('native app auth persistence keeps provider tokens through API wrappers', () => {
+  const buyerApi = read('src/api/buyerApi.ts');
+  const sellerProfileApi = read('src/api/seller/profileApi.ts');
+  const creatorApi = read('src/api/creatorApi.ts');
+  const useAuthActions = read('src/contexts/auth/useAuthActions.ts');
+  const storage = read('src/lib/storage.ts');
+
+  assert.match(storage, /if \(!isNativeApp\(\)\)[\s\S]*localStorage\.getItem\(key\)/);
+  assert.match(storage, /if \(!isNativeApp\(\)\)[\s\S]*localStorage\.setItem\(key, value\)/);
+  assert.match(buyerApi, /return \{ buyer: transformBuyer\(buyer\), token \}/);
+  assert.match(sellerProfileApi, /return \{ seller: transformSeller\(seller\), token \}/);
+  assert.match(creatorApi, /token: response\.data\?\.data\?\.token/);
+  assert.match(useAuthActions, /isNativeApp\(\) && response\.token/);
+  assert.match(useAuthActions, /await storage\.set\(`\$\{role\}Token`, response\.token\)/);
+  assert.match(useAuthActions, /await clearRoleSessionMarkers\(\)/);
+});
+
+test('creator registration excludes unused creator social links and validates confirm password', () => {
+  const creatorRegister = read('src/pages/creator/CreatorRegister.tsx');
+  const creatorApi = read('src/api/creatorApi.ts');
+  const creatorService = read('server/src/services/creator.service.js');
+  const creatorController = read('server/src/controllers/creator.controller.js');
+  const migration = read('server/migrations/20260610140000_remove_creator_social_links.sql');
+
+  assert.match(creatorRegister, /confirmPassword/);
+  assert.match(creatorRegister, /Passwords do not match/);
+  assert.doesNotMatch(creatorRegister, /instagramLink|tiktokLink|Instagram link|TikTok link/);
+  assert.match(creatorApi, /confirmPassword: string/);
+  assert.doesNotMatch(creatorApi, /instagramLink\?: string|tiktokLink\?: string/);
+  assert.match(creatorService, /data\.password !== data\.confirmPassword/);
+  assert.doesNotMatch(creatorService, /data\.instagramLink|data\.tiktokLink/);
+  assert.doesNotMatch(creatorController, /instagramLink: creator\.instagram_link|tiktokLink: creator\.tiktok_link/);
+  assert.match(migration, /DROP COLUMN IF EXISTS instagram_link/);
+  assert.match(migration, /DROP COLUMN IF EXISTS tiktok_link/);
 });
 
 test('base64 image handling allowlists safe raster types and verifies magic bytes', () => {

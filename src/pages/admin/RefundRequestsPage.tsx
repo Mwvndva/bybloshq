@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { CheckCircle, XCircle, Clock, DollarSign, Loader2, User, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { buildApiBaseUrl } from '@/lib/apiBaseUrl';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = buildApiBaseUrl();
 
 interface RefundRequest {
   id: number;

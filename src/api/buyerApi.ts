@@ -56,11 +56,13 @@ interface LoginApiResponse {
   status: string;
   data: {
     buyer: Buyer;
+    token?: string;
   };
 }
 
 interface LoginResponse {
   buyer?: Buyer;
+  token?: string;
   status?: string;
   message?: string;
 }
@@ -147,7 +149,7 @@ const buyerApi = {
         throw new Error('Invalid response from server - missing buyer data');
       }
 
-      const { buyer } = data;
+      const { buyer, token } = data;
 
       // Set the default Authorization header to empty/null just in case
       delete buyerApiInstance.defaults.headers.common['Authorization'];
@@ -155,7 +157,7 @@ const buyerApi = {
       // Refresh CSRF token for New Session
       await getFreshCsrfToken();
 
-      return { buyer: transformBuyer(buyer) };
+      return { buyer: transformBuyer(buyer), token };
     } catch (error: any) {
       console.error('Login error:', error);
       throw error;

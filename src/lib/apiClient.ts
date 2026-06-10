@@ -2,6 +2,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { authStateManager } from './authState';
 import { buildApiBaseUrl } from './apiBaseUrl';
+import { storage } from './storage';
 
 const baseURL = buildApiBaseUrl();
 
@@ -49,8 +50,6 @@ export const setCachedCsrfToken = (token: string | null) => {
  * Get current cached token
  */
 export const getCachedCsrfToken = () => csrfTokenCache;
-
-import { storage } from './storage';
 
 apiClient.interceptors.request.use(
     async (config: any) => {
@@ -119,7 +118,7 @@ const getLoginRedirectPath = (url: string): string => {
 /**
  * Handle 401 Unauthorized errors
  */
-const handleUnauthorized = (error: any) => {
+const handleUnauthorized = async (error: any) => {
     const url = error.config?.url || 'unknown';
     const currentPath = globalThis.location.pathname;
 
@@ -136,9 +135,13 @@ const handleUnauthorized = (error: any) => {
     }
 
     const roles = ['buyer', 'seller', 'creator', 'organizer', 'admin'];
-    const hadActiveSession = roles.some(role =>
-        localStorage.getItem(`${role}SessionActive`) === 'true'
-    );
+    let hadActiveSession = false;
+    for (const role of roles) {
+        if (await storage.get(`${role}SessionActive`) === 'true') {
+            hadActiveSession = true;
+            break;
+        }
+    }
 
     if (!isAuthCheck && !isPaymentSuccessPage && hadActiveSession) {
         toast.error('Session Expired', {
@@ -149,6 +152,7 @@ const handleUnauthorized = (error: any) => {
         roles.forEach(role => {
             localStorage.removeItem(`${role}SessionActive`);
         });
+        await Promise.all(roles.map(role => storage.remove(`${role}SessionActive`)));
 
         const redirectPath = getLoginRedirectPath(url);
 
@@ -196,7 +200,7 @@ apiClient.interceptors.response.use(
 
         // Handle Status Codes
         if (status === 401) {
-            handleUnauthorized(error);
+            await handleUnauthorized(error);
         } else if (status && status >= 500) {
             toast.error('Server Error', {
                 description: 'Something went wrong on our end. Please try again later.',

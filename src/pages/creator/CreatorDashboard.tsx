@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Copy, Loader2, LogOut, MousePointerClick, Trophy, Wallet } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Copy, Loader2, LogOut, MousePointerClick, Trophy, Wallet } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 import creatorApi from '@/api/creatorApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { storage } from '@/lib/storage';
 
 const money = (amount: number | string) => `KSh ${Number(amount || 0).toLocaleString()}`;
 const MIN_WITHDRAWAL_AMOUNT = 50;
@@ -94,7 +95,8 @@ export default function CreatorDashboard() {
   useEffect(() => {
     loadDashboard()
       .catch(() => {
-        localStorage.removeItem('creatorSessionActive');
+        void storage.remove('creatorSessionActive');
+        void storage.remove('creatorToken');
         navigate('/creator/login');
       })
       .finally(() => setLoading(false));
@@ -111,7 +113,8 @@ export default function CreatorDashboard() {
     } catch {
       // The local session should still end if the network request fails.
     } finally {
-      localStorage.removeItem('creatorSessionActive');
+      await storage.remove('creatorSessionActive');
+      await storage.remove('creatorToken');
       navigate('/creator/login', { replace: true });
     }
   };
@@ -188,27 +191,34 @@ export default function CreatorDashboard() {
   const hasEnoughBalance = Number(creator.balance || 0) >= totalDeduction;
 
   return (
-    <main className="byblos-light-page min-h-screen bg-black px-4 py-6 text-white">
-      <div className="space-y-5">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Creator dashboard</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">Welcome, {creator.firstName}</h1>
-            <p className="mt-1 text-sm font-medium text-white/50">Track clicks, sales, earnings, referrals, and withdrawals.</p>
-          </div>
+    <main className="byblos-light-page min-h-screen bg-[#090909] px-3 py-4 text-white sm:px-5 sm:py-6">
+      <div className="mx-auto max-w-7xl space-y-4 sm:space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <Link to="/" className="inline-flex h-10 items-center rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Home
+          </Link>
           <Button
             type="button"
             variant="outline"
             onClick={handleLogout}
-            className="h-10 w-full border-white/10 bg-white/[0.03] text-white hover:bg-white/10 sm:w-auto"
+            className="h-10 rounded-full border-white/10 bg-white/[0.04] px-4 text-white hover:bg-white/10"
             aria-label="Log out of creator dashboard"
           >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
+            <LogOut className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Logout</span>
           </Button>
+        </div>
+
+        <header className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.2)] sm:p-6">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Creator dashboard</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Welcome, {creator.firstName}</h1>
+            <p className="mt-1 text-sm font-medium text-white/50">Track clicks, sales, earnings, referrals, and withdrawals.</p>
+          </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Metric label="Balance" value={money(creator.balance)} />
           <Metric label="Completed sales" value={creator.totalSales || 0} />
           <Metric label="Creator earnings" value={money(creator.totalEarnings)} />
@@ -216,12 +226,12 @@ export default function CreatorDashboard() {
         </section>
 
         {(dashboard?.shopRequests || []).length > 0 && (
-          <section className="rounded-3xl border border-yellow-400/20 bg-yellow-400/10 p-4">
+          <section className="rounded-[2rem] border border-yellow-400/25 bg-yellow-400/10 p-4 sm:p-5">
             <h2 className="text-xl font-black">Shop requests</h2>
             <p className="mt-1 text-sm font-medium text-yellow-100/70">Accept a seller request to generate your creator link for that shop.</p>
             <div className="mt-4 grid gap-3">
               {(dashboard?.shopRequests || []).map((request) => (
-                <div key={request.id} className="rounded-2xl border border-yellow-400/20 bg-black/30 p-4">
+                <div key={request.id} className="rounded-2xl border border-yellow-400/20 bg-black/40 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-black">{request.shop_name}</p>
@@ -255,7 +265,7 @@ export default function CreatorDashboard() {
           </section>
         )}
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
           <h2 className="text-xl font-black">Linked shops</h2>
           <div className="mt-4 grid gap-3">
             {(dashboard?.shops || []).length === 0 ? (
@@ -267,14 +277,14 @@ export default function CreatorDashboard() {
               return (
                 <div key={shop.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-black">{shop.shop_name}</p>
                       <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
                         {Number(shop.commission_rate || 0.01) * 100}% cut | {shop.sales_count || 0} sales | {shop.click_count || 0} clicks | {money(shop.earnings)}
                       </p>
-                      <p className="mt-1 break-all text-xs text-yellow-200/80">{link}</p>
+                      <p className="mt-1 break-all rounded-xl bg-yellow-300/10 px-2 py-1 text-xs font-semibold text-yellow-100">{link}</p>
                     </div>
-                    <Button variant="outline" onClick={() => copy(link)} className="border-white/10 bg-transparent text-white hover:bg-white/5">
+                    <Button variant="outline" onClick={() => copy(link)} className="w-full border-white/10 bg-transparent text-white hover:bg-white/5 sm:w-auto">
                       <Copy className="mr-2 h-4 w-4" />
                       Copy link
                     </Button>
@@ -286,7 +296,7 @@ export default function CreatorDashboard() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-xl font-black">Creator analysis</h2>
               <div className="grid grid-cols-3 rounded-2xl border border-white/10 bg-black/30 p-1 text-xs font-black">
@@ -302,7 +312,7 @@ export default function CreatorDashboard() {
                 ))}
               </div>
             </div>
-            <div className="mt-4 h-64">
+            <div className="mt-4 h-56 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
@@ -314,7 +324,7 @@ export default function CreatorDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 h-56 rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="mt-4 h-52 rounded-2xl border border-white/10 bg-black/30 p-3 sm:h-56">
               <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-white/40">Sales value</p>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -331,7 +341,7 @@ export default function CreatorDashboard() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
             <div className="flex items-center gap-2">
               <Wallet className="h-5 w-5 text-yellow-300" />
               <h2 className="text-xl font-black">Withdraw</h2>
@@ -381,7 +391,7 @@ export default function CreatorDashboard() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-300" />
               <h2 className="text-xl font-black">Top creators</h2>
@@ -399,11 +409,11 @@ export default function CreatorDashboard() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 sm:p-5">
             <h2 className="text-xl font-black">Seller referral</h2>
             <p className="mt-1 text-sm font-medium text-white/50">Invite sellers and earn KSh 3 for every product they sell. No time limit.</p>
-            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="break-all text-sm font-bold text-yellow-100">{referralLink}</p>
+            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-yellow-400/25 bg-yellow-300/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="break-all text-sm font-bold text-yellow-50">{referralLink}</p>
               <Button onClick={() => copy(referralLink)} className="bg-yellow-400 font-black text-black hover:bg-yellow-300">
                 Copy seller link
               </Button>
@@ -417,12 +427,12 @@ export default function CreatorDashboard() {
 
 function Metric({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/40">{label}</p>
         {icon}
       </div>
-      <p className="mt-3 text-2xl font-black">{value}</p>
+      <p className="mt-3 text-xl font-black sm:text-2xl">{value}</p>
     </div>
   );
 }

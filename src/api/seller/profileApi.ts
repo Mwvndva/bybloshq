@@ -51,6 +51,7 @@ interface ShopNameAvailabilityResponse {
 interface LoginResponse {
   data: {
     seller: Seller;
+    token?: string;
   };
 }
 
@@ -103,7 +104,7 @@ export const checkShopNameAvailability = async (shopName: string): Promise<{ ava
 };
 
 export const sellerProfileApi = {
-  login: async (credentials: { email: string; password: string }): Promise<{ seller: Seller }> => {
+  login: async (credentials: { email: string; password: string }): Promise<{ seller: Seller; token?: string }> => {
     try {
       const response = await sellerApiInstance.post<LoginResponse>('/sellers/login', credentials);
       const responseData = response.data.data;
@@ -112,7 +113,7 @@ export const sellerProfileApi = {
         throw new Error('Invalid response from server');
       }
 
-      const { seller } = responseData;
+      const { seller, token } = responseData;
 
       if (!seller) {
         throw new Error('Invalid response from server - missing seller');
@@ -120,7 +121,7 @@ export const sellerProfileApi = {
 
       await getFreshCsrfToken();
 
-      return { seller: transformSeller(seller) };
+      return { seller: transformSeller(seller), token };
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.response?.data?.message) {
