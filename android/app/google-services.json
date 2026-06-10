@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "254127777027",
+    "project_id": "byblos-65321",
+    "storage_bucket": "byblos-65321.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:254127777027:android:cf878e6de6d8ff48263536",
+        "android_client_info": {
+          "package_name": "space.bybloshq.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCguW_-kUmLUSS-uMyKDs-yrLcu81QvUh4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

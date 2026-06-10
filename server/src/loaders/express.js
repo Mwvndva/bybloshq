@@ -124,7 +124,8 @@ export default async (app) => {
             'Idempotency-Key',
             'X-Checkout-Token',
             'X-Idempotency-Key',
-            'X-Request-Id'
+            'X-Request-Id',
+            'Cache-Control'
         ],
         exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token', 'X-Request-Id'],
         maxAge: 86400,
