@@ -127,7 +127,27 @@ test('native app origins and production CSRF cookies support authenticated app r
   assert.match(expressLoader, /const nativeAppOrigins = \[/);
   assert.match(expressLoader, /nativeAppOrigins[\s\S]*'capacitor:\/\/localhost'[\s\S]*'ionic:\/\/localhost'[\s\S]*'https:\/\/localhost'/);
   assert.match(expressLoader, /checkOrigin\(nativeAppOrigins, origin\)\s*\|\|\s*\(isLocal && checkOrigin\(localOrigins, origin\)\)/);
+  assert.match(expressLoader, /'Cache-Control'/);
+  assert.match(expressLoader, /'Pragma'/);
   assert.match(csrfController, /sameSite:\s*isProduction\s*\?\s*'none'\s*:\s*'lax'/);
+});
+
+test('native app API clients share absolute production API base URL logic', () => {
+  const apiBaseUrl = read('src/lib/apiBaseUrl.ts');
+  const apiClient = read('src/lib/apiClient.ts');
+  const publicApi = read('src/api/publicApi.ts');
+  const adminApi = read('src/api/adminApi.ts');
+  const marketingApi = read('src/services/marketingApi.js');
+
+  assert.match(apiBaseUrl, /isNativeApp\(\)/);
+  assert.match(apiBaseUrl, /VITE_NATIVE_API_URL[\s\S]*'https:\/\/bybloshq\.space'/);
+  assert.match(apiBaseUrl, /return '\/api'/);
+  assert.match(apiClient, /const baseURL = buildApiBaseUrl\(\)/);
+  assert.match(publicApi, /const baseURL = buildApiBaseUrl\(\)/);
+  assert.match(adminApi, /const API_BASE_URL = buildApiBaseUrl\(\)/);
+  assert.match(marketingApi, /const BASE_URL = buildApiBaseUrl\(\)/);
+  assert.doesNotMatch(publicApi, /import\.meta\.env\.VITE_API_URL \|\| '\/api'/);
+  assert.doesNotMatch(marketingApi, /const BASE_URL = '\/api'/);
 });
 
 test('base64 image handling allowlists safe raster types and verifies magic bytes', () => {

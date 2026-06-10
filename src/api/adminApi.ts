@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getFreshCsrfToken } from '@/lib/apiClient';
+import { buildApiBaseUrl } from '@/lib/apiBaseUrl';
 import type {
   LogisticsDashboardResponse,
   LogisticsLegType,
@@ -25,13 +26,7 @@ interface ApiError {
   request?: any;
 }
 
-// Default API configuration
-// Include /api in the base URL since our routes are prefixed with /api
-// Default API configuration
-// Get the base URL from environment variables
-const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
-
-console.log('Using VITE_API_URL:', API_BASE_URL);
+const API_BASE_URL = buildApiBaseUrl();
 
 // Helper function to determine product status based on stock
 function getProductStatus(stock: number): 'In Stock' | 'Low Stock' | 'Out of Stock' {
