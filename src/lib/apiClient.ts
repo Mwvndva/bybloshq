@@ -50,8 +50,28 @@ export const setCachedCsrfToken = (token: string | null) => {
  */
 export const getCachedCsrfToken = () => csrfTokenCache;
 
+import { storage } from './storage';
+
 apiClient.interceptors.request.use(
-    (config: any) => {
+    async (config: any) => {
+        const url = config.url || '';
+        let token = null;
+        if (url.includes('/sellers')) token = await storage.get('sellerToken');
+        else if (url.includes('/creators')) token = await storage.get('creatorToken');
+        else if (url.includes('/admin')) token = await storage.get('adminToken');
+        else if (url.includes('/buyers')) token = await storage.get('buyerToken');
+        
+        if (!token) {
+            for (const r of ['buyer', 'seller', 'creator', 'admin']) {
+                token = await storage.get(`${r}Token`);
+                if (token) break;
+            }
+        }
+
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+
         // Attach CSRF token to non-GET requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
             // FIX (Task 11): Use cached CSRF token if it's not stale (10-minute TTL)

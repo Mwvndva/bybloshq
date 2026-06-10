@@ -50,6 +50,7 @@ const sendTokenResponse = (data, statusCode, res, message) => {
       : (statusCode === 201 ? 'Account updated!' : message),
     data: {
       seller: sanitizeSeller(profile),
+      token: token,
       user: { email: user.email, role: user.role, is_verified: user.is_verified },
       emailVerificationRequired: !user?.is_verified,
       emailVerificationSent: statusCode === 201 && !user?.is_verified

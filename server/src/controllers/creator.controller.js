@@ -94,6 +94,7 @@ export const login = async (req, res, next) => {
       status: 'success',
       data: {
         creator: sanitizeCreator(result.profile),
+        token: result.token,
         user: {
           email: result.user.email,
           role: 'creator',

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import creatorApi from '@/api/creatorApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useGlobalAuth } from '@/contexts/AuthCoreContext';
 
 type ApiError = {
   response?: { data?: { message?: string } };
@@ -24,20 +25,15 @@ export default function CreatorLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const { login } = useGlobalAuth();
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     try {
-      await creatorApi.login(email, password);
-      localStorage.setItem('creatorSessionActive', 'true');
-      toast.success('Login successful', {
-        id: 'creator-login-success',
-        description: 'Welcome back to Byblos.',
-        duration: 2000,
-      });
-      navigate('/creator/dashboard');
+      await login(email, password, 'creator');
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Could not log in.'));
+      // Error is handled inside useAuthActions with a toast
     } finally {
       setLoading(false);
     }
@@ -45,7 +41,13 @@ export default function CreatorLogin() {
 
   return (
     <main className="auth-page byblos-light-page min-h-screen bg-black px-4 py-8 text-white">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
+        <div className="mb-6 w-full px-2">
+          <Link to="/" className="inline-flex items-center text-sm font-medium text-white/50 hover:text-white transition-colors">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Link>
+        </div>
         <form onSubmit={handleSubmit} className="w-full space-y-5 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Byblos creators</p>
