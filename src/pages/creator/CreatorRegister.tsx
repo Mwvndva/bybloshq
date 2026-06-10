@@ -89,15 +89,33 @@ export default function CreatorRegister() {
   };
 
   return (
-    <main className="auth-page byblos-light-page min-h-screen bg-[#090909] px-4 py-5 text-white">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-5xl flex-col">
-        <div className="flex justify-start">
-          <Link to="/" className="inline-flex h-10 items-center rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to home
-          </Link>
-        </div>
+    <main className="auth-page byblos-light-page min-h-screen bg-[#090909] text-white">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="relative flex h-16 items-center justify-between sm:h-20">
+            <div className="flex flex-1 items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="rounded-xl px-3 py-2 text-sm text-white/75 transition-all duration-200 hover:bg-yellow-100 hover:text-black"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                <span>Back</span>
+              </Button>
+            </div>
 
+            <div className="absolute left-1/2 flex min-w-0 max-w-[46%] -translate-x-1/2 items-center justify-center text-center sm:max-w-[50%]">
+              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Creator Portal</h1>
+            </div>
+
+            <div className="flex-1" aria-hidden="true" />
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-5xl flex-col px-4 py-5 sm:min-h-[calc(100svh-5rem)]">
         <div className="grid flex-1 items-center gap-6 py-6 lg:grid-cols-[0.85fr_1.15fr]">
         <section className="space-y-4">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">
