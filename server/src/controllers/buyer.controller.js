@@ -48,6 +48,7 @@ const createSendToken = (data, statusCode, req, res, next) => {
       : (statusCode === 201 ? 'Account updated!' : undefined),
     data: {
       buyer: sanitizeBuyer(buyer),
+      token: token,
       emailVerificationRequired: !user?.is_verified,
       emailVerificationSent: statusCode === 201 && !user?.is_verified
     }

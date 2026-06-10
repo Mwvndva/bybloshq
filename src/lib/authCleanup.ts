@@ -2,12 +2,14 @@ import axios from 'axios';
 import apiClient from './apiClient'; // This is for generic API calls
 import { publicApi } from '@/api/publicApi';
 
+import { storage } from './storage';
+
 /**
  * Robustly clears all possible authentication artifacts from the frontend environment.
  * This is used to ensure that a transition between user roles (e.g. from Seller to Buyer)
  * starts with a completely clean slate, preventing "Authorization" header leaks.
  */
-export const clearAllAuthData = () => {
+export const clearAllAuthData = async () => {
 
     // 1. Clear all known localStorage keys
     const authKeys = [
@@ -29,11 +31,12 @@ export const clearAllAuthData = () => {
         'organizerSessionActive'
     ];
 
-    authKeys.forEach(key => {
+    for (const key of authKeys) {
         if (localStorage.getItem(key)) {
             localStorage.removeItem(key);
         }
-    });
+        await storage.remove(key);
+    }
 
     // 2. Clear common axios instance defaults
     const axiosInstances = [

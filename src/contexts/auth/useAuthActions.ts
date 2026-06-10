@@ -45,7 +45,11 @@ export function useAuthActions({
         isAuthenticated: true
       });
 
-      markRoleSessionActive(role);
+      if (response.token) {
+        const { storage } = await import('@/lib/storage');
+        await storage.set(`${role}Token`, response.token);
+      }
+      await markRoleSessionActive(role);
       markAuthChecked();
       void registerNativePushNotifications(role);
 
@@ -197,7 +201,7 @@ export function useAuthActions({
     clearRoleSessionMarkers();
 
     if (!user) {
-      try { clearAllAuthData(); } catch { /* ignore */ }
+      try { await clearAllAuthData(); } catch { /* ignore */ }
       return;
     }
 
@@ -215,7 +219,7 @@ export function useAuthActions({
       // Fail silently
     } finally {
       try {
-        clearAllAuthData();
+        await clearAllAuthData();
       } catch (error) {
         // Fail silently, always clear user state.
       }
