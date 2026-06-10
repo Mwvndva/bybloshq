@@ -5,6 +5,7 @@ import adminApi from '@/api/adminApi';
 import apiClient from '@/lib/apiClient';
 import { clearAllAuthData } from '@/lib/authCleanup';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
+import { isNativeApp } from '@/lib/mobileApp';
 import { getApiForRole } from './authApi';
 import { getDashboardPath, getLoginPath } from './authRouting';
 import { clearRoleSessionMarkers, markRoleSessionActive } from './authSession';
@@ -45,7 +46,7 @@ export function useAuthActions({
         isAuthenticated: true
       });
 
-      if (response.token) {
+      if (isNativeApp() && response.token) {
         const { storage } = await import('@/lib/storage');
         await storage.set(`${role}Token`, response.token);
       }
@@ -93,7 +94,7 @@ export function useAuthActions({
         isAuthenticated: true
       });
 
-      markRoleSessionActive(role);
+      await markRoleSessionActive(role);
       markAuthChecked();
       void registerNativePushNotifications(role);
     } catch (error: any) {
@@ -120,7 +121,11 @@ export function useAuthActions({
           isAuthenticated: true
         });
 
-        markRoleSessionActive('admin');
+        if (isNativeApp() && response?.data?.token) {
+          const { storage } = await import('@/lib/storage');
+          await storage.set('adminToken', response.data.token);
+        }
+        await markRoleSessionActive('admin');
         markAuthChecked();
         void registerNativePushNotifications('admin');
 
@@ -170,7 +175,11 @@ export function useAuthActions({
         isAuthenticated: true
       });
 
-      markRoleSessionActive(role);
+      if (isNativeApp() && response?.token) {
+        const { storage } = await import('@/lib/storage');
+        await storage.set(`${role}Token`, response.token);
+      }
+      await markRoleSessionActive(role);
       markAuthChecked();
       void registerNativePushNotifications(role);
 
@@ -198,7 +207,7 @@ export function useAuthActions({
   }, [markAuthChecked, navigate, setIsLoading, setUser]);
 
   const logout = useCallback(async () => {
-    clearRoleSessionMarkers();
+    await clearRoleSessionMarkers();
 
     if (!user) {
       try { await clearAllAuthData(); } catch { /* ignore */ }
@@ -245,7 +254,7 @@ export function useAuthActions({
         isAuthenticated: true
       });
 
-      markRoleSessionActive(newRole);
+      await markRoleSessionActive(newRole);
       markAuthChecked();
       void registerNativePushNotifications(newRole);
 

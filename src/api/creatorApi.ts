@@ -7,9 +7,8 @@ export interface CreatorRegistrationPayload {
   email: string;
   mpesaNumber: string;
   whatsappNumber: string;
-  instagramLink?: string;
-  tiktokLink?: string;
   password: string;
+  confirmPassword: string;
   referralCode?: string;
 }
 
@@ -29,7 +28,11 @@ export const creatorApi = {
       ? { email: emailOrCredentials, password: maybePassword }
       : emailOrCredentials;
     const response = await apiClient.post('/creators/login', credentials);
-    return { creator: response.data?.data?.creator, ...response.data };
+    return {
+      creator: response.data?.data?.creator,
+      token: response.data?.data?.token,
+      ...response.data
+    };
   },
 
   logout: async () => {

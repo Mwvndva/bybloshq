@@ -49,8 +49,6 @@ export interface CreatorProfile extends BaseUser {
   firstName: string;
   lastName: string;
   mpesaNumber: string;
-  instagramLink?: string;
-  tiktokLink?: string;
   balance?: number;
   totalSales?: number;
   totalEarnings?: number;

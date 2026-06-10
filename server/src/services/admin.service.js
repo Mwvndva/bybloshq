@@ -304,8 +304,6 @@ class AdminService {
              c.email,
              c.mpesa_number,
              c.whatsapp_number,
-             c.instagram_link,
-             c.tiktok_link,
              c.balance,
              c.total_sales,
              c.total_earnings,
@@ -383,8 +381,6 @@ class AdminService {
              email = $2,
              mpesa_number = CONCAT('deleted-', $1::text),
              whatsapp_number = NULL,
-             instagram_link = NULL,
-             tiktok_link = NULL,
              status = 'deleted',
              updated_at = NOW()
          WHERE id = $1`,

@@ -144,3 +144,5 @@ nginx.conf
 debug_log.txt
 *.tsbuildinfo
 .audit-baseline.md
+vite.config.ts.timestamp-*.mjs
+/bybloshq
