@@ -96,7 +96,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
     const shopName = seller.shopName || seller.shop_name || 'Shop';
     const shopLink = isBuyer
         ? `/buyer/shop/${encodeURIComponent(shopName)}`
-        : `/shop/${encodeURIComponent(shopName)}`;
+        : `/${encodeURIComponent(shopName)}`;
     const avatarUrl = seller.avatarUrl || (seller as any).avatar_url;
     const [avatarFailed, setAvatarFailed] = useState(false);
     const [knockCount, setKnockCount] = useState(getNumber(seller.knockCount, seller.knock_count));

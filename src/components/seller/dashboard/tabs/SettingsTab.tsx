@@ -11,6 +11,7 @@ import { BusinessPhotoUpload } from '../../BusinessPhotoUpload';
 import ShopLocationPicker from '../../ShopLocationPicker';
 import { ThemeSelector } from '../../ThemeSelector';
 import { getSellerInitials } from '../dashboardUtils';
+import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/shopLinks';
 import type { SellerSettingsFormData } from '../types';
 import type { LocationCoordinates } from '@/lib/location';
 
@@ -53,11 +54,9 @@ export function SettingsTab({
   shopNameAvailable,
   toggleEdit
 }: SettingsTabProps) {
-  type EditableSection = 'business' | 'contact' | 'location' | 'creators';
   const [creatorEmail, setCreatorEmail] = useState('');
   const [creatorInvites, setCreatorInvites] = useState<any[]>([]);
   const [isInvitingCreator, setIsInvitingCreator] = useState(false);
-  const [activeEditSection, setActiveEditSection] = useState<EditableSection | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -90,46 +89,15 @@ export function SettingsTab({
     }
   };
 
-  const copyCreatorLink = async (link?: string) => {
+  const copyCreatorLink = async (link?: string, label?: string) => {
     if (!link) return;
-    await navigator.clipboard.writeText(link);
-    toast.success('Creator link copied.');
+    const copyMode = await copyLinkedTextToClipboard(label || link, link);
+    toast.success(copyMode === 'rich' ? 'Creator link copied as linked text.' : 'Creator link copied.');
   };
 
-  useEffect(() => {
-    if (!isEditing) {
-      setActiveEditSection(null);
-    }
-  }, [isEditing]);
-
-  const startSectionEdit = (section: EditableSection) => {
-    if (isEditing && activeEditSection && activeEditSection !== section) {
-      toast.info('Save or cancel the current section before editing another one.');
-      return;
-    }
-    if (!isEditing) {
-      toggleEdit();
-    }
-    setActiveEditSection(section);
-  };
-
-  const cancelSectionEdit = () => {
-    if (isEditing) {
-      toggleEdit();
-    }
-    setActiveEditSection(null);
-  };
-
-  const saveSectionEdit = async () => {
-    await handleSaveProfile();
-    setActiveEditSection(null);
-  };
-
-  const isBusinessEditing = isEditing && activeEditSection === 'business';
-  const isContactEditing = isEditing && activeEditSection === 'contact';
-  const isLocationEditing = isEditing && activeEditSection === 'location';
-  const isCreatorsEditing = isEditing && activeEditSection === 'creators';
   const creatorCommissionLabel = `${Number(formData.creatorCommissionRate || 1).toFixed(2).replace(/\.?0+$/, '')}%`;
+  const previewShopUsername = getShopUsername(formData.shopName);
+  const previewShopUrl = getShopUrl(formData.shopName);
 
   return (
     <div className="w-full space-y-5 sm:space-y-6">
@@ -141,23 +109,39 @@ export function SettingsTab({
             Keep your public shop details, appearance, contacts, and pickup location current.
           </p>
         </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {isEditing ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={toggleEdit}
+                disabled={isSaving}
+                className="h-10 w-full border-slate-200 bg-white text-slate-700 hover:bg-slate-50 sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                className="h-10 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:w-auto"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={toggleEdit}
+              className="h-10 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:w-auto"
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Button>
+          )}
+        </div>
       </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-        <SectionHeader
-          title="Business Profile"
-          description="The core identity buyers see on your shop page."
-          action={
-            <SectionActions
-              editLabel="Edit Business"
-              isEditing={isBusinessEditing}
-              isSaving={isSaving}
-              onCancel={cancelSectionEdit}
-              onEdit={() => startSectionEdit('business')}
-              onSave={saveSectionEdit}
-            />
-          }
-        />
+        <SectionHeader title="Business Profile" description="The core identity buyers see on your shop page." />
         <div className="mt-5 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(220px,320px)_minmax(0,1fr)]">
           <div className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <BusinessPhotoUpload
@@ -177,7 +161,7 @@ export function SettingsTab({
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Shop Name</p>
-              {isBusinessEditing ? (
+              {isEditing ? (
                 <div className="space-y-1">
                   <div className="relative">
                     <Input
@@ -204,7 +188,17 @@ export function SettingsTab({
                       {shopNameAvailable ? 'Name available' : 'Name already taken'}
                     </p>
                   )}
-                  <p className="text-[10px] text-slate-500 truncate">byblos.com/shop/{formData.shopName}</p>
+                  {previewShopUsername && (
+                    <a
+                      href={previewShopUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate text-[10px] font-bold text-slate-600 underline decoration-yellow-400 underline-offset-2"
+                      title={previewShopUrl}
+                    >
+                      {previewShopUsername}
+                    </a>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.shopName || 'Not set'}>
@@ -215,7 +209,7 @@ export function SettingsTab({
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Full Name</p>
-              {isBusinessEditing ? (
+              {isEditing ? (
                 <Input
                   name="fullName"
                   value={formData.fullName}
@@ -233,11 +227,11 @@ export function SettingsTab({
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
               <div className="flex items-center justify-between gap-3 mb-1">
                 <p className="text-xs sm:text-sm font-medium text-slate-600">Shop Bio</p>
-                {isBusinessEditing && (
+                {isEditing && (
                   <span className="text-[10px] text-slate-500">{formData.bio.length}/500</span>
                 )}
               </div>
-              {isBusinessEditing ? (
+              {isEditing ? (
                 <Textarea
                   name="bio"
                   value={formData.bio}
@@ -263,20 +257,7 @@ export function SettingsTab({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-        <SectionHeader
-          title="Contact & Socials"
-          description="Where buyers can identify and reach your business."
-          action={
-            <SectionActions
-              editLabel="Edit Contact"
-              isEditing={isContactEditing}
-              isSaving={isSaving}
-              onCancel={cancelSectionEdit}
-              onEdit={() => startSectionEdit('contact')}
-              onSave={saveSectionEdit}
-            />
-          }
-        />
+        <SectionHeader title="Contact & Socials" description="Where buyers can identify and reach your business." />
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Email</p>
@@ -287,7 +268,7 @@ export function SettingsTab({
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-[10px] sm:text-xs font-medium text-slate-600 mb-1">WhatsApp Number</p>
-              {isContactEditing ? (
+              {isEditing ? (
                 <Input
                   name="whatsappNumber"
                   value={formData.whatsappNumber}
@@ -303,7 +284,7 @@ export function SettingsTab({
             </div>
 
             <SocialInput
-              isEditing={isContactEditing}
+              isEditing={isEditing}
               label="Instagram Link"
               value={formData.instagramLink}
               displayValue={sellerProfile?.instagramLink}
@@ -312,7 +293,7 @@ export function SettingsTab({
               iconPath={<><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></>}
             />
             <SocialInput
-              isEditing={isContactEditing}
+              isEditing={isEditing}
               label="TikTok Link"
               value={formData.tiktokLink}
               displayValue={sellerProfile?.tiktokLink}
@@ -321,7 +302,7 @@ export function SettingsTab({
               iconPath={<path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>}
             />
             <SocialInput
-              isEditing={isContactEditing}
+              isEditing={isEditing}
               label="Facebook Link"
               value={formData.facebookLink}
               displayValue={sellerProfile?.facebookLink}
@@ -336,17 +317,15 @@ export function SettingsTab({
           <div className="space-y-3 sm:space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <SectionHeader title="Location Settings" description="Set where buyers collect orders from your physical shop." />
-              <div className="flex flex-col gap-2 self-start sm:flex-row sm:self-auto">
-                <SectionActions
-                  editLabel="Edit Location"
-                  isEditing={isLocationEditing}
-                  isSaving={isSaving}
-                  onCancel={cancelSectionEdit}
-                  onEdit={() => startSectionEdit('location')}
-                  onSave={saveSectionEdit}
-                />
-                {!isLocationEditing && (
-                  <>
+              {!isEditing && (
+                <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-auto">
+                  <button
+                    onClick={toggleEdit}
+                    className="text-xs sm:text-sm text-yellow-700 hover:text-yellow-800 font-medium flex items-center justify-center gap-1"
+                  >
+                    <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    Edit Location
+                  </button>
                   {(sellerProfile?.physicalAddress || sellerProfile?.latitude || sellerProfile?.longitude) && (
                     <button
                       type="button"
@@ -362,15 +341,14 @@ export function SettingsTab({
                       Delete Location
                     </button>
                   )}
-                  </>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">City</p>
-                {isLocationEditing ? (
+                {isEditing ? (
                   <select
                     name="city"
                     value={formData.city}
@@ -391,7 +369,7 @@ export function SettingsTab({
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Location/Area</p>
-                {isLocationEditing ? (
+                {isEditing ? (
                   <select
                     name="location"
                     value={formData.location}
@@ -414,7 +392,7 @@ export function SettingsTab({
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Physical Shop Address</p>
-              {isLocationEditing ? (
+              {isEditing ? (
                 <div className="mt-2 space-y-3">
                   <ShopLocationPicker
                     initialAddress={formData.physicalAddress}
@@ -474,14 +452,6 @@ export function SettingsTab({
               </p>
             </div>
           </div>
-          <SectionActions
-            editLabel="Edit Commission"
-            isEditing={isCreatorsEditing}
-            isSaving={isSaving}
-            onCancel={cancelSectionEdit}
-            onEdit={() => startSectionEdit('creators')}
-            onSave={saveSectionEdit}
-          />
         </div>
 
         <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
@@ -493,7 +463,7 @@ export function SettingsTab({
                 This is the cut creators earn from sales they bring to your shop. Default is 1%; you can raise it before inviting creators.
               </p>
             </div>
-            {isCreatorsEditing ? (
+            {isEditing ? (
               <div className="w-full sm:w-44">
                 <label className="mb-1 block text-xs font-semibold text-slate-600" htmlFor="creatorCommissionRate">
                   Commission %
@@ -512,7 +482,16 @@ export function SettingsTab({
                   className="h-10 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400"
                 />
               </div>
-            ) : null}
+            ) : (
+              <Button
+                type="button"
+                onClick={toggleEdit}
+                variant="outline"
+                className="h-10 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              >
+                Set Commission
+              </Button>
+            )}
           </div>
         </div>
 
@@ -552,14 +531,22 @@ export function SettingsTab({
                       {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% creator cut` : ''}
                     </p>
                     {invite.shopUrl && (
-                      <p className="mt-1 truncate text-xs text-yellow-700">{invite.shopUrl}</p>
+                      <a
+                        href={invite.shopUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block truncate text-xs font-bold text-slate-700 underline decoration-yellow-400 underline-offset-2"
+                        title={invite.shopUrl}
+                      >
+                        {getShopUsername(invite.shopName || formData.shopName)}
+                      </a>
                     )}
                   </div>
                   {invite.shopUrl && (
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => copyCreatorLink(invite.shopUrl)}
+                      onClick={() => copyCreatorLink(invite.shopUrl, getShopUsername(invite.shopName || formData.shopName))}
                       className="h-9 border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
                     >
                       <Copy className="mr-2 h-4 w-4" />
@@ -576,67 +563,12 @@ export function SettingsTab({
   );
 }
 
-function SectionHeader({ action, title, description }: { action?: React.ReactNode; title: string; description: string }) {
+function SectionHeader({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h3 className="text-base font-black tracking-tight text-slate-950 sm:text-lg">{title}</h3>
-        <p className="mt-1 text-xs font-medium text-slate-600 sm:text-sm">{description}</p>
-      </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+    <div>
+      <h3 className="text-base font-black tracking-tight text-slate-950 sm:text-lg">{title}</h3>
+      <p className="mt-1 text-xs font-medium text-slate-600 sm:text-sm">{description}</p>
     </div>
-  );
-}
-
-function SectionActions({
-  editLabel,
-  isEditing,
-  isSaving,
-  onCancel,
-  onEdit,
-  onSave
-}: {
-  editLabel: string;
-  isEditing: boolean;
-  isSaving: boolean;
-  onCancel: () => void;
-  onEdit: () => void;
-  onSave: () => void | Promise<void>;
-}) {
-  if (isEditing) {
-    return (
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSaving}
-          className="h-9 w-full border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 sm:w-auto"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          onClick={onSave}
-          disabled={isSaving}
-          className="h-9 w-full bg-yellow-400 text-xs font-black text-black hover:bg-yellow-300 sm:w-auto"
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <Button
-      type="button"
-      onClick={onEdit}
-      variant="outline"
-      className="h-9 w-full border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 sm:w-auto"
-    >
-      <Edit className="mr-2 h-3.5 w-3.5" />
-      {editLabel}
-    </Button>
   );
 }
 

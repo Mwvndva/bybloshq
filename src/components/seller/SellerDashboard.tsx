@@ -17,6 +17,7 @@ import { WithdrawalsTab } from './dashboard/tabs/WithdrawalsTab';
 import { SellerDashboardHeader } from './dashboard/widgets/SellerDashboardHeader';
 import { SellerDashboardErrorState, SellerDashboardLoadingState } from './dashboard/widgets/SellerDashboardState';
 import { SellerDashboardTabs } from './dashboard/widgets/SellerDashboardTabs';
+import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/shopLinks';
 import type { SellerDashboardProps, SellerTabId } from './dashboard/types';
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
@@ -56,9 +57,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     updateSellerProfile
   });
 
-  const availableBalance = analytics?.availableBalance ?? analytics?.balance ?? 0;
   const withdrawals = useSellerWithdrawals({
-    balance: availableBalance,
+    balance: analytics?.balance || 0,
     enabled: activeTab === 'withdrawals',
     toast
   });
@@ -77,12 +77,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const handleCopyShopLink = useCallback(async () => {
     if (!sellerProfile?.shopName) return;
 
-    const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
+    const shopUrl = getShopUrl(sellerProfile.shopName);
+    const shopUsername = getShopUsername(sellerProfile.shopName);
     try {
-      await navigator.clipboard.writeText(shopUrl);
+      const copyMode = await copyLinkedTextToClipboard(shopUsername, shopUrl);
       toast({
-        title: 'Link copied!',
-        description: 'Your shop link has been copied to clipboard.',
+        title: 'Shop link copied',
+        description: copyMode === 'rich'
+          ? `${shopUsername} was copied as linked text.`
+          : `${shopUrl} was copied.`,
       });
     } catch (err) {
       toast({
@@ -185,11 +188,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
         {activeTab === 'withdrawals' && (
           <WithdrawalsTab
-            balance={availableBalance}
-            pendingSettlementBalance={analytics.pendingSettlementBalance || 0}
-            withdrawalReservedBalance={analytics.withdrawalReservedBalance || 0}
-            refundReservedBalance={analytics.refundReservedBalance || 0}
-            nextSettlementAt={analytics.nextSettlementAt || null}
+            balance={analytics.balance}
             {...withdrawals}
           />
         )}

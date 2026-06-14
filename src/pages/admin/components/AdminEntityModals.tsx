@@ -146,7 +146,7 @@ export function AdminEntityModals({
                                     Public Shop Link
                                   </span>
                                   <a
-                                    href={`https://bybloshq.space/shop/${selectedSeller.slug || selectedSeller.shop_name?.toLowerCase()}`}
+                                    href={`https://bybloshq.space/${selectedSeller.slug || selectedSeller.shop_name?.toLowerCase()}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="block p-3 rounded-xl bg-white/5 border border-white/10 text-blue-400 font-bold text-xs truncate hover:bg-blue-500/10 hover:border-blue-500/20 transition-all flex items-center justify-between group/link"
