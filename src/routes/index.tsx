@@ -118,4 +118,9 @@ export const routes = [
   },
   ...sellerRoutes,
   ...buyerRoutes,
+  // Standard public seller short link wildcard (must be matched after specific subpaths)
+  {
+    path: '/:shopName',
+    element: <ShopPage />,
+  },
 ];

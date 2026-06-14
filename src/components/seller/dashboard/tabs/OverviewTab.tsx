@@ -3,6 +3,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getShopUrl, getShopUsername } from '@/lib/shopLinks';
 import { formatOrderStatusLabel, getPendingStatusStyles } from '../dashboardUtils';
 import type { AnalyticsData, RecentOrder } from '../types';
 
@@ -17,6 +18,8 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const recentOrders = (analytics.recentOrders || []).slice(0, 5);
   const monthlySales = analytics.monthlySales || [];
   const latestMonthSales = monthlySales[monthlySales.length - 1]?.sales || 0;
+  const shopUsername = getShopUsername(sellerProfile?.shopName);
+  const shopUrl = getShopUrl(sellerProfile?.shopName);
   const overviewCards = [
     { label: 'Live products', value: Number(analytics.totalProducts || 0).toLocaleString(), icon: Package },
     { label: 'Order value', value: formatCurrency(analytics.totalSales || 0), icon: ShoppingBag },
@@ -31,16 +34,27 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
           <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-slate-950">Overview</h2>
           <p className="mt-1 text-xs sm:text-sm text-slate-700 font-medium">What needs attention and how your shop is moving.</p>
         </div>
-        {sellerProfile?.shopName && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg h-9 px-3 text-xs font-medium w-full sm:w-auto"
-            onClick={onCopyShopLink}
-          >
-            <LinkIcon className="h-3 w-3" />
-            Copy Shop Link
-          </Button>
+        {shopUsername && (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <a
+              href={shopUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-950 hover:bg-slate-50 sm:w-auto"
+              title={shopUrl}
+            >
+              <LinkIcon className="h-3 w-3" />
+              {shopUsername}
+            </a>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg h-9 px-3 text-xs font-medium w-full sm:w-auto"
+              onClick={onCopyShopLink}
+            >
+              Copy link
+            </Button>
+          </div>
         )}
       </div>
 

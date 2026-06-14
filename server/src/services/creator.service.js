@@ -197,7 +197,7 @@ class CreatorService {
 
   static decorateInvite(invite) {
     const baseUrl = process.env.FRONTEND_URL || '';
-    const shopPath = invite.code ? `/shop/${invite.shop_name || ''}?creator=${invite.code}` : null;
+    const shopPath = invite.code ? `/${invite.shop_name || ''}?creator=${invite.code}` : null;
     return {
       id: invite.id,
       email: invite.email,

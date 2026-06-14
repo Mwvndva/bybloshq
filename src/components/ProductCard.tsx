@@ -630,9 +630,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
   const openShop = () => {
     if (displaySeller?.shopName) {
-      navigate(`/shop/${displaySeller.shopName}`);
+      navigate(`/${displaySeller.shopName}`);
     } else if (displaySeller?.id) {
-      navigate(`/shop/${displaySeller.id}`);
+      navigate(`/${displaySeller.id}`);
     }
   };
 
