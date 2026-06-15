@@ -255,121 +255,110 @@ const ShopPage = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/10 transition-opacity duration-300" />
 
         {/* Back to Home/Dashboard Button - Top Left */}
-        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20">
+        <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-20">
           <Button
             asChild
-            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center group"
+            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-300 flex items-center group"
           >
-            <Link to={location.pathname.startsWith('/buyer') ? "/buyer/dashboard" : "/"} className="flex items-center gap-1.5 sm:gap-2">
-              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
-              <span>{location.pathname.startsWith('/buyer') ? "Back to Dashboard" : "Back to Home"}</span>
+            <Link to={location.pathname.startsWith('/buyer') ? "/buyer/dashboard" : "/"} className="flex items-center gap-1 sm:gap-2">
+              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
+              <span className="hidden sm:inline">
+                {location.pathname.startsWith('/buyer') ? "Back to Dashboard" : "Back to Home"}
+              </span>
+              <span className="sm:hidden">
+                {location.pathname.startsWith('/buyer') ? "Dashboard" : "Home"}
+              </span>
             </Link>
           </Button>
         </div>
 
-        {/* Hero Content */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-3 pb-4 sm:p-8 sm:pb-8">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end gap-2.5 sm:gap-5 text-left sm:animate-fade-in-up">
-            
-            {/* Avatar & Shop Name Container - Side by Side on Mobile */}
-            <div className="flex items-center gap-3 sm:block shrink-0">
-              <div className="h-12 w-12 sm:h-20 sm:w-20 rounded-xl sm:rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/30 shadow-2xl overflow-hidden flex items-center justify-center text-lg sm:text-2xl font-black text-black">
-                {showSellerAvatar ? (
-                  <img
-                    src={getImageUrl(sellerInfo?.avatarUrl || '')}
-                    alt={`${sellerInfo?.shopName || 'Shop'} avatar`}
-                    className="h-full w-full object-cover"
-                    onError={() => setAvatarLoadFailed(true)}
-                  />
-                ) : (
-                  <span>{sellerInitials}</span>
-                )}
-              </div>
-              
-              <div className="min-w-0 sm:hidden">
-                <h1 className="text-xl font-bold text-white tracking-tight leading-tight drop-shadow-2xl break-words">
-                  {sellerInfo?.shopName || 'Shop'}
-                </h1>
-                {sellerInfo?.city && (
-                  <p className="text-[10px] text-white/80 font-medium">
-                    {sellerInfo.city}
-                  </p>
-                )}
-              </div>
-            </div>
+        {/* Hero Content - Centered */}
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 pt-10 sm:pt-14">
+          {/* Shop Name at the top */}
+          <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl break-words max-w-2xl px-4">
+            {sellerInfo?.shopName || 'Shop'}
+          </h1>
 
-            <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
-              <h1 className="hidden sm:block text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl break-words">
-                {sellerInfo?.shopName || 'Shop'}
-              </h1>
+          {/* Bio at the middle if available */}
+          {sellerInfo?.bio && (
+            <p className="mt-2 max-w-xl text-[10px] sm:text-sm md:text-base text-white/90 leading-relaxed break-words max-h-[3rem] sm:max-h-none overflow-hidden drop-shadow px-4">
+              {sellerInfo.bio}
+            </p>
+          )}
 
-              {sellerInfo?.bio && (
-                <p className="max-w-3xl text-[10px] sm:text-sm md:text-base text-white/85 leading-relaxed break-words max-h-[3rem] sm:max-h-none overflow-hidden drop-shadow">
-                  {sellerInfo.bio}
-                </p>
-              )}
-              
-              <div className="flex flex-wrap items-center gap-1.5 text-white/90 font-medium text-[9px] sm:text-xs max-w-full">
-                <span className="backdrop-blur-sm bg-black/25 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-full border border-white/10 shadow-lg">{filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}</span>
-                <span className="flex items-center gap-0.5 sm:gap-1 backdrop-blur-sm bg-black/25 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-full border border-white/10 shadow-lg">
-                  <Users className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
-                  <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
-                  <span>Followers</span>
-                </span>
-                <span className="flex items-center gap-0.5 sm:gap-1 backdrop-blur-sm bg-black/25 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-full border border-white/10 shadow-lg">
-                  <Store className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
-                  <span className="font-bold">{(sellerInfo && (sellerInfo.physicalAddress || (sellerInfo.latitude && sellerInfo.longitude && sellerInfo.latitude !== 0))) ? 'Physical Shop' : 'Online Shop'}</span>
-                </span>
-              </div>
-            </div>
+          {/* Followers, Shop Type, and Social Links at the bottom */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-white font-medium text-[9px] sm:text-xs">
+            {/* Followers (Icon and count only) */}
+            <span className="flex items-center gap-1 backdrop-blur-sm bg-black/35 px-2.5 py-1 rounded-full border border-white/10 shadow-lg" title="Followers">
+              <Users className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
+              <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
+            </span>
 
-            {(sellerInfo?.instagramLink || sellerInfo?.tiktokLink || sellerInfo?.facebookLink) && (
-              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                {sellerInfo?.instagramLink && (
-                  <a
-                    href={sellerInfo.instagramLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Instagram"
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[9px] sm:text-xs font-medium"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
-                      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-                    </svg>
-                    <span>Instagram</span>
-                  </a>
-                )}
-                {sellerInfo?.tiktokLink && (
-                  <a
-                    href={sellerInfo.tiktokLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="TikTok"
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[9px] sm:text-xs font-medium"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
-                      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-                    </svg>
-                    <span>TikTok</span>
-                  </a>
-                )}
-                {sellerInfo?.facebookLink && (
-                  <a
-                    href={sellerInfo.facebookLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Facebook"
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[9px] sm:text-xs font-medium"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
-                      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-                    </svg>
-                    <span>Facebook</span>
-                  </a>
-                )}
-              </div>
+            {/* Shop type (online or physical) */}
+            <span className="flex items-center gap-1 backdrop-blur-sm bg-black/35 px-2.5 py-1 rounded-full border border-white/10 shadow-lg" title="Shop Type">
+              <Store className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
+              <span className="font-bold">
+                {(sellerInfo && (sellerInfo.physicalAddress || (sellerInfo.latitude && sellerInfo.longitude && sellerInfo.latitude !== 0))) ? 'Physical' : 'Online'}
+              </span>
+            </span>
+
+            {/* Instagram / TikTok / Facebook Redirect Buttons (Icons only) */}
+            {sellerInfo?.instagramLink && (
+              <a
+                href={sellerInfo.instagramLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Instagram"
+                className="flex items-center justify-center p-1.5 rounded-full bg-black/35 border border-white/10 text-white/85 hover:text-white hover:bg-white/15 transition-all duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg>
+              </a>
+            )}
+            {sellerInfo?.tiktokLink && (
+              <a
+                href={sellerInfo.tiktokLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="TikTok"
+                className="flex items-center justify-center p-1.5 rounded-full bg-black/35 border border-white/10 text-white/85 hover:text-white hover:bg-white/15 transition-all duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
+                  <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+                </svg>
+              </a>
+            )}
+            {sellerInfo?.facebookLink && (
+              <a
+                href={sellerInfo.facebookLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Facebook"
+                className="flex items-center justify-center p-1.5 rounded-full bg-black/35 border border-white/10 text-white/85 hover:text-white hover:bg-white/15 transition-all duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                </svg>
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Business Profile Photo - Bottom and Center of the Banner */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-30">
+          <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-2xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/30 shadow-2xl overflow-hidden flex items-center justify-center text-lg sm:text-2xl font-black text-black">
+            {showSellerAvatar ? (
+              <img
+                src={getImageUrl(sellerInfo?.avatarUrl || '')}
+                alt={`${sellerInfo?.shopName || 'Shop'} avatar`}
+                className="h-full w-full object-cover"
+                onError={() => setAvatarLoadFailed(true)}
+              />
+            ) : (
+              <span>{sellerInitials}</span>
             )}
           </div>
         </div>
@@ -377,7 +366,7 @@ const ShopPage = () => {
       </div>
 
       {/* Products */}
-      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 py-6 sm:py-8 lg:px-8">
+      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 pt-10 pb-6 sm:pt-16 sm:pb-8 lg:px-8">
         <div className="mb-8">
           <div className="relative max-w-md mx-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
