@@ -224,7 +224,7 @@ const ShopPage = () => {
   return (
     <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
       {/* Modern Hero Section */}
-      <div className="relative h-[38dvh] min-h-[340px] sm:h-[44dvh] lg:h-[50dvh] w-full overflow-hidden">
+      <div className="relative h-[22dvh] min-h-[180px] sm:h-[44dvh] sm:min-h-[340px] lg:h-[50dvh] w-full overflow-hidden">
         {sellerInfo?.bannerImage && !bannerLoadFailed ? (
           <img
             src={getImageUrl(sellerInfo.bannerImage)}
@@ -240,7 +240,7 @@ const ShopPage = () => {
             <div className="absolute inset-0 opacity-[0.1] [background-image:linear-gradient(rgba(255,255,255,0.82)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.82)_1px,transparent_1px)] [background-size:44px_44px]" />
             <div className="absolute right-[-4rem] top-1/2 h-64 w-64 -translate-y-1/2 rounded-full border bg-white/[0.06] sm:h-96 sm:w-96" style={{ borderColor: 'rgba(var(--theme-accent-rgb), 0.24)' }} />
             <div
-              className="absolute left-6 top-20 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm backdrop-blur-sm sm:left-10"
+              className="absolute left-6 top-14 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-white shadow-sm backdrop-blur-sm sm:left-10 sm:top-20 sm:px-4 sm:py-1.5 sm:text-xs"
               style={{
                 backgroundColor: 'rgba(var(--theme-accent-rgb), 0.22)',
                 borderColor: 'rgba(var(--theme-accent-rgb), 0.34)'
@@ -252,7 +252,7 @@ const ShopPage = () => {
         )}
 
         {/* Sleek Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/10 transition-opacity duration-300" />
 
         {/* Back to Home/Dashboard Button - Top Left */}
         <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20">
@@ -268,60 +268,77 @@ const ShopPage = () => {
         </div>
 
         {/* Hero Content */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-5 sm:p-8 sm:pb-8">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-5 text-left sm:animate-fade-in-up">
-            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/30 shadow-2xl overflow-hidden flex items-center justify-center text-xl sm:text-2xl font-black text-black shrink-0">
-              {showSellerAvatar ? (
-                <img
-                  src={getImageUrl(sellerInfo?.avatarUrl || '')}
-                  alt={`${sellerInfo?.shopName || 'Shop'} avatar`}
-                  className="h-full w-full object-cover"
-                  onError={() => setAvatarLoadFailed(true)}
-                />
-              ) : (
-                <span>{sellerInitials}</span>
-              )}
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-3 pb-4 sm:p-8 sm:pb-8">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end gap-2.5 sm:gap-5 text-left sm:animate-fade-in-up">
+            
+            {/* Avatar & Shop Name Container - Side by Side on Mobile */}
+            <div className="flex items-center gap-3 sm:block shrink-0">
+              <div className="h-12 w-12 sm:h-20 sm:w-20 rounded-xl sm:rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/30 shadow-2xl overflow-hidden flex items-center justify-center text-lg sm:text-2xl font-black text-black">
+                {showSellerAvatar ? (
+                  <img
+                    src={getImageUrl(sellerInfo?.avatarUrl || '')}
+                    alt={`${sellerInfo?.shopName || 'Shop'} avatar`}
+                    className="h-full w-full object-cover"
+                    onError={() => setAvatarLoadFailed(true)}
+                  />
+                ) : (
+                  <span>{sellerInitials}</span>
+                )}
+              </div>
+              
+              <div className="min-w-0 sm:hidden">
+                <h1 className="text-xl font-bold text-white tracking-tight leading-tight drop-shadow-2xl break-words">
+                  {sellerInfo?.shopName || 'Shop'}
+                </h1>
+                {sellerInfo?.city && (
+                  <p className="text-[10px] text-white/80 font-medium">
+                    {sellerInfo.city}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="min-w-0 flex-1 space-y-2">
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl break-words">
+            <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
+              <h1 className="hidden sm:block text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl break-words">
                 {sellerInfo?.shopName || 'Shop'}
               </h1>
 
               {sellerInfo?.bio && (
-                <p className="max-w-3xl text-xs sm:text-sm md:text-base text-white/85 leading-relaxed break-words max-h-[4.5rem] sm:max-h-none overflow-hidden drop-shadow">
+                <p className="max-w-3xl text-[10px] sm:text-sm md:text-base text-white/85 leading-relaxed break-words max-h-[3rem] sm:max-h-none overflow-hidden drop-shadow">
                   {sellerInfo.bio}
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-2 text-white/90 font-medium text-[11px] sm:text-sm max-w-full">
-                <span className="backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">{filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}</span>
-                <span className="flex items-center gap-1 backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
-                <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
-                <span>Followers</span>
-              </span>
-                <span className="flex items-center gap-1 backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
-                <Store className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="font-bold">{(sellerInfo && (sellerInfo.physicalAddress || (sellerInfo.latitude && sellerInfo.longitude && sellerInfo.latitude !== 0))) ? 'Physical Shop' : 'Online Shop'}</span>
-              </span>
+              
+              <div className="flex flex-wrap items-center gap-1.5 text-white/90 font-medium text-[9px] sm:text-xs max-w-full">
+                <span className="backdrop-blur-sm bg-black/25 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-full border border-white/10 shadow-lg">{filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}</span>
+                <span className="flex items-center gap-0.5 sm:gap-1 backdrop-blur-sm bg-black/25 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-full border border-white/10 shadow-lg">
+                  <Users className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
+                  <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
+                  <span>Followers</span>
+                </span>
+                <span className="flex items-center gap-0.5 sm:gap-1 backdrop-blur-sm bg-black/25 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-full border border-white/10 shadow-lg">
+                  <Store className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
+                  <span className="font-bold">{(sellerInfo && (sellerInfo.physicalAddress || (sellerInfo.latitude && sellerInfo.longitude && sellerInfo.latitude !== 0))) ? 'Physical Shop' : 'Online Shop'}</span>
+                </span>
+              </div>
             </div>
 
             {(sellerInfo?.instagramLink || sellerInfo?.tiktokLink || sellerInfo?.facebookLink) && (
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                 {sellerInfo?.instagramLink && (
                   <a
                     href={sellerInfo.instagramLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Instagram"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[11px] sm:text-sm font-medium"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[9px] sm:text-xs font-medium"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
                       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
                     </svg>
-                    <span className="hidden sm:inline">Instagram</span>
+                    <span>Instagram</span>
                   </a>
                 )}
                 {sellerInfo?.tiktokLink && (
@@ -330,12 +347,12 @@ const ShopPage = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     title="TikTok"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[11px] sm:text-sm font-medium"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[9px] sm:text-xs font-medium"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
                       <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
                     </svg>
-                    <span className="hidden sm:inline">TikTok</span>
+                    <span>TikTok</span>
                   </a>
                 )}
                 {sellerInfo?.facebookLink && (
@@ -344,17 +361,16 @@ const ShopPage = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Facebook"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[11px] sm:text-sm font-medium"
+                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[9px] sm:text-xs font-medium"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-3.5 sm:h-3.5">
                       <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                     </svg>
-                    <span className="hidden sm:inline">Facebook</span>
+                    <span>Facebook</span>
                   </a>
                 )}
               </div>
             )}
-            </div>
           </div>
         </div>
 
