@@ -347,26 +347,26 @@ const ShopPage = () => {
           </div>
         </div>
 
-        {/* Business Profile Photo - Bottom and Center of the Banner */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-30">
-          <div className="h-14 w-14 sm:h-20 sm:w-20 rounded-2xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/30 shadow-2xl overflow-hidden flex items-center justify-center text-lg sm:text-2xl font-black text-black">
-            {showSellerAvatar ? (
-              <img
-                src={getImageUrl(sellerInfo?.avatarUrl || '')}
-                alt={`${sellerInfo?.shopName || 'Shop'} avatar`}
-                className="h-full w-full object-cover"
-                onError={() => setAvatarLoadFailed(true)}
-              />
-            ) : (
-              <span>{sellerInitials}</span>
-            )}
-          </div>
-        </div>
+      </div>
 
+      {/* Business Profile Photo - Bottom and Center of the Banner, outside the overflow-hidden parent to prevent clipping */}
+      <div className="relative z-30 flex justify-center -mt-10 sm:-mt-16 pointer-events-none">
+        <div className="h-20 w-20 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 border-4 border-[var(--theme-bg-color)] shadow-2xl overflow-hidden flex items-center justify-center text-2xl sm:text-4xl font-black text-black pointer-events-auto">
+          {showSellerAvatar ? (
+            <img
+              src={getImageUrl(sellerInfo?.avatarUrl || '')}
+              alt={`${sellerInfo?.shopName || 'Shop'} avatar`}
+              className="h-full w-full object-cover"
+              onError={() => setAvatarLoadFailed(true)}
+            />
+          ) : (
+            <span>{sellerInitials}</span>
+          )}
+        </div>
       </div>
 
       {/* Products */}
-      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 pt-10 pb-6 sm:pt-16 sm:pb-8 lg:px-8">
+      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 pt-12 pb-6 sm:pt-20 sm:pb-8 lg:px-8">
         <div className="mb-8">
           <div className="relative max-w-md mx-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
