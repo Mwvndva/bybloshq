@@ -696,6 +696,13 @@ export const uploadBanner = async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.isOperational) {
+      logger.warn(`Banner upload validation failed: ${error.message} for seller ${req.user?.sellerId}`);
+      return res.status(error.statusCode || 400).json({
+        status: 'error',
+        message: error.message
+      });
+    }
     logger.error('Error uploading banner:', {
       error: error.message,
       stack: error.stack,
@@ -757,6 +764,13 @@ export const uploadBusinessPhoto = async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.isOperational) {
+      logger.warn(`Business photo upload validation failed: ${error.message} for seller ${req.user?.sellerId}`);
+      return res.status(error.statusCode || 400).json({
+        status: 'error',
+        message: error.message
+      });
+    }
     logger.error('Error uploading business photo:', {
       error: error.message,
       stack: error.stack,

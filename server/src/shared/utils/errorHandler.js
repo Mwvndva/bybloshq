@@ -18,46 +18,55 @@ export const globalErrorHandler = (err, req, res, next) => {
   err.status = err.status || 'error';
   const requestId = req.id || req.headers['x-request-id'] || 'N/A';
 
-  if (process.env.NODE_ENV === 'development') {
-    if (err.statusCode === 404) {
-      logger.warn(`[Request ID: ${requestId}] 404 Not Found: ${err.message}`);
-    } else {
-      logger.error(`[Request ID: ${requestId}] ERROR 💥`, err);
-    }
+  // Normalize/clone error properties
+  let error = { ...err };
+  error.message = err.message;
+  error.name = err.name;
+  error.stack = err.stack;
+  error.isOperational = err.isOperational;
 
-    res.status(err.statusCode).json({
-      status: err.status,
-      error: err,
-      message: err.message,
-      stack: err.stack,
-      requestId
-    });
+  // Handle specific error types
+  if (error.code === '23505') error = handlePostgresUniqueError(error);
+  if (error.code === '23503') error = handlePostgresForeignKeyError(error);
+  if (error.name === 'JsonWebTokenError') error = handleJWTError();
+  if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+  if (error.code === 'EBADCSRFTOKEN') error.isOperational = true;
+
+  // Handle PayloadTooLargeError / entity.too.large
+  if (
+    error.name === 'PayloadTooLargeError' ||
+    err.type === 'entity.too.large' ||
+    error.statusCode === 413 ||
+    err.statusCode === 413
+  ) {
+    error.isOperational = true;
+    error.statusCode = 413;
+    error.message = 'Image size is too large. The maximum file size allowed is 10MB.';
+  }
+
+  // Handle Multer errors
+  if (error.code?.startsWith('LIMIT_')) {
+    error.isOperational = true;
+    error.statusCode = 400;
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      error.message = 'File is too large. Max size is 500MB.';
+    }
+  }
+
+  // Ensure status maps correctly (4xx should be 'fail', 5xx should be 'error')
+  error.status = `${error.statusCode}`.startsWith('4') ? 'fail' : 'error';
+
+  // Log the error
+  if (error.statusCode === 404) {
+    logger.warn(`[Request ID: ${requestId}] 404 Not Found: ${error.message}`);
+  } else if (error.statusCode === 413) {
+    logger.warn(`[Request ID: ${requestId}] Image Size Too Large: ${error.message}`);
+  } else if (error.isOperational) {
+    logger.warn(`[Request ID: ${requestId}] Operational ${error.statusCode}: ${error.message}`);
   } else {
-    // Production error handling
-    let error = { ...err };
-    error.message = err.message;
-    error.name = err.name;
-    error.stack = err.stack;
-
-    // Handle specific error types
-    if (error.code === '23505') error = handlePostgresUniqueError(error);
-    if (error.code === '23503') error = handlePostgresForeignKeyError(error);
-    if (error.name === 'JsonWebTokenError') error = handleJWTError();
-    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
-    if (error.code === 'EBADCSRFTOKEN') error.isOperational = true;
-
-    // Handle Multer errors
-    if (error.code?.startsWith('LIMIT_')) {
-      error.isOperational = true;
-      error.statusCode = 400;
-      if (error.code === 'LIMIT_FILE_SIZE') {
-        error.message = 'File is too large. Max size is 500MB.';
-      }
-    }
-
-    // Log the error with Request ID
-    if (error.statusCode === 404) {
-      logger.warn(`[Request ID: ${requestId}] 404 Not Found: ${error.message}`);
+    // Non-operational or database/programming error: log as error with stack trace
+    if (process.env.NODE_ENV === 'development') {
+      logger.error(`[Request ID: ${requestId}] ERROR 💥`, err);
     } else {
       logger.error(`[Request ID: ${requestId}] ERROR 💥`, {
         name: error.name,
@@ -66,8 +75,19 @@ export const globalErrorHandler = (err, req, res, next) => {
         statusCode: error.statusCode
       });
     }
+  }
 
-    // Operational, trusted error: send message to client
+  // Send response based on environment
+  if (process.env.NODE_ENV === 'development') {
+    res.status(error.statusCode).json({
+      status: error.status,
+      error: err,
+      message: error.message,
+      stack: error.stack,
+      requestId
+    });
+  } else {
+    // Production response
     if (error.isOperational) {
       res.status(error.statusCode).json({
         status: error.status,
@@ -76,7 +96,6 @@ export const globalErrorHandler = (err, req, res, next) => {
       });
     } else {
       // Programming or other unknown error: don't leak error details
-      // Send generic message
       res.status(500).json({
         status: 'error',
         message: 'Something went wrong!',

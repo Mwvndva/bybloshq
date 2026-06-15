@@ -222,7 +222,10 @@ export const sanitizePublicSeller = (seller) => {
         clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
         totalWishlistCount: Number.parseInt(sellerObj.totalWishlistCount || sellerObj.total_wishlist_count || 0),
         wishlistCount: Number.parseInt(sellerObj.wishlistCount || sellerObj.wishlist_count || sellerObj.totalWishlistCount || sellerObj.total_wishlist_count || 0),
-        knockCount: Number.parseInt(sellerObj.knockCount || sellerObj.knock_count || 0)
+        knockCount: Number.parseInt(sellerObj.knockCount || sellerObj.knock_count || 0),
+        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link || null,
+        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link || null,
+        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link || null
         // STRICTLY REMOVED: email, phone, whatsappNumber, fullName, balance, revenue, internal IDs, coordinates
     };
 };

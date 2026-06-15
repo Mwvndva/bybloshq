@@ -84,7 +84,11 @@ class ImageService {
             return shortUrl;
 
         } catch (error) {
-            logger.error('Error in ImageService.base64ToFile:', error);
+            if (error.isOperational) {
+                logger.warn(`ImageService.base64ToFile validation failed: ${error.message}`);
+            } else {
+                logger.error('Error in ImageService.base64ToFile:', error);
+            }
             throw error;
         }
     }

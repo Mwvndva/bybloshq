@@ -61,6 +61,13 @@ export const createProduct = async (req, res) => {
       data: { product: sanitizeProduct(product) }
     });
   } catch (error) {
+    if (error.isOperational) {
+      logger.warn(`Product creation validation failed: ${error.message}`);
+      return res.status(error.statusCode || 400).json({
+        status: 'error',
+        message: error.message
+      });
+    }
     logger.error('Error creating product:', error);
     const status = error.message.includes('required') || error.message.includes('Invalid') ? 400 : 500;
     res.status(status).json({
@@ -137,6 +144,13 @@ export const updateProduct = async (req, res) => {
       data: { product: sanitizeProduct(updatedProduct) }
     });
   } catch (error) {
+    if (error.isOperational) {
+      logger.warn(`Product update validation failed: ${error.message}`);
+      return res.status(error.statusCode || 400).json({
+        status: 'error',
+        message: error.message
+      });
+    }
     logger.error('Error updating product:', error);
     let status = 500;
     if (error.message.includes('not found')) status = 404;

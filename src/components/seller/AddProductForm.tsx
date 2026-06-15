@@ -403,7 +403,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
 
         {formData.product_type === 'digital' && (
           <div className="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
-            <Label className="text-xs font-bold text-yellow-400 uppercase">Upload Digital Content</Label>
+            <Label className="text-xs font-bold text-white uppercase">Upload Digital Content</Label>
             <div className="relative">
               <Input
                 type="file"
@@ -551,9 +551,9 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
       </div>
 
       {formData.product_type === 'digital' && (
-        <div className="flex items-start gap-3 p-3 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
-          <Info className="h-4 w-4 text-yellow-400 mt-0.5" />
-          <p className="text-[10px] text-yellow-100 opacity-80 leading-relaxed">
+        <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+          <Info className="h-4 w-4 text-amber-600 mt-0.5" />
+          <p className="text-[11px] font-semibold leading-relaxed text-amber-800">
             Note: <strong>Digital products</strong> are typically assets like PDFs, Music, or Software. If you are selling a Physical Item (e.g. Headphones), please use the Physical type.
           </p>
         </div>
