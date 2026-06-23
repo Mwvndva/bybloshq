@@ -42,17 +42,35 @@ async function persistDeviceToken(
   }));
 }
 
+let retryCount = 0;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 10000; // 10 seconds
+
 function ensurePushListeners() {
   if (listenersReady) return;
   listenersReady = true;
 
   PushNotifications.addListener('registration', async (token: Token) => {
     if (!pendingRole || !token.value) return;
+    retryCount = 0; // Reset retry count on successful registration
     await persistDeviceToken(token.value, pendingRole, pendingRequestConfig);
   });
 
   PushNotifications.addListener('registrationError', (error) => {
     console.warn('[MobileNotifications] Push registration failed', error);
+
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      const nextDelay = RETRY_DELAY_MS * Math.pow(2, retryCount - 1); // 10s, 20s, 40s
+      console.log(`[MobileNotifications] Retrying registration in ${nextDelay / 1000}s (Attempt ${retryCount}/${MAX_RETRIES})...`);
+      setTimeout(() => {
+        if (pendingRole) {
+          PushNotifications.register().catch((err) => {
+            console.error('[MobileNotifications] Failed to retry register', err);
+          });
+        }
+      }, nextDelay);
+    }
   });
 
   PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
