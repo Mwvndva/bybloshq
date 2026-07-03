@@ -13,7 +13,7 @@ const BuyerRegister = safeLazy(() => import('@/components/buyer/BuyerRegister').
 const BuyerForgotPassword = safeLazy(() => import('@/components/buyer/BuyerForgotPassword').then(m => m.BuyerForgotPassword));
 const BuyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetPassword').then(m => m.BuyerResetPassword));
 const BuyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
-const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
+const ShopPage = safeLazy(() => import('@/features/shop/pages'));
 
 export const buyerRoutes = [
   // ─── Public routes ──────────────────────────────────────────────────────────
