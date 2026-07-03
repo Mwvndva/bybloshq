@@ -1,0 +1,47 @@
+
+Name                    Mode  
+----                    ----  
+.agents                 d-----
+.idea                   d-----
+android                 d-----
+assets                  d-----
+dist                    d-----
+docs                    d-----
+e2e                     d-----
+nginx                   d-----
+node_modules            d-----
+public                  d-----
+scripts                 d-----
+server                  d-----
+src                     d-----
+tools                   d-----
+.dockerignore           -a----
+.env.production         -a----
+.gitignore              -a----
+capacitor.config.ts     -a----
+components.json         -a----
+docker-compose.yml      -a----
+Dockerfile              -a----
+eslint.config.js        -a----
+eslint.config.js.bak    -a----
+index.html              -a----
+package-lock.json       -a----
+package.json            -a----
+playwright.config.ts    -a----
+postcss.config.js       -a----
+project-root.txt        -a----
+project-src-files.txt   -a----
+project-src-folders.txt -a----
+project-structure.txt   -a----
+README.md               -a----
+SKILL.md                -a----
+skills-lock.json        -a----
+tailwind.config.ts      -a----
+tsconfig.app.json       -a----
+tsconfig.json           -a----
+tsconfig.node.json      -a----
+vite.config.ts          -a----
+vitest.setup.ts         -a----
+
+
+

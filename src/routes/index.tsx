@@ -6,7 +6,7 @@ import { RouteFallback } from '@/components/common/RouteFallback';
 
 // Lazy load pages
 import IndexPage from '@/pages/Index';
-import ShopPage from '@/pages/ShopPage';
+import { ShopPage } from '@/features/shop';
 const MarketingLogin = safeLazy(() => import('@/pages/marketing/MarketingLogin'));
 const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
 const VerifyEmail = safeLazy(() => import('@/pages/auth/VerifyEmail'));

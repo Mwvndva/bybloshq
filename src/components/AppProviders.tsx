@@ -2,7 +2,7 @@ import React from 'react';
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { GlobalAuthProvider } from "../contexts/GlobalAuthContext";
+import { GlobalAuthProvider } from "@/features/auth/contexts";
 import { WishlistProvider } from "../contexts/WishlistContext";
 
 const queryClient = new QueryClient({

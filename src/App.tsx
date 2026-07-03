@@ -1,35 +1,15 @@
-import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
-import { AppProviders } from "./components/AppProviders";
-import { LoadingScreen } from "./components/LoadingScreen";
-import { ErrorBoundary, RootErrorElement } from "./components/common/ErrorBoundary";
-import NotFound from '@/pages/NotFound';
-import { adminRouter } from "./routes/admin.routes";
-import { routes } from "./routes";
+import { RouterProvider } from "react-router-dom";
 
-// Create the main app router with both admin and main app routes
-const router = createBrowserRouter([
-  {
-    element: (
-      <AppProviders>
-        <Outlet />
-      </AppProviders>
-    ),
-    errorElement: <RootErrorElement />,
-    children: [
-      ...routes,
-      ...adminRouter.routes,
-      {
-        path: '*',
-        element: <NotFound />,
-      }
-    ],
-  },
-]);
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { router, LoadingScreen } from "@/app/router";
 
 function App() {
   return (
     <ErrorBoundary>
-      <RouterProvider router={router} fallbackElement={<LoadingScreen />} />
+      <RouterProvider
+        router={router}
+        fallbackElement={<LoadingScreen />}
+      />
     </ErrorBoundary>
   );
 }

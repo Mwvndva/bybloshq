@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "skills": {
+    "a2ui-renderer": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/a2ui-renderer/SKILL.md",
+      "computedHash": "95e30d7b289ad6cbcd3dcde1eafdf58142d1c497dc537eb8d22bf9810f12a9f1"
+    },
+    "copilotkit-agui": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-agui/SKILL.md",
+      "computedHash": "57a8f89ba1212667813a69505f37249e8d7ed52472249a4d5dda250dbdbd987c"
+    },
+    "copilotkit-contribute": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-contribute/SKILL.md",
+      "computedHash": "fd3d1064923a94d116cdda0810631f8123498c10789c9422784ca0c6c41a3a47"
+    },
+    "copilotkit-debug": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-debug/SKILL.md",
+      "computedHash": "a57919c98de8ce9f89d145496831300d0042af674ac367f7966f1f7f9ea7254f"
+    },
+    "copilotkit-develop": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-develop/SKILL.md",
+      "computedHash": "6e4972c28780731f73f6ae3b3046ae7d94b672da3207712cff810ae26e10e84e"
+    },
+    "copilotkit-integrations": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-integrations/SKILL.md",
+      "computedHash": "08ba8fe7b530545f69805f197e8949304f0839bc623a7580a2001e402ea743b8"
+    },
+    "copilotkit-self-update": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-self-update/SKILL.md",
+      "computedHash": "22d09f38a1b83fdb6ee30629f5921f749072bcd63e885b23c19fcd723e6ea452"
+    },
+    "copilotkit-setup": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-setup/SKILL.md",
+      "computedHash": "ba3c4226c65789ff2cc52337dd2e49944a166e233d4ef0e221d69c35b383e798"
+    },
+    "copilotkit-upgrade": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit-upgrade/SKILL.md",
+      "computedHash": "bb3a7b5b7195089488d14c7ab3108748886d5fa7e2060c5c7ef8d10719c489ff"
+    },
+    "react-core": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/react-core/SKILL.md",
+      "computedHash": "d0e85ab3303343a47153038f35e88b0f4f2fdf3ea80719c712e62bec950581fd"
+    },
+    "runtime": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/runtime/SKILL.md",
+      "computedHash": "c9c750463022acfc4a3f19fa13446e06706cf06d313bff37574cdc483c4cbe58"
+    }
+  }
+}
