@@ -304,6 +304,36 @@ Distributed under the MIT License. See `LICENSE` for more information.
 - [API Reference](./docs/api-reference.md)
 - [Database Schema](./docs/database-schema.md)
 
+## 🔒 SSL Certificate Management
+
+The site uses **Let's Encrypt** certificates managed by Certbot. Certificates expire every **90 days** and must be renewed. The nginx container reads certs from `./ssl/` on the VPS.
+
+### Emergency Manual Renewal (cert expired)
+
+SSH into the VPS and run:
+
+```bash
+cd /path/to/bybloshq
+sudo ./scripts/renew-ssl.sh
+```
+
+This stops nginx, renews via certbot standalone, copies certs to `./ssl/`, and restarts nginx.
+
+### Setup Auto-Renewal (run once after first deployment)
+
+```bash
+sudo ./scripts/setup-ssl-auto-renewal.sh /path/to/bybloshq
+```
+
+This installs:
+- A **certbot deploy hook** that copies new certs to `./ssl/` and reloads nginx after every renewal
+- A **daily cron job** (`0 3 * * *`) that attempts renewal (certbot only acts when cert is < 30 days from expiry)
+
+Test the auto-renewal config at any time:
+```bash
+sudo certbot renew --dry-run
+```
+
 ## 🔧 Support
 
 For support, please open an issue or reach out to our team at support@bybloshq.space
