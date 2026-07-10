@@ -63,7 +63,7 @@ export function SettingsTab({
 
   const handleInviteCreator = async () => {
     if (!creatorEmail.trim()) {
-      toast.error('Enter a creator email.');
+      toast.error('Enter an ambassador email.');
       return;
     }
 
@@ -71,7 +71,7 @@ export function SettingsTab({
     try {
       await inviteCreatorMutation.mutateAsync(creatorEmail.trim());
       setCreatorEmail('');
-      toast.success('Creator invite sent.');
+      toast.success('Ambassador invite sent.');
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
       toast.error(err?.response?.data?.message || err?.message || 'Could not send invite.');
@@ -83,7 +83,7 @@ export function SettingsTab({
   const copyCreatorLink = async (link?: string, label?: string) => {
     if (!link) return;
     const copyMode = await copyLinkedTextToClipboard(label || link, link);
-    toast.success(copyMode === 'rich' ? 'Creator link copied as linked text.' : 'Creator link copied.');
+    toast.success(copyMode === 'rich' ? 'Ambassador link copied as linked text.' : 'Ambassador link copied.');
   };
 
   const creatorCommissionLabel = `${Number(formData.creatorCommissionRate || 1).toFixed(2).replace(/\.?0+$/, '')}%`;
@@ -437,9 +437,9 @@ export function SettingsTab({
               <MailPlus className="h-5 w-5 text-yellow-700" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-950">Invite Creators</h3>
+              <h3 className="text-xl font-black text-slate-950">Invite Ambassadors</h3>
               <p className="text-slate-600 text-xs sm:text-sm">
-                Give influencers a creator link for your shop. They earn your chosen commission after completed sales.
+                Give influencers an ambassador link for your shop. They earn your chosen commission after completed sales.
               </p>
             </div>
           </div>
@@ -448,10 +448,10 @@ export function SettingsTab({
         <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-700">Creator commission</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-700">Ambassador commission</p>
               <h4 className="mt-1 text-lg font-black text-slate-950">{creatorCommissionLabel} per completed sale</h4>
               <p className="mt-1 text-xs font-medium text-slate-700 sm:text-sm">
-                This is the cut creators earn from sales they bring to your shop. Default is 1%; you can raise it before inviting creators.
+                This is the cut ambassadors earn from sales they bring to your shop. Default is 1%; you can raise it before inviting ambassadors.
               </p>
             </div>
             {isEditing ? (
@@ -491,7 +491,7 @@ export function SettingsTab({
             type="email"
             value={creatorEmail}
             onChange={(event) => setCreatorEmail(event.target.value)}
-            placeholder="creator@example.com"
+            placeholder="ambassador@example.com"
             className="h-10 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400"
           />
           <Button
@@ -507,7 +507,7 @@ export function SettingsTab({
         <div className="overflow-hidden rounded-2xl border border-slate-200">
           {invites.length === 0 ? (
             <div className="bg-slate-50 p-4 text-sm font-medium text-slate-500">
-              No creator invites yet.
+              No ambassador invites yet.
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
@@ -521,7 +521,7 @@ export function SettingsTab({
                      </p>
                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                        {invite.status}
-                       {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% creator cut` : ''}
+                       {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% ambassador cut` : ''}
                      </p>
                      {invite.shopUrl && (
                        <a

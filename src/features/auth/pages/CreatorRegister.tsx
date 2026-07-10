@@ -52,7 +52,7 @@ export default function CreatorRegister() {
 
   useEffect(() => {
     if (inviteError) {
-      toast.error(getErrorMessage(inviteError, 'Creator invite not found.'));
+      toast.error(getErrorMessage(inviteError, 'Ambassador invite not found.'));
     }
   }, [inviteError]);
 
@@ -81,7 +81,7 @@ export default function CreatorRegister() {
     try {
       const result = await registerMutation.mutateAsync({ token, ...form, referralCode } as unknown as Parameters<typeof registerMutation.mutateAsync>[0]) as Record<string, unknown>;
       if ((result?.data as Record<string, unknown>)?.status === 'created') {
-        toast.success('Creator access added. You can now log in.');
+        toast.success('Ambassador access added. You can now log in.');
         navigate('/creator/login');
         return;
       }
@@ -89,7 +89,7 @@ export default function CreatorRegister() {
       toast.success('Account created. Check your email to verify it.');
       navigate(`/verify-email?email=${encodeURIComponent(form.email)}&type=creator`);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Could not create creator account.'));
+      toast.error(getErrorMessage(error, 'Could not create ambassador account.'));
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export default function CreatorRegister() {
             </div>
 
             <div className="absolute left-1/2 flex min-w-0 max-w-[46%] -translate-x-1/2 items-center justify-center text-center sm:max-w-[50%]">
-              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Creator Portal</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Ambassador Portal</h1>
             </div>
 
             <div className="flex-1" aria-hidden="true" />
@@ -126,13 +126,13 @@ export default function CreatorRegister() {
         <div className="grid flex-1 items-center gap-6 py-6 lg:grid-cols-[0.85fr_1.15fr]">
         <section className="space-y-4">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">
-            {token ? 'Creator invite' : 'Byblos creators'}
+            {token ? 'Ambassador invite' : 'Byblos ambassadors'}
           </p>
           <h1 className="text-4xl font-black tracking-tight sm:text-5xl">Earn when your audience buys safely.</h1>
           <p className="text-sm font-medium leading-6 text-white/55">
             {invite
               ? `${invite.shopName} invited you to sell through Byblos.`
-              : 'Create a creator account, invite sellers with your link, and earn when their products sell.'}
+              : 'Create an ambassador account, invite sellers with your link, and earn when their products sell.'}
           </p>
         </section>
 
@@ -195,10 +195,10 @@ export default function CreatorRegister() {
           )}
           <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
             <Button disabled={loading || !passwordsMatch} className="h-12 rounded-2xl bg-yellow-400 font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create creator account'}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create ambassador account'}
             </Button>
             <Link to="/creator/login" className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black text-white transition hover:bg-white/10">
-              Creator login
+              Ambassador login
             </Link>
           </div>
         </form>

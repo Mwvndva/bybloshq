@@ -443,7 +443,7 @@ const NewAdminDashboard = () => {
         : null
     },
     {
-      title: 'Creators',
+      title: 'Ambassadors',
       value: dashboardState.analytics.totalCreators?.toLocaleString() || '0',
       icon: <UserPlus className="h-4 w-4 text-yellow-500" />,
       description: `${dashboardState.analytics.pendingCreatorRequests || 0} pending requests`,
@@ -690,20 +690,20 @@ const NewAdminDashboard = () => {
   };
 
   const handleDeleteCreator = async (creatorId: string, creatorName?: string) => {
-    if (!window.confirm(`Delete ${creatorName || 'this creator'}'s account? Their earnings and sales history will be preserved for audit.`)) {
+    if (!window.confirm(`Delete ${creatorName || 'this ambassador'}'s account? Their earnings and sales history will be preserved for audit.`)) {
       return;
     }
 
     try {
       await deleteCreatorMutation.mutateAsync(creatorId);
-      toast.success('Creator account deleted. History was preserved.');
+      toast.success('Ambassador account deleted. History was preserved.');
       setDashboardState(prev => ({
         ...prev,
         creators: prev.creators.filter(creator => String(creator.id) !== String(creatorId))
       }));
     } catch (error) {
       console.error('Error deleting creator:', error);
-      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete creator account');
+      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete ambassador account');
     }
   };
 
@@ -918,15 +918,15 @@ const NewAdminDashboard = () => {
               <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 <CardHeader className="p-5 md:p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
                   <div>
-                    <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Creator Network</CardTitle>
-                    <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Creator acquisition, shop links, clicks, and earnings performance</CardDescription>
+                    <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Ambassador Network</CardTitle>
+                    <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Ambassador acquisition, shop links, clicks, and earnings performance</CardDescription>
                   </div>
                   <div className="relative group w-full md:w-auto">
                     <div className="absolute -inset-0.5 bg-yellow-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-yellow-500 transition-colors" />
                     <Input
                       type="text"
-                      placeholder="Filter creators..."
+                      placeholder="Filter ambassadors..."
                       className="pl-12 w-full md:w-[320px] lg:w-[400px] h-11 md:h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-medium text-sm"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -935,11 +935,11 @@ const NewAdminDashboard = () => {
                 </CardHeader>
                 <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.012] p-5 md:grid-cols-4 md:p-8">
                   <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/[0.06] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/70">Creators</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/70">Ambassadors</p>
                     <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.creators.length.toLocaleString()}</p>
                   </div>
                   <div className="rounded-2xl border border-lime-500/20 bg-lime-500/[0.06] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-lime-200/70">Creator sales</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-lime-200/70">Ambassador sales</p>
                     <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.creators.reduce((sum, creator) => sum + (Number(creator.totalSales) || 0), 0).toLocaleString()}</p>
                   </div>
                   <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.06] p-4">
@@ -947,7 +947,7 @@ const NewAdminDashboard = () => {
                     <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.creators.reduce((sum, creator) => sum + (Number(creator.linkClicks) || 0), 0).toLocaleString()}</p>
                   </div>
                   <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200/70">Creator earnings</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200/70">Ambassador earnings</p>
                     <p className="mt-3 text-2xl font-black text-white tabular-nums">KSh {dashboardState.creators.reduce((sum, creator) => sum + (Number(creator.totalIncome) || 0), 0).toLocaleString()}</p>
                   </div>
                 </div>
@@ -956,7 +956,7 @@ const NewAdminDashboard = () => {
                     <table className="w-full text-left border-collapse">
                       <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
                         <tr>
-                          <th className="px-5 md:px-8 py-4 md:py-6">Creator Identity</th>
+                          <th className="px-5 md:px-8 py-4 md:py-6">Ambassador Identity</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Contact</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden xl:table-cell">Linked Shops</th>
                           <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Performance</th>

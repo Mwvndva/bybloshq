@@ -45,7 +45,7 @@ export default function CreatorLogin() {
             </div>
 
             <div className="absolute left-1/2 flex min-w-0 max-w-[46%] -translate-x-1/2 items-center justify-center text-center sm:max-w-[50%]">
-              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Creator Portal</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Ambassador Portal</h1>
             </div>
 
             <div className="flex-1" aria-hidden="true" />
@@ -56,7 +56,7 @@ export default function CreatorLogin() {
       <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-md flex-col px-4 py-5 sm:min-h-[calc(100svh-5rem)]">
         <form onSubmit={handleSubmit} className="my-auto w-full space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Creator program</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Ambassador program</p>
             <h1 className="text-3xl font-black tracking-tight">Welcome back.</h1>
             <p className="text-sm font-medium leading-6 text-white/55">Track shop links, sales, seller referrals, and M-Pesa withdrawals.</p>
           </div>
@@ -76,7 +76,7 @@ export default function CreatorLogin() {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Log in'}
           </Button>
           <p className="text-center text-sm font-medium text-white/50">
-            New creator?{' '}
+            New ambassador?{' '}
             <Link to="/creator/register" className="font-black text-yellow-300 hover:text-yellow-200">
               Create an account
             </Link>
