@@ -229,6 +229,7 @@ services:
       - ./nginx/production.nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro # Mount certs here (fullchain.pem and privkey.pem)
       - ./server/uploads:/app/uploads:ro # Serve uploads directly
+      - ./certbot-webroot:/var/www/certbot:ro # ACME HTTP-01 challenge webroot (Let's Encrypt renewal)
     depends_on:
       - frontend
       - backend

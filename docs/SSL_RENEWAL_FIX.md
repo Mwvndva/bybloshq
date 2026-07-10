@@ -7,6 +7,30 @@ Nothing in `src/` can produce it. It is caused by an **expired Let's Encrypt
 certificate**, and the underlying reason the cert expired is a **broken
 auto-renewal design**.
 
+## ✅ Status: repo-level fix applied (webroot). Run 2 commands on the VPS to recover.
+
+The zero-downtime **webroot** fix (Option A below) is now committed:
+- `nginx/production.nginx.conf` serves `/.well-known/acme-challenge/` from
+  `/var/www/certbot` **before** the HTTPS redirect.
+- `docker-compose.yml` mounts `./certbot-webroot` → `/var/www/certbot` on nginx.
+- `scripts/renew-ssl.sh` now issues/renews via `certbot certonly --webroot`
+  (no nginx stop) and migrates the saved renewal config off the broken
+  standalone authenticator, so the daily `certbot renew` cron works afterwards.
+
+**Deploy + recover the expired cert on the VPS:**
+
+```bash
+cd /path/to/bybloshq
+git pull origin main
+mkdir -p certbot-webroot
+docker compose up -d nginx      # nginx picks up the new config + webroot mount
+sudo ./scripts/renew-ssl.sh     # reissues via webroot, copies certs, reloads nginx
+```
+
+Auto-renewal (once, if not already installed):
+`sudo ./scripts/setup-ssl-auto-renewal.sh /path/to/bybloshq` — after the webroot
+reissue above, the daily `certbot renew` cron renews without touching port 80.
+
 ## Root cause
 
 Certificates for `bybloshq.space` are Let's Encrypt certs (90-day validity),
