@@ -172,7 +172,7 @@ export default function CreatorDashboard() {
       <main className="byblos-light-page flex min-h-screen items-center justify-center bg-[#f8f7f2] px-4 text-stone-950">
         <div className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
           <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
-          <span className="text-sm font-semibold text-stone-700">Loading creator dashboard...</span>
+          <span className="text-sm font-semibold text-stone-700">Loading ambassador dashboard...</span>
         </div>
       </main>
     );
@@ -190,7 +190,7 @@ export default function CreatorDashboard() {
       <div className="space-y-5">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Creator dashboard</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Ambassador dashboard</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight">Welcome, {creator.firstName}</h1>
             <p className="mt-1 text-sm font-medium text-white/50">Track clicks, sales, earnings, referrals, and withdrawals.</p>
           </div>
@@ -199,7 +199,7 @@ export default function CreatorDashboard() {
             variant="outline"
             onClick={handleLogout}
             className="h-10 w-full border-white/10 bg-white/[0.03] text-white hover:bg-white/10 sm:w-auto"
-            aria-label="Log out of creator dashboard"
+            aria-label="Log out of ambassador dashboard"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
@@ -209,14 +209,14 @@ export default function CreatorDashboard() {
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Balance" value={money(creator.balance)} />
           <Metric label="Completed sales" value={creator.totalSales || 0} />
-          <Metric label="Creator earnings" value={money(creator.totalEarnings)} />
+          <Metric label="Ambassador earnings" value={money(creator.totalEarnings)} />
           <Metric label="Link clicks" value={dashboard?.linkClicks || 0} icon={<MousePointerClick className="h-5 w-5 text-yellow-300" />} />
         </section>
 
         {(dashboard?.shopRequests || []).length > 0 && (
           <section className="rounded-3xl border border-yellow-400/20 bg-yellow-400/10 p-4">
             <h2 className="text-xl font-black">Shop requests</h2>
-            <p className="mt-1 text-sm font-medium text-yellow-100/70">Accept a seller request to generate your creator link for that shop.</p>
+            <p className="mt-1 text-sm font-medium text-yellow-100/70">Accept a seller request to generate your ambassador link for that shop.</p>
             <div className="mt-4 grid gap-3">
               {(dashboard?.shopRequests || []).map((request) => (
                 <div key={request.id} className="rounded-2xl border border-yellow-400/20 bg-black/30 p-4">
@@ -297,7 +297,7 @@ export default function CreatorDashboard() {
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-black">Creator analysis</h2>
+              <h2 className="text-xl font-black">Ambassador analysis</h2>
               <div className="grid grid-cols-3 rounded-2xl border border-white/10 bg-black/30 p-1 text-xs font-black">
                 {(['daily', 'weekly', 'monthly'] as AnalysisPeriod[]).map((period) => (
                   <button
@@ -393,7 +393,7 @@ export default function CreatorDashboard() {
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-300" />
-              <h2 className="text-xl font-black">Top creators</h2>
+              <h2 className="text-xl font-black">Top ambassadors</h2>
             </div>
             <div className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10">
               {(dashboard?.leaderboard || []).map((item, index: number) => (

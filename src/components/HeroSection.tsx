@@ -12,7 +12,7 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
         <Link to="/creator/login">
           <Button className="rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-900 shadow-[0_10px_28px_rgba(17,17,17,0.08)] transition-all duration-300 hover:bg-yellow-400 hover:text-black sm:px-5 sm:py-2.5 sm:text-sm">
-            Creator
+            Ambassador
           </Button>
         </Link>
       </div>

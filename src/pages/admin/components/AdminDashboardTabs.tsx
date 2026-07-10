@@ -6,7 +6,7 @@ const ADMIN_TABS = [
   { id: 'withdrawals', label: 'Payouts', color: 'from-green-400 to-emerald-500' },
   { id: 'refunds', label: 'Refunds', color: 'from-red-400 to-rose-500' },
   { id: 'sellers', label: 'Sellers', color: 'from-blue-400 to-cyan-500' },
-  { id: 'creators', label: 'Creators', color: 'from-yellow-300 to-lime-500' },
+  { id: 'creators', label: 'Ambassadors', color: 'from-yellow-300 to-lime-500' },
   { id: 'buyers', label: 'Buyers', color: 'from-purple-400 to-indigo-500' },
   { id: 'clients', label: 'Clients', color: 'from-pink-400 to-fuchsia-500' }
 ];

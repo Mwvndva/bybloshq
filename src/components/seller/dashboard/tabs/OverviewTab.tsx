@@ -23,8 +23,8 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const overviewCards = [
     { label: 'Live products', value: Number(analytics.totalProducts || 0).toLocaleString(), icon: Package },
     { label: 'Order value', value: formatCurrency(analytics.totalSales || 0), icon: ShoppingBag },
-    { label: 'Creator sales', value: formatCurrency(analytics.creatorGeneratedSales || 0), icon: BadgeDollarSign },
-    { label: 'Creators', value: Number(analytics.creatorCount || 0).toLocaleString(), icon: UserRoundCheck }
+    { label: 'Ambassador sales', value: formatCurrency(analytics.creatorGeneratedSales || 0), icon: BadgeDollarSign },
+    { label: 'Ambassadors', value: Number(analytics.creatorCount || 0).toLocaleString(), icon: UserRoundCheck }
   ];
 
   return (
