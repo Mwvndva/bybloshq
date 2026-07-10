@@ -70,6 +70,8 @@ export const PaymentStatusModal = ({
           paymentStatus?: string;
           paymentRecordStatus?: string;
           status?: string;
+          autoLoginToken?: string;
+          failureReason?: string;
         };
         const status = (res.paymentStatus || '').toLowerCase();
         const paymentRecordStatus = (res.paymentRecordStatus || '').toLowerCase();

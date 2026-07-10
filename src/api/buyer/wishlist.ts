@@ -24,6 +24,7 @@ interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
+  status?: string;
 }
 
 export async function getWishlist(maxRetries = 2, retryCount = 0): Promise<WishlistItem[]> {

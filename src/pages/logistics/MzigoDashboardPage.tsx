@@ -523,8 +523,8 @@ const MzigoDashboardPage = () => {
 
   useEffect(() => {
     if (partnerQuery.isError || requestsQuery.isError) {
-      const partnerErr = partnerQuery.error as Record<string, unknown> | null;
-      const requestsErr = requestsQuery.error as Record<string, unknown> | null;
+      const partnerErr = partnerQuery.error as unknown as Record<string, unknown> | null;
+      const requestsErr = requestsQuery.error as unknown as Record<string, unknown> | null;
       const status = (partnerErr?.response as Record<string, unknown>)?.status || (requestsErr?.response as Record<string, unknown>)?.status;
       if (status === 401 || status === 403) {
         clearLogisticsSession();
