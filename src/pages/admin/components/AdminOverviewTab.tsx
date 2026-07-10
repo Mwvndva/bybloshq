@@ -12,28 +12,37 @@ import {
 } from './AdminDashboardCharts';
 
 interface AdminOverviewTabProps {
-  dashboardState: { topShops?: Record<string, unknown>[], sellers?: Record<string, unknown>[], systemStats?: Record<string, unknown> };
+  dashboardState: {
+    analytics?: Record<string, unknown>,
+    topShops?: Record<string, unknown>[],
+    sellers?: Record<string, unknown>[],
+    systemStats?: Record<string, unknown>
+  };
   safeFormatDate: (dateString: string | null | undefined, formatStr?: string) => string;
   onShowSellers: () => void;
 }
 
 export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers }: AdminOverviewTabProps) {
+  const analytics = (dashboardState.analytics ?? {}) as Record<string, unknown>;
+  const asChartData = (value: unknown): Record<string, unknown>[] =>
+    Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+
   const operatingCards = [
     {
       label: 'Open paid orders',
-      value: dashboardState.analytics.activeOrders || 0,
+      value: analytics.activeOrders || 0,
       detail: 'Needs fulfillment or buyer confirmation',
       icon: <Package className="h-4 w-4 text-blue-400" />
     },
     {
       label: 'Pending withdrawals',
-      value: dashboardState.analytics.pendingWithdrawals || 0,
+      value: analytics.pendingWithdrawals || 0,
       detail: 'Needs payout monitoring',
       icon: <WalletCards className="h-4 w-4 text-emerald-400" />
     },
     {
       label: 'Low stock products',
-      value: dashboardState.analytics.lowStockProducts || 0,
+      value: analytics.lowStockProducts || 0,
       detail: 'Inventory attention',
       icon: <AlertTriangle className="h-4 w-4 text-amber-400" />
     }
@@ -58,16 +67,16 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
         ))}
       </div>
 
-      <SalesChart data={dashboardState.analytics.salesTrends || []} />
-      <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
-      <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
-      <GeoDistributionChart data={dashboardState.analytics.geoDistribution || []} />
-      <ProductStatusChart data={dashboardState.analytics.productStatus || []} />
+      <SalesChart data={asChartData(analytics.salesTrends)} />
+      <RevenueChart data={asChartData(analytics.revenueTrends)} />
+      <UserGrowthChart data={asChartData(analytics.userGrowth)} />
+      <GeoDistributionChart data={asChartData(analytics.geoDistribution)} />
+      <ProductStatusChart data={asChartData(analytics.productStatus)} />
 
       <ChartContainer title="Top Shops" description="Highest client conversion" className="col-span-4 lg:col-span-2">
         <div className="space-y-4 h-full flex flex-col justify-center">
           {dashboardState.topShops?.length ? dashboardState.topShops.slice(0, 3).map((shop: Record<string, unknown>, index: number) => (
-            <div key={shop.id} className="flex items-center justify-between p-5 bg-white/[0.03] rounded-[1.5rem] border border-white/5 hover:bg-white/10 transition-all duration-500 group/shop">
+            <div key={String(shop.id)} className="flex items-center justify-between p-5 bg-white/[0.03] rounded-[1.5rem] border border-white/5 hover:bg-white/10 transition-all duration-500 group/shop">
               <div className="flex items-center gap-5">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black italic shadow-inner transition-transform group-hover/shop:scale-110 ${index === 0 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
                   index === 1 ? 'bg-gray-400/20 text-gray-400 border border-gray-400/30' :
@@ -77,12 +86,12 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
                   {index + 1}
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-white tracking-tight">{shop.shopName || shop.name}</p>
-                  <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1 opacity-50">{shop.name}</p>
+                  <p className="text-lg font-bold text-white tracking-tight">{String(shop.shopName || shop.name || '')}</p>
+                  <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1 opacity-50">{String(shop.name || '')}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-black text-white tracking-tighter tabular-nums group-hover/shop:text-yellow-500 transition-colors">{shop.clientCount}</p>
+                <p className="text-3xl font-black text-white tracking-tighter tabular-nums group-hover/shop:text-yellow-500 transition-colors">{String(shop.clientCount ?? '')}</p>
                 <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest opacity-50">Pulse</p>
               </div>
             </div>
@@ -113,26 +122,26 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {dashboardState.sellers.slice(0, 5).map((seller: Record<string, unknown>) => (
-                  <tr key={seller.id} className="hover:bg-white/[0.02] transition-all group">
+                {(dashboardState.sellers ?? []).slice(0, 5).map((seller: Record<string, unknown>) => (
+                  <tr key={String(seller.id)} className="hover:bg-white/[0.02] transition-all group">
                     <td className="px-5 md:px-10 py-4 md:py-6">
                       <div className="flex items-center gap-3 md:gap-5">
                         <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-yellow-500/30 transition-all">
                           <Store className="w-4 h-4 md:w-5 md:h-5 text-gray-500 group-hover:text-yellow-500 transition-all" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm md:text-base font-bold text-white tracking-tight truncate">{seller.name}</p>
-                          <p className="text-[10px] md:text-xs text-gray-500 font-medium italic opacity-60 truncate">{seller.email}</p>
+                          <p className="text-sm md:text-base font-bold text-white tracking-tight truncate">{String(seller.name || '')}</p>
+                          <p className="text-[10px] md:text-xs text-gray-500 font-medium italic opacity-60 truncate">{String(seller.email || '')}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 md:px-10 py-4 md:py-6 text-center hidden sm:table-cell">
                       <Badge className={`px-3 md:px-5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border-none ${seller.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
-                        {seller.status}
+                        {String(seller.status || '')}
                       </Badge>
                     </td>
                     <td className="px-5 md:px-10 py-4 md:py-6 text-right text-[10px] md:text-sm font-bold text-gray-400 tabular-nums">
-                      {safeFormatDate(seller.createdAt)}
+                      {safeFormatDate(seller.createdAt as string)}
                     </td>
                   </tr>
                 ))}
@@ -144,5 +153,3 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
     </div>
   );
 }
-
-
