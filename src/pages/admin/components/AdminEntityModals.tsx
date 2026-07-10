@@ -38,6 +38,51 @@ interface AdminEntityModalsProps {
   inspectionSessionId: string;
 }
 
+// Display-only views over the dynamic admin entity payloads.
+interface SellerDetail {
+  shop_name?: string;
+  name?: string;
+  created_at?: string;
+  banner_image?: string;
+  avatar_url?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  location?: string;
+  balance?: string | number;
+  slug?: string;
+  instagram_link?: string;
+  facebook_link?: string;
+  tiktok_link?: string;
+  bio?: string;
+  client_count?: number;
+  metrics?: {
+    wishlistCount?: number;
+    totalProducts?: number;
+    totalSales?: number;
+    totalCommission?: number;
+    netSales?: number;
+    totalOrders?: number;
+  };
+  recentOrders?: Array<{
+    id?: string | number;
+    orderNumber?: string;
+    buyerName?: string;
+    totalAmount?: number;
+    status?: string;
+  }>;
+}
+
+interface BuyerDetail {
+  name?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  location?: string;
+  status?: string;
+  createdAt?: string;
+}
+
 export function AdminEntityModals({
   selectedSeller,
   isLoadingSeller,
@@ -48,12 +93,14 @@ export function AdminEntityModals({
   safeFormatDate,
   inspectionSessionId,
 }: AdminEntityModalsProps) {
+  const seller = selectedSeller as SellerDetail | null;
+  const buyer = selectedBuyer as BuyerDetail | null;
   return (
     <>
             {/* Modals Layer */}
             <div className="z-[100]">
               {/* Seller Details Modal */}
-              {selectedSeller && (
+              {seller && (
                 <div
                   className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]"
                   role="dialog"
@@ -67,12 +114,12 @@ export function AdminEntityModals({
                           <Store className="h-7 w-7 text-yellow-500" />
                         </div>
                         <div>
-                          <h3 id="seller-modal-title" className="text-2xl font-black text-white tracking-tight">{selectedSeller.shop_name || selectedSeller.name}</h3>
+                          <h3 id="seller-modal-title" className="text-2xl font-black text-white tracking-tight">{seller.shop_name || seller.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge className="bg-yellow-500/10 text-yellow-500 border-none px-2 py-0.5 text-[10px] font-black uppercase tracking-widest">Verified Merchant</Badge>
                             <span className="text-gray-500 text-xs font-medium flex items-center gap-1.5">
                               <Calendar className="h-3 w-3" />
-                              Joined {selectedSeller.created_at ? format(new Date(selectedSeller.created_at), 'MMMM dd, yyyy') : 'N/A'}
+                              Joined {seller.created_at ? format(new Date(seller.created_at), 'MMMM dd, yyyy') : 'N/A'}
                             </span>
                           </div>
                         </div>
@@ -89,19 +136,19 @@ export function AdminEntityModals({
                         </div>
                       ) : (
                         <>
-                          {selectedSeller.banner_image && (
+                          {seller.banner_image && (
                             <div className="w-full h-32 md:h-48 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-white/10 mb-8 relative group">
-                              <img src={selectedSeller.banner_image} alt={`${selectedSeller.shop_name || selectedSeller.name} branding`} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
+                              <img src={seller.banner_image} alt={`${seller.shop_name || seller.name} branding`} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
                               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent" />
                               <div className="absolute bottom-4 left-6 flex items-end gap-5">
-                                {selectedSeller.avatar_url && (
+                                {seller.avatar_url && (
                                   <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-[1.5rem] border-2 border-white/10 overflow-hidden shadow-2xl bg-[#0A0A0A]">
-                                    <img src={selectedSeller.avatar_url} alt={`${selectedSeller.shop_name || selectedSeller.name} profile`} className="w-full h-full object-cover" />
+                                    <img src={seller.avatar_url} alt={`${seller.shop_name || seller.name} profile`} className="w-full h-full object-cover" />
                                   </div>
                                 )}
                                 <div className="mb-2">
                                   <Badge className="bg-yellow-500 text-black font-black text-[9px] tracking-widest px-3 py-1 mb-2">OFFICIAL STORE</Badge>
-                                  <h4 className="text-xl font-black text-white tracking-tighter">{selectedSeller.shop_name}</h4>
+                                  <h4 className="text-xl font-black text-white tracking-tighter">{seller.shop_name}</h4>
                                 </div>
                               </div>
                             </div>
@@ -116,18 +163,18 @@ export function AdminEntityModals({
                               </h4>
                               <div className="space-y-4">
                                 {[
-                                  { label: 'Full Legal Name', value: selectedSeller.name, icon: <User className="h-3.5 w-3.5" /> },
-                                  { label: 'Email Protocol', value: selectedSeller.email, icon: <Mail className="h-3.5 w-3.5" /> },
-                                  { label: 'Secure Line', value: selectedSeller.phone, icon: <Activity className="h-3.5 w-3.5" /> },
-                                  { label: 'Operating Hub', value: `${selectedSeller.city}${selectedSeller.location ? `, ${selectedSeller.location}` : ''}`, icon: <MapPin className="h-3.5 w-3.5" /> },
-                                  { label: 'Merchant Balance', value: `KSh ${parseFloat(selectedSeller.balance || 0).toLocaleString()}`, highlight: true, icon: <DollarSign className="h-3.5 w-3.5" /> }
+                                  { label: 'Full Legal Name', value: seller.name, icon: <User className="h-3.5 w-3.5" /> },
+                                  { label: 'Email Protocol', value: seller.email, icon: <Mail className="h-3.5 w-3.5" /> },
+                                  { label: 'Secure Line', value: seller.phone, icon: <Activity className="h-3.5 w-3.5" /> },
+                                  { label: 'Operating Hub', value: `${seller.city}${seller.location ? `, ${seller.location}` : ''}`, icon: <MapPin className="h-3.5 w-3.5" /> },
+                                  { label: 'Merchant Balance', value: `KSh ${parseFloat(String(seller.balance || 0)).toLocaleString()}`, highlight: true, icon: <DollarSign className="h-3.5 w-3.5" /> }
                                 ].map((item, i) => (
                                   <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0 group/item">
                                     <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                       <span className="opacity-40 group-hover/item:opacity-100 transition-opacity">{item.icon}</span>
                                       {item.label}
                                     </span>
-                                    <span className={`text-sm font-bold ${(item as Record<string, unknown>).highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
+                                    <span className={`text-sm font-bold ${(item as { highlight?: boolean }).highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
                                   </div>
                                 ))}
                               </div>
@@ -146,21 +193,21 @@ export function AdminEntityModals({
                                     Public Shop Link
                                   </span>
                                   <a
-                                    href={`https://bybloshq.space/${selectedSeller.slug || selectedSeller.shop_name?.toLowerCase()}`}
+                                    href={`https://bybloshq.space/${seller.slug || seller.shop_name?.toLowerCase()}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="block p-3 rounded-xl bg-white/5 border border-white/10 text-blue-400 font-bold text-xs truncate hover:bg-blue-500/10 hover:border-blue-500/20 transition-all flex items-center justify-between group/link"
                                   >
-                                    /{selectedSeller.slug || selectedSeller.shop_name?.toLowerCase()}
+                                    /{seller.slug || seller.shop_name?.toLowerCase()}
                                     <ArrowUpRight className="h-4 w-4 opacity-0 group-hover/link:opacity-100 transition-all" />
                                   </a>
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-2 pt-2">
                                   {[
-                                    { link: selectedSeller.instagram_link, icon: <Instagram className="h-5 w-5" />, color: 'hover:text-pink-500', label: 'Instagram' },
-                                    { link: selectedSeller.facebook_link, icon: <Facebook className="h-5 w-5" />, color: 'hover:text-blue-600', label: 'Facebook' },
-                                    { link: selectedSeller.tiktok_link, icon: <Music2 className="h-5 w-5" />, color: 'hover:text-white', label: 'TikTok' }
+                                    { link: seller.instagram_link, icon: <Instagram className="h-5 w-5" />, color: 'hover:text-pink-500', label: 'Instagram' },
+                                    { link: seller.facebook_link, icon: <Facebook className="h-5 w-5" />, color: 'hover:text-blue-600', label: 'Facebook' },
+                                    { link: seller.tiktok_link, icon: <Music2 className="h-5 w-5" />, color: 'hover:text-white', label: 'TikTok' }
                                   ].map((social, i) => (
                                     <a
                                       key={i}
@@ -177,7 +224,7 @@ export function AdminEntityModals({
                                 <div className="pt-2">
                                   <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Merchant Bio</span>
                                   <p className="text-xs text-gray-400 leading-relaxed font-medium bg-white/5 rounded-xl p-3 border border-white/5 min-h-[60px]">
-                                    {selectedSeller.bio || 'Enterprise-grade merchant specializing in premium logistics and high-quality products.'}
+                                    {seller.bio || 'Enterprise-grade merchant specializing in premium logistics and high-quality products.'}
                                   </p>
                                 </div>
                               </div>
@@ -198,7 +245,7 @@ export function AdminEntityModals({
                                       </div>
                                       <div>
                                         <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Active Clients</p>
-                                        <p className="text-2xl font-black text-white">{selectedSeller.client_count || 0}</p>
+                                        <p className="text-2xl font-black text-white">{seller.client_count || 0}</p>
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-3">
@@ -207,7 +254,7 @@ export function AdminEntityModals({
                                       </div>
                                       <div>
                                         <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Wishlist Hits</p>
-                                        <p className="text-2xl font-black text-white">{selectedSeller.metrics?.wishlistCount || 0}</p>
+                                        <p className="text-2xl font-black text-white">{seller.metrics?.wishlistCount || 0}</p>
                                       </div>
                                     </div>
                                   </div>
@@ -218,7 +265,7 @@ export function AdminEntityModals({
                                       </div>
                                       <div>
                                         <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Inventory</p>
-                                        <p className="text-2xl font-black text-white">{selectedSeller.metrics?.totalProducts || 0}</p>
+                                        <p className="text-2xl font-black text-white">{seller.metrics?.totalProducts || 0}</p>
                                       </div>
                                     </div>
                                     <div className="h-10 w-32 bg-white/5 rounded-full border border-white/10 flex items-center justify-center">
@@ -232,10 +279,10 @@ export function AdminEntityModals({
                             {/* Section 4: Performance Analytics */}
                             <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
                               {[
-                                { label: 'Total Volume', value: selectedSeller.metrics?.totalSales, color: 'text-green-400', icon: <DollarSign className="h-4 w-4" /> },
-                                { label: 'Platform Revenue', value: selectedSeller.metrics?.totalCommission, color: 'text-yellow-400', icon: <Percent className="h-4 w-4" /> },
-                                { label: 'Merchant Net', value: selectedSeller.metrics?.netSales, color: 'text-blue-400', icon: <TrendingUp className="h-4 w-4" /> },
-                                { label: 'Order Chain', value: selectedSeller.metrics?.totalOrders, color: 'text-purple-400', icon: <ShoppingCart className="h-4 w-4" />, noCurrency: true }
+                                { label: 'Total Volume', value: seller.metrics?.totalSales, color: 'text-green-400', icon: <DollarSign className="h-4 w-4" /> },
+                                { label: 'Platform Revenue', value: seller.metrics?.totalCommission, color: 'text-yellow-400', icon: <Percent className="h-4 w-4" /> },
+                                { label: 'Merchant Net', value: seller.metrics?.netSales, color: 'text-blue-400', icon: <TrendingUp className="h-4 w-4" /> },
+                                { label: 'Order Chain', value: seller.metrics?.totalOrders, color: 'text-purple-400', icon: <ShoppingCart className="h-4 w-4" />, noCurrency: true }
                               ].map((met, i) => (
                                 <div key={i} className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 hover:bg-white/[0.05] transition-all group/met">
                                   <div className={`h-8 w-8 rounded-xl bg-white/5 flex items-center justify-center ${met.color} mb-3 shadow-inner group-hover/met:scale-110 transition-transform`}>{met.icon}</div>
@@ -270,8 +317,8 @@ export function AdminEntityModals({
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                  {selectedSeller.recentOrders?.map((order: Record<string, unknown>) => (
-                                    <tr key={order.id} className="text-sm hover:bg-white/[0.02] transition-colors group/row">
+                                  {seller.recentOrders?.map((order) => (
+                                    <tr key={String(order.id)} className="text-sm hover:bg-white/[0.02] transition-colors group/row">
                                       <td className="px-8 py-6">
                                         <code className="text-yellow-500 font-bold bg-yellow-500/5 px-3 py-1.5 rounded-lg border border-yellow-500/10 text-[10px]">
                                           #{order.orderNumber || String(order.id).slice(0, 12).toUpperCase()}
@@ -300,7 +347,7 @@ export function AdminEntityModals({
                                       </td>
                                     </tr>
                                   ))}
-                                  {(!selectedSeller.recentOrders || selectedSeller.recentOrders.length === 0) && (
+                                  {(!seller.recentOrders || seller.recentOrders.length === 0) && (
                                     <tr>
                                       <td colSpan={4} className="px-8 py-12 text-center text-gray-500 font-black uppercase tracking-widest text-xs opacity-50">
                                         No recent operational data found
@@ -326,7 +373,7 @@ export function AdminEntityModals({
               )}
 
               {/* Buyer Details Modal */}
-              {selectedBuyer && (
+              {buyer && (
                 <div
                   className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]"
                   role="dialog"
@@ -340,7 +387,7 @@ export function AdminEntityModals({
                           <UserCircle className="h-5 w-5 md:h-7 md:w-7 text-cyan-500" />
                         </div>
                         <div>
-                          <h3 id="buyer-modal-title" className="text-xl md:text-2xl font-black text-white tracking-tight">{selectedBuyer.name}</h3>
+                          <h3 id="buyer-modal-title" className="text-xl md:text-2xl font-black text-white tracking-tight">{buyer.name}</h3>
                           <p className="text-xs md:text-sm text-gray-400 font-medium">Customer Intelligence Report</p>
                         </div>
                       </div>
@@ -360,13 +407,13 @@ export function AdminEntityModals({
                             <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Identity Protocol</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                               {[
-                                { label: 'Full Legal Name', value: selectedBuyer.name },
-                                { label: 'Primary Communications', value: selectedBuyer.email },
-                                { label: 'Mobile Link', value: selectedBuyer.phone },
-                                { label: 'Primary City', value: selectedBuyer.city },
-                                { label: 'Last Known Location', value: selectedBuyer.location },
-                                { label: 'Account Status', value: selectedBuyer.status, isBadge: true },
-                                { label: 'Joined Network', value: safeFormatDate(selectedBuyer.createdAt) }
+                                { label: 'Full Legal Name', value: buyer.name },
+                                { label: 'Primary Communications', value: buyer.email },
+                                { label: 'Mobile Link', value: buyer.phone },
+                                { label: 'Primary City', value: buyer.city },
+                                { label: 'Last Known Location', value: buyer.location },
+                                { label: 'Account Status', value: buyer.status, isBadge: true },
+                                { label: 'Joined Network', value: safeFormatDate(buyer.createdAt) }
                               ].map((info, i) => (
                                 <div key={i} className="flex justify-between items-center py-2 border-b border-white/5">
                                   <span className="text-gray-500 text-sm font-medium">{info.label}</span>
