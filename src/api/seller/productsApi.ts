@@ -13,13 +13,14 @@ export const transformProduct = (product: unknown): ApiSellerProduct => {
       const parsed = parseFloat(pObj.price);
       price = isNaN(parsed) ? 0 : parsed;
     } else if (typeof pObj.price === 'object') {
-      const numericValue = pObj.price.value || pObj.price.amount || pObj.price.price || 0;
+      const priceObj = pObj.price as Record<string, unknown>;
+      const numericValue = priceObj.value || priceObj.amount || priceObj.price || 0;
       price = typeof numericValue === 'number' ? numericValue : 0;
     }
   }
 
-  return {
-    ...product,
+  const transformed: Record<string, unknown> = {
+    ...pObj,
     price,
     image_url: pObj.image_url || pObj.imageUrl,
     sellerId: pObj.sellerId || pObj.seller_id,
@@ -34,6 +35,7 @@ export const transformProduct = (product: unknown): ApiSellerProduct => {
     isSold: pObj.isSold || pObj.is_sold || pObj.status === 'sold',
     status: pObj.status || (pObj.isSold || pObj.is_sold ? 'sold' : 'available')
   };
+  return transformed as unknown as ApiSellerProduct;
 };
 
 interface ProductsResponse {
@@ -100,7 +102,7 @@ export const sellerProductsApi = {
   getProduct: async (id: string): Promise<ApiSellerProduct> => {
     try {
       const response = await sellerApiInstance.get<ProductResponse>(`/sellers/products/${id}`);
-      const productData = response.data?.data?.product;
+      const productData = (response.data?.data as Record<string, unknown>)?.product;
       if (!productData) {
         throw new Error('ApiSellerProduct not found');
       }
