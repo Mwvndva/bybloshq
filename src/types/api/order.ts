@@ -8,8 +8,10 @@ export interface ApiOrderItem {
   quantity: number;
   imageUrl: string;
   productType?: 'physical' | 'digital' | 'service';
+  product_type?: 'physical' | 'digital' | 'service';
   subtotal: number;
   isDigital?: boolean;
+  is_digital?: boolean;
 }
 
 export interface ApiOrderCustomer {

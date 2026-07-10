@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUpdateProductMutation, useUpdateInventoryMutation, sellerProductQuery } from '@/hooks/seller/useSellerProducts';
-import type { ApiSellerProduct } from '@/types';
+import type { ApiSellerProduct, Product } from '@/types';
 import { ProductDeleteDialog } from './products-list/ProductDeleteDialog';
 import { ProductEditDialog, type ProductEditFormData } from './products-list/ProductEditDialog';
 import { ProductInventoryDialog } from './products-list/ProductInventoryDialog';

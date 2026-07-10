@@ -55,6 +55,12 @@ export interface ApiSellerProduct {
   importDays?: number | null;
   import_note?: string | null;
   importNote?: string | null;
+  track_inventory?: boolean;
+  quantity?: number | null;
+  low_stock_threshold?: number | null;
+  isDigital?: boolean;
+  serviceOptions?: { location_type?: string };
+  serviceLocations?: unknown;
 }
 
 
