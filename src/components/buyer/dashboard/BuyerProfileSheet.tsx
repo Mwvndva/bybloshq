@@ -78,7 +78,8 @@ export function BuyerProfileSheet({
   onToggleEdit,
   onWhatsappNumberChange
 }: BuyerProfileSheetProps) {
-  const profileInitial = displayValue(user?.fullName || user?.email).slice(0, 1).toUpperCase();
+  const buyerUser = user as import("@/features/auth/types/authTypes").BuyerProfile | null;
+  const profileInitial = displayValue(buyerUser?.fullName || buyerUser?.email).slice(0, 1).toUpperCase();
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -119,15 +120,15 @@ export function BuyerProfileSheet({
             </div>
 
             <div className="grid gap-3">
-              <ProfileDetail icon={UserRound} label="Full name" value={user?.fullName} />
-              <ProfileDetail icon={Mail} label="Email address" value={user?.email} />
+              <ProfileDetail icon={UserRound} label="Full name" value={buyerUser?.fullName} />
+              <ProfileDetail icon={Mail} label="Email address" value={buyerUser?.email} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <ProfileDetail icon={MapPin} label="City" value={user?.city} />
-                <ProfileDetail icon={MapPin} label="Area" value={user?.location} />
+                <ProfileDetail icon={MapPin} label="City" value={buyerUser?.city} />
+                <ProfileDetail icon={MapPin} label="Area" value={buyerUser?.location} />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <ProfileDetail icon={Phone} label="Mobile payment" value={user?.mobilePayment} />
-                <ProfileDetail icon={MessageCircle} label="WhatsApp" value={user?.whatsappNumber} />
+                <ProfileDetail icon={Phone} label="Mobile payment" value={buyerUser?.mobilePayment} />
+                <ProfileDetail icon={MessageCircle} label="WhatsApp" value={buyerUser?.whatsappNumber} />
               </div>
             </div>
           </section>
