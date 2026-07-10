@@ -45,7 +45,7 @@ import { OrderLogisticsTracking } from '../orders/OrderLogisticsTracking';
 
 const hasBuyerPaidDoorDelivery = (order?: ApiOrder | null) => {
     if (!order) return false;
-    const delivery = order.metadata?.delivery || {};
+    const delivery = (order.metadata?.delivery || {}) as Record<string, unknown>;
     return delivery.doorDelivery === true
         || delivery.door_delivery === true
         || delivery.deliveryMode === 'DOOR_DELIVERY'
@@ -533,7 +533,7 @@ export default function SellerOrdersSection() {
                             const isPaid = ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '');
                             const effectiveFulfillmentType = getEffectiveFulfillmentType(order);
                             const isPhysicalOnline = isPhysicalOrder && effectiveFulfillmentType === 'COURIER';
-                            const sellerHandoff = order.metadata?.seller_handoff || {};
+                            const sellerHandoff = (order.metadata?.seller_handoff || {}) as Record<string, unknown>;
                             const pickupTracking = order.logistics?.pickupLeg;
                             const pickupIsActive = !!pickupTracking && !['failed', 'cancelled'].includes(String(pickupTracking.status || '').toLowerCase());
                             const handoffStatus = String(sellerHandoff.status || '').toLowerCase();
@@ -653,7 +653,7 @@ export default function SellerOrdersSection() {
                                                     const instruction = getOrderInstruction({
                                                         status: order.status,
                                                         userRole: 'seller',
-                                                        orderType: productType.toUpperCase(),
+                                                        orderType: String(productType).toUpperCase(),
                                                         fulfillmentType: getEffectiveFulfillmentType(order),
                                                     });
                                                     if (!instruction) return null;
@@ -705,19 +705,19 @@ export default function SellerOrdersSection() {
                                                             <div className="bg-black/60 p-2 rounded border border-purple-400/20">
                                                                 <p className="text-purple-200 text-xs font-medium mb-1">Date & Time</p>
                                                                 <p className="font-semibold text-white">
-                                                                    {order.metadata.booking_date ? formatDate(order.metadata.booking_date) : 'N/A'}
-                                                                    {order.metadata.booking_time && <span className="text-white/70 font-normal"> at {order.metadata.booking_time}</span>}
+                                                                    {order.metadata.booking_date ? formatDate(order.metadata.booking_date as string) : 'N/A'}
+                                                                    {order.metadata.booking_time && <span className="text-white/70 font-normal"> at {String(order.metadata.booking_time)}</span>}
                                                                 </p>
                                                             </div>
                                                             <div className="bg-black/60 p-2 rounded border border-purple-400/20">
                                                                 <p className="text-purple-200 text-xs font-medium mb-1">Location</p>
                                                                 <div className="font-semibold text-white break-words">
-                                                                    {order.metadata.buyer_location ? (
+                                                                    {(order.metadata.buyer_location as { fullAddress?: string; latitude?: number; longitude?: number }) ? (
                                                                         <div className="space-y-1">
-                                                                            <p>{order.metadata.buyer_location.fullAddress || 'Buyer Coordinates Provided'}</p>
-                                                                            {order.metadata.buyer_location.latitude && order.metadata.buyer_location.longitude && (
+                                                                            <p>{(order.metadata.buyer_location as { fullAddress?: string; latitude?: number; longitude?: number }).fullAddress || 'Buyer Coordinates Provided'}</p>
+                                                                            {(order.metadata.buyer_location as { fullAddress?: string; latitude?: number; longitude?: number }).latitude && (order.metadata.buyer_location as { fullAddress?: string; latitude?: number; longitude?: number }).longitude && (
                                                                                 <a
-                                                                                    href={`https://www.google.com/maps?q=${order.metadata.buyer_location.latitude},${order.metadata.buyer_location.longitude}`}
+                                                                                    href={`https://www.google.com/maps?q=${(order.metadata.buyer_location as { fullAddress?: string; latitude?: number; longitude?: number }).latitude},${(order.metadata.buyer_location as { fullAddress?: string; latitude?: number; longitude?: number }).longitude}`}
                                                                                     target="_blank"
                                                                                     rel="noopener noreferrer"
                                                                                     className="text-xs text-purple-200 hover:text-yellow-200 underline block"
@@ -727,7 +727,7 @@ export default function SellerOrdersSection() {
                                                                             )}
                                                                         </div>
                                                                     ) : (
-                                                                        <p>{order.metadata.service_location || 'Not specified'}</p>
+                                                                        <p>{String(order.metadata.service_location || 'Not specified')}</p>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -736,7 +736,7 @@ export default function SellerOrdersSection() {
                                                             <div className="mt-3 bg-black/60 p-2 rounded border border-purple-400/20">
                                                                 <p className="text-purple-200 text-xs font-medium mb-1">Special Requirements</p>
                                                                 <p className="text-sm text-white break-words">
-                                                                    {order.metadata.service_requirements}
+                                                                    {String(order.metadata.service_requirements || '')}
                                                                 </p>
                                                             </div>
                                                         )}

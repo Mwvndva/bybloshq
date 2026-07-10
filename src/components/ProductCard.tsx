@@ -44,7 +44,7 @@ const normalizeProductImages = (product: Product): string[] => {
 
   return [
     product.image_url,
-    product.imageUrl,
+    (product as { imageUrl?: string }).imageUrl,
     ...extraImages
   ]
     .filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
@@ -336,7 +336,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   ) => {
     try {
       // FIX (Task 5): Merge booking coordinates into buyer profile if available
-      const activeBooking = explicitBookingData || bookingData;
+      const activeBooking = (explicitBookingData || bookingData) as ({ date: Date; time: string; location: string; locationType?: string; serviceRequirements?: string; buyerLocation?: { lat?: number; lng?: number; address?: string } }) | null;
       const enrichedBuyerInfo = {
         ...buyerInfo,
         latitude: activeBooking?.buyerLocation?.lat, // Profile still uses latitude/longitude for legacy reasons
@@ -345,7 +345,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
       // If it's a new user (not just updating email for existing), save them first
       if (!isExistingUserUpdate && !shouldSkipSave) {
-        const saveResult = await saveBuyerInfoMutation.mutateAsync(enrichedBuyerInfo);
+        const saveResult = await saveBuyerInfoMutation.mutateAsync(enrichedBuyerInfo as BuyerInfoData);
 
         if (saveResult.requiresLogin) {
           // Save current location for redirect after login
@@ -358,13 +358,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         // Proceed with new ID (or let backend infer from cookie)
         await runWithLock(async () => {
           // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(enrichedBuyerInfo, explicitBookingData, saveResult.buyer?.id);
+          await executePayment(enrichedBuyerInfo as { fullName: string; email: string; mobilePayment: string; city?: string; location?: string }, explicitBookingData, saveResult.buyer?.id);
         });
       } else {
         // Existing user (skipped save) -> Proceed using backend lookup
         await runWithLock(async () => {
           // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(enrichedBuyerInfo, explicitBookingData);
+          await executePayment(enrichedBuyerInfo as { fullName: string; email: string; mobilePayment: string; city?: string; location?: string }, explicitBookingData);
         });
       }
 
@@ -402,7 +402,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
     setIsProcessingPurchase(true);
     try {
-      const activeBooking = bookingDetails || bookingData;
+      const activeBooking = (bookingDetails || bookingData) as ({ date: Date; time: string; location: string; locationType?: string; serviceRequirements?: string; buyerLocation?: { lat?: number; lng?: number; address?: string } }) | null;
       const doorDeliverySelection = isPhysical ? doorDeliverySelectionRef.current : null;
       console.log('[PAYLOAD-DEBUG] Outgoing Payment Payload:', {
         buyerDetails,
@@ -430,8 +430,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         : null;
       const cityLocationFallback = buyerDetails.city && buyerDetails.location
         ? toBuyerLocationPayload(`${buyerDetails.city}, ${buyerDetails.location}`, {
-          lat: (buyerDetails as Record<string, unknown>).latitude,
-          lng: (buyerDetails as Record<string, unknown>).longitude
+          lat: (buyerDetails as Record<string, unknown>).latitude as number | undefined,
+          lng: (buyerDetails as Record<string, unknown>).longitude as number | undefined
         })
         : null;
 
@@ -549,9 +549,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         });
 
         // Trigger Payment Status Modal (FIX 5)
-        const orderId = data.data?.orderId;
-        const orderNumber = data.data?.orderNumber;
-        const paymentReference = data.data?.paymentId || data.data?.reference || data.data?.orderId;
+        const resultData = (data.data ?? {}) as { orderId?: string; orderNumber?: string; paymentId?: string; reference?: string };
+        const orderId = resultData.orderId;
+        const orderNumber = resultData.orderNumber;
+        const paymentReference = resultData.paymentId || resultData.reference || resultData.orderId;
 
         console.log('[PAYMENT-DEBUG] Initiation Result:', { orderId, orderNumber, paymentReference });
 
@@ -573,7 +574,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
           setIsProcessingPurchase(false);
         }
       } else {
-        throw new Error(data.message);
+        throw new Error(String(data.message ?? 'Payment failed'));
       }
 
     } catch (error) {
@@ -736,7 +737,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         onPaymentModalClose={() => setPaymentModalData(prev => ({ ...prev, isOpen: false }))}
         onPhoneSubmit={handlePhoneSubmit}
         onBuyerInfoSubmit={async (buyerInfo, skipSave) => {
-          await handleBuyerInfoSubmit(buyerInfo, null, skipSave);
+          await handleBuyerInfoSubmit(buyerInfo as unknown as Record<string, unknown>, null, skipSave);
         }}
         onBookingConfirm={handleBookingConfirm}
       />
