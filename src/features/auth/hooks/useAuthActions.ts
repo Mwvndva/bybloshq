@@ -98,7 +98,7 @@ export function useAuthActions({
 
       setUser({
         role,
-        profile: profileData,
+        profile: profileData as UserProfile,
         isAuthenticated: true
       });
 
@@ -157,7 +157,7 @@ export function useAuthActions({
 
       setUser({
         role,
-        profile: profileData,
+        profile: profileData as UserProfile,
         isAuthenticated: true
       });
 
@@ -325,7 +325,7 @@ export function useAuthActions({
 
       setUser({
         role: newRole,
-        profile: profileData,
+        profile: profileData as UserProfile,
         isAuthenticated: true
       });
 
@@ -420,7 +420,7 @@ export function useAuthActions({
 
     setUser({
       role,
-      profile: profileData,
+      profile: profileData as UserProfile,
       isAuthenticated: true
     });
     void registerNativePushNotifications(role);

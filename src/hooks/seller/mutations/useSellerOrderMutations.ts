@@ -2,18 +2,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { sellerApi } from '@/api/seller';
 import { sellerQueryKeys } from '@/api/queryKeys';
 import { toast } from 'sonner';
-import type { OrderStatus } from '@/types/api/order';
+import type { OrderStatus } from '@/types';
 
 export function useQuotePickupMutation() {
   return useMutation({
     mutationFn: (args: { orderId: string; phone: string; address: string; lat: number | null; lng: number | null }) =>
-      sellerApi.quotePickup(args.orderId, {
-        phone: args.phone,
-        pickupLocation: {
-          address: args.address,
-          lat: args.lat,
-          lng: args.lng
-        }
+      sellerApi.quotePickup({
+        address: args.address,
+        latitude: args.lat ?? 0,
+        longitude: args.lng ?? 0
       }),
   });
 }
@@ -23,13 +20,12 @@ export function useRequestPickupMutation() {
   return useMutation({
     mutationFn: (args: { orderId: string; phone: string; address: string; lat: number | null; lng: number | null; quote: unknown }) =>
       sellerApi.requestPickup(args.orderId, {
-        phone: args.phone,
+        mobilePayment: args.phone,
         pickupLocation: {
           address: args.address,
-          lat: args.lat,
-          lng: args.lng
-        },
-        quote: args.quote
+          latitude: args.lat ?? 0,
+          longitude: args.lng ?? 0
+        }
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.orders() });

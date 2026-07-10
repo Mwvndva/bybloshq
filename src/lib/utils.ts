@@ -128,7 +128,7 @@ export function decodeJwt(token: string): unknown {
 }
 
 export function isTokenExpired(token: string): boolean {
-  const decoded = decodeJwt(token);
+  const decoded = decodeJwt(token) as { exp?: number } | null;
   if (!decoded || !decoded.exp) return true;
 
   const currentTime = Date.now() / 1000;
@@ -175,7 +175,7 @@ export function isSellerShopless(input: unknown): boolean {
   if (!input) return true;
 
   // 1. Identify the core seller data (prioritize nested seller object)
-  const seller = input.seller || input;
+  const seller = ((input as Record<string, unknown>).seller || input) as Record<string, unknown>;
 
   // 2. Extract coordinates and address (Strict Backend Parity)
   const latValue = seller.latitude ?? seller.lat;
