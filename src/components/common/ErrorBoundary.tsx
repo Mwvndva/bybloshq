@@ -173,7 +173,7 @@ export class ErrorBoundary extends Component<Props, State> {
  * into ChunkErrorBoundary.
  */
 export function RootErrorElement() {
-  const error = useRouteError() as unknown;
+  const error = useRouteError() as { message?: string };
 
   const isChunk =
     error?.message?.includes('Failed to fetch dynamically imported module') ||

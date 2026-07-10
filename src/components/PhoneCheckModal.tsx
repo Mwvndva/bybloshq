@@ -137,7 +137,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
           },
           signal: controller.signal
         });
-        const quote = response?.data;
+        const quote = (response as Record<string, unknown>)?.data;
         const feeAmount = Number(quote?.feeAmount || 0);
         setDeliveryQuote({
           feeAmount,
@@ -149,7 +149,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       } catch (quoteError: unknown) {
         if ((quoteError as Record<string, unknown>)?.name !== 'CanceledError' && (quoteError as Record<string, unknown>)?.code !== 'ERR_CANCELED') {
           setDeliveryQuote(null);
-          setQuoteError((((quoteError as Record<string, unknown>)?.response as Record<string, unknown>)?.data as Record<string, unknown>)?.error || (quoteError as Record<string, unknown>)?.message || 'Could not calculate delivery fee');
+          setQuoteError(String((((quoteError as Record<string, unknown>)?.response as Record<string, unknown>)?.data as Record<string, unknown>)?.error || (quoteError as Record<string, unknown>)?.message || 'Could not calculate delivery fee'));
         }
       } finally {
         if (!controller.signal.aborted) {

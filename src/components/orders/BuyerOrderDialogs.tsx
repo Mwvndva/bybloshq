@@ -217,7 +217,7 @@ export function BuyerOrderDialogs({
                     </p>
                   </div>
                   <span className="text-2xl font-bold text-emerald-200 text-right">
-                    {formatOrderCurrency((selectedOrderForDetails as Record<string, unknown>).total_amount as number || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
+                    {formatOrderCurrency((selectedOrderForDetails as unknown as Record<string, unknown>).total_amount as number || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
                   </span>
                 </div>
 

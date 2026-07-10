@@ -55,7 +55,7 @@ export default function PaymentSuccess() {
         setOrderReference(reference);
 
         if (paymentData.autoLoginToken) {
-          autoLoginMutation.mutateAsync(paymentData.autoLoginToken).catch((loginErr) => {
+          autoLoginMutation.mutateAsync(paymentData.autoLoginToken as string).catch((loginErr) => {
             console.warn('[PAYMENT-SUCCESS] Auto-login failed:', loginErr);
           });
         }

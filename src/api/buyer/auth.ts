@@ -87,7 +87,7 @@ export async function register(data: RegisterData): Promise<LoginResponse> {
       confirmPassword: data.confirmPassword,
       city: data.city,
       location: data.location,
-      termsAccepted: (data as Record<string, unknown>).termsAccepted === true
+      termsAccepted: (data as unknown as Record<string, unknown>).termsAccepted === true
     };
 
     const response = await buyerApiInstance.post<RegisterResponse>('/buyers/register', payload);

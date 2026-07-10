@@ -1,6 +1,9 @@
 import type { ApiPublicSeller } from '@/types/api/seller';
 
-export const getShopId = (shop: ApiPublicSeller) => String(shop?.id || shop?.sellerId || shop?.seller_id || '');
+export const getShopId = (shop: ApiPublicSeller) => {
+  const s = shop as unknown as Record<string, unknown>;
+  return String(s?.id || s?.sellerId || s?.seller_id || '');
+};
 
 export const updateSellerClientCount = (seller: ApiPublicSeller, clientCount: number) => ({
   ...seller,

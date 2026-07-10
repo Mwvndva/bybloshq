@@ -59,7 +59,7 @@ export interface ApiSellerProduct {
   quantity?: number | null;
   low_stock_threshold?: number | null;
   isDigital?: boolean;
-  serviceOptions?: { location_type?: string };
+  serviceOptions?: { location_type?: string; price_type?: string };
   serviceLocations?: unknown;
 }
 

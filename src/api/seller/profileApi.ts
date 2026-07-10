@@ -207,7 +207,7 @@ export const sellerProfileApi = {
   getProfile: async (): Promise<ApiSeller> => {
     try {
       const response = await sellerApiInstance.get<SellerResponse>('/sellers/profile');
-      const profileData = response.data?.data?.seller;
+      const profileData = (response.data?.data as Record<string, unknown>)?.seller;
       if (!profileData) {
         throw new Error('No profile data received');
       }

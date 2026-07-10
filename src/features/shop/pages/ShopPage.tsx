@@ -156,7 +156,7 @@ const ShopPage = () => {
           status: p.status || 'available',
           createdAt: p.createdAt || new Date().toISOString(),
           updatedAt: p.updatedAt || new Date().toISOString(),
-          aesthetic: isAesthetic((p as Record<string, unknown>).aesthetic as string) ? ((p as Record<string, unknown>).aesthetic as import("@/types").Aesthetic) : 'all',
+          aesthetic: isAesthetic((p as unknown as Record<string, unknown>).aesthetic as string) ? ((p as unknown as Record<string, unknown>).aesthetic as import("@/types").Aesthetic) : 'all',
           seller: sellerData
         } as unknown as ShopProduct))
         .filter(p => !p.isSold && p.status !== 'sold');

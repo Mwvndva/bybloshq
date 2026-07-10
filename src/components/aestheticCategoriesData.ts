@@ -22,7 +22,7 @@ export const aestheticCategories: {
     accent: 'border-purple-400',
   },
   {
-    id: 'food-lifestyle',
+    id: 'food-lifestyle' as Aesthetic,
     title: 'Food & Lifestyle',
     description: 'Delicious culinary experiences and lifestyle products',
     wornBy: 'Food lovers and culinary adventurers',
@@ -42,7 +42,7 @@ export const aestheticCategories: {
     accent: 'border-amber-400',
   },
   {
-    id: 'tech-gadgets',
+    id: 'tech-gadgets' as Aesthetic,
     title: 'Tech & Gadgets',
     description: 'Innovative technology and cool gadgets',
     wornBy: 'Tech enthusiasts and early adopters',
@@ -52,7 +52,7 @@ export const aestheticCategories: {
     accent: 'border-blue-400',
   },
   {
-    id: 'outdoor-adventure',
+    id: 'outdoor-adventure' as Aesthetic,
     title: 'Outdoor & Adventure',
     description: 'Gear and apparel for outdoor exploration',
     wornBy: 'Hikers, campers, and adventurers',
@@ -62,7 +62,7 @@ export const aestheticCategories: {
     accent: 'border-lime-400',
   },
   {
-    id: 'beauty-wellness',
+    id: 'beauty-wellness' as Aesthetic,
     title: 'Beauty & Wellness',
     description: 'Self-care products and wellness essentials',
     wornBy: 'Beauty and wellness enthusiasts',
