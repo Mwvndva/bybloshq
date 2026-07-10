@@ -99,7 +99,7 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
         sellerId: sellerId.toString(), // Ensure sellerId is a string
       };
 
-      await createProductMutation.mutateAsync(productData);
+      await createProductMutation.mutateAsync(productData as unknown as Parameters<typeof createProductMutation.mutateAsync>[0]);
 
       toast({
         title: 'Success',

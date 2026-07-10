@@ -54,7 +54,7 @@ const adminRoutesWithLayout: RouteObject[] = [
       props: {},
       key: null,
       ref: null
-    } as unknown as RouteObject,
+    } as unknown as import('react').ReactElement,
     children: adminRoutes,
   },
 ];

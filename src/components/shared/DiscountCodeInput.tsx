@@ -61,6 +61,7 @@ export const DiscountCodeInput = ({
             discount_amount?: number;
             final_amount?: number;
             discount_code?: { description?: string };
+            message?: string;
           };
         };
         const validation = res?.data;

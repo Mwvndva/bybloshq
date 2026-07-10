@@ -79,7 +79,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{ success: b
     if (err.code === 'ECONNABORTED') {
       errorMessage = 'Request timed out. Please check your internet connection and try again.';
     } else if (err.response) {
-      errorMessage = err.response.data?.message || err.response.statusText || 'Server error occurred';
+      errorMessage = err.response.data?.message || (err.response as { statusText?: string }).statusText || 'Server error occurred';
     } else if (err.request) {
       errorMessage = 'No response from server. Please try again later.';
     }

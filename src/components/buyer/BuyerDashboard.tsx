@@ -46,7 +46,7 @@ function BuyerDashboard() {
 
     // Priority 2: Navigation state
     const stateSection = (location.state as Record<string, unknown>)?.activeSection as string | undefined;
-    if (stateSection) return stateSection;
+    if (stateSection) return stateSection as BuyerSection;
 
     // Priority 3: Query parameters (legacy support)
     const queryParams = new URLSearchParams(location.search);

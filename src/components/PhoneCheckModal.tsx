@@ -137,7 +137,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
           },
           signal: controller.signal
         });
-        const quote = (response as Record<string, unknown>)?.data;
+        const quote = (response as Record<string, unknown>)?.data as { feeAmount?: number; distanceKm?: number; chargeableDistanceKm?: number; rateKesPerKm?: number } | undefined;
         const feeAmount = Number(quote?.feeAmount || 0);
         setDeliveryQuote({
           feeAmount,

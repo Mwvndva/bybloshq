@@ -8,7 +8,7 @@ import {
 
 describe('location helpers', () => {
   it('normalizes finite coordinates only', () => {
-    expect(normalizeCoordinates({ lat: '-1.2921' as unknown, lng: '36.8219' as unknown })).toEqual({
+    expect(normalizeCoordinates({ lat: '-1.2921' as unknown as number, lng: '36.8219' as unknown as number })).toEqual({
       lat: -1.2921,
       lng: 36.8219
     });

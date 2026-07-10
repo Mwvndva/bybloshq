@@ -4,6 +4,7 @@ interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
+  status?: string;
 }
 
 export async function leaveClient(sellerId: string): Promise<{ success: boolean; message: string; wasClient?: boolean; clientCount?: number }> {

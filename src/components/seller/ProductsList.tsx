@@ -216,7 +216,7 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
 
     try {
       const product = await queryClient.fetchQuery(sellerProductQuery(id));
-      setEditingProduct(product as ApiSellerProduct);
+      setEditingProduct(product as unknown as Product);
       setEditFormData({
         name: product.name || '',
         price: (product.price ?? 0).toString(),
