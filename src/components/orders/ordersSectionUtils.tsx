@@ -45,9 +45,9 @@ export const formatOrderCurrency = (value: number | undefined, currency = 'KSH')
 export const getBuyerServiceCharge = (order?: ApiOrder | null): number => {
   if (!order) return 0;
   const metadata = (order.metadata as Record<string, unknown>) || {};
-  const pricing = metadata.pricing || metadata.delivery?.pricing || {};
-  const rawAmount = (order as Record<string, unknown>).buyerServiceChargeAmount
-    ?? (order as Record<string, unknown>).buyer_service_charge_amount
+  const pricing = (metadata.pricing || (metadata.delivery as Record<string, unknown>)?.pricing || {}) as Record<string, unknown>;
+  const rawAmount = (order as unknown as Record<string, unknown>).buyerServiceChargeAmount
+    ?? (order as unknown as Record<string, unknown>).buyer_service_charge_amount
     ?? pricing.buyer_service_charge
     ?? pricing.product_service_charge
     ?? 0;
@@ -56,7 +56,7 @@ export const getBuyerServiceCharge = (order?: ApiOrder | null): number => {
 };
 
 export const isPaidOrder = (order: ApiOrder): boolean => {
-  const paymentStatus = String(order.paymentStatus || (order as Record<string, unknown>).payment_status || '').toLowerCase();
+  const paymentStatus = String(order.paymentStatus || (order as unknown as Record<string, unknown>).payment_status || '').toLowerCase();
   return ['completed', 'success', 'paid'].includes(paymentStatus);
 };
 
@@ -68,7 +68,7 @@ export const isDigitalOrderItem = (item: ApiOrderItem): boolean => {
 export const isDigitalOrder = (order: ApiOrder): boolean => {
   return !!(
     order.isDigital ||
-    (order as Record<string, unknown>).is_digital ||
+    (order as unknown as Record<string, unknown>).is_digital ||
     (order.metadata as Record<string, unknown>)?.product_type === 'digital' ||
     (order.metadata as Record<string, unknown>)?.productType === 'digital' ||
     order.items?.some(isDigitalOrderItem)
@@ -78,8 +78,8 @@ export const isDigitalOrder = (order: ApiOrder): boolean => {
 export const isServiceOrder = (order?: ApiOrder | null): boolean => {
   if (!order) return false;
   const metadata = (order.metadata as Record<string, unknown>) || {};
-  const orderType = String((order as Record<string, unknown>).order_type || (order as Record<string, unknown>).type || metadata.product_type || metadata.order_type || '').toLowerCase();
-  return orderType === 'service' || order.items.some((item: ApiOrderItem) => item.productType === 'service' || (item as Record<string, unknown>).isService);
+  const orderType = String((order as unknown as Record<string, unknown>).order_type || (order as unknown as Record<string, unknown>).type || metadata.product_type || metadata.order_type || '').toLowerCase();
+  return orderType === 'service' || order.items.some((item: ApiOrderItem) => item.productType === 'service' || (item as unknown as Record<string, unknown>).isService);
 };
 
 export const canConfirmOrderReceipt = (order?: ApiOrder | null): boolean => {
