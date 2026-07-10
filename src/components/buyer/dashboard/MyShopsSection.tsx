@@ -1,3 +1,4 @@
+import type { ApiPublicSeller } from '@/types/api/seller';
 import SellerBrandCard from '@/components/SellerBrandCard';
 import { BuyerShopCardSkeleton } from './BuyerShopCardSkeleton';
 import { getShopId } from './buyerShopUtils';
