@@ -3,7 +3,7 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GlobalAuthProvider } from "@/features/auth/contexts";
-import { WishlistProvider } from "../contexts/WishlistContext";
+
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -20,10 +20,10 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
             <SonnerToaster />
             {/* Unified auth provider - provides all role-specific hooks */}
             <GlobalAuthProvider>
-                <WishlistProvider>
-                    {children}
-                </WishlistProvider>
+                {children}
             </GlobalAuthProvider>
         </TooltipProvider>
     </QueryClientProvider>
 );
+
+

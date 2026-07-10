@@ -1,7 +1,8 @@
 import { RouterProvider } from "react-router-dom";
 
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
-import { router, LoadingScreen } from "@/app/router";
+import { router } from "@/app/router";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 function App() {
   return (
@@ -15,3 +16,5 @@ function App() {
 }
 
 export default App;
+
+

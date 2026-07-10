@@ -5,11 +5,11 @@ import { SellerLayout } from '../layouts/SellerLayout';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
 
-const SellerDashboard = safeLazy(() => import('../components/seller/SellerDashboard'));
-const SellerRegistration = safeLazy(() => import('../components/seller/SellerRegistration'));
-const SellerLogin = safeLazy(() => import('../components/seller/SellerLogin').then(m => m.SellerLogin));
+const sellerDashboard = safeLazy(() => import('../components/seller/SellerDashboard'));
+const sellerRegistration = safeLazy(() => import('../components/seller/SellerRegistration'));
+const sellerLogin = safeLazy(() => import('../components/seller/SellerLogin').then(m => m.SellerLogin));
 
-import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
+import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage';
 
 // Create the seller routes
 export const sellerRoutes: RouteObject[] = [
@@ -18,7 +18,7 @@ export const sellerRoutes: RouteObject[] = [
     path: '/seller/login',
     element: (
       <Suspense fallback={<RouteFallback />}>
-        <SellerLogin />
+        {(() => { const Component = sellerLogin; return <Component />; })()}
       </Suspense>
     ),
   },
@@ -26,7 +26,7 @@ export const sellerRoutes: RouteObject[] = [
     path: '/seller/register',
     element: (
       <Suspense fallback={<RouteFallback />}>
-        <SellerRegistration />
+        {(() => { const Component = sellerRegistration; return <Component />; })()}
       </Suspense>
     ),
   },
@@ -34,7 +34,7 @@ export const sellerRoutes: RouteObject[] = [
     path: '/join',
     element: (
       <Suspense fallback={<RouteFallback />}>
-        <SellerRegistration />
+        {(() => { const Component = sellerRegistration; return <Component />; })()}
       </Suspense>
     ),
   },
@@ -60,7 +60,7 @@ export const sellerRoutes: RouteObject[] = [
         path: 'dashboard',
         element: (
           <Suspense fallback={<RouteFallback />}>
-            <SellerDashboard />
+            {(() => { const Component = sellerDashboard; return <Component />; })()}
           </Suspense>
         ),
         children: [
@@ -89,3 +89,5 @@ export const sellerRoutes: RouteObject[] = [
     ],
   },
 ];
+
+

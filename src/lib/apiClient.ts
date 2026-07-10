@@ -29,7 +29,7 @@ const CSRF_TTL = 10 * 60 * 1000; // 10 minutes
 export const getFreshCsrfToken = async () => {
     try {
         const response = await axios.get(`${baseURL}/public/csrf-token`, { withCredentials: true });
-        csrfTokenCache = (response as any).data?.data?.csrfToken || null;
+        csrfTokenCache = (response as import('axios').AxiosResponse<{ data?: { csrfToken?: string } }>).data?.data?.csrfToken || null;
         lastFetchedAt = Date.now();
         return csrfTokenCache;
     } catch (error) {
@@ -52,7 +52,7 @@ export const setCachedCsrfToken = (token: string | null) => {
 export const getCachedCsrfToken = () => csrfTokenCache;
 
 apiClient.interceptors.request.use(
-    async (config: any) => {
+    async (config: import('axios').InternalAxiosRequestConfig) => {
         const url = config.url || '';
         let token = null;
         if (url.includes('/sellers')) token = await storage.get('sellerToken');
@@ -118,7 +118,7 @@ const getLoginRedirectPath = (url: string): string => {
 /**
  * Handle 401 Unauthorized errors
  */
-const handleUnauthorized = async (error: any) => {
+const handleUnauthorized = async (error: import('axios').AxiosError) => {
     const url = error.config?.url || 'unknown';
     const currentPath = globalThis.location.pathname;
 
@@ -183,7 +183,7 @@ apiClient.interceptors.response.use(
     },
     async (error) => {
         const status = error.response?.status;
-        const message = (error.response?.data as any)?.message || error.message || 'An error occurred';
+        const message = (error.response?.data as { message?: string })?.message || error.message || 'An error occurred';
         const config = error.config;
 
         // Handle 403 Forbidden - Potential CSRF Mismatch
@@ -228,3 +228,5 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+
+

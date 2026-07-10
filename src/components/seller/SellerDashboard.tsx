@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { sellerApi } from '@/api/sellerApi';
-import { useToast } from '@/components/ui/use-toast';
-import { useSellerAuth } from '@/contexts/GlobalAuthContext';
+import { useDeleteProductMutation, useUpdateProductMutation } from '@/hooks/seller/useSellerProducts';
+import { useToast } from '@/hooks/use-toast';
+import { useSellerAuth } from '@/features/auth/contexts';
 import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
 import { pendingOverviewStatuses } from './dashboard/dashboardUtils';
 import { useSellerDashboardData } from './dashboard/hooks/useSellerDashboardData';
@@ -107,18 +107,24 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     }
   }, []);
 
+  const deleteProductMutation = useDeleteProductMutation();
+  const updateProductMutation = useUpdateProductMutation();
+
   const handleDeleteProduct = useCallback(async (id: string) => {
-    await sellerApi.deleteProduct(id);
-  }, []);
+    await deleteProductMutation.mutateAsync(id);
+  }, [deleteProductMutation]);
 
   const handleStatusUpdate = useCallback(async (productId: string, newStatus: 'available' | 'sold') => {
     try {
       const isSold = newStatus === 'sold';
       const soldAt = isSold ? new Date().toISOString() : null;
 
-      await sellerApi.updateProduct(productId, {
-        status: newStatus,
-        soldAt
+      await updateProductMutation.mutateAsync({
+        id: productId,
+        updates: {
+          status: newStatus,
+          soldAt
+        }
       });
 
       toast({
@@ -133,7 +139,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         variant: 'destructive',
       });
     }
-  }, [toast]);
+  }, [toast, updateProductMutation]);
 
   useEffect(() => {
     const orders = ordersQuery.data || [];
@@ -224,3 +230,5 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     </>
   );
 }
+
+

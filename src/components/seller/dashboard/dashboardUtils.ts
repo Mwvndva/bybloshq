@@ -1,4 +1,5 @@
-import type { AnalyticsData, Product } from './types';
+import type { AnalyticsData } from './types';
+import type { ProductSummary } from '@/types/view/productSummary';
 
 export const MIN_WITHDRAWAL_AMOUNT = 50;
 export const WITHDRAWAL_FEE_TIERS = [
@@ -68,7 +69,7 @@ export const getPendingStatusStyles = (status: string) => {
   }
 };
 
-export const normalizeSellerAnalytics = (productsData: Product[], analyticsData: any): AnalyticsData => {
+export const normalizeSellerAnalytics = (productsData: ProductSummary[], analyticsData: unknown): AnalyticsData => {
   if (!analyticsData) {
     return {
       totalProducts: productsData.length || 0,
@@ -117,3 +118,5 @@ export const normalizeSellerAnalytics = (productsData: Product[], analyticsData:
     recentOrders: analyticsData.recentOrders || []
   };
 };
+
+

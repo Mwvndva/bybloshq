@@ -11,10 +11,11 @@ import {
     Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { sellerApi, ReferralDashboard } from '@/api/sellerApi';
+import { ReferralDashboard } from '@/api/seller';
+import { useSellerReferralDashboardQuery, useGenerateReferralCodeMutation } from '@/hooks/seller/useSellerProfile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 
@@ -23,58 +24,36 @@ interface ReferralPanelProps {
 }
 
 const ReferralPanel: React.FC<ReferralPanelProps> = ({ totalSales }) => {
-    const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
-    const [data, setData] = useState<ReferralDashboard | null>(null);
     const { toast } = useToast();
 
     const isLocked = totalSales === 0;
 
-    useEffect(() => {
-        if (!isLocked) {
-            fetchDashboard();
-        } else {
-            setLoading(false);
-        }
-    }, [isLocked]);
-
-    const fetchDashboard = async () => {
-        try {
-            setLoading(true);
-            const dashboard = await sellerApi.getReferralDashboard();
-            setData(dashboard);
-        } catch (err: any) {
-            console.error('[REFERRAL] Failed to fetch dashboard:', err);
-            // Silence common 404/403 errors if first time
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: queryData, isLoading: queryLoading } = useSellerReferralDashboardQuery(!isLocked);
+    const generateCodeMutation = useGenerateReferralCodeMutation();
 
     const handleGenerateCode = async () => {
         try {
             setGenerating(true);
-            const result = await sellerApi.generateReferralCode();
-            setData(prev => prev ? { ...prev, ...result } : {
-                referralCode: result.referralCode,
-                referralLink: result.referralLink,
-                totalReferralEarnings: 0,
-                referred: []
-            });
+            await generateCodeMutation.mutateAsync();
             toast({
                 title: 'Referral program activated!',
                 description: 'Your unique code and link are ready.',
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const error = err as { message?: string };
             toast({
                 title: 'Activation failed',
-                description: err.message || 'Could not activate referral program.',
+                description: error.message || 'Could not activate referral program.',
                 variant: 'destructive',
             });
         } finally {
             setGenerating(false);
         }
     };
+
+    const loading = !isLocked && queryLoading;
+    const data = queryData || null;
 
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
@@ -268,3 +247,5 @@ const ReferralPanel: React.FC<ReferralPanelProps> = ({ totalSales }) => {
 };
 
 export default ReferralPanel;
+
+

@@ -487,3 +487,5 @@ const BulletList = ({ items }: { items: string[] }) => (
 );
 
 export default TermsModal;
+
+

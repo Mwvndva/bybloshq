@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { useSellerAuth } from '@/contexts/GlobalAuthContext';
+import { useSellerAuth } from '@/features/auth/contexts';
 import { Eye, EyeOff, Loader2, Mail, ArrowLeft, Store, Lock, RefreshCw, AlertCircle } from 'lucide-react';
-import { sellerApi } from '@/api/sellerApi';
+import { sellerApi } from '@/api/seller';
 import { VerifyEmailModal } from '../auth/VerifyEmailModal';
 
 export function SellerLogin() {
@@ -62,7 +62,7 @@ export function SellerLogin() {
 
     try {
       await login({ email: formData.email, password: formData.password });
-    } catch (error: any) {
+    } catch (error) {
       // Extract the actual error message and code from the SDK/API response
       const apiError = error?.response?.data;
       const errorMessage = apiError?.message || error?.message || 'Invalid email or password';
@@ -117,7 +117,7 @@ export function SellerLogin() {
           variant: 'destructive',
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error sending reset link:', error);
       toast({
         title: 'Error',
@@ -355,3 +355,5 @@ export function SellerLogin() {
     </div>
   );
 }
+
+

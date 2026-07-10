@@ -1,15 +1,9 @@
-import { createContext, ReactNode, useContext, useMemo } from 'react';
-import { useGlobalAuth } from './AuthCoreContext';
+import { ReactNode, useMemo } from 'react';
+import { useGlobalAuth } from '../hooks/useGlobalAuth';
+import { AdminAuthContext } from './authContextObjects';
 
-export interface AdminAuthContextType {
-    isAuthenticated: boolean;
-    loading: boolean;
-    error: null;
-    login: (email: string, password: string) => Promise<void>;
-    logout: () => void;
-}
-
-const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
+export { AdminAuthContext } from './authContextObjects';
+export type { AdminAuthContextType } from './authContextObjects';
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
     const {
@@ -21,7 +15,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
     const adminAuthenticated = Boolean(user?.isAuthenticated && user.role === 'admin');
 
-    const value: AdminAuthContextType = useMemo(() => ({
+    const value: import('./authContextObjects').AdminAuthContextType = useMemo(() => ({
         isAuthenticated: adminAuthenticated,
         loading: isLoading,
         error: null,
@@ -36,10 +30,4 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
-export const useAdminAuth = () => {
-    const context = useContext(AdminAuthContext);
-    if (context === undefined) {
-        throw new Error('useAdminAuth must be used within an AdminAuthProvider');
-    }
-    return context;
-};
+

@@ -5,3 +5,5 @@ export const sellerDashboardQueryKeys = {
   summary: ['seller-dashboard', 'summary'] as const,
   withdrawals: ['seller-dashboard', 'withdrawals'] as const,
 };
+
+

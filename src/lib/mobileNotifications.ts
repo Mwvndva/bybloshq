@@ -2,7 +2,7 @@ import { PushNotifications, type Token } from '@capacitor/push-notifications';
 import type { AxiosRequestConfig } from 'axios';
 import apiClient from '@/lib/apiClient';
 import { getNativePlatform, getStableDeviceId, isNativeApp } from '@/lib/mobileApp';
-import type { UserRole } from '@/contexts/auth/authTypes';
+import type { UserRole } from '@/features/auth/types/authTypes';
 
 type AppNotificationRole = UserRole | 'logistics';
 
@@ -124,3 +124,5 @@ export async function unregisterNativePushNotifications(
   localStorage.removeItem(TOKEN_STORAGE_KEY);
   localStorage.removeItem(REGISTRATION_STORAGE_KEY);
 }
+
+

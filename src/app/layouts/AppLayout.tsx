@@ -7,3 +7,5 @@ interface Props {
 export default function AppLayout({ children }: Props) {
   return <>{children}</>;
 }
+
+

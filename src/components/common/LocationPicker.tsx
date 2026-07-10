@@ -25,7 +25,7 @@ const MAP_TILE_URLS = [
 
 // Fix Leaflet marker icon issue
 if (typeof window !== 'undefined') {
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
     L.Icon.Default.mergeOptions({
         iconRetinaUrl: markerIcon2x,
         iconUrl: markerIcon,
@@ -125,13 +125,19 @@ export default function LocationPicker({
         };
     }, []);
 
+    const addressRef = useRef(address);
+    addressRef.current = address;
+    const markerPositionRef = useRef(markerPosition);
+    markerPositionRef.current = markerPosition;
+
     useEffect(() => {
-        if (initialAddress && initialAddress !== address) {
+        if (initialAddress && initialAddress !== addressRef.current) {
             setAddress(initialAddress);
         }
         const nextInitialCoordinates = normalizeCoordinates(initialCoordinates);
         if (nextInitialCoordinates) {
-            if (!markerPosition || nextInitialCoordinates.lat !== markerPosition[0] || nextInitialCoordinates.lng !== markerPosition[1]) {
+            const currPos = markerPositionRef.current;
+            if (!currPos || nextInitialCoordinates.lat !== currPos[0] || nextInitialCoordinates.lng !== currPos[1]) {
                 const newPos: [number, number] = [nextInitialCoordinates.lat, nextInitialCoordinates.lng];
                 setMarkerPosition(newPos);
                 setCenter(newPos);
@@ -328,3 +334,5 @@ export default function LocationPicker({
         </div>
     );
 }
+
+

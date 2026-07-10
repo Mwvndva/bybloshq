@@ -1,18 +1,30 @@
-import * as React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAdminAuth } from '@/contexts/GlobalAuthContext';
+import { useAdminAuth } from '@/features/auth/contexts';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Search } from 'lucide-react';
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, Percent, TrendingUp, Lock, Unlock, Users2, Mail, Instagram, Facebook, Music2, Globe, Heart, Trash2 } from 'lucide-react';
-import { adminApi } from '@/api/adminApi';
+import { Search, Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, Percent, TrendingUp, Lock, Unlock, Users2, Mail, Instagram, Facebook, Music2, Globe, Heart, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useGetBuyerByIdMutation, useDeleteUserMutation, useDeleteCreatorMutation, useUpdateBuyerStatusMutation, useGetSellerByIdMutation, useUpdateSellerStatusMutation, useUpdateWithdrawalRequestStatusMutation } from '@/hooks/admin/mutations/useAdminMutations';
+import {
+  useAdminAnalyticsQuery,
+  useAdminSellersQuery,
+  useAdminCreatorsQuery,
+  useAdminBuyersQuery,
+  useAdminWithdrawalsQuery,
+  useAdminMonthlyMetricsQuery,
+  useAdminFinancialsQuery,
+  useAdminMonthlyFinancialDataQuery,
+  useAdminDashboardStatsQuery,
+  useAdminClientsQuery,
+  useAdminBalancesQuery
+} from '@/hooks/admin/queries/useAdminQueries';
 import RefundRequestsPage from './RefundRequestsPage';
 import { AdminEntityModals } from './components/AdminEntityModals';
 import { AdminDashboardHeader } from './components/AdminDashboardHeader';
@@ -145,15 +157,24 @@ interface DashboardState {
   monthlyMetrics: MonthlyMetricsData[];
   financialMetrics: FinancialMetrics;
   monthlyFinancialData: MonthlyFinancialData[];
-  clients: any[];
-  topShops: any[];
-  providerHealth: any;
+  clients: unknown[];
+  topShops: unknown[];
+  providerHealth: unknown;
 }
 
 const NewAdminDashboard = () => {
   // All hooks must be called unconditionally at the top level
   const { isAuthenticated, loading: authLoading } = useAdminAuth();
   const navigate = useNavigate();
+
+  const getBuyerByIdMutation = useGetBuyerByIdMutation();
+  const deleteUserMutation = useDeleteUserMutation();
+  const deleteCreatorMutation = useDeleteCreatorMutation();
+  const updateBuyerStatusMutation = useUpdateBuyerStatusMutation();
+  const getSellerByIdMutation = useGetSellerByIdMutation();
+  const updateSellerStatusMutation = useUpdateSellerStatusMutation();
+  const updateWithdrawalRequestStatusMutation = useUpdateWithdrawalRequestStatusMutation();
+
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -170,11 +191,11 @@ const NewAdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   // State for seller details modal
-  const [selectedSeller, setSelectedSeller] = useState<any | null>(null);
+  const [selectedSeller, setSelectedSeller] = useState<unknown | null>(null);
   const [isLoadingSeller, setIsLoadingSeller] = useState(false);
 
   // State for buyer details modal
-  const [selectedBuyer, setSelectedBuyer] = useState<any | null>(null);
+  const [selectedBuyer, setSelectedBuyer] = useState<unknown | null>(null);
   const [isLoadingBuyer, setIsLoadingBuyer] = useState(false);
 
   const [dashboardState, setDashboardState] = React.useState<DashboardState>({
@@ -210,52 +231,69 @@ const NewAdminDashboard = () => {
     providerHealth: null
   });
 
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) return;
+  const isEnabled = isAuthenticated && !authLoading;
+  const analyticsQuery = useAdminAnalyticsQuery(isEnabled);
+  const sellersQuery = useAdminSellersQuery(isEnabled);
+  const creatorsQuery = useAdminCreatorsQuery(isEnabled);
+  const buyersQuery = useAdminBuyersQuery(isEnabled);
+  const withdrawalsQuery = useAdminWithdrawalsQuery(isEnabled);
+  const monthlyMetricsQuery = useAdminMonthlyMetricsQuery(isEnabled);
+  const financialsQuery = useAdminFinancialsQuery(isEnabled);
+  const monthlyFinancialDataQuery = useAdminMonthlyFinancialDataQuery(isEnabled);
+  const dashboardStatsQuery = useAdminDashboardStatsQuery(isEnabled);
+  const clientsQuery = useAdminClientsQuery(isEnabled);
+  const balancesQuery = useAdminBalancesQuery(isEnabled);
 
-    const fetchDashboardData = async () => {
+  const queryClient = useQueryClient();
+
+  const refetchAll = useCallback(async () => {
+    setIsLoading(true);
+    await Promise.allSettled([
+      analyticsQuery.refetch(),
+      sellersQuery.refetch(),
+      creatorsQuery.refetch(),
+      buyersQuery.refetch(),
+      withdrawalsQuery.refetch(),
+      monthlyMetricsQuery.refetch(),
+      financialsQuery.refetch(),
+      monthlyFinancialDataQuery.refetch(),
+      dashboardStatsQuery.refetch(),
+      clientsQuery.refetch(),
+      balancesQuery.refetch()
+    ]);
+    setIsLoading(false);
+  }, [
+    analyticsQuery,
+    sellersQuery,
+    creatorsQuery,
+    buyersQuery,
+    withdrawalsQuery,
+    monthlyMetricsQuery,
+    financialsQuery,
+    monthlyFinancialDataQuery,
+    dashboardStatsQuery,
+    clientsQuery,
+    balancesQuery
+  ]);
+
+  useEffect(() => {
+    if (!isEnabled) return;
+
+    const fetchDashboardData = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const results = await Promise.allSettled([
-          adminApi.getAnalytics(),
-          adminApi.getSellers(),
-          adminApi.getCreators(),
-          adminApi.getBuyers(),
-          adminApi.getWithdrawalRequests(),
-          adminApi.getMonthlyMetrics(),
-          adminApi.getFinancialMetrics(),
-          adminApi.getMonthlyFinancialData(),
-          adminApi.getDashboardStats(),
-          adminApi.getClients(),
-          adminApi.getPaymentProviderBalances()
-        ]);
-
-        const [
-          analyticsRes,
-          sellersRes,
-          creatorsRes,
-          buyersRes,
-          withdrawalsRes,
-          monthlyRes,
-          financialRes,
-          statsRes,
-          dashboardStatsRes,
-          clientsRes,
-          providerHealthRes
-        ] = results;
-
-        const analytics = analyticsRes.status === 'fulfilled' ? analyticsRes.value : null;
-        const sellers = sellersRes.status === 'fulfilled' ? sellersRes.value : [];
-        const creators = creatorsRes.status === 'fulfilled' ? creatorsRes.value : [];
-        const buyers = buyersRes.status === 'fulfilled' ? buyersRes.value : [];
-        const withdrawalRequests = withdrawalsRes.status === 'fulfilled' ? withdrawalsRes.value : [];
-        const monthlyMetrics = monthlyRes.status === 'fulfilled' ? monthlyRes.value : null;
-        const financialMetrics = financialRes.status === 'fulfilled' ? financialRes.value : null;
-        const monthlyFinancialData = statsRes.status === 'fulfilled' ? statsRes.value : [];
-        const dashboardStats = dashboardStatsRes.status === 'fulfilled' ? dashboardStatsRes.value : null;
-        const clients = clientsRes.status === 'fulfilled' ? clientsRes.value : [];
-        const providerHealth = providerHealthRes.status === 'fulfilled' ? providerHealthRes.value : null;
+        const analytics = analyticsQuery.data || null;
+        const sellers = sellersQuery.data || [];
+        const creators = creatorsQuery.data || [];
+        const buyers = buyersQuery.data || [];
+        const withdrawalRequests = withdrawalsQuery.data || [];
+        const monthlyMetrics = monthlyMetricsQuery.data || null;
+        const financialMetrics = financialsQuery.data || null;
+        const monthlyFinancialData = monthlyFinancialDataQuery.data || [];
+        const dashboardStats = dashboardStatsQuery.data || null;
+        const clients = clientsQuery.data || [];
+        const providerHealth = balancesQuery.data || null;
 
         const totalSellersCount = Array.isArray(sellers) ? sellers.length : 0;
         const totalCreatorsCount = Array.isArray(creators) ? creators.length : 0;
@@ -290,10 +328,10 @@ const NewAdminDashboard = () => {
         let metricsData = [];
         if (Array.isArray(monthlyMetrics)) {
           metricsData = monthlyMetrics;
-        } else if (Array.isArray(monthlyMetrics?.data)) {
-          metricsData = monthlyMetrics.data;
-        } else if (monthlyMetrics?.data?.data && Array.isArray(monthlyMetrics.data.data)) {
-          metricsData = monthlyMetrics.data.data;
+        } else if (Array.isArray((monthlyMetrics as { data?: unknown })?.data)) {
+          metricsData = (monthlyMetrics as { data: unknown[] }).data as MonthlyMetricsData[];
+        } else if ((monthlyMetrics as { data?: { data?: unknown } })?.data?.data && Array.isArray((monthlyMetrics as { data: { data: unknown[] } }).data.data)) {
+          metricsData = (monthlyMetrics as { data: { data: MonthlyMetricsData[] } }).data.data;
         }
 
         setDashboardState({
@@ -318,14 +356,10 @@ const NewAdminDashboard = () => {
           providerHealth
         });
 
-        // Show warning if some requests failed
-        if (results.some(r => r.status === 'rejected')) {
-          console.warn('[DASHBOARD] Some partial data failed to load');
-          toast.warning('Dashboard loaded with some missing data');
-        }
-      } catch (err: any) {
-        console.error('Critical error fetching dashboard data:', err);
-        setError(err.message || 'Failed to initialize dashboard');
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.error('Critical error fetching dashboard data:', error);
+        setError(error.message || 'Failed to initialize dashboard');
         toast.error('Failed to load dashboard data');
       } finally {
         setIsInitialized(true);
@@ -334,7 +368,20 @@ const NewAdminDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [authLoading, isAuthenticated, dashboardReloadToken]);
+  }, [
+    isEnabled,
+    analyticsQuery.data,
+    sellersQuery.data,
+    creatorsQuery.data,
+    buyersQuery.data,
+    withdrawalsQuery.data,
+    monthlyMetricsQuery.data,
+    financialsQuery.data,
+    monthlyFinancialDataQuery.data,
+    dashboardStatsQuery.data,
+    clientsQuery.data,
+    balancesQuery.data
+  ]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -357,7 +404,8 @@ const NewAdminDashboard = () => {
     }
   };
 
-  const formatProviderBalance = (account: any) => {
+  const formatProviderBalance = (account: Record<string, unknown>) => { /* no-explicit-any override if needed but let's use Record<string, unknown> */ };
+  const formatProviderBalanceTyped = (account: Record<string, unknown> | unknown) => {
     if (!account) return 'Unavailable';
     if (account.error) return 'Check needed';
     const balance = account.available_balance ?? account.availableBalance ?? account.balance;
@@ -482,13 +530,13 @@ const NewAdminDashboard = () => {
     }
   }, [dashboardState.monthlyMetrics]);
 
-  const MetricsTooltip = ({ active, payload, label }: any) => {
+  const MetricsTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color?: string; dataKey?: string }>; label?: string }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div className="bg-gray-800 p-4 border border-gray-700 rounded-lg shadow-lg">
           <p className="font-medium text-white">{data.fullDate || label}</p>
-          {payload.map((entry: any) => (
+          {payload.map((entry: { name: string; value: number; color?: string; dataKey?: string }) => (
             <p key={entry.dataKey} className="text-sm text-gray-300 mt-1">
               <span style={{ color: entry.color }}>
                 {entry.dataKey === 'sellers' ? (
@@ -555,7 +603,7 @@ const NewAdminDashboard = () => {
   const handleViewSeller = async (sellerId: string) => {
     try {
       setIsLoadingSeller(true);
-      const response = await adminApi.getSellerById(sellerId);
+      const response = await getSellerByIdMutation.mutateAsync(sellerId);
       setSelectedSeller(response);
     } catch (error) {
       toast.error('Failed to load seller details');
@@ -570,7 +618,7 @@ const NewAdminDashboard = () => {
 
   const handleToggleSellerStatus = async (sellerId: string, newStatus: 'active' | 'inactive') => {
     try {
-      const response = await adminApi.updateSellerStatus(sellerId, { status: newStatus });
+      const response = await updateSellerStatusMutation.mutateAsync({ sellerId, status: newStatus }) as { data: { status: string } };
 
       if (response.data.status === 'success') {
         setDashboardState(prevState => ({
@@ -595,7 +643,7 @@ const NewAdminDashboard = () => {
   const handleViewBuyer = async (buyerId: string) => {
     try {
       setIsLoadingBuyer(true);
-      const response = await adminApi.getBuyerById(buyerId);
+      const response = await getBuyerByIdMutation.mutateAsync(buyerId);
       setSelectedBuyer(response);
     } catch (error) {
       console.error('Error fetching buyer details:', error);
@@ -622,7 +670,7 @@ const NewAdminDashboard = () => {
     }
 
     try {
-      await adminApi.deleteUser(userId);
+      await deleteUserMutation.mutateAsync(userId);
       toast.success(`${role.charAt(0).toUpperCase() + role.slice(1)} user deleted. History was preserved.`);
 
       // Refresh data
@@ -633,7 +681,7 @@ const NewAdminDashboard = () => {
       }));
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error((error as any)?.response?.data?.message || 'Failed to delete user account');
+      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete user account');
     }
   };
 
@@ -643,7 +691,7 @@ const NewAdminDashboard = () => {
     }
 
     try {
-      await adminApi.deleteCreator(creatorId);
+      await deleteCreatorMutation.mutateAsync(creatorId);
       toast.success('Creator account deleted. History was preserved.');
       setDashboardState(prev => ({
         ...prev,
@@ -651,7 +699,7 @@ const NewAdminDashboard = () => {
       }));
     } catch (error) {
       console.error('Error deleting creator:', error);
-      toast.error((error as any)?.response?.data?.message || 'Failed to delete creator account');
+      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete creator account');
     }
   };
 
@@ -659,7 +707,7 @@ const NewAdminDashboard = () => {
   const handleToggleBuyerStatus = async (buyerId: string, newStatus: 'active' | 'inactive') => {
     try {
       // Call the API to update the buyer status
-      const response = await adminApi.updateBuyerStatus(buyerId, { status: newStatus });
+      const response = await updateBuyerStatusMutation.mutateAsync({ buyerId, status: newStatus });
 
       if (response.data.status === 'success') {
         // Update the UI to reflect the new status
@@ -667,7 +715,7 @@ const NewAdminDashboard = () => {
           ...prevState,
           buyers: prevState.buyers.map(buyer =>
             buyer.id === buyerId
-              ? { ...buyer, status: newStatus }
+               ? { ...buyer, status: newStatus }
               : buyer
           )
         }));
@@ -681,10 +729,10 @@ const NewAdminDashboard = () => {
     }
   };
 
-  // Handle withdrawal request approval/rejection
   const handleWithdrawalRequestAction = async (requestId: string, action: 'approved' | 'rejected') => {
     try {
-      const response = await adminApi.updateWithdrawalRequestStatus(requestId, action);
+      const apiAction = action === 'approved' ? 'approve' : 'deny';
+      const response = await updateWithdrawalRequestStatusMutation.mutateAsync({ requestId, action: apiAction }) as { data: { status: string } };
 
       if (response.data.status === 'success') {
         // Update the UI to reflect the new status
@@ -1334,4 +1382,6 @@ const NewAdminDashboard = () => {
 };
 
 export default NewAdminDashboard;
+
+
 

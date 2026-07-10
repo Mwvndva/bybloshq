@@ -3,7 +3,7 @@
  */
 class AuthStateManager {
     private isRehydrating: boolean = false;
-    private queuedErrors: Array<{ error: any; timestamp: number }> = [];
+    private queuedErrors: Array<{ error: unknown; timestamp: number }> = [];
 
     setRehydrating(value: boolean) {
         this.isRehydrating = value;
@@ -18,7 +18,7 @@ class AuthStateManager {
         return this.isRehydrating;
     }
 
-    queueError(error: any) {
+    queueError(error: unknown) {
         this.queuedErrors.push({ error, timestamp: Date.now() });
     }
 
@@ -28,3 +28,5 @@ class AuthStateManager {
 }
 
 export const authStateManager = new AuthStateManager();
+
+

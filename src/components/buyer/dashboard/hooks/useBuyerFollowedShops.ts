@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import buyerApi from '@/api/buyerApi';
-import { useToast } from '@/components/ui/use-toast';
+import buyerApi from '@/api/buyer';
+import { useToast } from '@/hooks/use-toast';
 import {
   getShopId,
   isPhysicalShop,
@@ -175,3 +175,5 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
     unfollowingShopId
   };
 }
+
+

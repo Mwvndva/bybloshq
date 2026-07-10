@@ -4,12 +4,15 @@ import { Badge } from '@/components/ui/badge';
 import { CardContent } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Product, Seller } from '@/types';
+import type { ApiSellerProduct, ApiProduct } from '@/types/api/product';
 import { cn, formatCurrency, isSellerShopless } from '@/lib/utils';
 import type { ProductCardThemeClasses, Theme } from './productCardUtils';
 import { Calendar, ChevronDown, ExternalLink, FileText, Loader2, MapPin, ShoppingCart, Store } from 'lucide-react';
 
+type ProductWithApiFields = Product & Partial<ApiSellerProduct> & Partial<ApiProduct>;
+
 interface ProductCardDetailsProps {
-  product: Product;
+  product: ProductWithApiFields;
   displaySeller?: Seller;
   displaySellerName: string;
   theme: Theme;
@@ -37,11 +40,11 @@ export function ProductCardDetails({
   onBuyClick,
   onOpenShop
 }: ProductCardDetailsProps) {
-  const serviceOptions = product.service_options || (product as any).serviceOptions;
-  const isCustomProduct = Boolean((product as any).is_custom_product || (product as any).isCustomProduct);
-  const productionDays = Number((product as any).production_days || (product as any).productionDays || 0);
-  const isImportedProduct = Boolean((product as any).is_imported_product || (product as any).isImportedProduct);
-  const importDays = Number((product as any).import_days || (product as any).importDays || 0);
+  const serviceOptions = product.service_options || product.serviceOptions;
+  const isCustomProduct = Boolean(product.is_custom_product || product.isCustomProduct);
+  const productionDays = Number(product.production_days || product.productionDays || 0);
+  const isImportedProduct = Boolean(product.is_imported_product || product.isImportedProduct);
+  const importDays = Number(product.import_days || product.importDays || 0);
   const descriptionRef = useRef<HTMLDivElement>(null);
   const [hasMoreDescription, setHasMoreDescription] = useState(false);
 
@@ -249,3 +252,5 @@ export function ProductCardDetails({
     </CardContent>
   );
 }
+
+

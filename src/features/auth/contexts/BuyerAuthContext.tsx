@@ -1,24 +1,10 @@
-import { createContext, ReactNode, useContext, useMemo } from 'react';
-import {
-    BuyerProfile,
-    BuyerRegistrationData,
-    useGlobalAuth,
-} from './AuthCoreContext';
+import { ReactNode, useMemo } from 'react';
+import type { BuyerProfile, BuyerRegistrationData } from '../types/authTypes';
+import { useGlobalAuth } from '../hooks/useGlobalAuth';
+import { BuyerAuthContext } from './authContextObjects';
 
-export interface BuyerAuthContextType {
-    user: BuyerProfile | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    login: (email: string, password: string) => Promise<void>;
-    register: (data: BuyerRegistrationData) => Promise<{ status: string; message?: string } | void>;
-    logout: () => void;
-    forgotPassword: (email: string) => Promise<boolean>;
-    resetPassword: (token: string, newPassword: string, email: string) => Promise<void>;
-    loginWithToken: (token: string) => Promise<void>;
-    updateBuyerProfile: (updates: Partial<BuyerProfile>) => Promise<void>;
-}
-
-const BuyerAuthContext = createContext<BuyerAuthContextType | undefined>(undefined);
+export { BuyerAuthContext } from './authContextObjects';
+export type { BuyerAuthContextType } from './authContextObjects';
 
 export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     const {
@@ -36,7 +22,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     const buyerProfile = user?.role === 'buyer' ? user.profile as BuyerProfile : null;
     const buyerAuthenticated = Boolean(user?.isAuthenticated && user.role === 'buyer');
 
-    const value: BuyerAuthContextType = useMemo(() => ({
+    const value: import('./authContextObjects').BuyerAuthContextType = useMemo(() => ({
         user: buyerProfile,
         isAuthenticated: buyerAuthenticated,
         isLoading,
@@ -67,10 +53,4 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
-export const useBuyerAuth = () => {
-    const context = useContext(BuyerAuthContext);
-    if (context === undefined) {
-        throw new Error('useBuyerAuth must be used within a BuyerAuthProvider');
-    }
-    return context;
-};
+

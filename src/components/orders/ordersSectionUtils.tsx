@@ -1,7 +1,9 @@
 import { format, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, Package, Truck, XCircle } from 'lucide-react';
-import type { Order, PaymentStatus } from '@/types/order';
+import type { PaymentStatus } from '@/types';
+import type { ApiOrderItem } from '@/types/api/order';
+import type { ApiOrder } from '@/types/api/order';
 
 type DateLike = string | Date | { createdAt?: string | Date; created_at?: string | Date };
 
@@ -40,12 +42,12 @@ export const formatOrderCurrency = (value: number | undefined, currency = 'KSH')
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export const getBuyerServiceCharge = (order?: Order | null): number => {
+export const getBuyerServiceCharge = (order?: ApiOrder | null): number => {
   if (!order) return 0;
-  const metadata = (order.metadata as any) || {};
+  const metadata = (order.metadata as Record<string, unknown>) || {};
   const pricing = metadata.pricing || metadata.delivery?.pricing || {};
-  const rawAmount = (order as any).buyerServiceChargeAmount
-    ?? (order as any).buyer_service_charge_amount
+  const rawAmount = (order as Record<string, unknown>).buyerServiceChargeAmount
+    ?? (order as Record<string, unknown>).buyer_service_charge_amount
     ?? pricing.buyer_service_charge
     ?? pricing.product_service_charge
     ?? 0;
@@ -53,34 +55,34 @@ export const getBuyerServiceCharge = (order?: Order | null): number => {
   return Number.isFinite(amount) && amount > 0 ? amount : 0;
 };
 
-export const isPaidOrder = (order: Order): boolean => {
-  const paymentStatus = String(order.paymentStatus || (order as any).payment_status || '').toLowerCase();
+export const isPaidOrder = (order: ApiOrder): boolean => {
+  const paymentStatus = String(order.paymentStatus || (order as Record<string, unknown>).payment_status || '').toLowerCase();
   return ['completed', 'success', 'paid'].includes(paymentStatus);
 };
 
-export const isDigitalOrderItem = (item: any): boolean => {
+export const isDigitalOrderItem = (item: ApiOrderItem): boolean => {
   const productType = String(item?.productType || item?.product_type || '').toLowerCase();
   return Boolean(item?.isDigital || item?.is_digital || productType === 'digital');
 };
 
-export const isDigitalOrder = (order: Order): boolean => {
+export const isDigitalOrder = (order: ApiOrder): boolean => {
   return !!(
     order.isDigital ||
-    (order as any).is_digital ||
-    (order.metadata as any)?.product_type === 'digital' ||
-    (order.metadata as any)?.productType === 'digital' ||
+    (order as Record<string, unknown>).is_digital ||
+    (order.metadata as Record<string, unknown>)?.product_type === 'digital' ||
+    (order.metadata as Record<string, unknown>)?.productType === 'digital' ||
     order.items?.some(isDigitalOrderItem)
   );
 };
 
-export const isServiceOrder = (order?: Order | null): boolean => {
+export const isServiceOrder = (order?: ApiOrder | null): boolean => {
   if (!order) return false;
-  const metadata = (order.metadata as any) || {};
-  const orderType = String((order as any).order_type || (order as any).type || metadata.product_type || metadata.order_type || '').toLowerCase();
-  return orderType === 'service' || order.items.some((item: any) => item.productType === 'service' || item.isService);
+  const metadata = (order.metadata as Record<string, unknown>) || {};
+  const orderType = String((order as Record<string, unknown>).order_type || (order as Record<string, unknown>).type || metadata.product_type || metadata.order_type || '').toLowerCase();
+  return orderType === 'service' || order.items.some((item: ApiOrderItem) => item.productType === 'service' || (item as Record<string, unknown>).isService);
 };
 
-export const canConfirmOrderReceipt = (order?: Order | null): boolean => {
+export const canConfirmOrderReceipt = (order?: ApiOrder | null): boolean => {
   if (!order) return false;
 
   const terminalStatuses = ['COMPLETED', 'CANCELLED', 'FAILED', 'REFUND_PENDING', 'REFUNDED', 'MANUAL_REVIEW', 'COMPENSATION_REQUIRED'];
@@ -104,7 +106,7 @@ export const canConfirmOrderReceipt = (order?: Order | null): boolean => {
   return deliveryStatus === 'delivered' || deliveryStatus === 'completed';
 };
 
-export const getConfirmReceiptLabel = (order?: Order | null): string => {
+export const getConfirmReceiptLabel = (order?: ApiOrder | null): string => {
   return isServiceOrder(order) ? 'Mark Service Completed' : 'Confirm Receipt';
 };
 
@@ -233,3 +235,5 @@ export const getPaymentStatusBadge = (status?: string) => {
       );
   }
 };
+
+

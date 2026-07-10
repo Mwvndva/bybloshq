@@ -1,18 +1,20 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { sellerApi } from '@/api/sellerApi';
+import { useRequestWithdrawalMutation } from '@/hooks/seller/useSellerWithdrawals';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { getWithdrawalFee, MIN_WITHDRAWAL_AMOUNT } from '../dashboardUtils';
 import { sellerDashboardQueryKeys } from '../queryKeys';
+import { sellerApi } from '@/api/seller';
 
 interface UseSellerWithdrawalsArgs {
   balance: number;
   enabled?: boolean;
-  toast: (options: any) => void;
+  toast: (options: Record<string, unknown>) => void;
 }
 
 export function useSellerWithdrawals({ balance, enabled = true, toast }: UseSellerWithdrawalsArgs) {
   const queryClient = useQueryClient();
+  const requestWithdrawalMutation = useRequestWithdrawalMutation();
   const [withdrawalForm, setWithdrawalForm] = useState({
     amount: '',
     mpesaNumber: '',
@@ -26,7 +28,7 @@ export function useSellerWithdrawals({ balance, enabled = true, toast }: UseSell
 
   const withdrawalsQuery = useQuery({
     queryKey: sellerDashboardQueryKeys.withdrawals,
-    queryFn: sellerApi.getWithdrawalRequests,
+    queryFn: () => sellerApi.getWithdrawalRequests(),
     enabled,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -115,11 +117,11 @@ export function useSellerWithdrawals({ balance, enabled = true, toast }: UseSell
             : `withdrawal-${Date.now()}`;
         }
 
-        await sellerApi.requestWithdrawal({
+        await requestWithdrawalMutation.mutateAsync({
           amount,
           mpesaNumber: withdrawalForm.mpesaNumber,
           mpesaName: withdrawalForm.mpesaName,
-          idempotencyKey: withdrawalIdempotencyKeyRef.current
+          idempotencyKey: withdrawalIdempotencyKeyRef.current || undefined
         });
 
         toast({
@@ -140,7 +142,7 @@ export function useSellerWithdrawals({ balance, enabled = true, toast }: UseSell
           queryClient.invalidateQueries({ queryKey: sellerDashboardQueryKeys.withdrawals }),
           queryClient.invalidateQueries({ queryKey: sellerDashboardQueryKeys.analytics })
         ]);
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error requesting withdrawal:', error);
         const errorMessage = error.response?.data?.message || 'Failed to submit withdrawal request. Please try again.';
 
@@ -151,7 +153,7 @@ export function useSellerWithdrawals({ balance, enabled = true, toast }: UseSell
         });
       }
     });
-  }, [balance, queryClient, runWithLock, toast, withdrawalForm]);
+  }, [balance, queryClient, runWithLock, toast, withdrawalForm, requestWithdrawalMutation]);
 
   return {
     endDate,
@@ -170,3 +172,5 @@ export function useSellerWithdrawals({ balance, enabled = true, toast }: UseSell
     withdrawalRequests
   };
 }
+
+

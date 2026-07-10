@@ -1,18 +1,19 @@
 import apiClient from '@/lib/apiClient';
-import type { Product } from './types';
+import type { ApiSellerProduct } from '@/types/api/product';
 
 const sellerApiInstance = apiClient;
 
-export const transformProduct = (product: any): Product => {
+export const transformProduct = (product: unknown): ApiSellerProduct => {
+  const pObj = product as Record<string, unknown>;
   let price = 0;
-  if (product.price !== null && product.price !== undefined) {
-    if (typeof product.price === 'number') {
-      price = product.price;
-    } else if (typeof product.price === 'string') {
-      const parsed = parseFloat(product.price);
+  if (pObj.price !== null && pObj.price !== undefined) {
+    if (typeof pObj.price === 'number') {
+      price = pObj.price;
+    } else if (typeof pObj.price === 'string') {
+      const parsed = parseFloat(pObj.price);
       price = isNaN(parsed) ? 0 : parsed;
-    } else if (typeof product.price === 'object') {
-      const numericValue = product.price.value || product.price.amount || product.price.price || 0;
+    } else if (typeof pObj.price === 'object') {
+      const numericValue = pObj.price.value || pObj.price.amount || pObj.price.price || 0;
       price = typeof numericValue === 'number' ? numericValue : 0;
     }
   }
@@ -20,43 +21,43 @@ export const transformProduct = (product: any): Product => {
   return {
     ...product,
     price,
-    image_url: product.image_url || product.imageUrl,
-    sellerId: product.sellerId || product.seller_id,
-    createdAt: product.createdAt || product.created_at,
-    updatedAt: product.updatedAt || product.updated_at,
-    is_custom_product: Boolean(product.is_custom_product || product.isCustomProduct),
-    production_days: product.production_days ?? product.productionDays ?? null,
-    customization_prompt: product.customization_prompt || product.customizationPrompt || null,
-    is_imported_product: Boolean(product.is_imported_product || product.isImportedProduct),
-    import_days: product.import_days ?? product.importDays ?? null,
-    import_note: product.import_note || product.importNote || null,
-    isSold: product.isSold || product.is_sold || product.status === 'sold',
-    status: product.status || (product.isSold || product.is_sold ? 'sold' : 'available')
+    image_url: pObj.image_url || pObj.imageUrl,
+    sellerId: pObj.sellerId || pObj.seller_id,
+    createdAt: pObj.createdAt || pObj.created_at,
+    updatedAt: pObj.updatedAt || pObj.updated_at,
+    is_custom_product: Boolean(pObj.is_custom_product || pObj.isCustomProduct),
+    production_days: pObj.production_days ?? pObj.productionDays ?? null,
+    customization_prompt: pObj.customization_prompt || pObj.customizationPrompt || null,
+    is_imported_product: Boolean(pObj.is_imported_product || pObj.isImportedProduct),
+    import_days: pObj.import_days ?? pObj.importDays ?? null,
+    import_note: pObj.import_note || pObj.importNote || null,
+    isSold: pObj.isSold || pObj.is_sold || pObj.status === 'sold',
+    status: pObj.status || (pObj.isSold || pObj.is_sold ? 'sold' : 'available')
   };
 };
 
 interface ProductsResponse {
   data: {
-    products: any[];
+    products: ApiSellerProduct[];
   };
 }
 
 interface ProductResponse {
-  data: any;
+  data: unknown;
 }
 
 export const sellerProductsApi = {
-  createProduct: async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isSold'>): Promise<Product> => {
+  createProduct: async (product: Omit<ApiSellerProduct, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isSold'>): Promise<ApiSellerProduct> => {
     const response = await sellerApiInstance.post('/sellers/products', product);
     return transformProduct(response.data);
   },
 
-  getProducts: async (): Promise<Product[]> => {
+  getProducts: async (): Promise<ApiSellerProduct[]> => {
     try {
       const response = await sellerApiInstance.get<ProductsResponse>('/sellers/products');
       const products = response.data?.data?.products || [];
       return products.map(transformProduct);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching products:', {
         error: error.message,
         response: error.response?.data,
@@ -70,10 +71,10 @@ export const sellerProductsApi = {
     }
   },
 
-  getSellerProducts: async (sellerId: string | number): Promise<Product[]> => {
+  getSellerProducts: async (sellerId: string | number): Promise<ApiSellerProduct[]> => {
     try {
       const response = await apiClient.get<ProductsResponse>(`/sellers/${sellerId}/products`);
-      let products: any[] = [];
+      let products: ApiSellerProduct[] = [];
       if (response.data?.data?.products) {
         products = response.data.data.products;
       } else if (Array.isArray(response.data?.data)) {
@@ -82,7 +83,7 @@ export const sellerProductsApi = {
         products = response.data;
       }
       return products.map(transformProduct);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching seller products:', {
         error: error.message,
         response: error.response?.data,
@@ -96,15 +97,15 @@ export const sellerProductsApi = {
     }
   },
 
-  getProduct: async (id: string): Promise<Product> => {
+  getProduct: async (id: string): Promise<ApiSellerProduct> => {
     try {
       const response = await sellerApiInstance.get<ProductResponse>(`/sellers/products/${id}`);
       const productData = response.data?.data?.product;
       if (!productData) {
-        throw new Error('Product not found');
+        throw new Error('ApiSellerProduct not found');
       }
       return transformProduct(productData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching product:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -113,7 +114,7 @@ export const sellerProductsApi = {
     }
   },
 
-  updateProduct: async (id: string, updates: Partial<Product>): Promise<Product> => {
+  updateProduct: async (id: string, updates: Partial<ApiSellerProduct>): Promise<ApiSellerProduct> => {
     const response = await sellerApiInstance.patch(`/sellers/products/${id}`, updates);
     return transformProduct(response.data);
   },
@@ -122,7 +123,7 @@ export const sellerProductsApi = {
     track_inventory: boolean;
     quantity: number | null;
     low_stock_threshold: number | null;
-  }): Promise<Product> => {
+  }): Promise<ApiSellerProduct> => {
     const response = await sellerApiInstance.patch(`/sellers/products/${id}/inventory`, inventoryData);
     return transformProduct(response.data);
   },
@@ -153,7 +154,7 @@ export const sellerProductsApi = {
         'Content-Type': 'multipart/form-data',
       },
       timeout: 5 * 60 * 1000,
-    } as any);
+    } as import('axios').AxiosRequestConfig);
 
     return {
       filePath: response.data.data.filePath,
@@ -162,3 +163,5 @@ export const sellerProductsApi = {
     };
   }
 };
+
+

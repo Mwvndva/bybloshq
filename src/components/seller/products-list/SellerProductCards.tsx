@@ -9,16 +9,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Edit, EyeOff, Handshake, Loader2, MoreVertical, Package, Trash2 } from 'lucide-react';
 import type { Product } from '@/types';
+import type { ApiSellerProduct } from '@/types/api/product';
+type ProductWithApiFields = Product & Partial<ApiSellerProduct>;
 import { cn, formatCurrency } from '@/lib/utils';
 
 interface SellerProductCardsProps {
-  products: Product[];
+  products: ProductWithApiFields[];
   deletingId: string | null;
   updatingId: string | null;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onStatusUpdate?: (productId: string, status: 'available' | 'sold') => void;
-  onInventoryEdit: (product: Product) => void;
+  onInventoryEdit: (product: ProductWithApiFields) => void;
 }
 
 export function SellerProductCards({
@@ -111,19 +113,19 @@ export function SellerProductCards({
             <div className="flex items-center justify-between py-1">
               <span className="text-[10px] text-slate-600">Stock:</span>
               <div className="flex items-center gap-2">
-                {(product as any).track_inventory ? (
+                {product.track_inventory ? (
                   <Badge
                     className={cn(
                       'font-mono font-semibold text-[10px] px-1.5 py-0',
-                      (product as any).quantity === 0
+                      product.quantity === 0
                         ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                        : ((product as any).quantity <= ((product as any).low_stock_threshold || 5)
+                        : (product.quantity <= (product.low_stock_threshold || 5)
                           ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                           : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30')
                     )}
                   >
                     <Package className="h-2.5 w-2.5 mr-0.5" />
-                    {(product as any).quantity ?? 0}
+                    {product.quantity ?? 0}
                   </Badge>
                 ) : (
                   <span className="text-[10px] text-slate-500 italic">Not tracked</span>
@@ -166,3 +168,5 @@ export function SellerProductCards({
     </div>
   );
 }
+
+

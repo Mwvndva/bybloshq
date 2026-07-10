@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Phone, Loader2, MapPin, Truck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import LocationPicker from '@/components/common/LocationPicker';
-import apiClient from '@/lib/apiClient';
+import { useLogisticsQuoteMutation } from '@/hooks/buyer/useBuyerPayments';
 import {
   createOptionalBuyerLocation,
   hasPreciseLocation,
@@ -85,6 +85,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   const productPrice = Number(purchaseDetails?.productPrice || 0);
   const canUseDoorDelivery = Boolean(isPhysicalProduct && productPrice > 0);
   const displayedServiceCharge = calculateProductServiceCharge(productPrice);
+  const logisticsQuoteMutation = useLogisticsQuoteMutation();
   const displayedDeliveryFee = canUseDoorDelivery && doorDeliveryEnabled ? Number(deliveryQuote?.feeAmount || 0) : 0;
   const displayedTotal = calculateBuyerPayableTotal(productPrice, displayedDeliveryFee);
 
@@ -125,17 +126,18 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       setIsQuoteLoading(true);
       setQuoteError('');
       try {
-        const response = await apiClient.post('/payments/logistics-quote', {
-          legType: 'delivery',
-          location: {
-            address: deliveryLocation.address,
-            latitude: deliveryLocation.lat,
-            longitude: deliveryLocation.lng
-          }
-        }, {
+        const response = await logisticsQuoteMutation.mutateAsync({
+          payload: {
+            legType: 'delivery',
+            location: {
+              address: deliveryLocation.address,
+              latitude: deliveryLocation.lat,
+              longitude: deliveryLocation.lng
+            }
+          },
           signal: controller.signal
         });
-        const quote = response.data?.data;
+        const quote = response?.data;
         const feeAmount = Number(quote?.feeAmount || 0);
         setDeliveryQuote({
           feeAmount,
@@ -144,10 +146,10 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
           rateKesPerKm: Number(quote?.rateKesPerKm || 40),
           totalAmount: calculateBuyerPayableTotal(productPrice, feeAmount)
         });
-      } catch (quoteError: any) {
-        if (quoteError?.name !== 'CanceledError' && quoteError?.code !== 'ERR_CANCELED') {
+      } catch (quoteError: unknown) {
+        if ((quoteError as Record<string, unknown>)?.name !== 'CanceledError' && (quoteError as Record<string, unknown>)?.code !== 'ERR_CANCELED') {
           setDeliveryQuote(null);
-          setQuoteError(quoteError?.response?.data?.error || quoteError?.message || 'Could not calculate delivery fee');
+          setQuoteError((((quoteError as Record<string, unknown>)?.response as Record<string, unknown>)?.data as Record<string, unknown>)?.error || (quoteError as Record<string, unknown>)?.message || 'Could not calculate delivery fee');
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -160,7 +162,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [canUseDoorDelivery, doorDeliveryEnabled, deliveryLocation.address, deliveryLocation.lat, deliveryLocation.lng, productPrice]);
+  }, [canUseDoorDelivery, doorDeliveryEnabled, deliveryLocation, productPrice, logisticsQuoteMutation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,3 +419,5 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 };
 
 export default PhoneCheckModal;
+
+

@@ -10,7 +10,7 @@ import type { AnalyticsData, RecentOrder } from '../types';
 interface OverviewTabProps {
   analytics: AnalyticsData;
   pendingOverviewOrders: RecentOrder[];
-  sellerProfile: any;
+  sellerProfile: import('@/types').Seller;
   onCopyShopLink: () => Promise<void>;
 }
 
@@ -158,3 +158,5 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
     </div>
   );
 }
+
+

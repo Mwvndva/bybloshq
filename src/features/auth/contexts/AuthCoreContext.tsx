@@ -1,12 +1,11 @@
-import { createContext, useContext, useMemo, useState, ReactNode } from 'react';
+import { useMemo, useState, ReactNode } from 'react';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthActions } from '../hooks/useAuthActions';
 import { useAuthRevalidation } from '../hooks/useAuthRevalidation';
-import type {
-    GlobalAuthContextType,
-    GlobalUser,
-} from '../types/authTypes';
+import { GlobalAuthContext } from './authContextObjects';
+
+export { GlobalAuthContext } from './authContextObjects';
 
 export type {
     AdminProfile,
@@ -22,17 +21,11 @@ export type {
 } from '../types/authTypes';
 
 // ============================================================================
-// CONTEXT CREATION
-// ============================================================================
-
-const GlobalAuthContext = createContext<GlobalAuthContextType | undefined>(undefined);
-
-// ============================================================================
 // PROVIDER COMPONENT
 // ============================================================================
 
 export function AuthCoreProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<GlobalUser | null>(null);
+    const [user, setUser] = useState<import('../types/authTypes').GlobalUser | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     // Separate flag: only true during the very first page-load auth check.
     // Unlike isLoading, this does NOT become true again during login/register.
@@ -70,7 +63,7 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
     // CONTEXT VALUE
     // ============================================================================
 
-    const value: GlobalAuthContextType = useMemo(() => ({
+    const value: import('../types/authTypes').GlobalAuthContextType = useMemo(() => ({
         user,
         isAuthenticated: user?.isAuthenticated || false,
         isLoading,
@@ -104,14 +97,4 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
     );
 }
 
-// ============================================================================
-// HOOK
-// ============================================================================
 
-export const useGlobalAuth = (): GlobalAuthContextType => {
-    const context = useContext(GlobalAuthContext);
-    if (context === undefined) {
-        throw new Error('useGlobalAuth must be used within a GlobalAuthProvider');
-    }
-    return context;
-};

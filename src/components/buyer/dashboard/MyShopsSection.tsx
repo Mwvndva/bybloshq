@@ -6,15 +6,15 @@ interface MyShopsSectionProps {
   filteredCount: number;
   isLoadingShops: boolean;
   mobileTab: 'online' | 'physical';
-  onClickCountChange: (shop: any, clickCount: number) => void;
+  onClickCountChange: (shop: ApiPublicSeller, clickCount: number) => void;
   onMobileTabChange: (tab: 'online' | 'physical') => void;
-  onUnfollowShop: (shop: any) => void;
+  onUnfollowShop: (shop: ApiPublicSeller) => void;
   searchQuery: string;
   shopGroups: Array<{
     key: 'online' | 'physical';
     title: string;
     count: number;
-    shops: any[];
+    shops: ApiPublicSeller[];
     empty: string;
   }>;
   shopsCount: number;
@@ -118,12 +118,12 @@ interface ShopsGroupProps {
     key: 'online' | 'physical';
     title: string;
     count: number;
-    shops: any[];
+    shops: ApiPublicSeller[];
     empty: string;
   };
   isLoadingShops: boolean;
-  onClickCountChange: (shop: any, clickCount: number) => void;
-  onUnfollowShop: (shop: any) => void;
+  onClickCountChange: (shop: ApiPublicSeller, clickCount: number) => void;
+  onUnfollowShop: (shop: ApiPublicSeller) => void;
   skeletonKeyPrefix: string;
   unfollowingShopId: string | null;
 }
@@ -172,3 +172,5 @@ function ShopsGroup({
     </section>
   );
 }
+
+

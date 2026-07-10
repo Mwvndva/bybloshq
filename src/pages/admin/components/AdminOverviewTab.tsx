@@ -12,7 +12,7 @@ import {
 } from './AdminDashboardCharts';
 
 interface AdminOverviewTabProps {
-  dashboardState: any;
+  dashboardState: { topShops?: Record<string, unknown>[], sellers?: Record<string, unknown>[], systemStats?: Record<string, unknown> };
   safeFormatDate: (dateString: string | null | undefined, formatStr?: string) => string;
   onShowSellers: () => void;
 }
@@ -66,7 +66,7 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
 
       <ChartContainer title="Top Shops" description="Highest client conversion" className="col-span-4 lg:col-span-2">
         <div className="space-y-4 h-full flex flex-col justify-center">
-          {dashboardState.topShops?.length ? dashboardState.topShops.slice(0, 3).map((shop: any, index: number) => (
+          {dashboardState.topShops?.length ? dashboardState.topShops.slice(0, 3).map((shop: Record<string, unknown>, index: number) => (
             <div key={shop.id} className="flex items-center justify-between p-5 bg-white/[0.03] rounded-[1.5rem] border border-white/5 hover:bg-white/10 transition-all duration-500 group/shop">
               <div className="flex items-center gap-5">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black italic shadow-inner transition-transform group-hover/shop:scale-110 ${index === 0 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
@@ -113,7 +113,7 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {dashboardState.sellers.slice(0, 5).map((seller: any) => (
+                {dashboardState.sellers.slice(0, 5).map((seller: Record<string, unknown>) => (
                   <tr key={seller.id} className="hover:bg-white/[0.02] transition-all group">
                     <td className="px-5 md:px-10 py-4 md:py-6">
                       <div className="flex items-center gap-3 md:gap-5">
@@ -144,3 +144,5 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
     </div>
   );
 }
+
+

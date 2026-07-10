@@ -15,7 +15,7 @@ interface BuyerProfileSheetProps {
   locationData: Record<string, string[]>;
   mobilePayment: string;
   refundAmount: number;
-  user: any;
+  user: import("@/features/auth/types/authTypes").UserProfile | null;
   whatsappNumber: string;
   onCityChange: (value: string) => void;
   onFullNameChange: (value: string) => void;
@@ -39,7 +39,7 @@ function ProfileDetail({
   label,
   value
 }: {
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value?: string | null;
 }) {
@@ -186,3 +186,5 @@ export function BuyerProfileSheet({
     </Sheet>
   );
 }
+
+

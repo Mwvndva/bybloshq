@@ -18,6 +18,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { logisticsQueryKeys } from '@/api/queryKeys';
 import {
   clearLogisticsSession,
   fetchLogisticsMe,
@@ -30,7 +31,7 @@ import {
   LogisticsSort,
   LogisticsStatusUpdate,
   updateLogisticsLegStatus,
-} from '@/api/logisticsApi';
+} from '@/api/logistics';
 import { toast } from 'sonner';
 
 const ACTIVE_GROUPS = [
@@ -485,7 +486,7 @@ const MzigoDashboardPage = () => {
   }, []);
 
   const partnerQuery = useQuery({
-    queryKey: ['logistics', 'me'],
+    queryKey: logisticsQueryKeys.me(),
     queryFn: fetchLogisticsMe,
     enabled: Boolean(getLogisticsToken()),
     staleTime: 5 * 60 * 1000,
@@ -493,7 +494,7 @@ const MzigoDashboardPage = () => {
   });
 
   const requestsQuery = useQuery({
-    queryKey: ['logistics', 'requests', sort],
+    queryKey: logisticsQueryKeys.requests(sort),
     queryFn: () => fetchLogisticsRequests(sort),
     enabled: Boolean(getLogisticsToken()),
     refetchInterval: 60_000,
@@ -505,11 +506,14 @@ const MzigoDashboardPage = () => {
     mutationFn: updateLogisticsLegStatus,
     onSuccess: (result) => {
       toast.success(result.updated ? 'Status updated' : 'Status already up to date');
-      queryClient.invalidateQueries({ queryKey: ['logistics', 'requests'] });
+      queryClient.invalidateQueries({ queryKey: logisticsQueryKeys.all });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errObj = error as Record<string, unknown>;
+      const response = errObj.response as Record<string, unknown> | undefined;
+      const data = response?.data as Record<string, unknown> | undefined;
       toast.error('Status update failed', {
-        description: error?.response?.data?.message || error?.message || 'Mzigo status was not updated.',
+        description: String(data?.message || errObj.message || 'Mzigo status was not updated.'),
       });
     },
     onSettled: () => {
@@ -519,7 +523,9 @@ const MzigoDashboardPage = () => {
 
   useEffect(() => {
     if (partnerQuery.isError || requestsQuery.isError) {
-      const status = (partnerQuery.error as any)?.response?.status || (requestsQuery.error as any)?.response?.status;
+      const partnerErr = partnerQuery.error as Record<string, unknown> | null;
+      const requestsErr = requestsQuery.error as Record<string, unknown> | null;
+      const status = (partnerErr?.response as Record<string, unknown>)?.status || (requestsErr?.response as Record<string, unknown>)?.status;
       if (status === 401 || status === 403) {
         clearLogisticsSession();
         navigate('/mzigo/login', { replace: true });
@@ -747,3 +753,5 @@ const MzigoDashboardPage = () => {
 };
 
 export default MzigoDashboardPage;
+
+

@@ -63,3 +63,5 @@ export function SkeletonCardGrid({ count = 6, variant = 'product', className }: 
         </div>
     );
 }
+
+

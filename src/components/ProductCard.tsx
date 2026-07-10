@@ -1,15 +1,17 @@
 import { useState, useRef, type CSSProperties, type MouseEvent } from 'react';
 import { Card } from '@/components/ui/card';
 import { Loader2, Heart } from 'lucide-react';
-import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+import { useBuyerAuth } from '@/features/auth/contexts';
 import { Product, Seller } from '@/types';
-import { useWishlist } from '@/contexts/WishlistContext';
+import type { ApiSellerProduct, ApiProduct } from '@/types/api/product';
+import { useWishlist } from '@/contexts/useWishlist';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/components/ui/use-toast';
-import buyerApi from '@/api/buyerApi';
+import { useToast } from '@/hooks/use-toast';
+import { useCheckBuyerByPhoneMutation } from '@/hooks/buyer/mutations/useBuyerAuthMutations';
+import { useSaveBuyerInfoMutation } from '@/hooks/buyer/mutations/useSaveBuyerInfoMutation';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import apiClient from '@/lib/apiClient';
+import { useInitiateProductMutation } from '@/hooks/buyer/useBuyerPayments';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { ProductCardDetails } from '@/components/product-card/ProductCardDetails';
 import { ProductCardMedia } from '@/components/product-card/ProductCardMedia';
@@ -26,7 +28,7 @@ const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 0) => {
 };
 
 const normalizeProductImages = (product: Product): string[] => {
-  const rawImages = (product as any).images;
+  const rawImages = product.images;
   const extraImages = Array.isArray(rawImages)
     ? rawImages
     : typeof rawImages === 'string'
@@ -42,7 +44,7 @@ const normalizeProductImages = (product: Product): string[] => {
 
   return [
     product.image_url,
-    (product as any).imageUrl,
+    product.imageUrl,
     ...extraImages
   ]
     .filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
@@ -61,6 +63,8 @@ interface ProductCardProps {
 
 export function ProductCard({ product, seller, hideWishlist = false, theme, forceWhiteText = false }: ProductCardProps) {
   const { toast } = useToast();
+  const checkBuyerByPhoneMutation = useCheckBuyerByPhoneMutation();
+  const saveBuyerInfoMutation = useSaveBuyerInfoMutation();
   const navigate = useNavigate();
 
   const wishlistContext = useWishlist();
@@ -123,12 +127,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
-  const isCustomProduct = isPhysical && Boolean((product as any).is_custom_product || (product as any).isCustomProduct);
-  const productionDays = Number((product as any).production_days || (product as any).productionDays || 0) || null;
-  const customizationPrompt = (product as any).customization_prompt || (product as any).customizationPrompt || null;
-  const isImportedProduct = isPhysical && Boolean((product as any).is_imported_product || (product as any).isImportedProduct);
-  const importDays = Number((product as any).import_days || (product as any).importDays || 0) || null;
-  const importNote = (product as any).import_note || (product as any).importNote || null;
+  const isCustomProduct = isPhysical && Boolean(product.is_custom_product || product.isCustomProduct);
+  const productionDays = Number(product.production_days || product.productionDays || 0) || null;
+  const customizationPrompt = product.customization_prompt || product.customizationPrompt || null;
+  const isImportedProduct = isPhysical && Boolean(product.is_imported_product || product.isImportedProduct);
+  const importDays = Number(product.import_days || product.importDays || 0) || null;
+  const importNote = product.import_note || product.importNote || null;
   const effectiveIsCustomProduct = isCustomProduct || (isPhysical && forceCustomCheckout);
   const effectiveProductionDays = productionDays || (effectiveIsCustomProduct ? 1 : null);
   const effectiveCustomizationPrompt = customizationPrompt || 'Tell the seller exactly what you want customized.';
@@ -148,7 +152,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         await addToWishlist(product);
         // Toast is handled inside addToWishlist context method
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Wishlist toggle error:', error);
       // Errors are also handled with toasts in the context, 
       // but we log here just in case.
@@ -161,6 +165,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string; locationType?: string } | null>(null);
+  const initiateProductMutation = useInitiateProductMutation();
 
   const handleBuyClick = async (e: MouseEvent) => {
     e?.preventDefault?.();
@@ -240,7 +245,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
       }
       // FIX (Task 21): Normalize phone number before checking status
       const normalizedPhone = normalizePhone(phone);
-      const result = await buyerApi.checkBuyerByPhone(normalizedPhone);
+      const result = await checkBuyerByPhoneMutation.mutateAsync(normalizedPhone);
 
       setCurrentPhone(normalizedPhone);
       setIsPhoneCheckModalOpen(false);
@@ -313,7 +318,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
           setIsBuyerModalOpen(true);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to check phone number.',
@@ -325,8 +330,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   };
 
   const handleBuyerInfoSubmit = async (
-    buyerInfo: any,
-    explicitBookingData?: any,
+    buyerInfo: Record<string, unknown>,
+    explicitBookingData?: Record<string, unknown>,
     isExistingUserUpdate: boolean = false
   ) => {
     try {
@@ -340,7 +345,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
       // If it's a new user (not just updating email for existing), save them first
       if (!isExistingUserUpdate && !shouldSkipSave) {
-        const saveResult = await buyerApi.saveBuyerInfo(enrichedBuyerInfo);
+        const saveResult = await saveBuyerInfoMutation.mutateAsync(enrichedBuyerInfo);
 
         if (saveResult.requiresLogin) {
           // Save current location for redirect after login
@@ -363,7 +368,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         });
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Save error:', error);
       toast({ title: "Error", description: "Failed to save information." });
     }
@@ -377,7 +382,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
       city?: string;
       location?: string
     },
-    bookingDetails: any = null,
+    bookingDetails: Record<string, unknown> | null = null,
     buyerId?: string | number
   ) => {
     const activeDoorDeliverySelection = isPhysical ? doorDeliverySelectionRef.current : null;
@@ -425,8 +430,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         : null;
       const cityLocationFallback = buyerDetails.city && buyerDetails.location
         ? toBuyerLocationPayload(`${buyerDetails.city}, ${buyerDetails.location}`, {
-          lat: (buyerDetails as any).latitude,
-          lng: (buyerDetails as any).longitude
+          lat: (buyerDetails as Record<string, unknown>).latitude,
+          lng: (buyerDetails as Record<string, unknown>).longitude
         })
         : null;
 
@@ -531,12 +536,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
       };
 
       // USE NEW API CLIENT
-      const response = await apiClient.post('/payments/initiate-product', payload, {
-        headers: {
-          'Idempotency-Key': checkoutToken
-        }
-      });
-      const data: any = response.data;
+      const data = await initiateProductMutation.mutateAsync({
+        payload,
+        idempotencyKey: checkoutToken
+      }) as Record<string, unknown>;
 
       if (data.status === 'success' || data.success === true) {
         toast({
@@ -573,7 +576,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         throw new Error(data.message);
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Payment initiation error:', error);
 
       // Extract error message from response
@@ -750,3 +753,5 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
     </Card>
   );
 }
+
+

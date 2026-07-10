@@ -1,1 +1,3 @@
-export { ProductCard } from "./ProductCard";
+export { ProductCard } from "@/components/ProductCard";
+
+

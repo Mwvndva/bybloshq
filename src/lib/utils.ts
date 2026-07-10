@@ -14,7 +14,7 @@ export function formatCurrency(amount: number | string | null | undefined): stri
   // Handle objects - if amount is an object, try to extract a numeric value
   if (typeof amount === 'object' && amount !== null) {
     // Try to extract a numeric value from common object structures
-    const obj = amount as Record<string, any>;
+    const obj = amount as Record<string, unknown>;
     const numericValue = obj.value || obj.amount || obj.price || obj.total || 0;
     if (typeof numericValue === 'number' && !isNaN(numericValue)) {
       amount = numericValue;
@@ -113,7 +113,7 @@ export function formatDate(dateInput: string | Date, format: 'full' | 'date' | '
   }
 }
 
-export function decodeJwt(token: string): any {
+export function decodeJwt(token: string): unknown {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -171,7 +171,7 @@ export function getImageUrl(path: string | undefined | null): string {
  * Standardized check to determine if a seller is "Shopless"
  * (Missing physical shop flag, missing address, or using default placeholder coordinates)
  */
-export function isSellerShopless(input: any | null | undefined): boolean {
+export function isSellerShopless(input: unknown): boolean {
   if (!input) return true;
 
   // 1. Identify the core seller data (prioritize nested seller object)
@@ -216,3 +216,5 @@ export function formatFileSize(bytes: number | string | null | undefined): strin
   if (numBytes < 1024 * 1024) return `${(numBytes / 1024).toFixed(1)} KB`;
   return `${(numBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+

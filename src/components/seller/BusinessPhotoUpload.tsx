@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
-import { sellerApi } from '@/api/sellerApi';
+import { useUploadBusinessPhotoMutation } from '@/hooks/seller/useSellerProfile';
 import { getImageUrl } from '@/lib/utils';
 
 interface BusinessPhotoUploadProps {
@@ -75,13 +75,15 @@ export const BusinessPhotoUpload = ({ currentPhotoUrl, fallbackInitials, onPhoto
     });
   };
 
+  const uploadBusinessPhotoMutation = useUploadBusinessPhotoMutation();
+
   const handleUpload = useCallback(async () => {
     if (!file) return;
 
     try {
       setIsUploading(true);
       const base64Image = await fileToBase64(file);
-      const { businessPhotoUrl } = await sellerApi.uploadBusinessPhoto(base64Image);
+      const { businessPhotoUrl } = await uploadBusinessPhotoMutation.mutateAsync(base64Image);
 
       setFile(null);
       setPreviewUrl(businessPhotoUrl);
@@ -91,22 +93,23 @@ export const BusinessPhotoUpload = ({ currentPhotoUrl, fallbackInitials, onPhoto
         title: 'Business photo updated',
         description: 'Your business photo has been uploaded successfully.',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       console.error('Error uploading business photo:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to upload business photo. Please try again.',
+        description: err.response?.data?.message || 'Failed to upload business photo. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsUploading(false);
     }
-  }, [file, onPhotoUploaded]);
+  }, [file, onPhotoUploaded, uploadBusinessPhotoMutation]);
 
   const handleRemove = useCallback(async () => {
     try {
       setIsUploading(true);
-      await sellerApi.uploadBusinessPhoto('');
+      await uploadBusinessPhotoMutation.mutateAsync('');
 
       setFile(null);
       setPreviewUrl(null);
@@ -116,17 +119,18 @@ export const BusinessPhotoUpload = ({ currentPhotoUrl, fallbackInitials, onPhoto
         title: 'Business photo removed',
         description: 'Your business photo has been removed.',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       console.error('Error removing business photo:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to remove business photo. Please try again.',
+        description: err.response?.data?.message || 'Failed to remove business photo. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsUploading(false);
     }
-  }, [onPhotoUploaded]);
+  }, [onPhotoUploaded, uploadBusinessPhotoMutation]);
 
   const imageSrc = getPreviewSrc(previewUrl || currentPhotoUrl);
 
@@ -216,3 +220,5 @@ export const BusinessPhotoUpload = ({ currentPhotoUrl, fallbackInitials, onPhoto
 };
 
 export default BusinessPhotoUpload;
+
+

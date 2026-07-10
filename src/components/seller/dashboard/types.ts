@@ -2,37 +2,8 @@ import type { ReactNode } from 'react';
 
 export type SellerTabId = 'overview' | 'products' | 'orders' | 'withdrawals' | 'settings';
 
-export interface WithdrawalRequest {
-  id: string;
-  amount: number;
-  withdrawalFee?: number;
-  totalDeducted?: number;
-  mpesaNumber: string;
-  mpesaName: string;
-  status: 'processing' | 'completed' | 'failed' | 'compensation_required';
-  createdAt: string;
-  updatedAt?: string;
-  processedAt?: string;
-  processedBy?: string;
-  providerReference?: string;
-  mpesaReceipt?: string;
-  failureReason?: string;
-}
 
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  image_url: string;
-  imageUrl?: string;
-  aesthetic: string;
-  createdAt: string;
-  updatedAt?: string;
-  sold?: number;
-  status?: 'available' | 'sold';
-  isSold?: boolean;
-}
+
 
 export interface OrderItem {
   id: number;
@@ -91,3 +62,5 @@ export interface SellerSettingsFormData {
   bio: string;
   creatorCommissionRate: number;
 }
+
+

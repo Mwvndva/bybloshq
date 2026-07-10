@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, User, Mail, MapPin, Phone, CheckCircle2, Lock, Eye, EyeOff } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { locationData } from '@/lib/constants';
 import TermsModal from '@/components/TermsModal';
 
@@ -152,7 +152,7 @@ export function BuyerInfoModal({
         ...buyerInfo,
         fullName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim(),
         termsAccepted: true // Passed as true because validation passed
-      } as any);
+      } as unknown as import("@/features/auth/types/authTypes").RegisterBuyerPayload);
       // Reset form on successful submission
       setBuyerInfo({
         firstName: '',
@@ -167,10 +167,10 @@ export function BuyerInfoModal({
       });
       setErrors({});
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save buyer information',
+        description: (error as Error).message || 'Failed to save buyer information',
         variant: 'destructive',
         duration: 5000,
       });
@@ -564,3 +564,5 @@ export function BuyerInfoModal({
     </Dialog>
   );
 }
+
+

@@ -12,7 +12,7 @@ export type Aesthetic =
   | 'health-wellness';
 
 export interface Seller {
-  bannerUrl: any;
+  bannerUrl: string;
   shopName: string;
   id: string;
   fullName: string;
@@ -263,3 +263,39 @@ export interface PaginatedResponse<T> {
   hasNext: boolean;
   hasPrevious: boolean;
 }
+
+export type OrderStatus =
+  | 'PENDING'
+  | 'CREATED'
+  | 'RESERVED'
+  | 'HELD'
+  | 'PAYMENT_PENDING'
+  | 'PAID'
+  | 'AWAITING_SELLER_ACTION'
+  | 'FULFILLING'
+  | 'READY_FOR_BUYER'
+  | 'PROCESSING'
+  | 'DELIVERY_PENDING'
+  | 'CONFIRMED'
+  | 'SERVICE_PENDING'
+  | 'COLLECTION_PENDING'
+  | 'DELIVERY_COMPLETE'
+  | 'FULFILLMENT_PENDING'
+  | 'FULFILLED'
+  | 'DELIVERED'
+  | 'BOOKED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'FAILED'
+  | 'EXPIRED'
+  | 'REFUND_PENDING'
+  | 'REFUNDED'
+  | 'MANUAL_REVIEW'
+  | 'COMPENSATION_REQUIRED';
+
+export type PaymentStatus = 'pending' | 'success' | 'failed' | 'reversed' | 'completed' | 'paid' | 'cancelled' | 'manual_review';
+
+export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+
+
+

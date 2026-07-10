@@ -1,70 +1,42 @@
-export interface Seller {
-  id: string;
-  fullName: string;
-  full_name?: string;
-  email: string;
-  phone: string;
-  bio?: string;
-  avatarUrl?: string;
-  bannerUrl?: string;
-  banner_url?: string;
-  theme?: string;
-  location?: string;
-  city?: string;
-  website?: string;
-  socialMedia?: Record<string, string>;
-  shopName?: string;
-  shop_name?: string;
-  createdAt: string;
-  created_at?: string;
-  updatedAt?: string;
-  updated_at?: string;
-  hasPhysicalShop?: boolean;
-  has_physical_shop?: boolean;
-  physicalAddress?: string;
-  physical_address?: string;
-  latitude?: number;
-  longitude?: number;
-  totalWishlistCount?: number;
-  wishlistCount?: number;
-  clientCount?: number;
-  client_count?: number;
-  knockCount?: number;
-  knock_count?: number;
-}
+import type { ApiPublicSeller } from '@/types/api/seller';
+export type { ApiPublicSeller };
 
-export function transformSeller(seller: any): Seller | null {
+
+export function transformSeller(seller: unknown): ApiPublicSeller | null {
+  const sObj = seller as Record<string, unknown>;
   if (!seller) return null;
   return {
-    id: seller.id,
-    fullName: seller.full_name || seller.fullName || 'Unknown Seller',
-    email: seller.email || '',
-    phone: seller.phone || '',
-    bannerUrl: seller.banner_url || seller.bannerUrl || '',
-    shopName: seller.shop_name || seller.shopName || 'My Shop',
-    createdAt: seller.created_at || seller.createdAt || new Date().toISOString(),
-    updatedAt: seller.updated_at || seller.updatedAt || new Date().toISOString(),
-    theme: seller.theme || 'default',
-    ...(seller.bio && { bio: seller.bio }),
-    ...(seller.avatar_url && { avatarUrl: seller.avatar_url }),
-    ...(seller.avatarUrl && { avatarUrl: seller.avatarUrl }),
-    ...(seller.location && { location: seller.location }),
-    ...(seller.city && { city: seller.city }),
-    ...(seller.website && { website: seller.website }),
-    ...(seller.social_media && { socialMedia: seller.social_media }),
-    ...(seller.socialMedia && { socialMedia: seller.socialMedia }),
-    hasPhysicalShop: seller.hasPhysicalShop || seller.has_physical_shop || !!seller.physicalAddress || !!seller.physical_address,
-    ...(seller.physicalAddress && { physicalAddress: seller.physicalAddress }),
-    ...(seller.physical_address && { physicalAddress: seller.physical_address }),
-    ...(seller.latitude && { latitude: seller.latitude }),
-    ...(seller.longitude && { longitude: seller.longitude }),
-    ...(seller.clientCount !== undefined && { clientCount: Number(seller.clientCount) }),
-    ...(seller.client_count !== undefined && { clientCount: Number(seller.client_count) }),
-    ...(seller.totalWishlistCount !== undefined && { totalWishlistCount: Number(seller.totalWishlistCount) }),
-    ...(seller.total_wishlist_count !== undefined && { totalWishlistCount: Number(seller.total_wishlist_count) }),
-    ...(seller.wishlistCount !== undefined && { wishlistCount: Number(seller.wishlistCount) }),
-    ...(seller.wishlist_count !== undefined && { wishlistCount: Number(seller.wishlist_count) }),
-    ...(seller.knockCount !== undefined && { knockCount: Number(seller.knockCount) }),
-    ...(seller.knock_count !== undefined && { knockCount: Number(seller.knock_count) })
+    id: sObj.id,
+    fullName: sObj.full_name || sObj.fullName || 'Unknown Seller',
+    email: sObj.email || '',
+    phone: sObj.phone || '',
+    bannerUrl: sObj.banner_url || sObj.bannerUrl || '',
+    shopName: sObj.shop_name || sObj.shopName || 'My Shop',
+    createdAt: sObj.created_at || sObj.createdAt || new Date().toISOString(),
+    updatedAt: sObj.updated_at || sObj.updatedAt || new Date().toISOString(),
+    theme: sObj.theme || 'default',
+    ...(sObj.bio && { bio: sObj.bio }),
+    ...(sObj.avatar_url && { avatarUrl: sObj.avatar_url }),
+    ...(sObj.avatarUrl && { avatarUrl: sObj.avatarUrl }),
+    ...(sObj.location && { location: sObj.location }),
+    ...(sObj.city && { city: sObj.city }),
+    ...(sObj.website && { website: sObj.website }),
+    ...(sObj.social_media && { socialMedia: sObj.social_media }),
+    ...(sObj.socialMedia && { socialMedia: sObj.socialMedia }),
+    hasPhysicalShop: sObj.hasPhysicalShop || sObj.has_physical_shop || !!sObj.physicalAddress || !!sObj.physical_address,
+    ...(sObj.physicalAddress && { physicalAddress: sObj.physicalAddress }),
+    ...(sObj.physical_address && { physicalAddress: sObj.physical_address }),
+    ...(sObj.latitude && { latitude: sObj.latitude }),
+    ...(sObj.longitude && { longitude: sObj.longitude }),
+    ...(sObj.clientCount !== undefined && { clientCount: Number(sObj.clientCount) }),
+    ...(sObj.client_count !== undefined && { clientCount: Number(sObj.client_count) }),
+    ...(sObj.totalWishlistCount !== undefined && { totalWishlistCount: Number(sObj.totalWishlistCount) }),
+    ...(sObj.total_wishlist_count !== undefined && { totalWishlistCount: Number(sObj.total_wishlist_count) }),
+    ...(sObj.wishlistCount !== undefined && { wishlistCount: Number(sObj.wishlistCount) }),
+    ...(sObj.wishlist_count !== undefined && { wishlistCount: Number(sObj.wishlist_count) }),
+    ...(sObj.knockCount !== undefined && { knockCount: Number(sObj.knockCount) }),
+    ...(sObj.knock_count !== undefined && { knockCount: Number(sObj.knock_count) })
   };
 }
+
+

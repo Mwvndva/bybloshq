@@ -7,3 +7,5 @@ interface LoadingScreenProps {
 export const LoadingScreen = ({ message = 'Loading Byblos...' }: LoadingScreenProps) => {
     return <RouteFallback message={message} />;
 };
+
+

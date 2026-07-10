@@ -1,7 +1,7 @@
 import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { publicApiService, Seller } from '@/api/publicApi';
+import type { ApiPublicSeller } from '@/types/api/seller';
 import SellerBrandCard from '@/components/SellerBrandCard';
+import { usePublicSellersQuery } from '@/hooks/public/useShopQueries';
 
 interface SellersGridProps {
     filterCity: string;
@@ -39,16 +39,13 @@ const SellerGridSkeleton = () => (
     </div>
 );
 
+const EMPTY_SELLERS: ApiPublicSeller[] = [];
+
 const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGridProps) => {
     const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_SELLERS);
     const deferredSearchQuery = useDeferredValue(searchQuery);
-    const sellersQuery = useQuery({
-        queryKey: ['public-sellers', 1, 48],
-        queryFn: () => publicApiService.getSellersPage({ page: 1, limit: 48 }),
-        staleTime: 5 * 60 * 1000,
-        gcTime: 10 * 60 * 1000
-    });
-    const sellers = sellersQuery.data?.sellers || [];
+    const sellersQuery = usePublicSellersQuery({ page: 1, limit: 48 });
+    const sellers = sellersQuery.data?.sellers || EMPTY_SELLERS;
     const loading = sellersQuery.isLoading;
 
     useEffect(() => {
@@ -108,3 +105,5 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
 };
 
 export default memo(SellersGrid);
+
+

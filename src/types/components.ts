@@ -28,3 +28,5 @@ export interface WishlistItemProps {
   product: Product;
   onRemove: (productId: string) => void;
 }
+
+

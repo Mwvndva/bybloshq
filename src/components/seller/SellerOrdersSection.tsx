@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useEffect, type FormEvent } from 'react';
+import { OrderStatus } from '@/types';
+import { useState, useMemo, useCallback, useEffect, useRef, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { format, isValid, parseISO } from 'date-fns';
-import { Order, OrderStatus } from '@/types/order';
+import type { ApiOrder } from '@/types/api/order';
 
 // Helper function to safely format dates
 const formatDate = (dateString: string | Date) => {
@@ -24,9 +25,17 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
 
 const HUB_DROPOFF_LOCATION = 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32';
 import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download, MapPin, CreditCard } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { sellerApi } from '@/api/sellerApi';
+import { useToast } from '@/hooks/use-toast';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
+import {
+  useQuotePickupMutation,
+  useRequestPickupMutation,
+  useSelectHubDropoffMutation,
+  useMarkDroppedAtHubMutation,
+  useUpdateOrderStatusMutation,
+  useConfirmBookingMutation,
+  useCancelSellerOrderMutation
+} from '@/hooks/seller/mutations/useSellerOrderMutations';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 import { useSellerOrders } from './dashboard/hooks/useSellerOrders';
@@ -34,7 +43,7 @@ import { sellerDashboardQueryKeys } from './dashboard/queryKeys';
 import LocationPicker from '../common/LocationPicker';
 import { OrderLogisticsTracking } from '../orders/OrderLogisticsTracking';
 
-const hasBuyerPaidDoorDelivery = (order?: Order | null) => {
+const hasBuyerPaidDoorDelivery = (order?: ApiOrder | null) => {
     if (!order) return false;
     const delivery = order.metadata?.delivery || {};
     return delivery.doorDelivery === true
@@ -44,7 +53,7 @@ const hasBuyerPaidDoorDelivery = (order?: Order | null) => {
         || Boolean(order.logistics?.deliveryLeg);
 };
 
-const getEffectiveFulfillmentType = (order?: Order | null) => (
+const getEffectiveFulfillmentType = (order?: ApiOrder | null) => (
     hasBuyerPaidDoorDelivery(order) ? 'COURIER' : order?.fulfillment_type
 );
 
@@ -54,6 +63,19 @@ export default function SellerOrdersSection() {
     const orders = useMemo(() => ordersQuery.data || [], [ordersQuery.data]);
     const isLoading = ordersQuery.isLoading;
     const [isUpdating, setIsUpdating] = useState(false);
+    
+    const quotePickupMutation = useQuotePickupMutation();
+    const requestPickupMutation = useRequestPickupMutation();
+    const selectHubDropoffMutation = useSelectHubDropoffMutation();
+    const markDroppedAtHubMutation = useMarkDroppedAtHubMutation();
+    const updateOrderStatusMutation = useUpdateOrderStatusMutation();
+    const confirmBookingMutation = useConfirmBookingMutation();
+    const cancelOrderMutation = useCancelSellerOrderMutation();
+
+    // Store latest mutateAsync in a ref so the quote effect doesn't need the mutation as a dep
+    const quotePickupRef = useRef(quotePickupMutation.mutateAsync);
+    quotePickupRef.current = quotePickupMutation.mutateAsync;
+
     // FIX (Task 18): Prevent duplicate order mutations via synchronous lock
     const { runWithLock } = useAsyncLock();
     const [showPickupDialog, setShowPickupDialog] = useState(false);
@@ -62,7 +84,7 @@ export default function SellerOrdersSection() {
     const [readyAction, setReadyAction] = useState<'hub_dropoff' | 'shop_ready'>('hub_dropoff');
     const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [pickupOrder, setPickupOrder] = useState<Order | null>(null);
+    const [pickupOrder, setPickupOrder] = useState<ApiOrder | null>(null);
     const [pickupPhone, setPickupPhone] = useState('');
     const [pickupLocation, setPickupLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
         address: '',
@@ -110,10 +132,12 @@ export default function SellerOrdersSection() {
             setIsPickupQuoteLoading(true);
             setPickupQuoteError('');
             try {
-                const quote = await sellerApi.quotePickup({
+                const quote = await quotePickupRef.current({
+                    orderId: pickupOrder.id,
+                    phone: pickupPhone,
                     address: pickupLocation.address,
-                    latitude: pickupLocation.lat as number,
-                    longitude: pickupLocation.lng as number
+                    lat: pickupLocation.lat,
+                    lng: pickupLocation.lng
                 });
                 setPickupQuote({
                     feeAmount: Number(quote.feeAmount || 0),
@@ -122,16 +146,17 @@ export default function SellerOrdersSection() {
                     rateKesPerKm: Number(quote.rateKesPerKm || 40),
                     currency: quote.currency || 'KES'
                 });
-            } catch (error: any) {
+            } catch (error) {
+                const err = error as { message?: string; response?: { data?: { error?: string; message?: string } } };
                 setPickupQuote(null);
-                setPickupQuoteError(error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Could not calculate pickup fee');
+                setPickupQuoteError(err.response?.data?.error || err.response?.data?.message || err.message || 'Could not calculate pickup fee');
             } finally {
                 setIsPickupQuoteLoading(false);
             }
         }, 400);
 
         return () => window.clearTimeout(timer);
-    }, [pickupOrder, pickupLocation.address, pickupLocation.lat, pickupLocation.lng]);
+    }, [pickupOrder, pickupLocation.address, pickupLocation.lat, pickupLocation.lng, pickupPhone]);
 
     // Filter orders based on search query
     const filteredOrders = useMemo(() => {
@@ -152,7 +177,7 @@ export default function SellerOrdersSection() {
         setShowPickupDialog(true);
     };
 
-    const openRequestPickupDialog = (order: Order) => {
+    const openRequestPickupDialog = (order: ApiOrder) => {
         setPickupOrder(order);
         setPickupPhone('');
         setPickupLocation({ address: '', lat: null, lng: null });
@@ -198,27 +223,25 @@ export default function SellerOrdersSection() {
             try {
                 setIsRequestingPickup(true);
                 const idempotencyKey = `seller-pickup:${pickupOrder.id}:${Date.now()}`;
-                await sellerApi.requestPickup(pickupOrder.id, {
-                    mobilePayment: pickupPhone.trim(),
-                    pickupLocation: {
-                        address: pickupLocation.address.trim(),
-                        latitude: pickupLocation.lat as number,
-                        longitude: pickupLocation.lng as number
-                    },
-                    idempotencyKey
-                });
-                await refreshOrders();
-                toast({
-                    title: 'Pickup payment sent',
-                    description: 'Check your phone to pay the pickup fee. Pickup activates after payment succeeds.'
+                await requestPickupMutation.mutateAsync({
+                    orderId: pickupOrder.id,
+                    phone: pickupPhone.trim(),
+                    address: pickupLocation.address.trim(),
+                    lat: pickupLocation.lat,
+                    lng: pickupLocation.lng,
+                    quote: {
+                        ...pickupQuote,
+                        idempotencyKey
+                    }
                 });
                 setIsRequestingPickup(false);
                 closeRequestPickupDialog();
-            } catch (error: any) {
-                setPickupQuoteError(error?.response?.data?.message || error?.message || 'Failed to request pickup');
+            } catch (error) {
+                const err = error as { message?: string; response?: { data?: { message?: string } } };
+                setPickupQuoteError(err.response?.data?.message || err.message || 'Failed to request pickup');
                 toast({
                     title: 'Pickup request failed',
-                    description: error?.response?.data?.message || error?.message || 'Please try again.',
+                    description: err.response?.data?.message || err.message || 'Please try again.',
                     variant: 'destructive'
                 });
             } finally {
@@ -231,16 +254,16 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                await sellerApi.selectHubDropoff(orderId);
-                await refreshOrders();
+                await selectHubDropoffMutation.mutateAsync(orderId);
                 toast({
                     title: 'Mzigo Ego drop-off selected',
                     description: 'Drop the package at Mzigo Ego within 24 hours, then mark it handed over.'
                 });
-            } catch (error: any) {
+            } catch (error) {
+                const err = error as { message?: string; response?: { data?: { message?: string } } };
                 toast({
                     title: 'Could not select Mzigo drop-off',
-                    description: error?.response?.data?.message || error?.message || 'Please try again.',
+                    description: err.response?.data?.message || err.message || 'Please try again.',
                     variant: 'destructive'
                 });
             } finally {
@@ -258,15 +281,14 @@ export default function SellerOrdersSection() {
             try {
                 setIsUpdating(true);
 
-                if (readyAction === 'hub_dropoff') {
-                    await sellerApi.markDroppedAtHub(selectedOrderId);
+                 if (readyAction === 'hub_dropoff') {
+                    await markDroppedAtHubMutation.mutateAsync(selectedOrderId);
                 } else {
-                    await sellerApi.updateOrderStatus(selectedOrderId, 'READY_FOR_BUYER' as OrderStatus);
+                    await updateOrderStatusMutation.mutateAsync({ orderId: selectedOrderId, status: 'READY_FOR_BUYER' as OrderStatus });
                 }
-                await refreshOrders();
 
                 toast({
-                    title: readyAction === 'hub_dropoff' ? 'Package handed to Mzigo Ego' : 'Order ready for pickup',
+                    title: readyAction === 'hub_dropoff' ? 'Package handed to Mzigo Ego' : 'ApiOrder ready for pickup',
                     description: readyAction === 'hub_dropoff'
                         ? 'Mzigo Ego will secure the package, check it against the order, and update the buyer.'
                         : 'The buyer has been notified that their order is ready for shop pickup.',
@@ -291,11 +313,10 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                await sellerApi.updateOrderStatus(orderId, 'DELIVERY_COMPLETE' as OrderStatus);
-                await refreshOrders();
+                await updateOrderStatusMutation.mutateAsync({ orderId, status: 'DELIVERY_COMPLETE' as OrderStatus });
 
                 toast({
-                    title: 'Order Delivered',
+                    title: 'ApiOrder Delivered',
                     description: 'The order has been marked as delivered.',
                 });
             } catch (err) {
@@ -316,8 +337,7 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                await sellerApi.updateOrderStatus(orderId, 'READY_FOR_BUYER' as OrderStatus);
-                await refreshOrders();
+                await updateOrderStatusMutation.mutateAsync({ orderId, status: 'READY_FOR_BUYER' as OrderStatus });
 
                 toast({
                     title: 'Service Delivered',
@@ -341,8 +361,7 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                await sellerApi.confirmBooking(orderId);
-                await refreshOrders();
+                await confirmBookingMutation.mutateAsync(orderId);
 
                 toast({
                     title: 'Booking Confirmed',
@@ -375,14 +394,13 @@ export default function SellerOrdersSection() {
         await runWithLock(async () => {
             try {
                 setIsUpdating(true);
-                const result = await sellerApi.cancelOrder(cancellingOrderId);
-                await refreshOrders();
+                const result = await cancelOrderMutation.mutateAsync(cancellingOrderId);
 
                 toast({
-                    title: 'Order Cancelled',
+                    title: 'ApiOrder Cancelled',
                     description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount?.toLocaleString() || '0'}.`,
                 });
-            } catch (err: any) {
+            } catch (err) {
                 console.error('Failed to cancel order:', err);
                 toast({
                     title: 'Error',
@@ -565,12 +583,12 @@ export default function SellerOrdersSection() {
                                     <CardContent className="p-4 sm:p-6">
                                         {/* Mobile-first responsive layout */}
                                         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_240px] gap-4 sm:gap-6">
-                                            {/* Order Information Section */}
+                                            {/* ApiOrder Information Section */}
                                             <div className="space-y-3 sm:space-y-4 flex-1">
-                                                {/* Order Header */}
+                                                {/* ApiOrder Header */}
                                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">Order #{order.orderNumber}</h3>
+                                                        <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">ApiOrder #{order.orderNumber}</h3>
                                                         <p className="text-[10px] sm:text-sm text-white/70">{formatDate(order.createdAt)}</p>
                                                         {(order.buyerName || order.customer?.name) && (
                                                             <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-white bg-blue-500/15 border border-blue-400/30 px-2 py-0.5 rounded-md w-fit max-w-full">
@@ -800,7 +818,7 @@ export default function SellerOrdersSection() {
                                                                 disabled={isUpdating}
                                                             >
                                                                 <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                                Cancel Order
+                                                                Cancel ApiOrder
                                                             </Button>
                                                         </div>
                                                     )}
@@ -874,7 +892,7 @@ export default function SellerOrdersSection() {
                                                                     disabled={isUpdating}
                                                                 >
                                                                     <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                                    Cancel Order
+                                                                    Cancel ApiOrder
                                                                 </Button>
                                                             </div>
                                                         )}
@@ -918,7 +936,7 @@ export default function SellerOrdersSection() {
                             {pickupOrder && (
                                 <div className="grid grid-cols-1 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs sm:grid-cols-3">
                                     <div>
-                                        <p className="text-white/60">Order</p>
+                                        <p className="text-white/60">ApiOrder</p>
                                         <p className="font-semibold text-white">#{pickupOrder.orderNumber}</p>
                                     </div>
                                     <div>
@@ -1091,7 +1109,7 @@ export default function SellerOrdersSection() {
                 </DialogContent>
             </Dialog >
 
-            {/* Cancel Order Confirmation Dialog */}
+            {/* Cancel ApiOrder Confirmation Dialog */}
             < Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog} >
                 <DialogContent className="sm:max-w-[425px] bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
                     <DialogHeader>
@@ -1099,7 +1117,7 @@ export default function SellerOrdersSection() {
                             <div className="w-8 h-8 bg-red-500/10 border border-red-400/20 rounded-full flex items-center justify-center">
                                 <XCircle className="h-4 w-4 text-red-300" />
                             </div>
-                            Cancel Order
+                            Cancel ApiOrder
                         </DialogTitle>
                         <DialogDescription className="text-sm text-white/75 leading-relaxed">
                             Are you sure you want to cancel this order?
@@ -1121,7 +1139,7 @@ export default function SellerOrdersSection() {
                             disabled={isUpdating}
                             className="bg-transparent border-white/20 text-white hover:bg-white/10"
                         >
-                            No, Keep Order
+                            No, Keep ApiOrder
                         </Button>
                         <Button
                             onClick={cancelOrder}
@@ -1134,7 +1152,7 @@ export default function SellerOrdersSection() {
                                     Cancelling...
                                 </>
                             ) : (
-                                'Yes, Cancel Order'
+                                'Yes, Cancel ApiOrder'
                             )}
                         </Button>
                     </DialogFooter>
@@ -1143,3 +1161,5 @@ export default function SellerOrdersSection() {
         </>
     );
 }
+
+

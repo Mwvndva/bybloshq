@@ -19,3 +19,5 @@ export function RouteFallback({ message = 'Loading' }: RouteFallbackProps) {
 }
 
 export default RouteFallback;
+
+

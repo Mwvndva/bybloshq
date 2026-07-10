@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
-import { sellerApi } from '@/api/sellerApi';
+import { useUploadBannerMutation } from '@/hooks/seller/useSellerProfile';
 import { getImageUrl } from '@/lib/utils';
 
 interface BannerUploadProps {
@@ -64,6 +64,8 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
     });
   };
 
+  const uploadBannerMutation = useUploadBannerMutation();
+
   const handleUpload = useCallback(async () => {
     if (!file) return;
 
@@ -73,8 +75,8 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
       // Convert file to base64
       const base64Image = await fileToBase64(file);
 
-      // Upload the banner image using the sellerApi
-      const { bannerUrl } = await sellerApi.uploadBanner(base64Image);
+      // Upload the banner image using the mutation
+      const { bannerUrl } = await uploadBannerMutation.mutateAsync(base64Image);
 
       // Update the preview and call the callback
       onBannerUploaded(bannerUrl);
@@ -85,24 +87,25 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
         title: 'Banner updated',
         description: 'Your store banner has been updated successfully.',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       console.error('Error uploading banner:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to upload banner. Please try again.',
+        description: err.response?.data?.message || 'Failed to upload banner. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsUploading(false);
     }
-  }, [file, onBannerUploaded]);
+  }, [file, onBannerUploaded, uploadBannerMutation]);
 
   const handleRemoveBanner = useCallback(async () => {
     try {
       setIsUploading(true);
 
-      // Update the seller's banner to empty using sellerApi
-      await sellerApi.uploadBanner('');
+      // Update the seller's banner to empty using the mutation
+      await uploadBannerMutation.mutateAsync('');
 
       setFile(null);
       setPreviewUrl(null);
@@ -112,17 +115,18 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
         title: 'Banner removed',
         description: 'Your store banner has been removed.',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       console.error('Error removing banner:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to remove banner. Please try again.',
+        description: err.response?.data?.message || 'Failed to remove banner. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsUploading(false);
     }
-  }, [onBannerUploaded]);
+  }, [onBannerUploaded, uploadBannerMutation]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -225,3 +229,5 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
 };
 
 export default BannerUpload;
+
+

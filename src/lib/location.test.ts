@@ -8,7 +8,7 @@ import {
 
 describe('location helpers', () => {
   it('normalizes finite coordinates only', () => {
-    expect(normalizeCoordinates({ lat: '-1.2921' as any, lng: '36.8219' as any })).toEqual({
+    expect(normalizeCoordinates({ lat: '-1.2921' as unknown, lng: '36.8219' as unknown })).toEqual({
       lat: -1.2921,
       lng: 36.8219
     });
@@ -33,3 +33,5 @@ describe('location helpers', () => {
     expect(toBuyerLocationPayload('Nairobi CBD', null)).toBeNull();
   });
 });
+
+

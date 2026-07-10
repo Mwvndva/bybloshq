@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useGlobalAuth, UserRole } from '@/contexts/GlobalAuthContext';
+import { useGlobalAuth, UserRole } from '@/features/auth/contexts';
 import { RouteFallback } from '@/components/common/RouteFallback';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -94,3 +94,5 @@ export function MultiRoleProtectedRoute({
 }) {
     return <AppProtectedRoute allowedRoles={roles}>{children}</AppProtectedRoute>;
 }
+
+

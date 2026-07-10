@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { DollarSign, Loader2, Clock, Wallet, TrendingUp, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import buyerApi from '@/api/buyerApi';
+import { usePendingRefundsQuery } from '@/hooks/buyer/queries/usePendingRefundsQuery';
+import { useRefundRequestMutation } from '@/hooks/buyer/mutations/useRefundRequestMutation';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 interface RefundCardProps {
@@ -26,25 +27,14 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   // FIX (Task 16): Prevent duplicate refund submissions via synchronous lock
   const { runWithLock, isLocked: isSubmitting } = useAsyncLock();
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
-  const [isLoadingPending, setIsLoadingPending] = useState(true);
 
-  // Fetch pending refund requests
-  useEffect(() => {
-    fetchPendingRequests();
-  }, []);
+  // React Query: fetch pending refund requests
+  const pendingRefundsQuery = usePendingRefundsQuery();
+  const pendingRequests: PendingRequest[] = (pendingRefundsQuery.data as { pendingRequests?: PendingRequest[] })?.pendingRequests ?? [];
+  const isLoadingPending = pendingRefundsQuery.isLoading;
 
-  const fetchPendingRequests = async () => {
-    setIsLoadingPending(true);
-    try {
-      const data = await buyerApi.getPendingRefundRequests();
-      setPendingRequests(data.pendingRequests);
-    } catch (error) {
-      console.error('Error fetching pending requests:', error);
-    } finally {
-      setIsLoadingPending(false);
-    }
-  };
+  // React Query: refund request mutation
+  const refundMutation = useRefundRequestMutation();
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -67,23 +57,16 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
     // FIX (Task 16): Prevents duplicate refund submission
     await runWithLock(async () => {
       try {
-        await buyerApi.requestRefund({
-          amount: refundAmount
-        });
+        await refundMutation.mutateAsync({ amount: refundAmount });
 
-        toast.success('Refund request submitted successfully! Admin will review it shortly.');
         setIsDialogOpen(false);
-
-        // Refresh pending requests
-        await fetchPendingRequests();
 
         // Notify parent to refresh data
         if (onRefundRequested) {
           onRefundRequested();
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error requesting refund:', error);
-        toast.error(error.message || 'Failed to submit refund request');
       }
     });
   };
@@ -392,4 +375,6 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
     </>
   );
 }
+
+
 

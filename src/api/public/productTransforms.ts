@@ -1,56 +1,41 @@
-import { transformSeller, type Seller } from './sellerTransforms';
+import { transformSeller, type ApiPublicSeller } from './sellerTransforms';
 
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  image_url: string;
-  imageUrl?: string;
-  aesthetic: string;
-  sellerId: string;
-  seller_id?: string;
-  isSold: boolean;
-  is_sold?: boolean;
-  status: 'available' | 'sold';
-  soldAt?: string | null;
-  sold_at?: string | null;
-  createdAt: string;
-  created_at?: string;
-  updatedAt?: string;
-  updated_at?: string;
-  seller?: Seller;
-}
+import type { ApiProduct } from '@/types/api/product';
+export type { ApiProduct };
 
-export const transformProduct = (product: any): Product => {
+
+export const transformProduct = (product: unknown): ApiProduct => {
+  const pObj = product as Record<string, unknown>;
   let price = 0;
-  if (product.price !== null && product.price !== undefined) {
-    if (typeof product.price === 'number') {
-      price = product.price;
-    } else if (typeof product.price === 'string') {
-      const parsed = Number.parseFloat(product.price);
+  if (pObj.price !== null && pObj.price !== undefined) {
+    if (typeof pObj.price === 'number') {
+      price = pObj.price;
+    } else if (typeof pObj.price === 'string') {
+      const parsed = Number.parseFloat(pObj.price);
       price = Number.isNaN(parsed) ? 0 : parsed;
-    } else if (typeof product.price === 'object') {
-      const numericValue = product.price.value || product.price.amount || product.price.price || 0;
+    } else if (typeof pObj.price === 'object') {
+      const numericValue = pObj.price.value || pObj.price.amount || pObj.price.price || 0;
       price = typeof numericValue === 'number' ? numericValue : 0;
     }
   }
 
-  const transformedProduct: any = {
+  const transformedProduct: ApiProduct = {
     ...product,
     price,
-    image_url: product.image_url || product.imageUrl,
-    sellerId: product.sellerId || product.seller_id,
-    isSold: product.isSold || product.is_sold || product.status === 'sold',
-    status: product.status || (product.isSold || product.is_sold ? 'sold' : 'available'),
-    createdAt: product.createdAt || product.created_at,
-    updatedAt: product.updatedAt || product.updated_at,
-    soldAt: product.soldAt || product.sold_at
+    image_url: pObj.image_url || pObj.imageUrl,
+    sellerId: pObj.sellerId || pObj.seller_id,
+    isSold: pObj.isSold || pObj.is_sold || pObj.status === 'sold',
+    status: pObj.status || (pObj.isSold || pObj.is_sold ? 'sold' : 'available'),
+    createdAt: pObj.createdAt || pObj.created_at,
+    updatedAt: pObj.updatedAt || pObj.updated_at,
+    soldAt: pObj.soldAt || pObj.sold_at
   };
 
-  if (product.seller) {
-    transformedProduct.seller = transformSeller(product.seller);
+  if (pObj.seller) {
+    transformedProduct.seller = transformSeller(pObj.seller);
   }
 
-  return transformedProduct as Product;
+  return transformedProduct as ApiProduct;
 };
+
+

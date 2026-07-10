@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { SellerDashboardLayout } from '@/layouts/BaseDashboardLayout';
 import { Home, ShoppingBag, Settings } from 'lucide-react';
-import { useSellerAuth } from '@/contexts/GlobalAuthContext';
+import { useSellerAuth } from '@/features/auth/contexts';
 
 export function SellerLayout() {
     const { seller } = useSellerAuth();
@@ -30,3 +30,5 @@ export function SellerLayout() {
 }
 
 export default SellerLayout;
+
+

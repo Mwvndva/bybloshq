@@ -74,3 +74,5 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
 };
 
 export default HeroSection;
+
+

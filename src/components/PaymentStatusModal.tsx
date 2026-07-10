@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import buyerApi from '@/api/buyerApi';
-import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useGetOrderStatusMutation } from '@/hooks/buyer/queries/useOrderStatusQuery';
+import { useBuyerAuth } from '@/features/auth/contexts';
 import { formatCurrency } from '@/lib/utils';
 
 type ModalState = 'POLLING' | 'SUCCESS' | 'FAILED' | 'TIMEOUT';
@@ -35,7 +35,12 @@ export const PaymentStatusModal = ({
   const [failureReason, setFailureReason] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { loginWithToken } = useBuyerAuth();
+  const getOrderStatusMutation = useGetOrderStatusMutation();
+  // Store the latest mutateAsync in a ref so the polling effect doesn't need it as a dep
+  const getOrderStatusRef = useRef(getOrderStatusMutation.mutateAsync);
+  getOrderStatusRef.current = getOrderStatusMutation.mutateAsync;
   const MAX_ATTEMPTS = 60;
+
 
   useEffect(() => {
     if (isOpen && invoiceId) {
@@ -45,13 +50,13 @@ export const PaymentStatusModal = ({
     }
   }, [isOpen, invoiceId]);
 
-  const handleAutoLogin = async (token: string) => {
+  const handleAutoLogin = useCallback(async (token: string) => {
     try {
       await loginWithToken(token);
     } catch (err) {
       console.error('Auto-login failed:', err);
     }
-  };
+  }, [loginWithToken]);
 
   useEffect(() => {
     if (!isOpen || !invoiceId || state !== 'POLLING') {
@@ -61,7 +66,11 @@ export const PaymentStatusModal = ({
 
     const poll = async () => {
       try {
-        const res = await buyerApi.getOrderStatus(invoiceId);
+        const res = (await getOrderStatusRef.current(invoiceId)) as {
+          paymentStatus?: string;
+          paymentRecordStatus?: string;
+          status?: string;
+        };
         const status = (res.paymentStatus || '').toLowerCase();
         const paymentRecordStatus = (res.paymentRecordStatus || '').toLowerCase();
         const orderStatus = String(res.status || '').toUpperCase();
@@ -125,7 +134,7 @@ export const PaymentStatusModal = ({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isOpen, invoiceId, state, isGuest, onSuccess]);
+  }, [isOpen, invoiceId, state, isGuest, onSuccess, handleAutoLogin]);
 
   if (!isOpen) return null;
 
@@ -247,3 +256,5 @@ export const PaymentStatusModal = ({
     </div>
   );
 };
+
+

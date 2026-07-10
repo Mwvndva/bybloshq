@@ -1,8 +1,8 @@
+import type { ApiSeller } from '@/types/api/seller';
 import apiClient, { getFreshCsrfToken } from '@/lib/apiClient';
 import type {
   ReferralDashboard,
   RegisterSellerInput,
-  Seller,
   SellerAnalytics,
   Theme,
   UpdateSellerProfileInput
@@ -10,8 +10,9 @@ import type {
 
 const sellerApiInstance = apiClient;
 
-export const transformSeller = (data: any): Seller => {
-  const seller = data.seller || data;
+export const transformSeller = (data: unknown): ApiSeller => {
+  const dataObj = (data && typeof data === 'object') ? (data as Record<string, unknown>) : {};
+  const seller = (dataObj.seller && typeof dataObj.seller === 'object' ? dataObj.seller : dataObj) as Record<string, unknown>;
 
   return {
     id: seller.id,
@@ -50,7 +51,7 @@ interface ShopNameAvailabilityResponse {
 
 interface LoginResponse {
   data: {
-    seller: Seller;
+    seller: ApiSeller;
     token?: string;
   };
 }
@@ -59,7 +60,7 @@ interface RegisterResponse {
   status: string;
   message?: string;
   data: {
-    seller?: Seller;
+    seller?: ApiSeller;
     email?: string;
     emailVerificationRequired?: boolean;
     emailVerificationSent?: boolean;
@@ -67,7 +68,7 @@ interface RegisterResponse {
 }
 
 interface SellerResponse {
-  data: any;
+  data: unknown;
 }
 
 interface AnalyticsResponse {
@@ -104,7 +105,7 @@ export const checkShopNameAvailability = async (shopName: string): Promise<{ ava
 };
 
 export const sellerProfileApi = {
-  login: async (credentials: { email: string; password: string }): Promise<{ seller: Seller; token?: string }> => {
+  login: async (credentials: { email: string; password: string }): Promise<{ seller: ApiSeller; token?: string }> => {
     try {
       const response = await sellerApiInstance.post<LoginResponse>('/sellers/login', credentials);
       const responseData = response.data.data;
@@ -122,7 +123,7 @@ export const sellerProfileApi = {
       await getFreshCsrfToken();
 
       return { seller: transformSeller(seller), token };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -131,7 +132,7 @@ export const sellerProfileApi = {
     }
   },
 
-  register: async (data: RegisterSellerInput): Promise<{ seller?: Seller; status?: string; message?: string }> => {
+  register: async (data: RegisterSellerInput): Promise<{ seller?: ApiSeller; status?: string; message?: string }> => {
     try {
       const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
         fullName: data.fullName,
@@ -172,7 +173,7 @@ export const sellerProfileApi = {
       await getFreshCsrfToken();
 
       return { seller: transformSeller(seller) };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration error:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -188,12 +189,12 @@ export const sellerProfileApi = {
         { email: email.trim().toLowerCase() }
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to resend verification email');
     }
   },
 
-  getProfile: async (): Promise<Seller> => {
+  getProfile: async (): Promise<ApiSeller> => {
     try {
       const response = await sellerApiInstance.get<SellerResponse>('/sellers/profile');
       const profileData = response.data?.data?.seller;
@@ -201,7 +202,7 @@ export const sellerProfileApi = {
         throw new Error('No profile data received');
       }
       return transformSeller(profileData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching profile:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -210,7 +211,7 @@ export const sellerProfileApi = {
     }
   },
 
-  getSellerById: async (id: string | number): Promise<Seller> => {
+  getSellerById: async (id: string | number): Promise<ApiSeller> => {
     try {
       const response = await sellerApiInstance.get<SellerResponse>(`/sellers/${id}`);
       const sellerData = response.data?.data;
@@ -218,7 +219,7 @@ export const sellerProfileApi = {
         throw new Error('No seller data received');
       }
       return transformSeller(sellerData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching seller:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -227,7 +228,7 @@ export const sellerProfileApi = {
     }
   },
 
-  async getSellerByShopName(shopName: string): Promise<Seller> {
+  async getSellerByShopName(shopName: string): Promise<ApiSeller> {
     try {
       const response = await sellerApiInstance.get<SellerResponse>(`/sellers/shop/${encodeURIComponent(shopName)}`);
       const sellerData = response.data?.data;
@@ -235,7 +236,7 @@ export const sellerProfileApi = {
         throw new Error('No seller data received');
       }
       return transformSeller(sellerData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching seller by shop name:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -271,7 +272,7 @@ export const sellerProfileApi = {
       }
 
       return { message: response.data.message };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Forgot password error:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -292,7 +293,7 @@ export const sellerProfileApi = {
       }
 
       return { message: response.data.message };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Reset password error:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -305,9 +306,9 @@ export const sellerProfileApi = {
     }
   },
 
-  updateProfile: async (data: UpdateSellerProfileInput): Promise<Seller> => {
+  updateProfile: async (data: UpdateSellerProfileInput): Promise<ApiSeller> => {
     try {
-      const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
+      const response = await sellerApiInstance.patch<{ data: ApiSeller }>('/sellers/profile', data);
       return transformSeller(response.data.data);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -361,11 +362,13 @@ export const sellerProfileApi = {
       });
       return {
         success: true,
-        message: (response.data as any).message || 'Email verified successfully'
+        message: ((response.data as Record<string, unknown>)?.message as string) || 'Email verified successfully'
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Email verification error:', error);
       throw new Error(error.response?.data?.message || 'Email verification failed');
     }
   }
 };
+
+

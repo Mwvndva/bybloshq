@@ -1,5 +1,6 @@
-﻿import { useState, useEffect, useCallback, useRef, lazy, Suspense, type TouchEvent } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, type TouchEvent } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useBuyerOrdersQuery } from '@/hooks/buyer/queries/useBuyerOrdersQuery';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
@@ -8,8 +9,8 @@ import {
   Users, Store, Package
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useWishlist } from '@/contexts/WishlistContext';
-import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+import { useWishlist } from '@/contexts/useWishlist';
+import { useBuyerAuth } from '@/features/auth/contexts';
 import WishlistSection from './WishlistSection';
 import SellersGrid from '@/components/SellersGrid';
 import { BuyerBottomNav } from './dashboard/BuyerBottomNav';
@@ -44,7 +45,7 @@ function BuyerDashboard() {
     if (pathname.includes('/buyer/profile')) return 'shop';
 
     // Priority 2: Navigation state
-    const stateSection = (location.state as any)?.activeSection;
+    const stateSection = (location.state as Record<string, unknown>)?.activeSection as string | undefined;
     if (stateSection) return stateSection;
 
     // Priority 3: Query parameters (legacy support)
@@ -52,7 +53,7 @@ function BuyerDashboard() {
     const querySection = queryParams.get('section') || queryParams.get('tab');
     if (querySection === 'profile') return 'shop';
     if (querySection && ['shop', 'shops', 'wishlist', 'orders'].includes(querySection)) {
-      return querySection as any;
+      return querySection as "shop" | "shops" | "wishlist" | "orders";
     }
 
     return 'shop';
@@ -101,6 +102,7 @@ function BuyerDashboard() {
   const [myShopsMobileTab, setMyShopsMobileTab] = useState<'online' | 'physical'>('online');
   const followedShops = useBuyerFollowedShops(shopsSearchQuery, activeSection === 'shops');
 
+  const ordersQuery = useBuyerOrdersQuery(!!user);
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
   const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
@@ -161,40 +163,25 @@ function BuyerDashboard() {
 
   // Check for order updates
   useEffect(() => {
-    const checkForOrderUpdates = async () => {
-      try {
-        const buyerApiModule = await import('@/api/buyerApi');
-        const buyerApi = buyerApiModule.default;
-        const orders = await buyerApi.getOrders();
+    if (ordersQuery.data && ordersQuery.data.length > 0) {
+      // Get the most recent order update time (could be createdAt or updatedAt)
+      const latestUpdateTime = Math.max(
+        ...ordersQuery.data.map(order => {
+          const created = new Date(order.createdAt).getTime();
+          const updated = order.updatedAt ? new Date(order.updatedAt).getTime() : created;
+          return Math.max(created, updated);
+        })
+      );
 
-        if (orders.length > 0) {
-          // Get the most recent order update time (could be createdAt or updatedAt)
-          const latestUpdateTime = Math.max(
-            ...orders.map(order => {
-              const created = new Date(order.createdAt).getTime();
-              const updated = order.updatedAt ? new Date(order.updatedAt).getTime() : created;
-              return Math.max(created, updated);
-            })
-          );
+      const lastViewed = lastViewedOrdersTime
+        ? new Date(lastViewedOrdersTime).getTime()
+        : 0;
 
-          const lastViewed = lastViewedOrdersTime
-            ? new Date(lastViewedOrdersTime).getTime()
-            : 0;
-
-          setHasUnreadOrders(latestUpdateTime > lastViewed);
-        } else {
-          setHasUnreadOrders(false);
-        }
-      } catch (error) {
-        console.error('Error checking for order updates:', error);
-      }
-    };
-
-    // Check when component mounts and when user changes
-    if (user) {
-      checkForOrderUpdates();
+      setHasUnreadOrders(latestUpdateTime > lastViewed);
+    } else {
+      setHasUnreadOrders(false);
     }
-  }, [user, lastViewedOrdersTime]);
+  }, [ordersQuery.data, lastViewedOrdersTime]);
 
   const handleLogout = () => {
     logout();
@@ -423,3 +410,5 @@ function BuyerDashboard() {
 }
 
 export default BuyerDashboard;
+
+

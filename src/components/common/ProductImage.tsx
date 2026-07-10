@@ -71,3 +71,5 @@ const ProductImage = ({ src, alt, className, style }: ProductImageProps) => {
 };
 
 export default ProductImage;
+
+

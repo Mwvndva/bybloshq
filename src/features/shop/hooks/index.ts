@@ -1,1 +1,3 @@
-export * from "./useShopTheme";
+export { useShopTheme } from "@/hooks/useShopTheme";
+
+

@@ -64,3 +64,5 @@ export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNav
     </div>
   );
 }
+
+

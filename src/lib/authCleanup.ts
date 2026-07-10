@@ -1,6 +1,6 @@
 import axios from 'axios';
 import apiClient from './apiClient'; // This is for generic API calls
-import { publicApi } from '@/api/publicApi';
+import { publicApi } from '@/api/public';
 
 import { storage } from './storage';
 
@@ -75,3 +75,5 @@ export const clearAllAuthData = async () => {
         console.error('[AuthCleanup] Could not selectively clear sessionStorage', e);
     }
 };
+
+

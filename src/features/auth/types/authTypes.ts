@@ -44,7 +44,7 @@ export interface SellerProfile extends BaseUser {
   facebookLink?: string;
 }
 
-export interface AdminProfile extends BaseUser {}
+export type AdminProfile = BaseUser;
 export interface CreatorProfile extends BaseUser {
   firstName: string;
   lastName: string;
@@ -110,3 +110,5 @@ export interface GlobalAuthContextType {
   getProfile: (role: UserRole) => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>, role: UserRole) => Promise<void>;
 }
+
+

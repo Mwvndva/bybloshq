@@ -1,7 +1,6 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef } from 'react';
-import adminApi from '@/api/adminApi';
+import { useQueryClient } from '@tanstack/react-query';
 import { authStateManager } from '@/lib/authState';
-import { getApiForRole } from '../api/authApi';
 import {
   AUTH_REVALIDATION_TTL_MS,
   getRoleFromRoute,
@@ -9,6 +8,12 @@ import {
 } from '../utils/authRouting';
 import { clearRoleSession, markRoleSessionActive } from '../services/authSession';
 import type { GlobalUser, UserRole } from '../types/authTypes';
+import {
+  buyerProfileQueryOptions,
+  sellerProfileQueryOptions,
+  adminProfileQueryOptions,
+  creatorProfileQueryOptions,
+} from '@/hooks/auth/useAuthQueries';
 
 interface UseAuthRevalidationOptions {
   pathname: string;
@@ -29,6 +34,7 @@ export function useAuthRevalidation({
   const initialized = useRef(false);
   const lastCheckRef = useRef<number>(0);
   const lastRouteRoleRef = useRef<UserRole | null>(null);
+  const queryClient = useQueryClient();
 
   const markAuthChecked = useCallback(() => {
     lastCheckRef.current = Date.now();
@@ -57,10 +63,19 @@ export function useAuthRevalidation({
     authStateManager.setRehydrating(true);
 
     try {
-      const api = getApiForRole(currentRole);
-      const profileData = currentRole === 'admin'
-        ? await adminApi.getMe()
-        : await api.getProfile();
+      let queryOpts;
+      if (currentRole === 'buyer') {
+        queryOpts = buyerProfileQueryOptions;
+      } else if (currentRole === 'seller') {
+        queryOpts = sellerProfileQueryOptions;
+      } else if (currentRole === 'admin') {
+        queryOpts = adminProfileQueryOptions;
+      } else {
+        queryOpts = creatorProfileQueryOptions;
+      }
+
+      // Fetch or get query data
+      const profileData = await queryClient.fetchQuery(queryOpts);
 
       if (!profileData) {
         setUser(null);
@@ -76,7 +91,7 @@ export function useAuthRevalidation({
 
       await markRoleSessionActive(currentRole);
       markAuthChecked();
-    } catch (error: any) {
+    } catch (error) {
       if (currentRole === 'buyer' && (error.response?.status === 404 || error.response?.status === 401)) {
         // Preserve the previous cross-role behavior: seller sessions should not be cleared by a buyer route probe.
       } else {
@@ -89,7 +104,7 @@ export function useAuthRevalidation({
       setInitializing(false);
       authCheckInProgress.current = false;
     }
-  }, [markAuthChecked, pathname, setInitializing, setIsLoading, setUser, user]);
+  }, [markAuthChecked, pathname, setInitializing, setIsLoading, setUser, user, queryClient]);
 
   useEffect(() => {
     const currentRole = getRoleFromRoute(pathname);
@@ -130,3 +145,5 @@ export function useAuthRevalidation({
 
   return { markAuthChecked };
 }
+
+

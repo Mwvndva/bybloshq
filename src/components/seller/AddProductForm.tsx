@@ -2,12 +2,14 @@ import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { isSellerShopless } from '@/lib/utils';
+import { isSellerShopless, cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
-import { sellerApi } from '@/api/sellerApi';
-import { aestheticCategories } from '../AestheticCategories';
+import { useToast } from '@/hooks/use-toast';
+import { sellerApi } from '@/api/seller';
+import { aestheticCategories } from '../aestheticCategoriesData';
+import { useSellerProfileQuery } from '@/hooks/seller/useSellerProfile';
+import { useCreateProductMutation, useUploadDigitalProductMutation } from '@/hooks/seller/useSellerProducts';
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,7 +23,6 @@ import {
   Clock,
   MapPin
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface ServiceOptions {
   availability_days: string[];
@@ -89,21 +90,10 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
   const [extraFiles, setExtraFiles] = useState<File[]>([]);
   const [extraPreviews, setExtraPreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState<FormData>({ ...formDataDefaults });
-  const [sellerProfile, setSellerProfile] = useState<any>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [fileError, setFileError] = useState<string>('');
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const seller = await sellerApi.getProfile();
-        setSellerProfile(seller);
-      } catch (error) {
-        console.error('Error getting seller profile:', error);
-      }
-    };
-    fetchProfile();
-  }, []);
+  const { data: sellerProfile = null } = useSellerProfileQuery();
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -207,6 +197,9 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
 
   const prevStep = () => setStep(s => s - 1);
 
+  const createProductMutation = useCreateProductMutation();
+  const uploadDigitalProductMutation = useUploadDigitalProductMutation();
+
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
@@ -215,10 +208,13 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
       let digitalFileSize = formData.digital_file_size;
 
       if (formData.is_digital && formData.digital_file) {
-        const res = await sellerApi.uploadDigitalProduct(formData.digital_file, setUploadProgress);
-        digitalFilePath = res.filePath;
-        digitalFileName = res.fileName;
-        digitalFileSize = res.size;
+        const res = await uploadDigitalProductMutation.mutateAsync({
+          file: formData.digital_file,
+          onProgress: setUploadProgress
+        }) as Record<string, unknown>;
+        digitalFilePath = String(res.filePath);
+        digitalFileName = String(res.fileName);
+        digitalFileSize = Number(res.size);
       }
 
       const priceFloat = parseFloat(formData.price || '0');
@@ -250,11 +246,12 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         service_options: formData.product_type === 'service' ? formData.service_options : undefined,
       };
 
-      await sellerApi.createProduct(productData);
+      await createProductMutation.mutateAsync(productData);
       toast({ title: 'Success', description: 'Product launched successfully!' });
       onSuccess();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.response?.data?.message || 'Failed to create product', variant: 'destructive' });
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast({ title: 'Error', description: err.response?.data?.message || 'Failed to create product', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -276,7 +273,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           <button
             key={type.id}
             type="button"
-            onClick={() => setFormData(p => ({ ...p, product_type: type.id as any, is_digital: type.id === 'digital' }))}
+            onClick={() => setFormData(p => ({ ...p, product_type: type.id as 'physical' | 'digital' | 'service', is_digital: type.id === 'digital' }))}
             className={cn(
               "flex min-h-[92px] flex-col items-center justify-center rounded-2xl border-2 p-2 text-center transition-all duration-300 group sm:min-h-[120px] sm:p-4",
               formData.product_type === type.id
@@ -676,3 +673,5 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
 };
 
 export default AddProductForm;
+
+

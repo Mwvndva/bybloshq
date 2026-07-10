@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+import { useBuyerAuth } from '@/features/auth/contexts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -350,3 +350,5 @@ export function BuyerResetPassword() {
 }
 
 export default BuyerResetPassword;
+
+

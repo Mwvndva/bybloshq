@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Copy, Edit, Loader2, MailPlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Theme } from '@/api/sellerApi';
-import { sellerApi } from '@/api/sellerApi';
+import type { Theme } from '@/api/seller';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +13,8 @@ import { getSellerInitials } from '../dashboardUtils';
 import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/shopLinks';
 import type { SellerSettingsFormData } from '../types';
 import type { LocationCoordinates } from '@/lib/location';
+
+import { useInviteCreatorMutation, useGetCreatorInvitesQuery } from '@/hooks/seller/useSellerProfile';
 
 interface SettingsTabProps {
   cities: Record<string, string[]>;
@@ -29,7 +30,7 @@ interface SettingsTabProps {
   isDeletingLocation: boolean;
   isEditing: boolean;
   isSaving: boolean;
-  sellerProfile: any;
+  sellerProfile: import("@/types").Seller;
   setFormData: React.Dispatch<React.SetStateAction<SellerSettingsFormData>>;
   shopNameAvailable: boolean | null;
   toggleEdit: () => void;
@@ -55,20 +56,10 @@ export function SettingsTab({
   toggleEdit
 }: SettingsTabProps) {
   const [creatorEmail, setCreatorEmail] = useState('');
-  const [creatorInvites, setCreatorInvites] = useState<any[]>([]);
   const [isInvitingCreator, setIsInvitingCreator] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    sellerApi.getCreatorInvites()
-      .then((invites) => {
-        if (mounted) setCreatorInvites(invites);
-      })
-      .catch(() => undefined);
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { data: invites = [] } = useGetCreatorInvitesQuery();
+  const inviteCreatorMutation = useInviteCreatorMutation();
 
   const handleInviteCreator = async () => {
     if (!creatorEmail.trim()) {
@@ -78,12 +69,12 @@ export function SettingsTab({
 
     setIsInvitingCreator(true);
     try {
-      const invite = await sellerApi.inviteCreator(creatorEmail.trim());
-      setCreatorInvites((current) => [invite, ...current.filter((item) => item.id !== invite.id)]);
+      await inviteCreatorMutation.mutateAsync(creatorEmail.trim());
       setCreatorEmail('');
       toast.success('Creator invite sent.');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message || 'Could not send invite.');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(err?.response?.data?.message || err?.message || 'Could not send invite.');
     } finally {
       setIsInvitingCreator(false);
     }
@@ -514,47 +505,49 @@ export function SettingsTab({
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-slate-200">
-          {creatorInvites.length === 0 ? (
+          {invites.length === 0 ? (
             <div className="bg-slate-50 p-4 text-sm font-medium text-slate-500">
               No creator invites yet.
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
-              {creatorInvites.map((invite) => (
-                <div key={invite.id} className="grid gap-3 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-950">
-                      {invite.creatorName || invite.email}
-                    </p>
-                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {invite.status}
-                      {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% creator cut` : ''}
-                    </p>
-                    {invite.shopUrl && (
-                      <a
-                        href={invite.shopUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block truncate text-xs font-bold text-slate-700 underline decoration-yellow-400 underline-offset-2"
-                        title={invite.shopUrl}
-                      >
-                        {getShopUsername(invite.shopName || formData.shopName)}
-                      </a>
-                    )}
-                  </div>
-                  {invite.shopUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => copyCreatorLink(invite.shopUrl, getShopUsername(invite.shopName || formData.shopName))}
-                      className="h-9 border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy Link
-                    </Button>
-                  )}
-                </div>
-              ))}
+              {(invites as unknown[]).map((inviteItem) => {
+                 const invite = inviteItem as { id: string | number; creatorName?: string; email?: string; status?: string; code?: string; commissionRate?: number; shopUrl?: string; shopName?: string };
+                 return (
+                 <div key={invite.id} className="grid gap-3 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                   <div className="min-w-0">
+                     <p className="truncate text-sm font-black text-slate-950">
+                       {invite.creatorName || invite.email}
+                     </p>
+                     <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                       {invite.status}
+                       {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% creator cut` : ''}
+                     </p>
+                     {invite.shopUrl && (
+                       <a
+                         href={invite.shopUrl}
+                         target="_blank"
+                         rel="noreferrer"
+                         className="mt-1 block truncate text-xs font-bold text-slate-700 underline decoration-yellow-400 underline-offset-2"
+                         title={invite.shopUrl}
+                       >
+                         {getShopUsername(invite.shopName || formData.shopName)}
+                       </a>
+                     )}
+                   </div>
+                   {invite.shopUrl && (
+                     <Button
+                       type="button"
+                       variant="outline"
+                       onClick={() => copyCreatorLink(invite.shopUrl, getShopUsername(invite.shopName || formData.shopName))}
+                       className="h-9 border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                     >
+                       <Copy className="mr-2 h-4 w-4" />
+                       Copy Link
+                     </Button>
+                   )}
+                 </div>
+              );})}
             </div>
           )}
         </div>
@@ -615,3 +608,5 @@ function SocialInput({ displayValue, iconPath, isEditing, label, onChange, place
     </div>
   );
 }
+
+

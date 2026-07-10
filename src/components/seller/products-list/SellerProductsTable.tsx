@@ -3,16 +3,18 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, EyeOff, Handshake, Loader2, Package, Trash2 } from 'lucide-react';
 import type { Product } from '@/types';
+import type { ApiSellerProduct } from '@/types/api/product';
+type ProductWithApiFields = Product & Partial<ApiSellerProduct>;
 import { cn, formatCurrency } from '@/lib/utils';
 
 interface SellerProductsTableProps {
-  products: Product[];
+  products: ProductWithApiFields[];
   deletingId: string | null;
   updatingId: string | null;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onStatusUpdate?: (productId: string, status: 'available' | 'sold') => void;
-  onInventoryEdit: (product: Product) => void;
+  onInventoryEdit: (product: ProductWithApiFields) => void;
 }
 
 export function SellerProductsTable({
@@ -75,19 +77,19 @@ export function SellerProductsTable({
               <TableCell className="text-slate-950 font-semibold">{formatCurrency(product.price)}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {(product as any).track_inventory ? (
+                  {product.track_inventory ? (
                     <Badge
                       className={cn(
                         'font-mono font-semibold',
-                        (product as any).quantity === 0
+                        product.quantity === 0
                           ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                          : (product as any).quantity <= ((product as any).low_stock_threshold || 5)
+                          : product.quantity <= (product.low_stock_threshold || 5)
                             ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                             : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                       )}
                     >
                       <Package className="h-3 w-3 mr-1" />
-                      {(product as any).quantity ?? 0}
+                      {product.quantity ?? 0}
                     </Badge>
                   ) : (
                     <span className="text-xs text-slate-500 italic">Not tracked</span>
@@ -166,3 +168,5 @@ export function SellerProductsTable({
     </div>
   );
 }
+
+

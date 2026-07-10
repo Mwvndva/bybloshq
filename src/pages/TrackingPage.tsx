@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Clock, MapPin, Package, ShieldCheck, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { fetchPublicTracking, type PublicTrackingLeg } from '@/api/trackingApi';
+import { fetchPublicTracking, type PublicTrackingLeg } from '@/api/public';
+import { logisticsQueryKeys } from '@/api/queryKeys';
 
 function label(value?: string | null) {
   return String(value || 'pending').replace(/_/g, ' ');
@@ -81,7 +82,7 @@ export default function TrackingPage() {
   const decodedToken = useMemo(() => safeDecodeToken(token), [token]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['public-tracking', decodedToken],
+    queryKey: logisticsQueryKeys.publicTracking(decodedToken),
     queryFn: () => fetchPublicTracking(decodedToken),
     enabled: Boolean(decodedToken),
     retry: false,
@@ -213,3 +214,5 @@ export default function TrackingPage() {
     </main>
   );
 }
+
+

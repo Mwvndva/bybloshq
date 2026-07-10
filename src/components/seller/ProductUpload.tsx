@@ -8,10 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, Package, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { sellerApi } from '@/api/sellerApi';
+import { useSellerProfileQuery } from '@/hooks/seller/useSellerProfile';
+import { useCreateProductMutation } from '@/hooks/seller/useSellerProducts';
 import { useNavigate } from 'react-router-dom';
 import { Aesthetic } from '@/types';
-import { aestheticCategories } from '../AestheticCategories';
+import { aestheticCategories } from '../aestheticCategoriesData';
 
 interface ProductUploadProps {
   onSuccess: () => void;
@@ -49,23 +50,26 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
 
   const navigate = useNavigate();
 
+  const { data: sellerProfile } = useSellerProfileQuery();
+  const createProductMutation = useCreateProductMutation();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.image) {
+    if (!formData.name || !formData.price || !formData.image) {
       toast({
-        title: 'Error',
-        description: 'Please select an image for the product',
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
         variant: 'destructive',
       });
       return;
     }
 
-    const priceValue = Number.parseFloat(formData.price);
-    if (!Number.isFinite(priceValue) || priceValue < 50) {
+    const priceValue = parseFloat(formData.price);
+    if (isNaN(priceValue) || priceValue <= 0) {
       toast({
-        title: 'Error',
-        description: 'Minimum price must be KES 50',
+        title: 'Validation Error',
+        description: 'Please enter a valid price.',
         variant: 'destructive',
       });
       return;
@@ -82,9 +86,8 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
       // For now, we'll just use a placeholder URL
       const imageUrl = URL.createObjectURL(formData.image);
 
-      // Get the seller's profile to get their ID
-      const sellerProfile = await sellerApi.getProfile();
-      const sellerId = sellerProfile.id;
+      const sellerId = sellerProfile?.id;
+      if (!sellerId) throw new Error('Seller profile not found');
 
       // Create the product with the image URL and seller ID
       const productData = {
@@ -96,7 +99,7 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
         sellerId: sellerId.toString(), // Ensure sellerId is a string
       };
 
-      await sellerApi.createProduct(productData);
+      await createProductMutation.mutateAsync(productData);
 
       toast({
         title: 'Success',
@@ -243,3 +246,5 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
 };
 
 export default ProductUpload;
+
+

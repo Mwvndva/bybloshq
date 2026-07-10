@@ -2,16 +2,18 @@ import { memo, useCallback, useEffect, useMemo, useState, type KeyboardEvent } f
 import { useNavigate } from 'react-router-dom';
 import { Heart, MapPin, MousePointerClick, Store, UserMinus, Users, Wifi } from 'lucide-react';
 import { cn, getImageUrl } from '@/lib/utils';
-import { publicApiService, Seller } from '@/api/publicApi';
+import { useKnockSellerMutation } from '@/hooks/public/useShopQueries';
+import type { ApiPublicSeller } from '@/types/api/seller';
+
 
 interface SellerBrandCardProps {
-    seller: Seller;
+    seller: ApiPublicSeller;
     className?: string;
     isBuyer?: boolean;
     showUnfollow?: boolean;
     isUnfollowing?: boolean;
-    onUnfollow?: (seller: Seller) => void;
-    onClickCountChange?: (seller: Seller, clickCount: number) => void;
+    onUnfollow?: (seller: ApiPublicSeller) => void;
+    onClickCountChange?: (seller: ApiPublicSeller, clickCount: number) => void;
 }
 
 const getNumber = (...values: unknown[]) => {
@@ -93,18 +95,19 @@ const getThemePalette = (theme?: string) => {
 
 const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isUnfollowing = false, onUnfollow, onClickCountChange }: SellerBrandCardProps) => {
     const navigate = useNavigate();
+    const knockSellerMutation = useKnockSellerMutation();
     const shopName = seller.shopName || seller.shop_name || 'Shop';
     const shopLink = isBuyer
         ? `/buyer/shop/${encodeURIComponent(shopName)}`
         : `/${encodeURIComponent(shopName)}`;
-    const avatarUrl = seller.avatarUrl || (seller as any).avatar_url;
+    const avatarUrl = seller.avatarUrl || (seller as Record<string, unknown>).avatar_url;
     const [avatarFailed, setAvatarFailed] = useState(false);
     const [knockCount, setKnockCount] = useState(getNumber(seller.knockCount, seller.knock_count));
     const palette = useMemo(() => getThemePalette(seller.theme), [seller.theme]);
     const isPhysicalShop = Boolean(
         seller.hasPhysicalShop ||
         seller.physicalAddress ||
-        (seller as any).physical_address ||
+        (seller as Record<string, unknown>).physical_address ||
         hasValidCoordinate(seller.latitude, seller.longitude)
     );
     const shopModeStyle = isPhysicalShop
@@ -124,7 +127,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
         };
 
     const clientCount = getNumber(seller.clientCount, seller.client_count);
-    const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as any).wishlist_count, (seller as any).total_wishlist_count);
+    const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as Record<string, unknown>).wishlist_count, (seller as Record<string, unknown>).total_wishlist_count);
     const hasAvatar = Boolean(avatarUrl && !avatarFailed);
 
     useEffect(() => {
@@ -136,16 +139,20 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
         setKnockCount(optimisticCount);
         onClickCountChange?.(seller, optimisticCount);
 
-        void publicApiService.knockSeller(seller.id).then((result) => {
-            if (typeof result.knockCount !== 'number') return;
-            setKnockCount(result.knockCount);
-            onClickCountChange?.(seller, result.knockCount);
-        }).catch((error) => {
-            console.error('Failed to record seller knock:', error);
+        knockSellerMutation.mutate(seller.id, {
+            onSuccess: (result) => {
+                if (typeof result.knockCount !== 'number') return;
+                setKnockCount(result.knockCount);
+                onClickCountChange?.(seller, result.knockCount);
+            },
+            onError: (error) => {
+                console.error('Failed to record seller knock:', error);
+            },
         });
 
         navigate(shopLink);
-    }, [knockCount, navigate, onClickCountChange, seller, shopLink]);
+    }, [knockCount, navigate, onClickCountChange, seller, shopLink, knockSellerMutation]);
+
 
     const handleUnfollow = useCallback(() => {
         if (!onUnfollow || isUnfollowing) return;
@@ -272,3 +279,5 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
 };
 
 export default memo(SellerBrandCard);
+
+
