@@ -4,18 +4,20 @@ import { buyerRoutes } from './buyer.routes';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
 
-// Lazy load pages
+// Eager pages
 import IndexPage from '@/pages/Index';
 import { ShopPage } from '@/features/shop';
-const marketingLogin = safeLazy(() => import('@/features/auth/pages/MarketingLogin'));
-const marketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
-const verifyEmail = safeLazy(() => import('@/features/auth/pages/VerifyEmail'));
-const mzigoLogin = safeLazy(() => import('@/features/auth/pages/MzigoLoginPage'));
-const mzigoDashboard = safeLazy(() => import('@/pages/logistics/MzigoDashboardPage'));
-const trackingPage = safeLazy(() => import('@/pages/TrackingPage'));
-const creatorLogin = safeLazy(() => import('@/features/auth/pages/CreatorLogin'));
-const creatorRegister = safeLazy(() => import('@/features/auth/pages/CreatorRegister'));
-const creatorDashboard = safeLazy(() => import('@/pages/creator/CreatorDashboard'));
+
+// Lazy-loaded pages
+const MarketingLogin = safeLazy(() => import('@/features/auth/pages/MarketingLogin'));
+const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
+const VerifyEmail = safeLazy(() => import('@/features/auth/pages/VerifyEmail'));
+const MzigoLogin = safeLazy(() => import('@/features/auth/pages/MzigoLoginPage'));
+const MzigoDashboard = safeLazy(() => import('@/pages/logistics/MzigoDashboardPage'));
+const TrackingPage = safeLazy(() => import('@/pages/TrackingPage'));
+const CreatorLogin = safeLazy(() => import('@/features/auth/pages/CreatorLogin'));
+const CreatorRegister = safeLazy(() => import('@/features/auth/pages/CreatorRegister'));
+const CreatorDashboard = safeLazy(() => import('@/pages/creator/CreatorDashboard'));
 
 // Main routes configuration
 export const routes = [
@@ -30,25 +32,19 @@ export const routes = [
   },
   {
     path: '/track/:token',
-    element: (() => {
-      const Component = trackingPage;
-      return (
-        <Suspense fallback={<RouteFallback />}>
-          <Component />
-        </Suspense>
-      );
-    })(),
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <TrackingPage />
+      </Suspense>
+    ),
   },
   {
     path: '/admin/marketing/login',
-    element: (() => {
-      const Component = marketingLogin;
-      return (
-        <Suspense fallback={<RouteFallback />}>
-          <Component />
-        </Suspense>
-      );
-    })(),
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MarketingLogin />
+      </Suspense>
+    ),
   },
   {
     path: '/admin/marketing',
@@ -60,36 +56,27 @@ export const routes = [
   },
   {
     path: '/verify-email',
-    element: (() => {
-      const Component = verifyEmail;
-      return (
-        <Suspense fallback={<RouteFallback />}>
-          <Component />
-        </Suspense>
-      );
-    })(),
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <VerifyEmail />
+      </Suspense>
+    ),
   },
   {
     path: '/creator/login',
-    element: (() => {
-      const Component = creatorLogin;
-      return (
-        <Suspense fallback={<RouteFallback />}>
-          <Component />
-        </Suspense>
-      );
-    })(),
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <CreatorLogin />
+      </Suspense>
+    ),
   },
   {
     path: '/creator/register',
-    element: (() => {
-      const Component = creatorRegister;
-      return (
-        <Suspense fallback={<RouteFallback />}>
-          <Component />
-        </Suspense>
-      );
-    })(),
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <CreatorRegister />
+      </Suspense>
+    ),
   },
   {
     path: '/creator/dashboard',
@@ -101,14 +88,11 @@ export const routes = [
   },
   {
     path: '/mzigo/login',
-    element: (() => {
-      const Component = mzigoLogin;
-      return (
-        <Suspense fallback={<RouteFallback />}>
-          <Component />
-        </Suspense>
-      );
-    })(),
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MzigoLogin />
+      </Suspense>
+    ),
   },
   {
     path: '/mzigo/dashboard',
@@ -142,5 +126,3 @@ export const routes = [
     element: <ShopPage />,
   },
 ];
-
-

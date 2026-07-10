@@ -13,33 +13,43 @@ const sellerApiInstance = apiClient;
 export const transformSeller = (data: unknown): ApiSeller => {
   const dataObj = (data && typeof data === 'object') ? (data as Record<string, unknown>) : {};
   const seller = (dataObj.seller && typeof dataObj.seller === 'object' ? dataObj.seller : dataObj) as Record<string, unknown>;
+  const user = (seller.user && typeof seller.user === 'object') ? (seller.user as Record<string, unknown>) : undefined;
+
+  // Backend responses mix snake_case and camelCase; coerce each field to the
+  // ApiSeller contract without altering the original selection semantics.
+  const str = (v: unknown, fallback = ''): string => (v === null || v === undefined || v === '') ? fallback : String(v);
+  const optNum = (v: unknown): number | undefined => {
+    if (v === null || v === undefined || v === '') return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
 
   return {
-    id: seller.id,
-    fullName: seller.fullName || seller.full_name || '',
-    shopName: seller.shopName || seller.shop_name || '',
-    email: seller.email || '',
-    phone: seller.phone || seller.whatsapp_number || '',
-    whatsappNumber: seller.whatsapp_number || seller.whatsappNumber || seller.phone || '',
-    city: seller.city || '',
-    location: seller.location || '',
-    physicalAddress: seller.physicalAddress || seller.physical_address || '',
-    hasPhysicalShop: seller.hasPhysicalShop || !!seller.physicalAddress || !!seller.physical_address,
-    latitude: seller.latitude,
-    longitude: seller.longitude,
-    bannerImage: seller.bannerImage || seller.banner_image || null,
-    bio: seller.bio || '',
-    avatarUrl: seller.avatarUrl || seller.avatar_url || '',
-    theme: seller.theme || 'default',
-    instagramLink: seller.instagramLink || seller.instagram_link || '',
-    tiktokLink: seller.tiktokLink || seller.tiktok_link || '',
-    facebookLink: seller.facebookLink || seller.facebook_link || '',
+    id: Number(seller.id),
+    fullName: str(seller.fullName || seller.full_name),
+    shopName: str(seller.shopName || seller.shop_name),
+    email: str(seller.email),
+    phone: str(seller.phone || seller.whatsapp_number),
+    whatsappNumber: str(seller.whatsapp_number || seller.whatsappNumber || seller.phone),
+    city: str(seller.city),
+    location: str(seller.location),
+    physicalAddress: str(seller.physicalAddress || seller.physical_address),
+    hasPhysicalShop: Boolean(seller.hasPhysicalShop || seller.physicalAddress || seller.physical_address),
+    latitude: optNum(seller.latitude),
+    longitude: optNum(seller.longitude),
+    bannerImage: str(seller.bannerImage || seller.banner_image) || undefined,
+    bio: str(seller.bio),
+    avatarUrl: str(seller.avatarUrl || seller.avatar_url),
+    theme: (seller.theme || 'default') as ApiSeller['theme'],
+    instagramLink: str(seller.instagramLink || seller.instagram_link),
+    tiktokLink: str(seller.tiktokLink || seller.tiktok_link),
+    facebookLink: str(seller.facebookLink || seller.facebook_link),
     creatorCommissionRate: Number(seller.creatorCommissionRate ?? seller.creator_commission_rate ?? 0.01),
-    is_verified: !!(seller.is_verified || seller.isVerified || seller.user?.is_verified),
-    clientCount: seller.clientCount !== undefined ? seller.clientCount : (seller.client_count || 0),
-    totalSales: parseFloat(seller.totalSales || seller.total_sales || 0),
-    createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
-    updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
+    is_verified: !!(seller.is_verified || seller.isVerified || user?.is_verified),
+    clientCount: seller.clientCount !== undefined ? optNum(seller.clientCount) : optNum(seller.client_count),
+    totalSales: optNum(seller.totalSales || seller.total_sales) ?? 0,
+    createdAt: str(seller.createdAt || seller.created_at, new Date().toISOString()),
+    updatedAt: str(seller.updatedAt || seller.updated_at, new Date().toISOString())
   };
 };
 

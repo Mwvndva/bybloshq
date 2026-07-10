@@ -1,5 +1,4 @@
 import type { Aesthetic } from '../types';
-import { AestheticCategory } from '../types/components'; // or declare inline if needed
 
 export const aestheticCategories: {
   id: Aesthetic;
