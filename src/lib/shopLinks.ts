@@ -28,7 +28,7 @@ export const getCreatorShopUrl = (
   return `${shopUrl}?creator=${encodeURIComponent(creatorCode)}`;
 };
 
-export const copyLinkedTextToClipboard = async (label: string, url: string) => {
+export const copyLinkedTextToClipboard = async (label: string, url: string): Promise<'empty' | 'plain' | 'rich'> => {
   const cleanLabel = getShopUsername(label);
   if (!cleanLabel || !url) return 'empty' as const;
 
