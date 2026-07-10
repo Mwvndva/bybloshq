@@ -1,12 +1,11 @@
 import { Dispatch, SetStateAction, useCallback } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { toast } from 'sonner';
-import adminApi from '@/api/adminApi';
 import apiClient from '@/lib/apiClient';
+import { useQueryClient } from '@tanstack/react-query';
 import { clearAllAuthData } from '@/lib/authCleanup';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 import { isNativeApp } from '@/lib/mobileApp';
-import { getApiForRole } from '../api/authApi';
 import { getDashboardPath, getLoginPath } from '../utils/authRouting';
 import { clearRoleSessionMarkers, markRoleSessionActive } from '../services/authSession';
 import type {
@@ -17,6 +16,22 @@ import type {
   UserProfile,
   UserRole,
 } from '../types/authTypes';
+import {
+  useBuyerLoginMutation,
+  useSellerLoginMutation,
+  useAdminLoginMutation,
+  useCreatorLoginMutation,
+  useRegisterMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+  useUpdateProfileMutation,
+} from '@/hooks/auth/useAuthMutations';
+import {
+  buyerProfileQueryOptions,
+  sellerProfileQueryOptions,
+  adminProfileQueryOptions,
+  creatorProfileQueryOptions,
+} from '@/hooks/auth/useAuthQueries';
 
 interface UseAuthActionsOptions {
   navigate: NavigateFunction;
@@ -26,6 +41,16 @@ interface UseAuthActionsOptions {
   markAuthChecked: () => void;
 }
 
+type AuthRequestError = {
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+};
+
 export function useAuthActions({
   navigate,
   user,
@@ -33,11 +58,42 @@ export function useAuthActions({
   setIsLoading,
   markAuthChecked,
 }: UseAuthActionsOptions) {
+  const queryClient = useQueryClient();
+
+  const buyerLoginMut = useBuyerLoginMutation();
+  const sellerLoginMut = useSellerLoginMutation();
+  const adminLoginMut = useAdminLoginMutation();
+  const creatorLoginMut = useCreatorLoginMutation();
+
+  const buyerRegMut = useRegisterMutation('buyer');
+  const sellerRegMut = useRegisterMutation('seller');
+
+  const buyerForgotMut = useForgotPasswordMutation('buyer');
+  const sellerForgotMut = useForgotPasswordMutation('seller');
+  const creatorForgotMut = useForgotPasswordMutation('creator');
+
+  const buyerResetMut = useResetPasswordMutation('buyer');
+  const sellerResetMut = useResetPasswordMutation('seller');
+  const creatorResetMut = useResetPasswordMutation('creator');
+
+  const buyerUpdateMut = useUpdateProfileMutation('buyer');
+  const sellerUpdateMut = useUpdateProfileMutation('seller');
+  const creatorUpdateMut = useUpdateProfileMutation('creator');
+
   const login = useCallback(async (email: string, password: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      const api = getApiForRole(role);
-      const response = await api.login({ email, password });
+      let response;
+      if (role === 'buyer') {
+        response = await buyerLoginMut.mutateAsync({ email, password });
+      } else if (role === 'seller') {
+        response = await sellerLoginMut.mutateAsync({ email, password });
+      } else if (role === 'creator') {
+        response = await creatorLoginMut.mutateAsync({ email, password });
+      } else {
+        throw new Error(`Unsupported login role: ${role}`);
+      }
+
       const profileData = role === 'buyer' ? response.buyer : role === 'creator' ? response.creator : response.seller;
 
       setUser({
@@ -73,20 +129,31 @@ export function useAuthActions({
           navigate('/', { replace: true });
         }
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || 'Login failed';
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || err.message || 'Login failed';
       toast.error('Login Failed', { description: message });
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, navigate, setIsLoading, setUser]);
+  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerLoginMut, sellerLoginMut, creatorLoginMut]);
 
   const loginWithToken = useCallback(async (token: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      const api = getApiForRole(role);
-      const profileData = await api.getProfile();
+      let queryOpts;
+      if (role === 'buyer') {
+        queryOpts = buyerProfileQueryOptions;
+      } else if (role === 'seller') {
+        queryOpts = sellerProfileQueryOptions;
+      } else if (role === 'creator') {
+        queryOpts = creatorProfileQueryOptions;
+      } else {
+        queryOpts = adminProfileQueryOptions;
+      }
+
+      const profileData = await queryClient.fetchQuery(queryOpts);
 
       setUser({
         role,
@@ -97,21 +164,19 @@ export function useAuthActions({
       await markRoleSessionActive(role);
       markAuthChecked();
       void registerNativePushNotifications(role);
-    } catch (error: any) {
-      throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, setIsLoading, setUser]);
+  }, [markAuthChecked, setIsLoading, setUser, queryClient]);
 
   const loginAdmin = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await adminApi.login({ email, password });
+      const response = await adminLoginMut.mutateAsync({ email, password });
       const success = response?.status === 'success' || !!response?.data?.token;
 
       if (success) {
-        const adminProfile = await adminApi.getMe();
+        const adminProfile = await queryClient.fetchQuery(adminProfileQueryOptions);
         if (!adminProfile?.id) {
           throw new Error('Admin profile could not be verified after login');
         }
@@ -138,25 +203,26 @@ export function useAuthActions({
       } else {
         throw new Error('Invalid credentials');
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Invalid email or password. Please try again.';
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || 'Invalid email or password. Please try again.';
       toast.error('Login Failed', { description: message });
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, navigate, setIsLoading, setUser]);
+  }, [markAuthChecked, navigate, setIsLoading, setUser, adminLoginMut, queryClient]);
 
   const register = useCallback(async (data: RegistrationData, role: UserRole) => {
     setIsLoading(true);
     try {
-      const api = getApiForRole(role);
       let response;
-
       if (role === 'buyer') {
-        response = await api.register(data as BuyerRegistrationData);
+        response = await buyerRegMut.mutateAsync(data as BuyerRegistrationData);
       } else if (role === 'seller') {
-        response = await api.register(data as SellerRegistrationData);
+        response = await sellerRegMut.mutateAsync(data as SellerRegistrationData);
+      } else {
+        throw new Error(`Unsupported registration role: ${role}`);
       }
 
       if (response?.status === 'pending_verification') {
@@ -189,8 +255,9 @@ export function useAuthActions({
       });
       navigate(getDashboardPath(role), { replace: true });
       return { status: 'success' };
-    } catch (error: any) {
-      if (error.response?.status === 409) {
+    } catch (error) {
+      const err = error as AuthRequestError;
+      if (err.response?.status === 409) {
         toast.error('Account Already Exists', {
           description: 'This email is already registered. Please login or use Forgot Password.',
           duration: 6000,
@@ -198,13 +265,13 @@ export function useAuthActions({
         throw error;
       }
 
-      const message = error.response?.data?.message || error.message || 'Registration failed';
+      const message = err.response?.data?.message || err.message || 'Registration failed';
       toast.error('Registration Failed', { description: message });
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, navigate, setIsLoading, setUser]);
+  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerRegMut, sellerRegMut]);
 
   const logout = useCallback(async () => {
     await clearRoleSessionMarkers();
@@ -241,12 +308,20 @@ export function useAuthActions({
   const refreshRole = useCallback(async (newRole: UserRole) => {
     setIsLoading(true);
     try {
-      const api = getApiForRole(newRole);
-      const profileData = newRole === 'admin'
-        ? await adminApi.getMe()
-        : await api.getProfile();
+      let queryOpts;
+      if (newRole === 'buyer') {
+        queryOpts = buyerProfileQueryOptions;
+      } else if (newRole === 'seller') {
+        queryOpts = sellerProfileQueryOptions;
+      } else if (newRole === 'creator') {
+        queryOpts = creatorProfileQueryOptions;
+      } else {
+        queryOpts = adminProfileQueryOptions;
+      }
 
-      if (!profileData) throw new Error('Failed to fetch admin profile');
+      const profileData = await queryClient.fetchQuery(queryOpts);
+
+      if (!profileData) throw new Error('Failed to fetch profile');
 
       setUser({
         role: newRole,
@@ -262,19 +337,27 @@ export function useAuthActions({
         description: `Switched to ${newRole} dashboard`,
         duration: 2000,
       });
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to switch role';
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || 'Failed to switch role';
       toast.error('Role Switch Failed', { description: message });
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, setIsLoading, setUser]);
+  }, [markAuthChecked, setIsLoading, setUser, queryClient]);
 
   const forgotPassword = useCallback(async (email: string, role: UserRole): Promise<boolean> => {
     try {
-      const api = getApiForRole(role);
-      await api.forgotPassword(email);
+      if (role === 'buyer') {
+        await buyerForgotMut.mutateAsync(email);
+      } else if (role === 'seller') {
+        await sellerForgotMut.mutateAsync(email);
+      } else if (role === 'creator') {
+        await creatorForgotMut.mutateAsync(email);
+      } else {
+        throw new Error(`ForgotPassword not supported for role: ${role}`);
+      }
 
       toast.success('Check your email', {
         description: 'If an account exists with this email, you will receive a password reset link.',
@@ -282,18 +365,26 @@ export function useAuthActions({
       });
 
       return true;
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to send reset email';
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || 'Failed to send reset email';
       toast.error('Request Failed', { description: message });
       return false;
     }
-  }, []);
+  }, [buyerForgotMut, sellerForgotMut, creatorForgotMut]);
 
   const resetPassword = useCallback(async (token: string, newPassword: string, email: string, role: UserRole) => {
     try {
       setIsLoading(true);
-      const api = getApiForRole(role);
-      await api.resetPassword(token, newPassword, email);
+      if (role === 'buyer') {
+        await buyerResetMut.mutateAsync({ token, newPassword, email });
+      } else if (role === 'seller') {
+        await sellerResetMut.mutateAsync({ token, newPassword, email });
+      } else if (role === 'creator') {
+        await creatorResetMut.mutateAsync({ token, newPassword, email });
+      } else {
+        throw new Error(`ResetPassword not supported for role: ${role}`);
+      }
 
       toast.success('Password updated', {
         description: 'You can now log in with your new password.',
@@ -301,41 +392,51 @@ export function useAuthActions({
       });
 
       navigate(getLoginPath(role), { replace: true });
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to reset password';
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || 'Failed to reset password';
       toast.error('Reset Failed', { description: message });
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [navigate, setIsLoading]);
+  }, [navigate, setIsLoading, buyerResetMut, sellerResetMut, creatorResetMut]);
 
   const getProfile = useCallback(async (role: UserRole) => {
-    try {
-      const api = getApiForRole(role);
-      const profileData = role === 'admin'
-        ? await adminApi.getMe()
-        : await api.getProfile();
-
-      if (!profileData) throw new Error('Failed to fetch admin profile');
-
-      setUser({
-        role,
-        profile: profileData,
-        isAuthenticated: true
-      });
-      void registerNativePushNotifications(role);
-    } catch (error: any) {
-      throw error;
+    let queryOpts;
+    if (role === 'buyer') {
+      queryOpts = buyerProfileQueryOptions;
+    } else if (role === 'seller') {
+      queryOpts = sellerProfileQueryOptions;
+    } else if (role === 'creator') {
+      queryOpts = creatorProfileQueryOptions;
+    } else {
+      queryOpts = adminProfileQueryOptions;
     }
-  }, [setUser]);
+
+    const profileData = await queryClient.fetchQuery(queryOpts);
+
+    if (!profileData) throw new Error('Failed to fetch profile');
+
+    setUser({
+      role,
+      profile: profileData,
+      isAuthenticated: true
+    });
+    void registerNativePushNotifications(role);
+  }, [setUser, queryClient]);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>, role: UserRole) => {
     try {
-      const api = getApiForRole(role);
-
-      if (api.updateProfile) {
-        await api.updateProfile(updates);
+      const updatesRecord = updates as Record<string, unknown>;
+      if (role === 'buyer') {
+        await buyerUpdateMut.mutateAsync(updatesRecord);
+      } else if (role === 'seller') {
+        await sellerUpdateMut.mutateAsync(updatesRecord);
+      } else if (role === 'creator') {
+        await creatorUpdateMut.mutateAsync(updatesRecord);
+      } else {
+        throw new Error(`UpdateProfile not supported for role: ${role}`);
       }
 
       await getProfile(role);
@@ -344,12 +445,13 @@ export function useAuthActions({
         description: 'Your profile has been successfully updated.',
         duration: 2000,
       });
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update profile';
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || 'Failed to update profile';
       toast.error('Update Failed', { description: message });
       throw error;
     }
-  }, [getProfile]);
+  }, [getProfile, buyerUpdateMut, sellerUpdateMut, creatorUpdateMut]);
 
   return {
     login,
@@ -364,3 +466,5 @@ export function useAuthActions({
     updateProfile,
   };
 }
+
+

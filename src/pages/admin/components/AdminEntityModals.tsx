@@ -28,10 +28,10 @@ import {
 } from 'lucide-react';
 
 interface AdminEntityModalsProps {
-  selectedSeller: any | null;
+  selectedSeller: Record<string, unknown> | null;
   isLoadingSeller: boolean;
   closeSellerModal: () => void;
-  selectedBuyer: any | null;
+  selectedBuyer: Record<string, unknown> | null;
   isLoadingBuyer: boolean;
   closeBuyerModal: () => void;
   safeFormatDate: (dateString: string | null | undefined, formatStr?: string) => string;
@@ -127,7 +127,7 @@ export function AdminEntityModals({
                                       <span className="opacity-40 group-hover/item:opacity-100 transition-opacity">{item.icon}</span>
                                       {item.label}
                                     </span>
-                                    <span className={`text-sm font-bold ${(item as any).highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
+                                    <span className={`text-sm font-bold ${(item as Record<string, unknown>).highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
                                   </div>
                                 ))}
                               </div>
@@ -270,7 +270,7 @@ export function AdminEntityModals({
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                  {selectedSeller.recentOrders?.map((order: any) => (
+                                  {selectedSeller.recentOrders?.map((order: Record<string, unknown>) => (
                                     <tr key={order.id} className="text-sm hover:bg-white/[0.02] transition-colors group/row">
                                       <td className="px-8 py-6">
                                         <code className="text-yellow-500 font-bold bg-yellow-500/5 px-3 py-1.5 rounded-lg border border-yellow-500/10 text-[10px]">
@@ -394,3 +394,5 @@ export function AdminEntityModals({
     </>
   );
 }
+
+

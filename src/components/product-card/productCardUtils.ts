@@ -1,4 +1,6 @@
 import type { Product } from '@/types';
+import type { ApiSellerProduct, ApiProduct } from '@/types/api/product';
+type ProductWithApiFields = Product & Partial<ApiSellerProduct> & Partial<ApiProduct>;
 
 export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -128,13 +130,13 @@ export const normalizePhone = (phone: string): string => {
   return normalized;
 };
 
-export const getProductFlags = (product: Product) => {
-  const productType = String(product.product_type || (product as any).productType || '').toLowerCase();
-  const isDigital = productType === 'digital' || product.is_digital || (product as any).isDigital;
+export const getProductFlags = (product: ProductWithApiFields) => {
+  const productType = String(product.product_type || product.productType || '').toLowerCase();
+  const isDigital = productType === 'digital' || product.is_digital || product.isDigital;
   const isService = productType === 'service';
   const isPhysical = productType === 'physical' && !isDigital && !isService;
-  const isHybrid = isService && (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid');
-  const isOutOfStock = (product as any).track_inventory === true && ((product as any).quantity === 0 || (product as any).quantity === null);
+  const isHybrid = isService && (product.service_options?.location_type === 'hybrid' || product.serviceOptions?.location_type === 'hybrid');
+  const isOutOfStock = product.track_inventory === true && (product.quantity === 0 || product.quantity === null);
 
   return {
     isDigital,
@@ -182,3 +184,5 @@ export const getThemeClasses = (theme: Theme): ProductCardThemeClasses => {
       };
   }
 };
+
+

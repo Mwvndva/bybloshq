@@ -15,3 +15,5 @@ export async function searchLocations(query: string): Promise<LocationSearchResu
 
   return Array.isArray(response.data?.data) ? response.data.data : [];
 }
+
+

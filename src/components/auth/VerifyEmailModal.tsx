@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Mail, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import buyerApi from '@/api/buyerApi';
-import { sellerApi } from '@/api/sellerApi';
+import { useBuyerResendVerificationMutation } from '@/hooks/buyer/mutations/useBuyerAuthMutations';
+import { useSellerResendVerificationMutation } from '@/hooks/seller/mutations/useSellerAuthMutations';
 
 interface VerifyEmailModalProps {
     isOpen: boolean;
@@ -31,6 +31,9 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
         };
     }, [resendCooldown]);
 
+    const buyerResend = useBuyerResendVerificationMutation();
+    const sellerResend = useSellerResendVerificationMutation();
+
     const handleResend = async () => {
         if (resendCooldown > 0 || isResending) return;
 
@@ -38,9 +41,9 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
         setIsSuccess(false);
         try {
             if (role === 'seller') {
-                await sellerApi.resendVerification(email);
+                await sellerResend.mutateAsync(email);
             } else {
-                await buyerApi.resendVerification(email);
+                await buyerResend.mutateAsync(email);
             }
 
             setIsSuccess(true);
@@ -49,7 +52,7 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
                 description: `A new link has been sent to ${email}. Please check your inbox.`,
             });
             setResendCooldown(60);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: 'Error',
                 description: error.message || 'Failed to resend verification email.',
@@ -118,3 +121,5 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
         </Dialog>
     );
 }
+
+

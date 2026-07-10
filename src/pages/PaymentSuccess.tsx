@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import apiClient from '@/lib/apiClient';
+import { useAutoLoginMutation, usePaymentStatusQuery } from '@/hooks/buyer/useBuyerPayments';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -12,65 +12,64 @@ export default function PaymentSuccess() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderReference, setOrderReference] = useState<string>('');
 
-  useEffect(() => {
-    const verifyPayment = async () => {
-      const reference = searchParams.get('reference');
+  const reference = searchParams.get('reference') || '';
+  const referenceRegex = /^[A-Za-z0-9_-]{8,64}$/;
+  const isReferenceValid = !!reference && referenceRegex.test(reference);
 
-      // FIX (Task 3): Strict reference validation to prevent probing and injection attacks
-      const referenceRegex = /^[A-Za-z0-9_-]{8,64}$/;
-      if (!reference || !referenceRegex.test(reference)) {
-        setStatus('error');
-        setMessage('Invalid payment reference format');
+  const autoLoginMutation = useAutoLoginMutation();
+  const { data: queryResponse, isLoading: isQueryLoading, error: queryError } = usePaymentStatusQuery(
+    reference,
+    isReferenceValid && status === 'loading'
+  );
+
+  useEffect(() => {
+    if (!isReferenceValid) {
+      setStatus('error');
+      setMessage('Invalid payment reference format');
+      return;
+    }
+
+    if (isQueryLoading) {
+      return;
+    }
+
+    if (queryError) {
+      const err = queryError as { response?: { status?: number; data?: { message?: string } } };
+      if (err.response?.status === 401) {
+        navigate(`/checkout?status=pending&reference=${reference}`, { replace: true });
         return;
       }
+      console.error('[PaymentSuccess] Payment verification failed:', queryError);
+      setStatus('error');
+      setMessage(err.response?.data?.message || 'Failed to verify payment. Please contact support.');
+      return;
+    }
 
-      try {
-        // NOTE: This call may fail with 401 if buyer is not authenticated.
-        // That's OK — we handle it below using autoLoginToken.
-        const response = await apiClient.get<any>(`/payments/status/${reference}`);
-        const paymentData = response.data?.data || response.data;
+    if (queryResponse) {
+      const queryResObj = queryResponse as Record<string, unknown>;
+      const paymentData = (queryResObj.data as Record<string, unknown> | undefined) || queryResObj;
 
-        if (paymentData.status === 'completed' || paymentData.status === 'success') {
-          setStatus('success');
-          setMessage('Payment completed successfully!');
-          setOrderReference(reference);
+      if (paymentData.status === 'completed' || paymentData.status === 'success') {
+        setStatus('success');
+        setMessage('Payment completed successfully!');
+        setOrderReference(reference);
 
-          // Handle auto-login if buyer isn't currently authenticated
-          if (paymentData.autoLoginToken) {
-            try {
-              await apiClient.post('/buyers/auto-login', {
-                autoLoginToken: paymentData.autoLoginToken
-              });
-              // Cookie is now set — show success modal then navigate to orders
-            } catch (loginErr) {
-              console.warn('[PAYMENT-SUCCESS] Auto-login failed:', loginErr);
-              // Still show success UI but navigation will require manual login
-            }
-          }
-
-          setTimeout(() => setShowSuccessModal(true), 800);
-        } else if (paymentData.status === 'pending' || paymentData.status === 'processing') {
-          // Payment is still being processed — redirect to checkout polling page
-          navigate(`/checkout?status=pending&reference=${reference}`, { replace: true });
-        } else {
-          setStatus('error');
-          setMessage('Payment failed or was cancelled');
+        if (paymentData.autoLoginToken) {
+          autoLoginMutation.mutateAsync(paymentData.autoLoginToken).catch((loginErr) => {
+            console.warn('[PAYMENT-SUCCESS] Auto-login failed:', loginErr);
+          });
         }
-      } catch (error: any) {
-        if (error.response?.status === 401) {
-          // Buyer not authenticated — the payment may still have succeeded.
-          // Redirect to checkout page which handles polling + auto-login properly.
-          navigate(`/checkout?status=pending&reference=${reference}`, { replace: true });
-          return;
-        }
-        console.error('[PaymentSuccess] Payment verification failed:', error);
+
+        setTimeout(() => setShowSuccessModal(true), 800);
+      } else if (paymentData.status === 'pending' || paymentData.status === 'processing') {
+        navigate(`/checkout?status=pending&reference=${reference}`, { replace: true });
+      } else {
         setStatus('error');
-        setMessage(error.response?.data?.message || 'Failed to verify payment. Please contact support.');
+        setMessage('Payment failed or was cancelled');
       }
-    };
+    }
+  }, [reference, isReferenceValid, queryResponse, isQueryLoading, queryError, navigate, autoLoginMutation]);
 
-    verifyPayment();
-  }, [searchParams, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8f7f2] relative px-4">
@@ -171,3 +170,5 @@ export default function PaymentSuccess() {
     </div>
   );
 }
+
+

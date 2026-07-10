@@ -1,8 +1,9 @@
 import { useState, useEffect, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, Palette, Loader2 } from 'lucide-react';
-import { sellerApi, Theme } from '@/api/sellerApi';
-import { useToast } from '@/components/ui/use-toast';
+import { Theme } from '@/api/seller';
+import { useUpdateThemeMutation } from '@/hooks/seller/useSellerProfile';
+import { useToast } from '@/hooks/use-toast';
 
 const themeColors = [
   { name: 'White', value: 'default', color: '#ffffff' },
@@ -33,10 +34,12 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
     setSelectedTheme(theme);
   };
 
+  const updateThemeMutation = useUpdateThemeMutation();
+
   const saveTheme = async () => {
     try {
       setIsSaving(true);
-      await sellerApi.updateTheme(selectedTheme);
+      await updateThemeMutation.mutateAsync(selectedTheme);
 
       if (onThemeChange) {
         onThemeChange(selectedTheme);
@@ -46,7 +49,7 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
         title: 'Theme updated',
         description: `Your shop theme has been updated to ${selectedTheme}.`,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating theme:', error);
       toast({
         title: 'Error',
@@ -123,3 +126,5 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
 };
 
 export default ThemeSelector;
+
+

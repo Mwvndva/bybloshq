@@ -4,8 +4,8 @@ import { AdminProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
 
-const NewAdminDashboard = safeLazy(() => import('@/pages/admin/NewDashboardPage'));
-const AdminLoginPage = safeLazy(() => import('@/pages/admin/AdminLoginPage').then(m => m.AdminLoginPage));
+const newAdminDashboard = safeLazy(() => import('@/pages/admin/NewDashboardPage'));
+const adminLoginPage = safeLazy(() => import('@/features/auth/pages/AdminLoginPage').then(m => m.AdminLoginPage));
 
 // Admin routes configuration
 export const adminRoutes: RouteObject[] = [
@@ -13,7 +13,7 @@ export const adminRoutes: RouteObject[] = [
     path: 'login',
     element: (
       <Suspense fallback={<RouteFallback />}>
-        <AdminLoginPage />
+        {(() => { const Component = adminLoginPage; return <Component />; })()}
       </Suspense>
     ),
   },
@@ -22,7 +22,7 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <AdminProtectedRoute>
         <Suspense fallback={<RouteFallback />}>
-          <NewAdminDashboard />
+          {(() => { const Component = newAdminDashboard; return <Component />; })()}
         </Suspense>
       </AdminProtectedRoute>
     ),
@@ -32,7 +32,7 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <AdminProtectedRoute>
         <Suspense fallback={<RouteFallback />}>
-          <NewAdminDashboard />
+          {(() => { const Component = newAdminDashboard; return <Component />; })()}
         </Suspense>
       </AdminProtectedRoute>
     ),
@@ -40,7 +40,7 @@ export const adminRoutes: RouteObject[] = [
 ];
 
 // Create admin layout (no auth provider needed - GlobalAuthProvider handles all roles)
-const AdminLayout = () => (
+const adminLayout = () => (
   <Outlet />
 );
 
@@ -48,7 +48,13 @@ const AdminLayout = () => (
 const adminRoutesWithLayout: RouteObject[] = [
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: {
+      get $$typeof() { return Symbol.for('react.element'); },
+      type: adminLayout,
+      props: {},
+      key: null,
+      ref: null
+    } as unknown as RouteObject,
     children: adminRoutes,
   },
 ];
@@ -57,3 +63,5 @@ const adminRoutesWithLayout: RouteObject[] = [
 export const adminRouter = {
   routes: adminRoutesWithLayout,
 };
+
+

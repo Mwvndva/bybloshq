@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { adminApiInstance as axios } from '@/api/adminApi';
+import { useAdminRefundRequestsQuery, useConfirmRefundMutation, useRejectRefundMutation } from '@/hooks/admin/mutations/useAdminRefunds';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +23,7 @@ interface RefundRequest {
   amount: string;
   status: string;
   payment_method: string;
-  payment_details: any;
+  payment_details: Record<string, unknown>;
   notes: string;
   admin_notes: string;
   requested_at: string;
@@ -32,7 +32,6 @@ interface RefundRequest {
 
 export default function RefundRequestsPage() {
   const [requests, setRequests] = useState<RefundRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<RefundRequest | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -40,49 +39,45 @@ export default function RefundRequestsPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusFilter, setStatusFilter] = useState('pending');
 
-  const fetchRefundRequests = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/refunds?status=${statusFilter}`);
-      setRequests(response.data.data.requests);
-    } catch (error) {
-      console.error('Error fetching refund requests:', error);
-      toast.error('Failed to load refund requests');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [statusFilter]);
+  const confirmRefundMutation = useConfirmRefundMutation();
+  const rejectRefundMutation = useRejectRefundMutation();
+
+  const refundQuery = useAdminRefundRequestsQuery(statusFilter);
 
   useEffect(() => {
-    fetchRefundRequests();
-  }, [fetchRefundRequests]);
+    if (refundQuery.data) {
+      setRequests(refundQuery.data.data?.requests || []);
+    }
+  }, [refundQuery.data]);
+
+  const fetchRefundRequests = useCallback(async () => {
+    await refundQuery.refetch();
+  }, [refundQuery]);
+
+  const isLoadingRequests = refundQuery.isLoading;
 
   const handleConfirmRefund = async () => {
     if (!selectedRequest) return;
 
     setIsProcessing(true);
     try {
-      // FIX (Task 7): Add idempotency key to prevent double approval
       const idempotencyKey = `refund-confirm-${selectedRequest.id}`;
 
-      await axios.patch(
-        `${API_URL}/refunds/${selectedRequest.id}/confirm`,
-        { adminNotes },
-        {
-          headers: {
-            'Idempotency-Key': idempotencyKey
-          }
-        }
-      );
+      await confirmRefundMutation.mutateAsync({
+        id: selectedRequest.id,
+        adminNotes,
+        idempotencyKey
+      });
 
       toast.success('Refund confirmed and processed successfully!');
       setIsConfirmDialogOpen(false);
       setAdminNotes('');
       setSelectedRequest(null);
       fetchRefundRequests();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       console.error('Error confirming refund:', error);
-      toast.error(error.response?.data?.message || 'Failed to confirm refund');
+      toast.error(err.response?.data?.message || err.message || 'Failed to confirm refund');
     } finally {
       setIsProcessing(false);
     }
@@ -93,27 +88,23 @@ export default function RefundRequestsPage() {
 
     setIsProcessing(true);
     try {
-      // FIX (Task 7): Add idempotency key to prevent double rejection
       const idempotencyKey = `refund-reject-${selectedRequest.id}`;
 
-      await axios.patch(
-        `${API_URL}/refunds/${selectedRequest.id}/reject`,
-        { adminNotes },
-        {
-          headers: {
-            'Idempotency-Key': idempotencyKey
-          }
-        }
-      );
+      await rejectRefundMutation.mutateAsync({
+        id: selectedRequest.id,
+        adminNotes,
+        idempotencyKey
+      });
 
       toast.success('Refund request rejected');
       setIsRejectDialogOpen(false);
       setAdminNotes('');
       setSelectedRequest(null);
       fetchRefundRequests();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       console.error('Error rejecting refund:', error);
-      toast.error(error.response?.data?.message || 'Failed to reject refund');
+      toast.error(err.response?.data?.message || err.message || 'Failed to reject refund');
     } finally {
       setIsProcessing(false);
     }
@@ -154,7 +145,7 @@ export default function RefundRequestsPage() {
     })}`;
   };
 
-  if (isLoading) {
+  if (isLoadingRequests) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-yellow-500" />
@@ -449,4 +440,6 @@ export default function RefundRequestsPage() {
     </div>
   );
 }
+
+
 

@@ -1,53 +1,63 @@
 import { Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { BuyerProtectedRoute } from '@/components/auth/AppProtectedRoute';
-import { WishlistProvider } from '@/contexts/WishlistContext';
-import { BybxProvider } from '@/contexts/BybxContext';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
 import BuyerLayout from '@/layouts/BuyerLayout';
 
 // Lazy load components
-const BuyerLogin = safeLazy(() => import('@/components/buyer/BuyerLogin').then(m => m.BuyerLogin));
-const BuyerRegister = safeLazy(() => import('@/components/buyer/BuyerRegister').then(m => m.BuyerRegister));
-const BuyerForgotPassword = safeLazy(() => import('@/components/buyer/BuyerForgotPassword').then(m => m.BuyerForgotPassword));
-const BuyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetPassword').then(m => m.BuyerResetPassword));
-const BuyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
-const ShopPage = safeLazy(() => import('@/features/shop/pages'));
+const buyerLogin = safeLazy(() => import('@/components/buyer/BuyerLogin').then(m => m.BuyerLogin));
+const buyerRegister = safeLazy(() => import('@/components/buyer/BuyerRegister').then(m => m.BuyerRegister));
+const buyerForgotPassword = safeLazy(() => import('@/components/buyer/BuyerForgotPassword').then(m => m.BuyerForgotPassword));
+const buyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetPassword').then(m => m.BuyerResetPassword));
+const buyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
+const shopPage = safeLazy(() => import('@/features/shop/pages/ShopPage'));
 
 export const buyerRoutes = [
   // ─── Public routes ──────────────────────────────────────────────────────────
   {
     path: '/buyer/register',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerRegister />
-      </Suspense>
-    ),
+    element: (() => {
+      const Component = buyerRegister;
+      return (
+        <Suspense fallback={<RouteFallback />}>
+          <Component />
+        </Suspense>
+      );
+    })(),
   },
   {
     path: '/buyer/login',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerLogin />
-      </Suspense>
-    ),
+    element: (() => {
+      const Component = buyerLogin;
+      return (
+        <Suspense fallback={<RouteFallback />}>
+          <Component />
+        </Suspense>
+      );
+    })(),
   },
   {
     path: '/buyer/forgot-password',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerForgotPassword />
-      </Suspense>
-    ),
+    element: (() => {
+      const Component = buyerForgotPassword;
+      return (
+        <Suspense fallback={<RouteFallback />}>
+          <Component />
+        </Suspense>
+      );
+    })(),
   },
   {
     path: '/buyer/reset-password',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerResetPassword />
-      </Suspense>
-    ),
+    element: (() => {
+      const Component = buyerResetPassword;
+      return (
+        <Suspense fallback={<RouteFallback />}>
+          <Component />
+        </Suspense>
+      );
+    })(),
   },
 
   // ─── Protected routes ────────────────────────────────────────────────────────
@@ -55,9 +65,7 @@ export const buyerRoutes = [
     path: '/buyer',
     element: (
       <BuyerProtectedRoute>
-        <BybxProvider>
-          <BuyerLayout />
-        </BybxProvider>
+        <BuyerLayout />
       </BuyerProtectedRoute>
     ),
     children: [
@@ -67,11 +75,14 @@ export const buyerRoutes = [
       },
       {
         path: 'dashboard',
-        element: (
-          <Suspense fallback={<RouteFallback />}>
-            <BuyerDashboard />
-          </Suspense>
-        ),
+        element: (() => {
+          const Component = buyerDashboard;
+          return (
+            <Suspense fallback={<RouteFallback />}>
+              <Component />
+            </Suspense>
+          );
+        })(),
       },
       {
         path: 'orders',
@@ -113,12 +124,12 @@ export const buyerRoutes = [
     path: '/buyer/shop/:shopName',
     element: (
       <BuyerProtectedRoute>
-        <WishlistProvider>
-          <Suspense fallback={<RouteFallback />}>
-            <ShopPage />
-          </Suspense>
-        </WishlistProvider>
+        <Suspense fallback={<RouteFallback />}>
+          <ShopPage />
+        </Suspense>
       </BuyerProtectedRoute>
     ),
   },
 ];
+
+

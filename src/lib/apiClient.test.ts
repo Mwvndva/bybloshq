@@ -12,3 +12,5 @@ describe('apiClient module', () => {
     expect(typeof getFreshCsrfToken).toBe('function');
   });
 });
+
+

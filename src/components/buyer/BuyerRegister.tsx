@@ -6,15 +6,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Mail, User, Phone, Lock, ArrowLeft, ShoppingBag, MapPin, Check, X, RefreshCw } from 'lucide-react';
-import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+import { useBuyerAuth } from '@/features/auth/contexts';
 import { locationData } from '@/lib/constants';
 import TermsModal from '@/components/TermsModal';
-import buyerApi from '@/api/buyerApi';
+import { useBuyerResendVerificationMutation } from '@/hooks/buyer/mutations/useBuyerAuthMutations';
 
 export function BuyerRegister() {
   const { toast } = useToast();
   const { register, isLoading } = useBuyerAuth();
   const navigate = useNavigate();
+  const resendVerificationMutation = useBuyerResendVerificationMutation();
 
   // Keep the standalone auth route aligned with the light app shell.
   useEffect(() => {
@@ -67,11 +68,12 @@ export function BuyerRegister() {
     if (resendCooldown > 0 || isResending) return;
     setIsResending(true);
     try {
-      await buyerApi.resendVerification(formData.email);
+      await resendVerificationMutation.mutateAsync(formData.email);
       toast({ title: 'Email Sent', description: 'A new verification link has been sent to your inbox.' });
       startResendCooldown();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Failed to resend email.', variant: 'destructive' });
+    } catch (err) {
+      const error = err as Error;
+      toast({ title: 'Error', description: error.message || 'Failed to resend email.', variant: 'destructive' });
     } finally {
       setIsResending(false);
     }
@@ -181,13 +183,13 @@ export function BuyerRegister() {
         termsAccepted: termsAccepted
       });
 
-      if ((result as any)?.status === 'pending_verification') {
+      if ((result as Record<string, unknown>)?.status === 'pending_verification') {
         setIsRegistered(true);
         return;
       }
 
       // Registration success and navigation is handled by the auth context
-    } catch (error: any) {
+    } catch (error) {
       // Handle structured validation errors
       if (error.response?.status === 400 && error.response?.data?.errors) {
         const validationErrors: { field: string; message: string }[] = error.response.data.errors;
@@ -727,3 +729,5 @@ export function BuyerRegister() {
     </div>
   );
 }
+
+

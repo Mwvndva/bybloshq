@@ -249,3 +249,5 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
 };
 
 export default ProductGrid;
+
+

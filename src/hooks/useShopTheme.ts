@@ -199,3 +199,5 @@ export function useShopTheme(themeName: Theme = 'default') {
 
     return config.classes;
 }
+
+

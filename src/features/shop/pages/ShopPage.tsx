@@ -2,14 +2,14 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package, Users } from 'lucide-react';
-import { sellerApi } from '@/api/sellerApi';
-import creatorApi from '@/api/creatorApi';
+import { useSellerByShopNameQuery, usePublicSellerProductsQuery } from '@/hooks/public/useShopQueries';
+import { useTrackCreatorLinkMutation } from '@/hooks/creator/mutations/useTrackCreatorLinkMutation';
+import type { ApiSellerProduct } from '@/types/api/product';
 import { formatCurrency, getImageUrl, cn } from '@/lib/utils';
-import { ProductCard } from '../components/ProductCard';
-import type { Product as ProductType, Seller, Aesthetic } from '@/types';
-import type { Product as SellerApiProduct } from '@/api/sellerApi';
+import { ProductCard } from '@/components/ProductCard';
+import type { Product, Seller, Aesthetic } from '@/types';
 import { useBuyerAuth } from '@/features/auth/contexts';
-import { useShopTheme, type Theme } from '../hooks/useShopTheme';
+import { useShopTheme, type Theme } from '@/hooks/useShopTheme';
 
 const SHOP_DEFAULT_BANNER_STYLE: CSSProperties = {
   background: [
@@ -41,7 +41,7 @@ const getSellerInitials = (shopName?: string, fullName?: string) => {
 };
 
 // Base product type that matches the Product interface but makes some fields optional
-interface BaseProduct extends Omit<ProductType, 'seller' | 'aesthetic' | 'isSold' | 'status'> {
+interface BaseProduct extends Omit<Product, 'seller' | 'aesthetic' | 'isSold' | 'status'> {
   seller?: Seller;
   isSold: boolean;
   status: 'available' | 'sold';
@@ -81,6 +81,8 @@ const ShopPage = () => {
   const { isAuthenticated } = useBuyerAuth();
   const themeClasses = useShopTheme((sellerInfo?.theme as Theme) || 'default');
 
+  const trackCreatorLink = useTrackCreatorLinkMutation();
+
   useEffect(() => {
     const creatorCode = new URLSearchParams(location.search).get('creator');
     if (!creatorCode) return;
@@ -88,85 +90,82 @@ const ShopPage = () => {
     const storageKey = `creator-click:${creatorCode}`;
     if (sessionStorage.getItem(storageKey)) return;
     sessionStorage.setItem(storageKey, '1');
-    creatorApi.trackLinkClick(creatorCode).catch(() => undefined);
-  }, [location.search]);
+    trackCreatorLink.mutate(creatorCode);
+  }, [location.search, trackCreatorLink]);
+
+  const { data: seller, isLoading: isSellerLoading, error: sellerError } = useSellerByShopNameQuery(shopName || '', !!shopName);
+  const { data: sellerProducts, isLoading: isProductsLoading } = usePublicSellerProductsQuery(seller?.id || '', !!seller?.id);
 
   useEffect(() => {
-    const fetchShopData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        window.scrollTo(0, 0);
+    if (sellerError) {
+      const err = sellerError as { response?: { data?: { message?: string } }; message?: string };
+      setError(err?.response?.data?.message || err?.message || 'Failed to load shop data');
+      setIsLoading(false);
+      return;
+    }
 
-        if (!shopName) {
-          throw new Error('Shop name is required');
-        }
+    if (isSellerLoading || (seller && isProductsLoading)) {
+      setIsLoading(true);
+      return;
+    }
 
-        const seller = await sellerApi.getSellerByShopName(shopName);
-
-        if (!seller) {
-          throw new Error('Shop not found');
-        }
-
-        const sellerData: ShopSeller = {
-          id: String(seller.id),
-          fullName: seller.fullName || seller.full_name || '',
-          shopName: seller.shopName || seller.shop_name || '',
-          phone: seller.phone || '',
-          whatsappNumber: seller.whatsappNumber || seller.phone || '',
-          email: seller.email || '',
-          bannerImage: seller.bannerImage || seller.banner_image || '',
-          city: seller.city,
-          location: seller.location,
-          theme: (seller.theme as Theme) || 'default',
-          instagramLink: seller.instagramLink || '',
-          tiktokLink: seller.tiktokLink || '',
-          facebookLink: seller.facebookLink || '',
-          clientCount: seller.clientCount || seller.client_count || 0,
-          bio: seller.bio || '',
-          avatarUrl: seller.avatarUrl || seller.avatar_url || '',
-          hasPhysicalShop: !!seller.physicalAddress,
-          physicalAddress: seller.physicalAddress,
-          latitude: seller.latitude,
-          longitude: seller.longitude,
-          createdAt: seller.createdAt || new Date().toISOString()
-        };
-
-        setSellerInfo(sellerData);
-        setAvatarLoadFailed(false);
-        setBannerLoadFailed(false);
-
-        const sellerProducts = await sellerApi.getSellerProducts(seller.id);
-
-        const availableProducts = (sellerProducts as SellerApiProduct[])
-          .map(p => ({
-            ...p,
-            sellerId: p.sellerId || '',
-            isSold: p.isSold || false,
-            status: p.status || 'available',
-            createdAt: p.createdAt || new Date().toISOString(),
-            updatedAt: p.updatedAt || new Date().toISOString(),
-            aesthetic: isAesthetic((p as any).aesthetic) ? (p as any).aesthetic : 'all',
-            seller: sellerData
-          } as unknown as ShopProduct))
-          .filter(p => !p.isSold && p.status !== 'sold');
-
-        setProducts(availableProducts);
-      } catch (err: any) {
-        console.error('Error fetching shop data:', err);
-        setError(err.response?.data?.message || err.message || 'Failed to load shop data');
-      } finally {
+    if (!seller) {
+      if (!isSellerLoading) {
+        setError('Shop not found');
         setIsLoading(false);
       }
+      return;
+    }
+
+    window.scrollTo(0, 0);
+
+    const sellerData: ShopSeller = {
+      id: String(seller.id),
+      fullName: seller.fullName || seller.full_name || '',
+      shopName: seller.shopName || seller.shop_name || '',
+      phone: seller.phone || '',
+      whatsappNumber: seller.whatsappNumber || seller.phone || '',
+      email: seller.email || '',
+      bannerImage: seller.bannerImage || seller.banner_image || '',
+      city: seller.city,
+      location: seller.location,
+      theme: (seller.theme as Theme) || 'default',
+      instagramLink: seller.instagramLink || '',
+      tiktokLink: seller.tiktokLink || '',
+      facebookLink: seller.facebookLink || '',
+      clientCount: seller.clientCount || seller.client_count || 0,
+      bio: seller.bio || '',
+      avatarUrl: seller.avatarUrl || seller.avatar_url || '',
+      hasPhysicalShop: !!seller.physicalAddress,
+      physicalAddress: seller.physicalAddress,
+      latitude: seller.latitude,
+      longitude: seller.longitude,
+      createdAt: seller.createdAt || new Date().toISOString()
     };
 
-    if (shopName) {
-      fetchShopData();
-    } else {
-      setError('Shop name is required');
-      setIsLoading(false);
+    setSellerInfo(sellerData);
+    setAvatarLoadFailed(false);
+    setBannerLoadFailed(false);
+
+    if (sellerProducts) {
+      const availableProducts = (sellerProducts as ApiSellerProduct[])
+        .map(p => ({
+          ...p,
+          sellerId: p.sellerId || '',
+          isSold: p.isSold || false,
+          status: p.status || 'available',
+          createdAt: p.createdAt || new Date().toISOString(),
+          updatedAt: p.updatedAt || new Date().toISOString(),
+          aesthetic: isAesthetic((p as Record<string, unknown>).aesthetic as string) ? ((p as Record<string, unknown>).aesthetic as import("@/types").Aesthetic) : 'all',
+          seller: sellerData
+        } as unknown as ShopProduct))
+        .filter(p => !p.isSold && p.status !== 'sold');
+
+      setProducts(availableProducts);
     }
-  }, [shopName]);
+
+    setIsLoading(false);
+  }, [seller, sellerProducts, isSellerLoading, isProductsLoading, sellerError, shopName]);
 
   // Filter products based on search query
   const filteredProducts = products.filter(product => {
@@ -416,7 +415,7 @@ const ShopPage = () => {
             <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
               {filteredProducts.map((product) => {
                 // Ensure the product has the seller info from the shop
-                const productWithSeller: ProductType & { seller?: Seller; isSold?: boolean; } = {
+                const productWithSeller: Product & { seller?: Seller; isSold?: boolean; } = {
                   ...product,
                   aesthetic: isAesthetic(product.aesthetic) ? product.aesthetic : 'all',
                   seller: sellerInfo ? {
@@ -513,3 +512,5 @@ const ShopPage = () => {
 };
 
 export default ShopPage;
+
+

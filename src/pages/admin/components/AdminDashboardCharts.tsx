@@ -13,7 +13,7 @@ export interface StatsCardProps {
 
 const COLORS = ['#facc15', '#111111', '#737373', '#d4d4d4', '#f59e0b', '#a3a3a3'];
 
-const hasChartData = (data: any[] = []) => data.some(item =>
+const hasChartData = (data: Record<string, unknown>[] = []) => data.some(item =>
   Object.values(item || {}).some(value => typeof value === 'number' && value > 0)
 );
 
@@ -59,7 +59,7 @@ export const ChartContainer = ({ title, description, children, className = '' }:
   </Card>
 );
 
-export const UserGrowthChart = ({ data }: { data: any[] }) => (
+export const UserGrowthChart = ({ data }: { data: Record<string, unknown>[] }) => (
   <ChartContainer title="User Growth" description="New buyers and sellers growth trend" className="col-span-4 lg:col-span-2">
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data}>
@@ -88,7 +88,7 @@ export const UserGrowthChart = ({ data }: { data: any[] }) => (
   </ChartContainer>
 );
 
-export const RevenueChart = ({ data }: { data: any[] }) => (
+export const RevenueChart = ({ data }: { data: Record<string, unknown>[] }) => (
   <ChartContainer title="Revenue Trends" description="Monthly platform earnings (KSh)" className="col-span-4 lg:col-span-2">
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data}>
@@ -112,7 +112,7 @@ export const RevenueChart = ({ data }: { data: any[] }) => (
   </ChartContainer>
 );
 
-export const SalesChart = ({ data }: { data: any[] }) => (
+export const SalesChart = ({ data }: { data: Record<string, unknown>[] }) => (
   <ChartContainer title="Sales Volume" description="Total marketplace transaction volume" className="col-span-4 lg:col-span-2">
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data}>
@@ -136,7 +136,7 @@ export const SalesChart = ({ data }: { data: any[] }) => (
   </ChartContainer>
 );
 
-export const ProductStatusChart = ({ data }: { data: any[] }) => (
+export const ProductStatusChart = ({ data }: { data: Record<string, unknown>[] }) => (
   <ChartContainer title="Product Distribution" description="Product mix by catalog type" className="col-span-4 lg:col-span-2">
     {hasChartData(data) ? (
       <ResponsiveContainer width="100%" height="100%">
@@ -168,7 +168,7 @@ export const ProductStatusChart = ({ data }: { data: any[] }) => (
   </ChartContainer>
 );
 
-export const GeoDistributionChart = ({ data }: { data: any[] }) => (
+export const GeoDistributionChart = ({ data }: { data: Record<string, unknown>[] }) => (
   <ChartContainer title="Geographic Reach" description="Regions by GMV, buyers, and sellers" className="col-span-4 lg:col-span-2">
     {hasChartData(data) ? (
       <ResponsiveContainer width="100%" height="100%">
@@ -193,3 +193,5 @@ export const GeoDistributionChart = ({ data }: { data: any[] }) => (
     )}
   </ChartContainer>
 );
+
+

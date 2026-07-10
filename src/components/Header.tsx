@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
 import { Instagram, Calendar, ShoppingBag, Shield, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSellerAuth } from '@/contexts/GlobalAuthContext';
+import { useSellerAuth } from '@/features/auth/contexts';
 
 const Header = () => {
   const { isAuthenticated: isSellerAuthenticated } = useSellerAuth();
@@ -43,3 +43,5 @@ const Header = () => {
 };
 
 export default Header;
+
+

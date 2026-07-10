@@ -1,10 +1,10 @@
 import { CalendarClock, Clock, MapPin, Route, ShieldCheck, Truck } from 'lucide-react';
-import type { Order, OrderLogisticsDeliveryLeg } from '@/types/order';
+import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/types/api/order';
 
 type TrackingView = 'buyer' | 'seller';
 
 interface OrderLogisticsTrackingProps {
-  order: Order;
+  order: ApiOrder;
   view: TrackingView;
   isPhysical?: boolean;
   formatCurrency: (value: number | undefined, currency?: string) => string;
@@ -45,7 +45,7 @@ function mapLink(lat?: number | string | null, lng?: number | string | null, add
   return null;
 }
 
-function getDeliveryAddress(leg?: OrderLogisticsDeliveryLeg | null, order?: Order) {
+function getDeliveryAddress(leg?: ApiOrderLogisticsDeliveryLeg | null, order?: ApiOrder) {
   return leg?.destinationAddress
     || leg?.destinationLabel
     || order?.location_address
@@ -71,7 +71,7 @@ function StatBox({
   );
 }
 
-function Timeline({ events }: { events: NonNullable<Order['logistics']>['events'] }) {
+function Timeline({ events }: { events: NonNullable<ApiOrder['logistics']>['events'] }) {
   if (!events?.length) {
     return (
       <p className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-white/65">
@@ -243,3 +243,5 @@ export function OrderLogisticsTracking({
     </section>
   );
 }
+
+

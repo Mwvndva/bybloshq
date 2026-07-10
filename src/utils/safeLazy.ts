@@ -7,7 +7,7 @@ import { lazy, ComponentType } from 'react';
  * @param importFn The dynamic import function, e.g., () => import('./MyComponent')
  * @returns A lazy-loaded component that automatically recovers from chunk errors
  */
-export const safeLazy = <T extends ComponentType<any>>(
+export const safeLazy = <T extends ComponentType<unknown>>(
     importFn: () => Promise<{ default: T } | T>
 ) => {
     return lazy(async () => {
@@ -21,7 +21,7 @@ export const safeLazy = <T extends ComponentType<any>>(
             }
 
             return { default: component as T };
-        } catch (error: any) {
+        } catch (error) {
             console.error('safeLazy caught a chunk loading error:', error);
 
             // Check if it's a dynamic import failure
@@ -55,3 +55,5 @@ export const safeLazy = <T extends ComponentType<any>>(
         }
     });
 };
+
+

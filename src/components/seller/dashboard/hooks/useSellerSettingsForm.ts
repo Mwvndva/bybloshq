@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { checkShopNameAvailability, sellerApi } from '@/api/sellerApi';
+import { checkShopNameAvailability } from '@/api/seller';
+import { useUpdateProfileMutation } from '@/hooks/seller/useSellerProfile';
+import { sellerQueryKeys } from '@/api/queryKeys';
 import type { SellerSettingsFormData } from '../types';
+import type { ApiSeller } from '@/types';
 import type { LocationCoordinates } from '@/lib/location';
 
 const cities = {
@@ -18,7 +21,7 @@ const isDefaultCoordinate = (lat?: number | null, lng?: number | null) => {
     Math.abs(Number(lng) - (36.8219)) < 0.0001);
 };
 
-const buildInitialFormData = (sellerProfile: any): SellerSettingsFormData => {
+const buildInitialFormData = (sellerProfile: ApiSeller | Record<string, unknown>): SellerSettingsFormData => {
   const initialPhysicalAddress = sellerProfile?.physicalAddress === 'Nairobi, Kenya'
     ? ''
     : (sellerProfile?.physicalAddress || '');
@@ -44,13 +47,14 @@ const buildInitialFormData = (sellerProfile: any): SellerSettingsFormData => {
 };
 
 interface UseSellerSettingsFormArgs {
-  sellerProfile: any;
-  toast: (options: any) => void;
-  updateSellerProfile?: (payload: any) => Promise<void>;
+  sellerProfile: ApiSeller | Record<string, unknown>;
+  toast: (options: Record<string, unknown>) => void;
+  updateSellerProfile?: (payload: Record<string, unknown>) => Promise<void>;
 }
 
 export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfile }: UseSellerSettingsFormArgs) {
   const queryClient = useQueryClient();
+  const updateProfileMutation = useUpdateProfileMutation();
   const [formData, setFormData] = useState<SellerSettingsFormData>(() => buildInitialFormData(sellerProfile));
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -158,7 +162,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
       if (updateSellerProfile) {
         await updateSellerProfile(payload);
       } else {
-        await sellerApi.updateProfile(payload);
+        await updateProfileMutation.mutateAsync(payload);
       }
 
       setFormData(prev => ({
@@ -168,14 +172,14 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
         longitude: null
       }));
 
-      queryClient.invalidateQueries({ queryKey: ['sellerDashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['seller-dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: sellerQueryKeys.dashboard() });
+      queryClient.invalidateQueries({ queryKey: sellerQueryKeys.summary() });
 
       toast({
         title: 'Location deleted',
         description: 'Your shop pickup location has been removed.',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting shop location:', error);
       toast({
         title: 'Error',
@@ -194,7 +198,8 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     sellerProfile?.latitude,
     sellerProfile?.longitude,
     toast,
-    updateSellerProfile
+    updateSellerProfile,
+    updateProfileMutation
   ]);
 
   const toggleEdit = useCallback(() => {
@@ -248,7 +253,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     setIsSaving(true);
 
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         fullName: formData.fullName,
         shopName: formData.shopName,
         city: formData.city,
@@ -267,7 +272,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
       if (updateSellerProfile) {
         await updateSellerProfile(payload);
       } else {
-        await sellerApi.updateProfile(payload);
+        await updateProfileMutation.mutateAsync(payload);
       }
 
       setIsEditing(false);
@@ -276,7 +281,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
         title: 'Success',
         description: 'Profile updated successfully',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         title: 'Error',
@@ -286,11 +291,11 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     } finally {
       setIsSaving(false);
     }
-  }, [formData, sellerProfile?.shopName, shopNameAvailable, toast, updateSellerProfile]);
+  }, [formData, sellerProfile?.shopName, shopNameAvailable, toast, updateSellerProfile, updateProfileMutation]);
 
   const handleBusinessPhotoUploaded = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['sellerDashboard'] });
-    queryClient.invalidateQueries({ queryKey: ['seller-dashboard', 'summary'] });
+    queryClient.invalidateQueries({ queryKey: sellerQueryKeys.dashboard() });
+    queryClient.invalidateQueries({ queryKey: sellerQueryKeys.summary() });
   }, [queryClient]);
 
   return {
@@ -312,3 +317,5 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     toggleEdit
   };
 }
+
+

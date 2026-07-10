@@ -1,5 +1,5 @@
 import apiClient from '@/lib/apiClient';
-import type { WithdrawalRequest } from './types';
+import type { ApiWithdrawalRequest } from '@/types/api/withdrawal';
 
 const sellerApiInstance = apiClient;
 
@@ -9,7 +9,7 @@ export const sellerWithdrawalsApi = {
     mpesaNumber: string;
     mpesaName: string;
     idempotencyKey: string;
-  }): Promise<WithdrawalRequest> {
+  }): Promise<ApiWithdrawalRequest> {
     if (data.amount < 50 || data.amount > 250_000) {
       throw new Error('Invalid withdrawal amount. Must be between KSh 50 and KSh 250,000.');
     }
@@ -20,7 +20,7 @@ export const sellerWithdrawalsApi = {
 
     const { idempotencyKey, ...payload } = data;
 
-    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>(
+    const response = await sellerApiInstance.post<{ data: ApiWithdrawalRequest }>(
       '/sellers/withdrawal-request',
       payload,
       {
@@ -32,8 +32,8 @@ export const sellerWithdrawalsApi = {
     return response.data.data;
   },
 
-  async getWithdrawalRequests(): Promise<WithdrawalRequest[]> {
-    const response = await sellerApiInstance.get<{ data: WithdrawalRequest[] }>('/sellers/withdrawal-requests');
+  async getWithdrawalRequests(): Promise<ApiWithdrawalRequest[]> {
+    const response = await sellerApiInstance.get<{ data: ApiWithdrawalRequest[] }>('/sellers/withdrawal-requests');
     return response.data.data;
   }
 };
@@ -66,3 +66,5 @@ export const withdrawalService = {
     return response.data;
   }
 };
+
+

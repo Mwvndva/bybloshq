@@ -1,14 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { sellerApi } from '@/api/sellerApi';
+import { sellerApi } from '@/api/seller';
 import { normalizeSellerAnalytics } from '../dashboardUtils';
 import { sellerDashboardQueryKeys } from '../queryKeys';
 import type { AnalyticsData } from '../types';
 
 interface UseSellerDashboardDataArgs {
-  navigate: (path: string, options?: any) => void;
+  navigate: (path: string, options?: import('react-router-dom').NavigateOptions) => void;
   locationPathname: string;
-  toast: (options: any) => void;
+  toast: (options: Record<string, unknown>) => void;
 }
 
 export function useSellerDashboardData({ navigate, locationPathname, toast }: UseSellerDashboardDataArgs) {
@@ -16,7 +16,7 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
 
   const productsQuery = useQuery({
     queryKey: sellerDashboardQueryKeys.products,
-    queryFn: sellerApi.getProducts,
+    queryFn: () => sellerApi.getProducts(),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     retry: 1,
@@ -25,14 +25,14 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
 
   const analyticsQuery = useQuery({
     queryKey: sellerDashboardQueryKeys.analytics,
-    queryFn: sellerApi.getAnalytics,
+    queryFn: () => sellerApi.getAnalytics(),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     retry: 1,
     refetchOnWindowFocus: false
   });
 
-  const handleDashboardFetchError = useCallback((err: any) => {
+  const handleDashboardFetchError = useCallback((err: unknown) => {
     console.error('Error fetching dashboard data:', err);
 
     if (err.response?.status === 401) {
@@ -73,12 +73,12 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
       const [productsData, analyticsData] = await Promise.all([
         queryClient.fetchQuery({
           queryKey: sellerDashboardQueryKeys.products,
-          queryFn: sellerApi.getProducts,
+          queryFn: () => sellerApi.getProducts(),
           staleTime: 0
         }),
         queryClient.fetchQuery({
           queryKey: sellerDashboardQueryKeys.analytics,
-          queryFn: sellerApi.getAnalytics,
+          queryFn: () => sellerApi.getAnalytics(),
           staleTime: 0
         })
       ]);
@@ -87,7 +87,7 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
         Array.isArray(productsData) ? productsData : [],
         analyticsData
       );
-    } catch (err: any) {
+    } catch (err) {
       handleDashboardFetchError(err);
 
       return {
@@ -97,6 +97,8 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
         totalPayout: 0,
         balance: 0,
         clientCount: 0,
+        creatorCount: 0,
+        creatorGeneratedSales: 0,
         wishlistCount: 0,
         clickCount: 0,
         monthlySales: [],
@@ -128,3 +130,5 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
     products
   };
 }
+
+

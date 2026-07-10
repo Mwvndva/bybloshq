@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
-import apiClient from '@/lib/apiClient';
+import { useValidateDiscountCodeMutation } from '@/hooks/buyer/useBuyerPayments';
 
 interface DiscountCodeInputProps {
   eventId: string;
@@ -34,6 +34,8 @@ export const DiscountCodeInput = ({
   const { runWithLock, isLocked: isValidating } = useAsyncLock();
   const { toast } = useToast();
 
+  const validateMutation = useValidateDiscountCodeMutation();
+
   const validateDiscountCode = async () => {
     if (!code.trim()) {
       toast({
@@ -47,14 +49,14 @@ export const DiscountCodeInput = ({
     // FIX (Task 20): Prevents duplicate validation requests
     await runWithLock(async () => {
       try {
-        const response = await apiClient.post('/discount-codes/validate', {
+        const response = await validateMutation.mutateAsync({
           code: code.trim().toUpperCase(),
           order_amount: orderAmount
         });
 
-        const validation = (response.data as any)?.data;
+        const validation = response?.data;
 
-        if ((response.data as any)?.success && validation.valid) {
+        if (response?.success && validation.valid) {
           setAppliedDiscount({
             code: code.trim().toUpperCase(),
             discountAmount: validation.discount_amount,
@@ -75,11 +77,12 @@ export const DiscountCodeInput = ({
             variant: 'destructive'
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { message?: string } } };
         console.error('Error validating discount code:', error);
         toast({
           title: 'Error',
-          description: error.response?.data?.message || 'Failed to validate discount code',
+          description: err.response?.data?.message || 'Failed to validate discount code',
           variant: 'destructive'
         });
       }
@@ -193,3 +196,5 @@ export const DiscountCodeInput = ({
     </Card>
   );
 };
+
+

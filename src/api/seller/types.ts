@@ -1,73 +1,8 @@
-import type { OrderStatus } from '@/types/order';
+import type { OrderStatus } from '@/types';
 import type { ProductType } from '@/types/index';
 
 export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
-export interface Seller {
-  id: number;
-  fullName: string;
-  full_name?: string;
-  shopName: string;
-  shop_name?: string;
-  email: string;
-  phone: string;
-  whatsappNumber: string;
-  city?: string;
-  location?: string;
-  hasPhysicalShop?: boolean;
-  physicalAddress?: string;
-  physical_address?: string;
-  latitude?: number;
-  longitude?: number;
-  bannerImage?: string;
-  banner_image?: string;
-  bio?: string;
-  avatarUrl?: string;
-  avatar_url?: string;
-  theme?: Theme;
-  balance?: number;
-  total_sales?: number;
-  totalSales?: number;
-  net_revenue?: number;
-  createdAt: string;
-  created_at?: string;
-  updatedAt?: string;
-  updated_at?: string;
-  instagramLink?: string;
-  tiktokLink?: string;
-  facebookLink?: string;
-  creatorCommissionRate?: number;
-  creator_commission_rate?: number;
-  is_verified: boolean;
-  clientCount?: number;
-  client_count?: number;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  image_url: string;
-  images?: string[];
-  aesthetic: string;
-  sellerId: string;
-  isSold: boolean;
-  status: 'available' | 'sold';
-  soldAt?: string | null;
-  createdAt: string;
-  updatedAt?: string;
-  is_digital?: boolean;
-  digital_file_path?: string;
-  digital_file_name?: string;
-  productType?: ProductType;
-  is_custom_product?: boolean;
-  production_days?: number | null;
-  customization_prompt?: string | null;
-  is_imported_product?: boolean;
-  import_days?: number | null;
-  import_note?: string | null;
-}
 
 export interface SellerAnalytics {
   totalProducts: number;
@@ -96,22 +31,7 @@ export interface SellerAnalytics {
   }>;
 }
 
-export interface WithdrawalRequest {
-  id: string;
-  amount: number;
-  withdrawalFee?: number;
-  totalDeducted?: number;
-  mpesaNumber: string;
-  mpesaName: string;
-  status: 'processing' | 'completed' | 'failed' | 'compensation_required';
-  createdAt: string;
-  updatedAt?: string;
-  processedAt?: string;
-  processedBy?: string;
-  providerReference?: string;
-  mpesaReceipt?: string;
-  failureReason?: string;
-}
+
 
 export interface ReferredSeller {
   id: number;
@@ -175,3 +95,5 @@ export interface OrdersAnalytics {
 export interface OrderQueryParams {
   status?: OrderStatus;
 }
+
+

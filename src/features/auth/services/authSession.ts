@@ -18,3 +18,5 @@ export const clearRoleSessionMarkers = async (): Promise<void> => {
     await storage.remove(`${role}Token`);
   }
 };
+
+

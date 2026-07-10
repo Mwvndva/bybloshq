@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { User, Mail, Phone, Lock, Loader2, Eye, EyeOff, ArrowLeft, Store, MapPin, Check, X, Globe, RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
+import { sellerApi, checkShopNameAvailability } from '@/api/seller';
 import ShopLocationPicker from './ShopLocationPicker';
 import TermsModal from '@/components/TermsModal';
+import { useSellerResendVerificationMutation } from '@/hooks/seller/mutations/useSellerAuthMutations';
 
 interface SellerRegistrationProps {
   onSuccess?: () => void;
@@ -21,7 +22,7 @@ const locationData: Record<string, string[]> = {
   'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka']
 };
 
-import { useSellerAuth } from '@/contexts/GlobalAuthContext';
+import { useSellerAuth } from '@/features/auth/contexts';
 
 const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const navigate = useNavigate();
@@ -58,6 +59,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
+  const resendVerificationMutation = useSellerResendVerificationMutation();
 
   // Keep the standalone auth route aligned with the light app shell.
   useEffect(() => {
@@ -166,7 +168,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   }, [formData.shopName]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
 
     // Disallow spaces in shop name
     if (name === 'shopName') {
@@ -182,7 +185,6 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     if (name === 'shopName') {
       setShopNameAvailable(null);
     }
-
     // Validate passwords when either field changes
     if (name === 'password' || name === 'confirmPassword') {
       if (formData.password && formData.confirmPassword) {
@@ -260,7 +262,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         termsAccepted: true
       });
 
-      if ((result as any)?.status === 'pending_verification') {
+      if ((result as Record<string, unknown>)?.status === 'pending_verification') {
         setIsRegistered(true);
         setIsLoading(false);
         return;
@@ -278,21 +280,22 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
       navigate('/seller/dashboard');
 
       if (onSuccess) onSuccess();
-    } catch (error: any) {
-      if (error.response?.status === 409) return;
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { message?: string; errors?: Array<{ message: string }> } }; message?: string };
+      if (err.response?.status === 409) return;
       console.error('Registration failed:', error);
 
       let errorMessage = 'An error occurred during registration';
       let errorTitle = 'Registration Failed';
 
       // Handle structured validation errors
-      if (error.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
-        const firstError = error.response.data.errors[0];
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors) && err.response.data.errors.length > 0) {
+        const firstError = err.response.data.errors[0];
         errorTitle = 'Validation Error';
         errorMessage = firstError.message;
       } else {
-        errorMessage = error.response?.data?.message ||
-          (error instanceof Error ? error.message : errorMessage);
+        errorMessage = err.response?.data?.message ||
+          (err instanceof Error ? err.message : errorMessage);
       }
 
       toast({
@@ -416,14 +419,15 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                       if (resendCooldown > 0 || isResending) return;
                       setIsResending(true);
                       try {
-                        await sellerApi.resendVerification(formData.email);
+                        await resendVerificationMutation.mutateAsync(formData.email);
                         toast({ title: 'Email Sent', description: 'A new verification link has been sent to your inbox.' });
                         setResendCooldown(60);
                         const interval = setInterval(() => {
                           setResendCooldown(prev => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; });
                         }, 1000);
-                      } catch (err: any) {
-                        toast({ title: 'Error', description: err.message || 'Failed to resend email.', variant: 'destructive' });
+                      } catch (err: unknown) {
+                        const error = err as Error;
+                        toast({ title: 'Error', description: error.message || 'Failed to resend email.', variant: 'destructive' });
                       } finally {
                         setIsResending(false);
                       }
@@ -877,3 +881,5 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 };
 
 export default SellerRegistration;
+
+

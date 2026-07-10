@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { exportWithdrawalsToCSV } from '@/utils/exportUtils';
 import { getWithdrawalFee, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS } from '../dashboardUtils';
-import type { WithdrawalRequest } from '../types';
+import type { ApiWithdrawalRequest } from '@/types/api/withdrawal';
 
 interface WithdrawalsTabProps {
   balance: number;
@@ -15,7 +15,7 @@ interface WithdrawalsTabProps {
   refundReservedBalance?: number;
   nextSettlementAt?: string | null;
   endDate: string;
-  filteredWithdrawals: WithdrawalRequest[];
+  filteredWithdrawals: ApiWithdrawalRequest[];
   handleWithdrawalRequest: (event: React.FormEvent) => Promise<void>;
   isRequestingWithdrawal: boolean;
   setEndDate: (date: string) => void;
@@ -25,7 +25,7 @@ interface WithdrawalsTabProps {
   showWithdrawalForm: boolean;
   startDate: string;
   withdrawalForm: { amount: string; mpesaNumber: string; mpesaName: string };
-  withdrawalRequests: WithdrawalRequest[];
+  withdrawalRequests: ApiWithdrawalRequest[];
 }
 
 const formatKes = (amount: number) => {
@@ -400,3 +400,5 @@ export function WithdrawalsTab({
     </div>
   );
 }
+
+

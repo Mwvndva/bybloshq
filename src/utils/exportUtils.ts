@@ -1,23 +1,15 @@
-import { Order } from '@/types/order';
+import { ApiOrder } from '@/types/api/order';
+import { ApiWithdrawalRequest } from '@/types/api/withdrawal';
 import { format } from 'date-fns';
 
-interface WithdrawalRequest {
-    id: string;
-    amount: number;
-    mpesaNumber: string;
-    mpesaName: string;
-    status: 'processing' | 'completed' | 'failed';
-    createdAt: string;
-    processedAt?: string;
-    updatedAt?: string;
-    processedBy?: string;
-    failureReason?: string;
-}
+type WithdrawalRequest = ApiWithdrawalRequest;
+
+
 
 /**
  * Sanitize a cell value to prevent CSV Formula Injection
  */
-const sanitizeCell = (value: any): string => {
+const sanitizeCell = (value: unknown): string => {
     const str = '' + value;
     // If the value starts with a symbol that could be interpreted as a formula
     // (=, +, -, @), prepend a single quote to neutralize it
@@ -30,10 +22,10 @@ const sanitizeCell = (value: any): string => {
 /**
  * Convert array of objects to CSV string
  */
-const convertToCSV = (data: any[], headers: string[]): string => {
+const convertToCSV = (data: Record<string, unknown>[], headers: string[]): string => {
     if (data.length === 0) return '';
 
-    const csvRows = [];
+    const csvRows: string[] = [];
 
     // Add header row
     csvRows.push(headers.join(','));
@@ -76,14 +68,14 @@ const downloadCSV = (csvContent: string, filename: string): void => {
 /**
  * Format orders data for CSV export
  */
-export const formatOrdersForExport = (orders: Order[]) => {
+export const formatOrdersForExport = (orders: ApiOrder[]) => {
     return orders.map(order => {
         const productNames = order.items?.map(item => item.name).join(', ') || 'N/A';
         const totalQuantity = order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
         const firstItemPrice = order.items?.[0]?.price || 0;
 
         return {
-            'Order ID': order.id,
+            'ApiOrder ID': order.id,
             'Date': format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm:ss'),
             'Buyer Name': order.buyerName || order.customer?.name || 'N/A',
             'Products': productNames,
@@ -117,7 +109,7 @@ export const formatWithdrawalsForExport = (withdrawals: WithdrawalRequest[]) => 
 /**
  * Export orders to CSV file
  */
-export const exportOrdersToCSV = (orders: Order[], filename?: string): void => {
+export const exportOrdersToCSV = (orders: ApiOrder[], filename?: string): void => {
     const formattedData = formatOrdersForExport(orders);
     const headers = Object.keys(formattedData[0] || {});
     const csvContent = convertToCSV(formattedData, headers);
@@ -138,3 +130,5 @@ export const exportWithdrawalsToCSV = (
     const defaultFilename = `withdrawals_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`;
     downloadCSV(csvContent, filename || defaultFilename);
 };
+
+

@@ -1,10 +1,10 @@
-import buyerApi from '@/api/buyerApi';
-import { sellerApi } from '@/api/sellerApi';
-import adminApi from '@/api/adminApi';
-import creatorApi from '@/api/creatorApi';
+import buyerApi from '@/api/buyer';
+import { sellerApi } from '@/api/seller';
+import adminApi from '@/api/admin';
+import creatorApi from '@/api/creator';
 import type { UserRole } from '../types/authTypes';
 
-export const getApiForRole = (role: UserRole): any => {
+export const getApiForRole = (role: UserRole): unknown => {
   switch (role) {
     case 'buyer':
       return buyerApi;
@@ -18,3 +18,5 @@ export const getApiForRole = (role: UserRole): any => {
       throw new Error(`Unknown role: ${role}`);
   }
 };
+
+

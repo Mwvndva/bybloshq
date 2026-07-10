@@ -2,14 +2,15 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Clock, ExternalLink, History, Mail, Phone, ShieldCheck, Truck } from 'lucide-react';
 import { toast } from 'sonner';
-import { adminApi, type AdminLogisticsStatusFilter } from '@/api/adminApi';
+import { adminApi, type AdminLogisticsStatusFilter } from '@/api/admin';
+import { adminQueryKeys } from '@/api/queryKeys';
 import type {
   LogisticsLeg,
   LogisticsLegType,
   LogisticsRequestCard,
   LogisticsSort,
   LogisticsStatusUpdate,
-} from '@/api/logisticsApi';
+} from '@/api/logistics';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -302,7 +303,7 @@ export function AdminLogisticsTab() {
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
 
   const logisticsQuery = useQuery({
-    queryKey: ['admin', 'logistics', status, sort],
+    queryKey: adminQueryKeys.logistics(status, sort),
     queryFn: () => adminApi.getLogisticsRequests({ status, sort }),
     staleTime: 20_000,
     refetchInterval: 60_000,
@@ -312,11 +313,12 @@ export function AdminLogisticsTab() {
     mutationFn: adminApi.updateLogisticsLegStatus,
     onSuccess: () => {
       toast.success('Logistics status updated');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'logistics'] });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.all });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       toast.error('Status update failed', {
-        description: error?.response?.data?.message || error?.message || 'The logistics status was not updated.',
+        description: err?.response?.data?.message || err?.message || 'The logistics status was not updated.',
       });
     },
     onSettled: () => setUpdatingKey(null),
@@ -326,11 +328,12 @@ export function AdminLogisticsTab() {
     mutationFn: adminApi.resolveLogisticsDispute,
     onSuccess: () => {
       toast.success('Dispute action recorded');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'logistics'] });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.all });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       toast.error('Dispute action failed', {
-        description: error?.response?.data?.message || error?.message || 'The dispute action was not recorded.',
+        description: err?.response?.data?.message || err?.message || 'The dispute action was not recorded.',
       });
     },
   });
@@ -447,3 +450,5 @@ export function AdminLogisticsTab() {
     </div>
   );
 }
+
+

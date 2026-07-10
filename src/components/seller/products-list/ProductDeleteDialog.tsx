@@ -49,3 +49,5 @@ export function ProductDeleteDialog({ open, deletingId, onOpenChange, onCancel, 
     </Dialog>
   );
 }
+
+

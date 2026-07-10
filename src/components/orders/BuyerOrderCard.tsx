@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Download, Loader2, RefreshCw, Users } from 'lucide-react';
-import type { Order } from '@/types/order';
+import type { ApiOrder } from '@/types/api/order';
 import { getImageUrl } from '@/lib/utils';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 import { OrderLogisticsTracking } from './OrderLogisticsTracking';
@@ -20,14 +20,14 @@ import {
 } from './ordersSectionUtils';
 
 interface BuyerOrderCardProps {
-  order: Order;
+  order: ApiOrder;
   clientStatus: Record<string, boolean>;
   isBecomingClient: Record<string, boolean>;
   downloadingOrderId: string | null;
   downloadProgress: Record<string, number>;
-  onViewDetails: (order: Order) => void;
+  onViewDetails: (order: ApiOrder) => void;
   onConfirmReceipt: (orderId: string) => void;
-  onDownload: (order: Order) => void;
+  onDownload: (order: ApiOrder) => void;
   onToggleClientStatus: (sellerId: string, sellerName: string) => void;
 }
 
@@ -84,7 +84,7 @@ export function BuyerOrderCard({
             <div className="text-right">
               <p className="text-xs text-white/70 uppercase tracking-wider mb-1">Total</p>
               <p className="text-xl sm:text-2xl font-bold text-white">
-                {formatOrderCurrency((order as any).total_amount || order.totalAmount, order.currency)}
+                {formatOrderCurrency((order as Record<string, unknown>).total_amount as number || order.totalAmount, order.currency)}
               </p>
               <p className="mt-1 text-[11px] font-medium text-white/60">
                 Includes 2% Byblos charge{buyerServiceCharge > 0 ? ` (${formatOrderCurrency(buyerServiceCharge, order.currency)})` : ''}
@@ -105,7 +105,7 @@ export function BuyerOrderCard({
               <p className="mt-0.5 text-sm font-semibold text-white">{order.items?.length || 0} item{order.items?.length === 1 ? '' : 's'}</p>
             </div>
             <div className={detailPillClass}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">Order ID</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">ApiOrder ID</p>
               <p className="mt-0.5 truncate text-sm font-semibold text-white">{String(order.id).slice(0, 12)}</p>
             </div>
           </div>
@@ -231,3 +231,5 @@ export function BuyerOrderCard({
     </Card>
   );
 }
+
+

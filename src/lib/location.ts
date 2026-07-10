@@ -90,3 +90,5 @@ export const hasPreciseLocation = (
     normalizeCoordinates({ lat: location.lat, lng: location.lng })
   );
 };
+
+

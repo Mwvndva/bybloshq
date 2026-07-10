@@ -1,13 +1,16 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useGlobalAuth } from '@/contexts/GlobalAuthContext';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
 } from '@/components/ui/card';
 import { Loader2, CheckCircle2, Clock, XCircle, FileText } from 'lucide-react';
-import axios from 'axios';
-import { toast } from '@/components/ui/use-toast';
+import { useAutoLoginMutation } from '@/hooks/buyer/useBuyerPayments';
+import { useQueryClient } from '@tanstack/react-query';
+import { buyerApi } from '@/api/buyer';
+import { buyerQueryKeys } from '@/api/queryKeys';
+import { toast } from '@/hooks/use-toast';
 
 type OrderStatus = 'success' | 'completed' | 'pending' | 'processing' | 'error' | 'failed' | 'declined' | 'delivery_pending' | 'collection_pending' | 'service_pending';
 
@@ -97,15 +100,14 @@ export default function CheckoutPage() {
     }
   }, [stopPolling]);
 
+  const autoLoginMutation = useAutoLoginMutation();
+  const queryClient = useQueryClient();
+
   // Handle auto-login when payment completes — calls the backend auto-login endpoint
   // which sets the HttpOnly jwt cookie and returns buyer profile
   const handleAutoLogin = useCallback(async (autoLoginToken: string) => {
     try {
-      await axios.post(
-        '/api/buyers/auto-login',
-        { autoLoginToken },
-        { withCredentials: true }
-      );
+      await autoLoginMutation.mutateAsync(autoLoginToken);
 
       // FIX (Task 2): Never trust cookie set — must rehydrate auth context
       // This ensures the application state is consistent before navigation
@@ -118,7 +120,7 @@ export default function CheckoutPage() {
       console.warn('[CHECKOUT] Auto-login failed, redirecting to login:', err);
       navigate('/buyer/login', { replace: true });
     }
-  }, [navigate, loginWithToken]);
+  }, [navigate, loginWithToken, autoLoginMutation]);
 
   const checkPaymentStatus = useCallback(async (reference: string) => {
     // FIX (Task 1): Guard using isCheckingRef.current to prevent overlapping polling requests
@@ -135,13 +137,13 @@ export default function CheckoutPage() {
     pollCountRef.current += 1;
 
     try {
-      const response = await axios.get<{ data: PaymentStatusResponse }>(
-        `/api/orders/reference/${reference}`,
-        { withCredentials: true }
-      );
+      const response = await queryClient.fetchQuery({
+        queryKey: buyerQueryKeys.orderStatus(reference),
+        queryFn: () => buyerApi.getPaymentStatus(reference)
+      });
 
       // Handle the nested data structure from the response
-      const responseData = response.data.data || (response.data as any);
+      const responseData = (response as { data?: unknown })?.data || response;
       const { status, message, autoLoginToken } = responseData as PaymentStatusResponse;
 
       const isFinal = ['success', 'completed', 'error', 'failed', 'declined', 'delivery_pending', 'collection_pending', 'service_pending'].includes(status);
@@ -161,7 +163,7 @@ export default function CheckoutPage() {
     } finally {
       isCheckingRef.current = false;
     }
-  }, [stopPolling, updateStatusUI, handleAutoLogin]);
+  }, [stopPolling, updateStatusUI, handleAutoLogin, queryClient]);
 
   useEffect(() => {
     const status = searchParams.get('status');
@@ -250,3 +252,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+

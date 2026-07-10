@@ -1,23 +1,10 @@
-import { createContext, ReactNode, useContext, useMemo } from 'react';
-import {
-    SellerProfile,
-    SellerRegistrationData,
-    useGlobalAuth,
-} from './AuthCoreContext';
+import { ReactNode, useMemo } from 'react';
+import type { SellerProfile, SellerRegistrationData } from '../types/authTypes';
+import { useGlobalAuth } from '../hooks/useGlobalAuth';
+import { SellerAuthContext } from './authContextObjects';
 
-export interface SellerAuthContextType {
-    seller: SellerProfile | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    login: (credentials: { email: string; password: string }) => Promise<void>;
-    register: (data: SellerRegistrationData) => Promise<{ status: string; message?: string } | void>;
-    logout: () => void;
-    forgotPassword: (email: string) => Promise<boolean>;
-    resetPassword: (token: string, newPassword: string, email: string) => Promise<void>;
-    updateSellerProfile: (updates: Partial<SellerProfile>) => Promise<void>;
-}
-
-const SellerAuthContext = createContext<SellerAuthContextType | undefined>(undefined);
+export { SellerAuthContext } from './authContextObjects';
+export type { SellerAuthContextType } from './authContextObjects';
 
 export function SellerAuthProvider({ children }: { children: ReactNode }) {
     const {
@@ -34,7 +21,7 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
     const sellerProfile = user?.role === 'seller' ? user.profile as SellerProfile : null;
     const sellerAuthenticated = Boolean(user?.isAuthenticated && user.role === 'seller');
 
-    const value: SellerAuthContextType = useMemo(() => ({
+    const value: import('./authContextObjects').SellerAuthContextType = useMemo(() => ({
         seller: sellerProfile,
         isAuthenticated: sellerAuthenticated,
         isLoading,
@@ -63,10 +50,4 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
-export const useSellerAuth = () => {
-    const context = useContext(SellerAuthContext);
-    if (context === undefined) {
-        throw new Error('useSellerAuth must be used within a SellerAuthProvider');
-    }
-    return context;
-};
+

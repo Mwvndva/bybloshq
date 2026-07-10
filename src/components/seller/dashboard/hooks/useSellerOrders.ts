@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { sellerApi } from '@/api/sellerApi';
+import { sellerApi } from '@/api/seller';
 import { sellerDashboardQueryKeys } from '../queryKeys';
 
 export function useSellerOrders() {
@@ -12,3 +12,5 @@ export function useSellerOrders() {
     refetchOnWindowFocus: true
   });
 }
+
+

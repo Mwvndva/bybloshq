@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Loader2, LogOut, MousePointerClick, Trophy, Wallet } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
-import creatorApi from '@/api/creatorApi';
+import { useCreatorDashboardQuery } from '@/hooks/creator/queries/useCreatorDashboardQuery';
+import { useCreatorReferralDashboardQuery } from '@/hooks/creator/queries/useCreatorReferralDashboardQuery';
+import { useAcceptShopRequestMutation } from '@/hooks/creator/mutations/useAcceptShopRequestMutation';
+import { useCreatorWithdrawalMutation } from '@/hooks/creator/mutations/useCreatorWithdrawalMutation';
+import { useDenyShopRequestMutation } from '@/hooks/creator/mutations/useDenyShopRequestMutation';
+import { useCreatorLogoutMutation } from '@/hooks/creator/mutations/useCreatorAuthMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { copyLinkedTextToClipboard, getCreatorShopUrl, getShopUsername } from '@/lib/shopLinks';
@@ -75,31 +79,21 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [referral, setReferral] = useState<ReferralData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>('monthly');
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>('monthly');
   const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
 
-  const loadDashboard = useCallback(async (period: AnalysisPeriod = analysisPeriod) => {
-    const [dashboardData, referralData] = await Promise.all([
-      creatorApi.getDashboard(period),
-      creatorApi.getReferralDashboard()
-    ]);
-    setDashboard(dashboardData);
-    setReferral(referralData);
-  }, [analysisPeriod]);
+  const dashboardQuery = useCreatorDashboardQuery(analysisPeriod);
+  const referralQuery = useCreatorReferralDashboardQuery();
+  const logoutMutation = useCreatorLogoutMutation();
+  const withdrawalMutation = useCreatorWithdrawalMutation();
+  const acceptRequestMutation = useAcceptShopRequestMutation();
+  const denyRequestMutation = useDenyShopRequestMutation();
 
-  useEffect(() => {
-    loadDashboard()
-      .catch(() => {
-        localStorage.removeItem('creatorSessionActive');
-        navigate('/creator/login');
-      })
-      .finally(() => setLoading(false));
-  }, [navigate, analysisPeriod, loadDashboard]);
+  const dashboard = dashboardQuery.data || null;
+  const referral = referralQuery.data || null;
+  const loading = dashboardQuery.isLoading || referralQuery.isLoading;
 
   const copy = async (value: string, label?: string) => {
     if (label) {
@@ -113,7 +107,7 @@ export default function CreatorDashboard() {
 
   const handleLogout = async () => {
     try {
-      await creatorApi.logout();
+      await logoutMutation.mutateAsync();
     } catch {
       // The local session should still end if the network request fails.
     } finally {
@@ -138,10 +132,9 @@ export default function CreatorDashboard() {
 
     setWithdrawing(true);
     try {
-      await creatorApi.requestWithdrawal(amount);
+      await withdrawalMutation.mutateAsync(amount);
       toast.success('Withdrawal request sent.');
       setWithdrawalAmount('');
-      await loadDashboard(analysisPeriod);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Could not request withdrawal.'));
     } finally {
@@ -153,13 +146,12 @@ export default function CreatorDashboard() {
     setRespondingRequestId(inviteId);
     try {
       if (action === 'accept') {
-        await creatorApi.acceptShopRequest(inviteId);
+        await acceptRequestMutation.mutateAsync(inviteId);
         toast.success('Shop request accepted.');
       } else {
-        await creatorApi.denyShopRequest(inviteId);
+        await denyRequestMutation.mutateAsync(inviteId);
         toast.success('Shop request declined.');
       }
-      await loadDashboard(analysisPeriod);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Could not update shop request.'));
     } finally {
@@ -443,3 +435,5 @@ function Metric({ label, value, icon }: { label: string; value: string | number;
     </div>
   );
 }
+
+

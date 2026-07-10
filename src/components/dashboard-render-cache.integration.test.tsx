@@ -60,31 +60,31 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/api/buyerApi', () => ({
+vi.mock('@/api/buyer', () => ({
   __esModule: true,
   default: mocks.buyerApi,
 }));
 
-vi.mock('@/api/sellerApi', () => ({
+vi.mock('@/api/seller', () => ({
   sellerApi: mocks.sellerApi,
 }));
 
-vi.mock('@/components/ui/use-toast', () => ({
+vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mocks.toast }),
 }));
 
-vi.mock('@/contexts/GlobalAuthContext', () => ({
+vi.mock('@/features/auth/contexts', () => ({
   useBuyerAuth: () => mocks.auth.buyer,
   useSellerAuth: () => mocks.auth.seller,
 }));
 
-vi.mock('@/contexts/WishlistContext', () => ({
+vi.mock('@/contexts/useWishlist', () => ({
   useWishlist: () => ({ wishlist: [] }),
 }));
 
 vi.mock('@/components/SellerBrandCard', () => ({
   __esModule: true,
-  default: ({ seller, showUnfollow, onUnfollow }: any) => (
+  default: ({ seller, showUnfollow, onUnfollow }: { seller: { shopName?: string, name?: string }, showUnfollow?: boolean, onUnfollow?: (s: unknown) => void }) => (
     <article data-testid="seller-brand-card">
       <span>{seller.shopName || seller.name}</span>
       {showUnfollow && (
@@ -127,7 +127,7 @@ vi.mock('@/components/buyer/RefundCard', () => ({
 }));
 
 vi.mock('@/components/seller/UnifiedAnalyticsHub', () => ({
-  UnifiedAnalyticsHub: ({ analytics }: any) => (
+  UnifiedAnalyticsHub: ({ analytics }: { analytics: { totalProducts?: number, clientCount?: number } }) => (
     <section data-testid="seller-analytics">
       <span>Products: {analytics.totalProducts}</span>
       <span>Followers: {analytics.clientCount}</span>
@@ -257,3 +257,5 @@ describe('dashboard render and cache behavior', () => {
     expect(mocks.sellerApi.getOrders).toHaveBeenCalledTimes(1);
   });
 });
+
+

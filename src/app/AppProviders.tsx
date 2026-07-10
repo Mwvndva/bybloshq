@@ -8,3 +8,5 @@ interface Props {
 export default function AppProviders({ children }: Props) {
   return <LegacyAppProviders>{children}</LegacyAppProviders>;
 }
+
+

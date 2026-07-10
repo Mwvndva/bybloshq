@@ -10,7 +10,7 @@ import { Product } from '@/types';
 import { format, addDays, isBefore, startOfDay, parse } from 'date-fns';
 import { cn, isSellerShopless } from '@/lib/utils';
 import { Calendar as CalendarIcon, Clock, MapPin, Edit2, Loader2 } from 'lucide-react';
-import { useBuyerAuth, useGlobalAuth } from '@/contexts/GlobalAuthContext';
+import { useBuyerAuth, useGlobalAuth } from '@/features/auth/contexts';
 import LocationPicker from './common/LocationPicker';
 import { toast } from 'sonner';
 import {
@@ -37,7 +37,7 @@ interface ServiceBookingModalProps {
     initialBuyerLocation?: BuyerLocationPayload | null;
 }
 
-export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initialBuyerLocation = null }: ServiceBookingModalProps) {
+export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initialBuyerLocation = null }: ServiceBookingModalProps & { product: ProductWithApiFields }) {
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState<string>('');
     const [location, setLocation] = useState<string | null>(null);
@@ -52,14 +52,14 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [buyerLocation, setBuyerLocation] = useState<OptionalBuyerLocation | null>(null);
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-    const serviceOptions = product.service_options || (product as any).serviceOptions || {};
+    const serviceOptions = useMemo(() => product.service_options || product.serviceOptions || {}, [product.service_options, product.serviceOptions]);
 
 
     const wordCount = serviceRequirements.trim().split(/\s+/).filter(w => w.length > 0).length;
     const maxWords = 50;
 
     const isShopless = isSellerShopless(product);
-    const seller = product.seller || (product as any).seller;
+    const seller = product.seller || product.seller;
 
     // Standardized Mode: If seller has a shop, we prioritize 'At Shop' (In-store)
     const isSellerVisits = isShopless;
@@ -84,14 +84,14 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
             // AUTO-SELECT Shop location if In-Store (Task BUG-SHOP-12)
             if (!isShopless) {
-                const shopAddress = seller?.physicalAddress || (seller as any)?.physical_address;
+                const shopAddress = seller?.physicalAddress || seller?.physical_address;
                 setLocation(shopAddress || 'Our Shop');
             } else {
                 setLocation(null);
             }
 
         }
-    }, [isOpen, initialBuyerLocation, isShopless]); // Only trigger when modal opens/closes or initial location data changes
+    }, [isOpen, initialBuyerLocation, isShopless, seller]); // Only trigger when modal opens/closes or initial location data changes
 
     // Generate time slots
     useEffect(() => {
@@ -172,7 +172,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                 fullAddress: preciseLocation.address,
                 latitude: preciseLocation.lat,
                 longitude: preciseLocation.lng
-            } as any, 'buyer');
+            } as unknown as Partial<import('@/features/auth/types/authTypes').UserProfile>, 'buyer');
             setIsChangingLocation(false);
             toast.success('Location updated', {
                 description: 'Your default service location has been saved.'
@@ -438,3 +438,5 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         </Dialog>
     );
 }
+
+

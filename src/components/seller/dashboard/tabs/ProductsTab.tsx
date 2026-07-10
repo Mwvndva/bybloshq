@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { AddProductForm } from '../../AddProductForm';
 import { ProductsList } from '../../ProductsList';
-import type { Product } from '../types';
+import type { ProductSummary } from '@/types/view/productSummary';
 
 interface ProductsTabProps {
   fetchProducts: () => Promise<void>;
@@ -11,7 +11,7 @@ interface ProductsTabProps {
   onDeleteProduct: (id: string) => Promise<void>;
   onEditProduct: (id: string) => void;
   onStatusUpdate: (productId: string, newStatus: 'available' | 'sold') => Promise<void>;
-  products: Product[];
+  products: ProductSummary[];
   setIsAddProductModalOpen: (open: boolean) => void;
 }
 
@@ -66,7 +66,7 @@ export function ProductsTab({
         </div>
 
         <ProductsList
-          products={products as any}
+          products={products as import('@/types').Product[]}
           onDelete={onDeleteProduct}
           onEdit={onEditProduct}
           onStatusUpdate={onStatusUpdate}
@@ -76,3 +76,5 @@ export function ProductsTab({
     </div>
   );
 }
+
+

@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CheckCircle, Package, RefreshCw, Users, XCircle } from 'lucide-react';
-import type { Order } from '@/types/order';
+import type { ApiOrder } from '@/types/api/order';
 import { getImageUrl } from '@/lib/utils';
 import {
   canConfirmOrderReceipt,
@@ -15,16 +15,16 @@ import {
 } from './ordersSectionUtils';
 
 interface BuyerOrderDialogsProps {
-  orders: Order[];
+  orders: ApiOrder[];
   currentOrderId: string | null;
   isConfirming: string | null;
   showCancelDialog: boolean;
   showReceiptDialog: boolean;
-  selectedOrderForDetails: Order | null;
+  selectedOrderForDetails: ApiOrder | null;
   viewingImage: string | null;
   onCancelDialogChange: (open: boolean) => void;
   onReceiptDialogChange: (open: boolean) => void;
-  onSelectedOrderChange: (order: Order | null) => void;
+  onSelectedOrderChange: (order: ApiOrder | null) => void;
   onViewingImageChange: (image: string | null) => void;
   onCancelOrder: () => void;
   onConfirmReceipt: () => void;
@@ -84,7 +84,7 @@ export function BuyerOrderDialogs({
               <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
                 <XCircle className="h-4 w-4 text-white" />
               </div>
-              Cancel Order
+              Cancel ApiOrder
             </DialogTitle>
             <DialogDescription className="text-sm text-white/70 leading-relaxed">
               Are you sure you want to cancel this order? This action cannot be undone.
@@ -104,7 +104,7 @@ export function BuyerOrderDialogs({
               disabled={isConfirming === currentOrderId}
               className="border-white/20 text-white hover:bg-white/10"
             >
-              No, Keep Order
+              No, Keep ApiOrder
             </Button>
             <Button
               onClick={onCancelOrder}
@@ -117,7 +117,7 @@ export function BuyerOrderDialogs({
                   Cancelling...
                 </>
               ) : (
-                'Yes, Cancel Order'
+                'Yes, Cancel ApiOrder'
               )}
             </Button>
           </DialogFooter>
@@ -130,7 +130,7 @@ export function BuyerOrderDialogs({
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-white">
-                  Order Details
+                  ApiOrder Details
                 </DialogTitle>
                 <DialogDescription className="text-white/70">
                   {formatOrderDate(selectedOrderForDetails)}
@@ -217,7 +217,7 @@ export function BuyerOrderDialogs({
                     </p>
                   </div>
                   <span className="text-2xl font-bold text-emerald-200 text-right">
-                    {formatOrderCurrency((selectedOrderForDetails as any).total_amount || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
+                    {formatOrderCurrency((selectedOrderForDetails as Record<string, unknown>).total_amount as number || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
                   </span>
                 </div>
 
@@ -344,3 +344,5 @@ export function BuyerOrderDialogs({
     </>
   );
 }
+
+

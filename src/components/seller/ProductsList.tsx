@@ -3,8 +3,9 @@ import { Loader2, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Product } from '@/types';
-import { sellerApi } from '@/api/sellerApi';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUpdateProductMutation, useUpdateInventoryMutation, sellerProductQuery } from '@/hooks/seller/useSellerProducts';
+import type { ApiSellerProduct } from '@/types';
 import { ProductDeleteDialog } from './products-list/ProductDeleteDialog';
 import { ProductEditDialog, type ProductEditFormData } from './products-list/ProductEditDialog';
 import { ProductInventoryDialog } from './products-list/ProductInventoryDialog';
@@ -139,9 +140,9 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
 
   const handleInventoryEdit = (product: Product) => {
     setSelectedProduct(product);
-    setStockQuantity((product as any).quantity ?? 0);
-    setLowStockThreshold((product as any).low_stock_threshold ?? 5);
-    setTrackInventory((product as any).track_inventory ?? false);
+    setStockQuantity((product as ApiSellerProduct).quantity ?? 0);
+    setLowStockThreshold((product as ApiSellerProduct).low_stock_threshold ?? 5);
+    setTrackInventory((product as ApiSellerProduct).track_inventory ?? false);
     setShowStockModal(true);
   };
 
@@ -206,12 +207,16 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
     }));
   };
 
+  const queryClient = useQueryClient();
+  const updateProductMutation = useUpdateProductMutation();
+  const updateInventoryMutation = useUpdateInventoryMutation();
+
   const handleEditClick = async (id: string) => {
     setIsLoadingEdit(true);
 
     try {
-      const product = await sellerApi.getProduct(id);
-      setEditingProduct(product as any);
+      const product = await queryClient.fetchQuery(sellerProductQuery(id));
+      setEditingProduct(product as ApiSellerProduct);
       setEditFormData({
         name: product.name || '',
         price: (product.price ?? 0).toString(),
@@ -221,7 +226,7 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
         imagePreview: product.image_url || '',
         extraFiles: [],
         extraPreviews: product.images || [],
-        product_type: (product.product_type || product.productType || 'physical') as any,
+        product_type: (product.product_type || product.productType || 'physical') as 'physical' | 'digital' | 'service',
         is_custom_product: Boolean(product.is_custom_product || product.isCustomProduct),
         production_days: String(product.production_days || product.productionDays || 1),
         customization_prompt: product.customization_prompt || product.customizationPrompt || 'Tell the seller exactly what you want customized.',
@@ -299,7 +304,7 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
     setIsSavingEdit(true);
 
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         name: editFormData.name.trim(),
         price: priceValue,
         description: editFormData.description.trim(),
@@ -320,7 +325,10 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
         updateData.image_url = '';
       }
 
-      await sellerApi.updateProduct(editingProduct.id, updateData);
+      await updateProductMutation.mutateAsync({
+        id: editingProduct.id,
+        updates: updateData
+      });
 
       toast({
         title: 'Success',
@@ -329,11 +337,12 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
 
       setShowEditModal(false);
       onRefresh?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       console.error('Error updating product:', error);
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to update product',
+        description: err.response?.data?.message || 'Failed to update product',
         variant: 'destructive',
       });
     } finally {
@@ -354,12 +363,13 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
       await onDelete(productToDelete);
       setShowDeleteDialog(false);
       setProductToDelete(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       console.error('Failed to delete product:', error);
       toast({
         title: 'Error',
-        description: error?.response?.data?.message ||
-          error?.message ||
+        description: err?.response?.data?.message ||
+          err?.message ||
           'Failed to delete product. Please try again.',
         variant: 'destructive',
       });
@@ -392,10 +402,9 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
 
     try {
       setUpdatingStock(true);
-      await sellerApi.updateInventory(selectedProduct.id, {
-        track_inventory: trackInventory,
-        quantity: trackInventory ? stockQuantity : null,
-        low_stock_threshold: trackInventory ? lowStockThreshold : null
+      await updateInventoryMutation.mutateAsync({
+        id: selectedProduct.id,
+        stockCount: trackInventory ? stockQuantity : 0
       });
 
       toast({
@@ -405,10 +414,11 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
 
       setShowStockModal(false);
       onRefresh?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       toast({
         title: 'Error',
-        description: error.response?.data?.message || error.message || 'Failed to update inventory',
+        description: err.response?.data?.message || err.message || 'Failed to update inventory',
         variant: 'destructive',
       });
     } finally {
@@ -510,3 +520,5 @@ export function ProductsList({ products, onDelete, onStatusUpdate, onRefresh }: 
     </div>
   );
 }
+
+

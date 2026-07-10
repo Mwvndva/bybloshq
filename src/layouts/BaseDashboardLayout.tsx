@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogOut, ArrowLeft, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGlobalAuth, UserRole } from '@/contexts/GlobalAuthContext';
+import { useGlobalAuth, UserRole } from '@/features/auth/contexts';
 
 // ============================================================================
 // TYPES
@@ -273,3 +273,5 @@ export function SellerDashboardLayout(props: Omit<BaseDashboardLayoutProps, 'rol
 export function AdminDashboardLayout(props: Omit<BaseDashboardLayoutProps, 'role'>) {
     return <BaseDashboardLayout role="admin" {...props} />;
 }
+
+

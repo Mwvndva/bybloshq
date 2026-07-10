@@ -1,22 +1,23 @@
 import apiClient from '@/lib/apiClient';
-import type { Order, OrderStatus } from '@/types/order';
+import type { OrderStatus } from '@/types';
+import type { ApiOrder } from '@/types/api/order';
 import type { OrdersAnalytics, OrderQueryParams } from './types';
 
 const sellerApiInstance = apiClient;
 
 export const sellerOrdersApi = {
-  async getOrders(params?: OrderQueryParams): Promise<Order[]> {
-    const response = await sellerApiInstance.get<{ data: Order[] }>('/sellers/orders', { params });
+  async getOrders(params?: OrderQueryParams): Promise<ApiOrder[]> {
+    const response = await sellerApiInstance.get<{ data: ApiOrder[] }>('/sellers/orders', { params });
     return response.data.data;
   },
 
-  async getOrder(orderId: string): Promise<Order> {
-    const response = await sellerApiInstance.get<{ data: Order }>(`/sellers/orders/${orderId}`);
+  async getOrder(orderId: string): Promise<ApiOrder> {
+    const response = await sellerApiInstance.get<{ data: ApiOrder }>(`/sellers/orders/${orderId}`);
     return response.data.data;
   },
 
-  async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-    const response = await sellerApiInstance.patch<{ data: Order }>(
+  async updateOrderStatus(orderId: string, status: OrderStatus): Promise<ApiOrder> {
+    const response = await sellerApiInstance.patch<{ data: ApiOrder }>(
       `/sellers/orders/${orderId}`,
       { status }
     );
@@ -45,7 +46,7 @@ export const sellerOrdersApi = {
     cbdPickupFeeKes?: number;
     cbdRadiusKm?: number;
   }> {
-    const response = await sellerApiInstance.post<{ data: any }>('/payments/logistics-quote', {
+    const response = await sellerApiInstance.post<{ data: unknown }>('/payments/logistics-quote', {
       legType: 'pickup',
       location
     });
@@ -56,8 +57,8 @@ export const sellerOrdersApi = {
     mobilePayment: string;
     pickupLocation: { address: string; latitude: number; longitude: number };
     idempotencyKey?: string;
-  }): Promise<any> {
-    const response = await sellerApiInstance.post<{ data: any }>(
+  }): Promise<unknown> {
+    const response = await sellerApiInstance.post<{ data: unknown }>(
       `/sellers/orders/${orderId}/request-pickup`,
       payload,
       {
@@ -67,24 +68,26 @@ export const sellerOrdersApi = {
     return response.data.data;
   },
 
-  async selectHubDropoff(orderId: string): Promise<Order> {
-    const response = await sellerApiInstance.post<{ data: Order }>(
+  async selectHubDropoff(orderId: string): Promise<ApiOrder> {
+    const response = await sellerApiInstance.post<{ data: ApiOrder }>(
       `/sellers/orders/${orderId}/select-hub-dropoff`
     );
     return response.data.data;
   },
 
-  async markDroppedAtHub(orderId: string): Promise<Order> {
-    const response = await sellerApiInstance.post<{ data: Order }>(
+  async markDroppedAtHub(orderId: string): Promise<ApiOrder> {
+    const response = await sellerApiInstance.post<{ data: ApiOrder }>(
       `/sellers/orders/${orderId}/mark-dropped-at-hub`
     );
     return response.data.data;
   },
 
-  async confirmBooking(orderId: string): Promise<Order> {
-    const response = await sellerApiInstance.post<{ data: Order }>(
+  async confirmBooking(orderId: string): Promise<ApiOrder> {
+    const response = await sellerApiInstance.post<{ data: ApiOrder }>(
       `/sellers/orders/${orderId}/confirm-booking`
     );
     return response.data.data;
   }
 };
+
+

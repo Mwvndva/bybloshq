@@ -20,3 +20,5 @@ export const isPublicRoute = (pathname: string): boolean => {
   const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/marketing'];
   return publicPaths.some(path => pathname.includes(path));
 };
+
+
