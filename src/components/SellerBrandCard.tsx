@@ -100,14 +100,14 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
     const shopLink = isBuyer
         ? `/buyer/shop/${encodeURIComponent(shopName)}`
         : `/${encodeURIComponent(shopName)}`;
-    const avatarUrl = seller.avatarUrl || (seller as Record<string, unknown>).avatar_url;
+    const avatarUrl = String(seller.avatarUrl || (seller as unknown as Record<string, unknown>).avatar_url || '');
     const [avatarFailed, setAvatarFailed] = useState(false);
     const [knockCount, setKnockCount] = useState(getNumber(seller.knockCount, seller.knock_count));
     const palette = useMemo(() => getThemePalette(seller.theme), [seller.theme]);
     const isPhysicalShop = Boolean(
         seller.hasPhysicalShop ||
         seller.physicalAddress ||
-        (seller as Record<string, unknown>).physical_address ||
+        (seller as unknown as Record<string, unknown>).physical_address ||
         hasValidCoordinate(seller.latitude, seller.longitude)
     );
     const shopModeStyle = isPhysicalShop
@@ -127,7 +127,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
         };
 
     const clientCount = getNumber(seller.clientCount, seller.client_count);
-    const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as Record<string, unknown>).wishlist_count, (seller as Record<string, unknown>).total_wishlist_count);
+    const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as unknown as Record<string, unknown>).wishlist_count, (seller as unknown as Record<string, unknown>).total_wishlist_count);
     const hasAvatar = Boolean(avatarUrl && !avatarFailed);
 
     useEffect(() => {
