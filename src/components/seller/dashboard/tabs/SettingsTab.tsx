@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, Edit, Loader2, MailPlus, Trash2 } from 'lucide-react';
+import { Copy, Edit, Loader2, LogOut, MailPlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Theme } from '@/api/seller';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ interface SettingsTabProps {
   sellerProfile: import("@/features/auth/types/authTypes").SellerProfile;
   setFormData: React.Dispatch<React.SetStateAction<SellerSettingsFormData>>;
   shopNameAvailable: boolean | null;
+  onLogout: () => void;
   toggleEdit: () => void;
 }
 
@@ -53,6 +54,7 @@ export function SettingsTab({
   sellerProfile,
   setFormData,
   shopNameAvailable,
+  onLogout,
   toggleEdit
 }: SettingsTabProps) {
   const [creatorEmail, setCreatorEmail] = useState('');
@@ -550,6 +552,20 @@ export function SettingsTab({
               );})}
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-red-200 bg-red-50/60 p-4 shadow-sm sm:p-5 lg:p-6">
+        <SectionHeader title="Account" description="Sign out of your seller account on this device." />
+        <div className="mt-4">
+          <Button
+            variant="outline"
+            onClick={onLogout}
+            className="h-10 w-full border-red-200 bg-white font-black text-red-600 hover:bg-red-50 sm:w-auto"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
         </div>
       </section>
     </div>

@@ -194,16 +194,6 @@ export default function CreatorDashboard() {
             <h1 className="mt-2 text-3xl font-black tracking-tight">Welcome, {creator.firstName}</h1>
             <p className="mt-1 text-sm font-medium text-white/50">Track clicks, sales, earnings, referrals, and withdrawals.</p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleLogout}
-            className="h-10 w-full border-white/10 bg-white/[0.03] text-white hover:bg-white/10 sm:w-auto"
-            aria-label="Log out of ambassador dashboard"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -418,6 +408,21 @@ export default function CreatorDashboard() {
               </Button>
             </div>
           </div>
+        </section>
+
+        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/40">Account</p>
+          <p className="mt-1 text-sm font-medium text-white/50">Sign out of your ambassador account on this device.</p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleLogout}
+            className="mt-3 h-10 w-full border-white/10 bg-white/[0.03] text-white hover:bg-white/10 sm:w-auto"
+            aria-label="Log out of ambassador dashboard"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
         </section>
       </div>
     </main>

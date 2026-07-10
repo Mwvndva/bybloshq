@@ -33,6 +33,7 @@ import {
   updateLogisticsLegStatus,
 } from '@/api/logistics';
 import { toast } from 'sonner';
+import { isNativeApp } from '@/lib/mobileApp';
 
 const ACTIVE_GROUPS = [
   {
@@ -573,6 +574,7 @@ const MzigoDashboardPage = () => {
     <main className="mzigo-light-dashboard min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] text-stone-950">
       <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/95 px-4 py-4 backdrop-blur">
         <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {!isNativeApp() && (
           <button
             type="button"
             onClick={() => navigate('/')}
@@ -581,6 +583,7 @@ const MzigoDashboardPage = () => {
             <ArrowLeft size={16} />
             Home
           </button>
+          )}
 
           <div className="order-first text-center sm:order-none">
             <p className="text-xs font-semibold text-yellow-600">Mzigo Ego</p>
@@ -588,14 +591,6 @@ const MzigoDashboardPage = () => {
             <p className="text-xs text-stone-500">{partner?.name || 'Logistics partner'} workspace</p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
         </div>
       </header>
 
@@ -742,6 +737,21 @@ const MzigoDashboardPage = () => {
             </section>
           </div>
         )}
+      </section>
+
+      <section className="w-full px-4 pb-6 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-stone-200 bg-white p-4">
+          <p className="text-xs font-semibold text-stone-500">Account</p>
+          <p className="mt-1 text-sm text-stone-600">Sign out of your logistics workspace on this device.</p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-3 inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
+        </div>
       </section>
 
       <footer className="border-t border-stone-200 px-4 py-4 text-center text-xs text-stone-500">

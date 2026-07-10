@@ -176,7 +176,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       <SellerDashboardHeader
         sellerFirstName={sellerFirstName}
         onBackHome={() => navigate('/')}
-        onLogout={handleLogout}
       />
 
       <div className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
@@ -223,6 +222,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'settings' && (
           <SettingsTab
             sellerProfile={sellerProfile}
+            onLogout={handleLogout}
             {...settingsForm}
           />
         )}
