@@ -152,7 +152,7 @@ export function BuyerInfoModal({
         ...buyerInfo,
         fullName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim(),
         termsAccepted: true // Passed as true because validation passed
-      } as unknown as import("@/features/auth/types/authTypes").RegisterBuyerPayload);
+      } as unknown as Parameters<typeof onSubmit>[0]);
       // Reset form on successful submission
       setBuyerInfo({
         firstName: '',

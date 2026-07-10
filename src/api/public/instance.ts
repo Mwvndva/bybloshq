@@ -56,7 +56,7 @@ class CustomAxios {
         const message = error.response?.data ? (error.response.data as Record<string, unknown>).message || '' : '';
         const config = error.config;
 
-        if (status === 403 && typeof message === 'string' && message.includes('CSRF mismatch') && config && !config._retry) {
+        if (status === 403 && typeof message === 'string' && message.includes('CSRF mismatch') && config && !(config as { _retry?: boolean })._retry) {
           (config as import('axios').InternalAxiosRequestConfig & { _retry?: boolean })._retry = true;
           console.warn('[CSRF-Public] Mismatch detected. Refreshing token and retrying...');
 

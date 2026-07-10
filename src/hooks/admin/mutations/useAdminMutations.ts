@@ -85,7 +85,7 @@ export function useUpdateWithdrawalRequestStatusMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (args: { requestId: string; action: 'approve' | 'deny' }) =>
-      adminApi.updateWithdrawalRequestStatus(args.requestId, args.action),
+      adminApi.updateWithdrawalRequestStatus(args.requestId, args.action === 'approve' ? 'approved' : 'rejected'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.withdrawals() });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.analytics() });

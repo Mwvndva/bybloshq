@@ -246,7 +246,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         service_options: formData.product_type === 'service' ? formData.service_options : undefined,
       };
 
-      await createProductMutation.mutateAsync(productData);
+      await createProductMutation.mutateAsync(productData as unknown as Parameters<typeof createProductMutation.mutateAsync>[0]);
       toast({ title: 'Success', description: 'Product launched successfully!' });
       onSuccess();
     } catch (error: unknown) {

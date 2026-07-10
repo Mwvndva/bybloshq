@@ -36,7 +36,7 @@ export function useCreateProductMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (product: Omit<ApiSellerProduct, 'id' | 'createdAt' | 'updatedAt' | 'sellerId' | 'seller'> & { digital_file?: File }) =>
-      sellerApi.createProduct(product),
+      sellerApi.createProduct(product as unknown as Parameters<typeof sellerApi.createProduct>[0]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.products() });
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.analytics() });
@@ -70,7 +70,7 @@ export function useUpdateInventoryMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (args: { id: string; stockCount: number }) =>
-      sellerApi.updateInventory(args.id, { stockCount: args.stockCount }),
+      sellerApi.updateInventory(args.id, { stockCount: args.stockCount } as unknown as Parameters<typeof sellerApi.updateInventory>[1]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.products() });
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.analytics() });

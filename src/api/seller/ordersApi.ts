@@ -50,7 +50,7 @@ export const sellerOrdersApi = {
       legType: 'pickup',
       location
     });
-    return response.data.data;
+    return response.data.data as { feeAmount: number; distanceKm: number; chargeableDistanceKm: number; rateKesPerKm: number; currency: string; pricingModel?: string; cbdPickupFeeKes?: number; cbdRadiusKm?: number };
   },
 
   async requestPickup(orderId: string, payload: {

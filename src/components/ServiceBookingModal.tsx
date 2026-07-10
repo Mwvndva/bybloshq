@@ -54,7 +54,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [buyerLocation, setBuyerLocation] = useState<OptionalBuyerLocation | null>(null);
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-    const serviceOptions = useMemo(() => product.service_options || product.serviceOptions || {}, [product.service_options, product.serviceOptions]);
+    const serviceOptions = useMemo(() => (product.service_options || product.serviceOptions || {}) as { location_type?: string; price_type?: string; start_time?: string; end_time?: string; availability_days?: string[] }, [product.service_options, product.serviceOptions]);
 
 
     const wordCount = serviceRequirements.trim().split(/\s+/).filter(w => w.length > 0).length;
@@ -86,7 +86,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
             // AUTO-SELECT Shop location if In-Store (Task BUG-SHOP-12)
             if (!isShopless) {
-                const shopAddress = seller?.physicalAddress || seller?.physical_address;
+                const shopAddress = seller?.physicalAddress || (seller as { physical_address?: string })?.physical_address;
                 setLocation(shopAddress || 'Our Shop');
             } else {
                 setLocation(null);

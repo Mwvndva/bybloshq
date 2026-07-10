@@ -18,7 +18,7 @@ export function useRequestWithdrawalMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (args: { amount: number; mpesaNumber: string; mpesaName: string; idempotencyKey?: string }) =>
-      sellerApi.requestWithdrawal(args),
+      sellerApi.requestWithdrawal(args as unknown as Parameters<typeof sellerApi.requestWithdrawal>[0]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.withdrawals() });
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.analytics() });

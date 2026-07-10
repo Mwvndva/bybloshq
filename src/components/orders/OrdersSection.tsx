@@ -256,15 +256,12 @@ export default function OrdersSection() {
             <BuyerOrderCard
               key={order.id}
               order={order}
-              isConfirming={isConfirming}
-              downloadingOrderId={downloadingOrderId}
-              downloadProgress={downloadProgress}
               clientStatus={mergedClientStatus}
               isBecomingClient={isBecomingClient}
-              viewingImage={viewingImage}
-              setViewingImage={setViewingImage}
-              onConfirmReceiptClick={handleConfirmReceiptClick}
-              onCancelClick={(orderId) => { setCurrentOrderId(orderId); setShowCancelDialog(true); }}
+              downloadingOrderId={downloadingOrderId}
+              downloadProgress={downloadProgress}
+              onViewDetails={(o) => setSelectedOrderForDetails(o)}
+              onConfirmReceipt={handleConfirmReceiptClick}
               onDownload={handleDownload}
               onToggleClientStatus={handleToggleClientStatus}
             />
@@ -273,12 +270,20 @@ export default function OrdersSection() {
       )}
 
       <BuyerOrderDialogs
-        showReceiptDialog={showReceiptDialog}
+        orders={filteredOrders}
+        currentOrderId={currentOrderId}
+        isConfirming={isConfirming}
         showCancelDialog={showCancelDialog}
-        onConfirmReceipt={handleConfirmReceipt}
+        showReceiptDialog={showReceiptDialog}
+        selectedOrderForDetails={selectedOrderForDetails}
+        viewingImage={viewingImage}
+        onCancelDialogChange={setShowCancelDialog}
+        onReceiptDialogChange={setShowReceiptDialog}
+        onSelectedOrderChange={setSelectedOrderForDetails}
+        onViewingImageChange={setViewingImage}
         onCancelOrder={handleCancelOrder}
-        onCloseReceipt={() => setShowReceiptDialog(false)}
-        onCloseCancel={() => setShowCancelDialog(false)}
+        onConfirmReceipt={handleConfirmReceipt}
+        onConfirmReceiptClick={handleConfirmReceiptClick}
       />
     </div>
   );

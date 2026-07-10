@@ -79,7 +79,7 @@ export default function CreatorRegister() {
     }
     setLoading(true);
     try {
-      const result = await registerMutation.mutateAsync({ token, ...form, referralCode }) as Record<string, unknown>;
+      const result = await registerMutation.mutateAsync({ token, ...form, referralCode } as unknown as Parameters<typeof registerMutation.mutateAsync>[0]) as Record<string, unknown>;
       if ((result?.data as Record<string, unknown>)?.status === 'created') {
         toast.success('Creator access added. You can now log in.');
         navigate('/creator/login');
