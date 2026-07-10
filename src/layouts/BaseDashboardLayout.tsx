@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogOut, ArrowLeft, Menu, X } from 'lucide-react';
+import { isNativeApp } from '@/lib/mobileApp';
 import { cn } from '@/lib/utils';
 import { useGlobalAuth, UserRole } from '@/features/auth/contexts';
 
@@ -199,7 +200,7 @@ export function BaseDashboardLayout({
                                             <Menu className="h-5 w-5" />
                                         </Button>
                                     )}
-                                    {showBackButton && (
+                                    {showBackButton && !isNativeApp() && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
