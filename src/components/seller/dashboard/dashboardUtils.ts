@@ -92,30 +92,37 @@ export const normalizeSellerAnalytics = (productsData: ProductSummary[], analyti
     };
   }
 
-  const salesTotal = (analyticsData.monthlySales || []).reduce(
+  const a = analyticsData as Record<string, unknown>;
+  const num = (v: unknown): number => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const monthlySales = (Array.isArray(a.monthlySales) ? a.monthlySales : []) as AnalyticsData['monthlySales'];
+  const salesTotal = monthlySales.reduce(
     (sum: number, monthData: { sales?: number }) => sum + (monthData.sales || 0),
     0
   );
-  const totalRevenue = analyticsData.totalRevenue ?? salesTotal ?? 0;
+  const totalRevenue = num(a.totalRevenue ?? salesTotal);
 
   return {
-    totalProducts: analyticsData.totalProducts,
-    totalSales: analyticsData.totalSales || 0,
+    totalProducts: num(a.totalProducts),
+    totalSales: num(a.totalSales),
     totalRevenue,
     totalPayout: totalRevenue,
-    balance: analyticsData.balance || 0,
-    availableBalance: analyticsData.availableBalance ?? analyticsData.balance ?? 0,
-    pendingSettlementBalance: analyticsData.pendingSettlementBalance || 0,
-    withdrawalReservedBalance: analyticsData.withdrawalReservedBalance || 0,
-    refundReservedBalance: analyticsData.refundReservedBalance || 0,
-    nextSettlementAt: analyticsData.nextSettlementAt || null,
-    clientCount: analyticsData.clientCount || analyticsData.client_count || 0,
-    creatorCount: analyticsData.creatorCount || analyticsData.creator_count || 0,
-    creatorGeneratedSales: analyticsData.creatorGeneratedSales || analyticsData.creator_generated_sales || 0,
-    wishlistCount: analyticsData.wishlistCount || analyticsData.wishlist_count || 0,
-    clickCount: analyticsData.clickCount || analyticsData.click_count || analyticsData.knockCount || analyticsData.knock_count || 0,
-    monthlySales: analyticsData.monthlySales || [],
-    recentOrders: analyticsData.recentOrders || []
+    balance: num(a.balance),
+    availableBalance: num(a.availableBalance ?? a.balance),
+    pendingSettlementBalance: num(a.pendingSettlementBalance),
+    withdrawalReservedBalance: num(a.withdrawalReservedBalance),
+    refundReservedBalance: num(a.refundReservedBalance),
+    nextSettlementAt: (a.nextSettlementAt as string | null) || null,
+    clientCount: num(a.clientCount || a.client_count),
+    creatorCount: num(a.creatorCount || a.creator_count),
+    creatorGeneratedSales: num(a.creatorGeneratedSales || a.creator_generated_sales),
+    wishlistCount: num(a.wishlistCount || a.wishlist_count),
+    clickCount: num(a.clickCount || a.click_count || a.knockCount || a.knock_count),
+    monthlySales,
+    recentOrders: (Array.isArray(a.recentOrders) ? a.recentOrders : []) as AnalyticsData['recentOrders']
   };
 };
 
