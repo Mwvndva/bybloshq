@@ -338,7 +338,7 @@ const NewAdminDashboard = () => {
           analytics: safeAnalytics,
           sellers: Array.isArray(sellers) ? sellers : [],
           creators: Array.isArray(creators) ? creators : [],
-          buyers: Array.isArray(buyers) ? buyers : [],
+          buyers: Array.isArray(buyers) ? (buyers as DashboardState['buyers']) : [],
           withdrawalRequests: Array.isArray(withdrawalRequests) ? (withdrawalRequests as WithdrawalRequest[]) : [],
           monthlyMetrics: metricsData,
           financialMetrics: financialMetrics || {
@@ -404,20 +404,24 @@ const NewAdminDashboard = () => {
     }
   };
 
-  const formatProviderBalance = (account: Record<string, unknown>) => { /* no-explicit-any override if needed but let's use Record<string, unknown> */ };
-  const formatProviderBalanceTyped = (account: Record<string, unknown> | unknown) => {
+  const formatProviderBalance = (account: unknown) => {
     if (!account) return 'Unavailable';
-    if (account.error) return 'Check needed';
-    const balance = account.available_balance ?? account.availableBalance ?? account.balance;
+    const acc = account as Record<string, unknown>;
+    if (acc.error) return 'Check needed';
+    const balance = acc.available_balance ?? acc.availableBalance ?? acc.balance;
     if (balance === undefined || balance === null || Number.isNaN(Number(balance))) return 'Connected';
-    const currency = account.currency || 'KES';
+    const currency = acc.currency || 'KES';
     return `${currency} ${Number(balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const providerHealthAvailable = Boolean(dashboardState.providerHealth);
+  const providerHealth = dashboardState.providerHealth as {
+    payin?: Record<string, unknown>;
+    payout?: Record<string, unknown>;
+  } | null;
+  const providerHealthAvailable = Boolean(providerHealth);
   const providerHealthOk = providerHealthAvailable
-    && !dashboardState.providerHealth?.payin?.error
-    && !dashboardState.providerHealth?.payout?.error;
+    && !providerHealth?.payin?.error
+    && !providerHealth?.payout?.error;
 
   const statsCards: StatsCardProps[] = [
     {
@@ -530,12 +534,12 @@ const NewAdminDashboard = () => {
     }
   }, [dashboardState.monthlyMetrics]);
 
-  const MetricsTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color?: string; dataKey?: string }>; label?: string }) => {
+  const MetricsTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color?: string; dataKey?: string; payload?: { fullDate?: string } }>; label?: string }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div className="bg-gray-800 p-4 border border-gray-700 rounded-lg shadow-lg">
-          <p className="font-medium text-white">{data.fullDate || label}</p>
+          <p className="font-medium text-white">{data?.fullDate || label}</p>
           {payload.map((entry: { name: string; value: number; color?: string; dataKey?: string }) => (
             <p key={entry.dataKey} className="text-sm text-gray-300 mt-1">
               <span style={{ color: entry.color }}>
@@ -780,10 +784,10 @@ const NewAdminDashboard = () => {
             <AdminDashboardTabs />
 
             <AdminEntityModals
-              selectedSeller={selectedSeller}
+              selectedSeller={selectedSeller as Record<string, unknown> | null}
               isLoadingSeller={isLoadingSeller}
               closeSellerModal={closeSellerModal}
-              selectedBuyer={selectedBuyer}
+              selectedBuyer={selectedBuyer as Record<string, unknown> | null}
               isLoadingBuyer={isLoadingBuyer}
               closeBuyerModal={closeBuyerModal}
               safeFormatDate={safeFormatDate}
@@ -791,7 +795,11 @@ const NewAdminDashboard = () => {
             />
             <TabsContent value="overview" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
               <AdminOverviewTab
-                dashboardState={dashboardState}
+                dashboardState={{
+                  analytics: dashboardState.analytics as unknown as Record<string, unknown>,
+                  topShops: dashboardState.topShops as Record<string, unknown>[],
+                  sellers: dashboardState.sellers as unknown as Record<string, unknown>[],
+                }}
                 safeFormatDate={safeFormatDate}
                 onShowSellers={() => setActiveTab('sellers')}
               />
@@ -1185,12 +1193,12 @@ const NewAdminDashboard = () => {
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payment provider balance/status</p>
-                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(dashboardState.providerHealth?.payin)}</p>
+                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(providerHealth?.payin)}</p>
                     <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Pay-in account</p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payment provider balance/status</p>
-                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(dashboardState.providerHealth?.payout)}</p>
+                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(providerHealth?.payout)}</p>
                     <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Payout account</p>
                   </div>
                 </div>
@@ -1330,19 +1338,19 @@ const NewAdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {(dashboardState.clients || []).filter(c =>
-                          (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (c.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (c.sellerName || '').toLowerCase().includes(searchQuery.toLowerCase())
+                        {((dashboardState.clients || []) as Array<Record<string, unknown>>).filter(c =>
+                          String(c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          String(c.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          String(c.sellerName || '').toLowerCase().includes(searchQuery.toLowerCase())
                         ).map((client) => (
-                          <tr key={client.id} className="hover:bg-white/[0.02] transition-all group">
+                          <tr key={String(client.id)} className="hover:bg-white/[0.02] transition-all group">
                             <td className="px-5 md:px-8 py-4 md:py-6">
                               <div className="flex items-center gap-3 md:gap-5">
                                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-pink-500/30 transition-all shadow-inner">
                                   <Users2 className="w-4 h-4 md:w-5 md:h-5 text-gray-500 group-hover:text-pink-500 transition-all" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-sm md:text-base font-black text-white tracking-tight truncate">{client.name}</p>
+                                  <p className="text-sm md:text-base font-black text-white tracking-tight truncate">{String(client.name || '')}</p>
                                   <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50 truncate">CID: {String(client.id).slice(0, 12)}</p>
                                 </div>
                               </div>
@@ -1352,7 +1360,7 @@ const NewAdminDashboard = () => {
                                 <div className="w-8 h-8 rounded-lg bg-yellow-500/5 flex items-center justify-center border border-yellow-500/10">
                                   <Store className="w-3.5 h-3.5 text-yellow-500/50" />
                                 </div>
-                                <span className="text-sm font-bold text-gray-300 tracking-tight">{client.sellerName}</span>
+                                <span className="text-sm font-bold text-gray-300 tracking-tight">{String(client.sellerName || '')}</span>
                               </div>
                             </td>
                             <td className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">
@@ -1360,11 +1368,11 @@ const NewAdminDashboard = () => {
                                 <div className="w-8 h-8 rounded-lg bg-blue-500/5 flex items-center justify-center border border-blue-500/10">
                                   <Mail className="w-3.5 h-3.5 text-blue-500/50" />
                                 </div>
-                                <span className="text-sm font-medium text-gray-400 italic lowercase">{client.email}</span>
+                                <span className="text-sm font-medium text-gray-400 italic lowercase">{String(client.email || '')}</span>
                               </div>
                             </td>
                             <td className="px-5 md:px-8 py-4 md:py-6 text-right">
-                              <p className="text-[10px] md:text-sm font-bold text-gray-400 tabular-nums">{safeFormatDate(client.createdAt)}</p>
+                              <p className="text-[10px] md:text-sm font-bold text-gray-400 tabular-nums">{safeFormatDate(client.createdAt as string)}</p>
                               <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mt-0.5 hidden sm:block">First Seen</p>
                             </td>
                           </tr>
