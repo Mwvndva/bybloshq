@@ -30,7 +30,7 @@ interface SettingsTabProps {
   isDeletingLocation: boolean;
   isEditing: boolean;
   isSaving: boolean;
-  sellerProfile: import("@/types").Seller;
+  sellerProfile: import("@/features/auth/types/authTypes").SellerProfile;
   setFormData: React.Dispatch<React.SetStateAction<SellerSettingsFormData>>;
   shopNameAvailable: boolean | null;
   toggleEdit: () => void;
