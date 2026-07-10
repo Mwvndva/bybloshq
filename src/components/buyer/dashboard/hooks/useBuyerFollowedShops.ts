@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import buyerApi from '@/api/buyer';
+import type { ApiPublicSeller } from '@/types/api/seller';
 import { useToast } from '@/hooks/use-toast';
 import {
   getShopId,
@@ -12,16 +13,18 @@ import {
 const FOLLOWED_SHOPS_QUERY_KEY = ['buyer-followed-shops'] as const;
 const PUBLIC_SELLERS_QUERY_KEY = ['public-sellers'] as const;
 
+type PublicSellersCache = { sellers?: ApiPublicSeller[] } | undefined;
+
 const updatePublicSellerCache = (
   queryClient: QueryClient,
   shopId: string,
-  updateSeller: (seller: any) => any
+  updateSeller: (seller: ApiPublicSeller) => ApiPublicSeller
 ) => {
-  queryClient.setQueriesData({ queryKey: PUBLIC_SELLERS_QUERY_KEY }, (current: any) => {
+  queryClient.setQueriesData({ queryKey: PUBLIC_SELLERS_QUERY_KEY }, (current: PublicSellersCache) => {
     if (!current?.sellers) return current;
     return {
       ...current,
-      sellers: current.sellers.map((seller: any) => (
+      sellers: current.sellers.map((seller) => (
         getShopId(seller) === shopId ? updateSeller(seller) : seller
       ))
     };
@@ -31,9 +34,9 @@ const updatePublicSellerCache = (
 const updateFollowedShopCache = (
   queryClient: QueryClient,
   shopId: string,
-  updateShop: (shop: any) => any
+  updateShop: (shop: ApiPublicSeller) => ApiPublicSeller
 ) => {
-  queryClient.setQueryData<any[]>(FOLLOWED_SHOPS_QUERY_KEY, (current = []) =>
+  queryClient.setQueryData<ApiPublicSeller[]>(FOLLOWED_SHOPS_QUERY_KEY, (current = []) =>
     current.map(item => getShopId(item) === shopId ? updateShop(item) : item)
   );
 };
@@ -51,24 +54,24 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
     enabled
   });
 
-  const shops = useMemo(() => shopsQuery.data || [], [shopsQuery.data]);
+  const shops = useMemo(() => (shopsQuery.data || []) as ApiPublicSeller[], [shopsQuery.data]);
 
   const filteredShops = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return shops;
 
-    return shops.filter((shop: any) => {
-      const name = String(shop.shopName || shop.name || '').toLowerCase();
+    return shops.filter((shop) => {
+      const name = String(shop.shopName || (shop as { name?: string }).name || '').toLowerCase();
       const location = String(shop.location || shop.city || '').toLowerCase();
       return name.includes(query) || location.includes(query);
     });
   }, [shops, searchQuery]);
 
   const { onlineShops, physicalShops } = useMemo(() => {
-    const online: any[] = [];
-    const physical: any[] = [];
+    const online: ApiPublicSeller[] = [];
+    const physical: ApiPublicSeller[] = [];
 
-    filteredShops.forEach((shop: any) => {
+    filteredShops.forEach((shop) => {
       if (isPhysicalShop(shop)) {
         physical.push(shop);
       } else {
@@ -97,17 +100,17 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
   ]), [onlineShops, physicalShops, searchQuery]);
 
   const unfollowShopMutation = useMutation({
-    mutationFn: (shop: any) => buyerApi.leaveClient(getShopId(shop)),
-    onMutate: async (shop: any) => {
+    mutationFn: (shop: ApiPublicSeller) => buyerApi.leaveClient(getShopId(shop)),
+    onMutate: async (shop: ApiPublicSeller) => {
       const shopId = getShopId(shop);
       setUnfollowingShopId(shopId);
       await queryClient.cancelQueries({ queryKey: FOLLOWED_SHOPS_QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: PUBLIC_SELLERS_QUERY_KEY });
 
-      const previousFollowedShops = queryClient.getQueryData<any[]>(FOLLOWED_SHOPS_QUERY_KEY);
+      const previousFollowedShops = queryClient.getQueryData<ApiPublicSeller[]>(FOLLOWED_SHOPS_QUERY_KEY);
       const previousPublicSellerQueries = queryClient.getQueriesData({ queryKey: PUBLIC_SELLERS_QUERY_KEY });
 
-      queryClient.setQueryData<any[]>(FOLLOWED_SHOPS_QUERY_KEY, (current = []) =>
+      queryClient.setQueryData<ApiPublicSeller[]>(FOLLOWED_SHOPS_QUERY_KEY, (current = []) =>
         current.filter(item => getShopId(item) !== shopId)
       );
 
@@ -130,11 +133,11 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
         variant: 'destructive'
       });
     },
-    onSuccess: (result: any, shop: any) => {
+    onSuccess: (result, shop) => {
       const shopId = getShopId(shop);
       if (typeof result.clientCount === 'number') {
         updatePublicSellerCache(queryClient, shopId, (seller) =>
-          updateSellerClientCount(seller, result.clientCount)
+          updateSellerClientCount(seller, result.clientCount as number)
         );
       }
       toast({
@@ -149,7 +152,7 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
     }
   });
 
-  const handleShopClickCountChange = useCallback((shop: any, clickCount: number) => {
+  const handleShopClickCountChange = useCallback((shop: ApiPublicSeller, clickCount: number) => {
     const shopId = getShopId(shop);
     if (!shopId) return;
 
@@ -161,7 +164,7 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
     );
   }, [queryClient]);
 
-  const handleUnfollowShop = useCallback((shop: any) => {
+  const handleUnfollowShop = useCallback((shop: ApiPublicSeller) => {
     unfollowShopMutation.mutate(shop);
   }, [unfollowShopMutation]);
 
@@ -175,5 +178,3 @@ export function useBuyerFollowedShops(searchQuery: string, enabled: boolean) {
     unfollowingShopId
   };
 }
-
-

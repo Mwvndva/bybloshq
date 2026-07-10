@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- route config module exports a route array, not a fast-refreshable component */
 import { Suspense } from 'react';
 import { sellerRoutes } from './seller.routes';
 import { buyerRoutes } from './buyer.routes';
