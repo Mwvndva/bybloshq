@@ -1,4 +1,7 @@
 
+export type { ApiSeller } from './api/seller';
+export type { ApiSellerProduct } from './api/product';
+
 export type ProductType = 'physical' | 'digital' | 'service';
 
 export type Aesthetic =
