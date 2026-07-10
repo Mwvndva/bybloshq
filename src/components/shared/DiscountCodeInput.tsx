@@ -54,17 +54,26 @@ export const DiscountCodeInput = ({
           order_amount: orderAmount
         });
 
-        const validation = response?.data;
+        const res = response as {
+          success?: boolean;
+          data?: {
+            valid?: boolean;
+            discount_amount?: number;
+            final_amount?: number;
+            discount_code?: { description?: string };
+          };
+        };
+        const validation = res?.data;
 
-        if (response?.success && validation.valid) {
+        if (res?.success && validation?.valid) {
           setAppliedDiscount({
             code: code.trim().toUpperCase(),
-            discountAmount: validation.discount_amount,
-            finalAmount: validation.final_amount,
-            description: validation.discount_code.description || ''
+            discountAmount: validation.discount_amount ?? 0,
+            finalAmount: validation.final_amount ?? 0,
+            description: validation.discount_code?.description || ''
           });
 
-          onDiscountApplied(validation.discount_amount, validation.final_amount, code.trim().toUpperCase());
+          onDiscountApplied(validation.discount_amount ?? 0, validation.final_amount ?? 0, code.trim().toUpperCase());
 
           toast({
             title: 'Discount Applied!',

@@ -85,7 +85,7 @@ export function useAuthRevalidation({
 
       setUser({
         role: currentRole,
-        profile: profileData,
+        profile: profileData as import("@/features/auth/types/authTypes").UserProfile,
         isAuthenticated: true
       });
 

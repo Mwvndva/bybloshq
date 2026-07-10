@@ -33,12 +33,12 @@ export function useWishlist() {
   const mapWishlistItemToProduct = useCallback((item: WishlistItem): Product => {
     const seller: Seller = {
       id: item.sellerId,
-      fullName: (item as Record<string, unknown>).sellerName as string || 'Unknown Shop',
+      fullName: (item as unknown as Record<string, unknown>).sellerName as string || 'Unknown Shop',
       email: '',
       phone: '',
       whatsappNumber: '',
       bannerUrl: '',
-      shopName: (item as Record<string, unknown>).sellerName as string || 'Unknown Shop',
+      shopName: (item as unknown as Record<string, unknown>).sellerName as string || 'Unknown Shop',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

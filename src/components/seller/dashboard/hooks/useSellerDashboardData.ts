@@ -34,8 +34,9 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
 
   const handleDashboardFetchError = useCallback((err: unknown) => {
     console.error('Error fetching dashboard data:', err);
+    const e = err as { response?: { status?: number; data?: { message?: string } } };
 
-    if (err.response?.status === 401) {
+    if (e.response?.status === 401) {
       localStorage.removeItem('sellerToken');
       toast({
         title: 'Session expired',
@@ -48,7 +49,7 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
 
     toast({
       title: 'Error',
-      description: err.response?.data?.message || 'Failed to load dashboard data',
+      description: e.response?.data?.message || 'Failed to load dashboard data',
       variant: 'destructive',
     });
   }, [locationPathname, navigate, toast]);

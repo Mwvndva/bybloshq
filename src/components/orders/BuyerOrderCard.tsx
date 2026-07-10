@@ -84,7 +84,7 @@ export function BuyerOrderCard({
             <div className="text-right">
               <p className="text-xs text-white/70 uppercase tracking-wider mb-1">Total</p>
               <p className="text-xl sm:text-2xl font-bold text-white">
-                {formatOrderCurrency((order as Record<string, unknown>).total_amount as number || order.totalAmount, order.currency)}
+                {formatOrderCurrency((order as unknown as Record<string, unknown>).total_amount as number || order.totalAmount, order.currency)}
               </p>
               <p className="mt-1 text-[11px] font-medium text-white/60">
                 Includes 2% Byblos charge{buyerServiceCharge > 0 ? ` (${formatOrderCurrency(buyerServiceCharge, order.currency)})` : ''}
