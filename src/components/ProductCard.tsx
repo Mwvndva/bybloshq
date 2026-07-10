@@ -345,7 +345,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
 
       // If it's a new user (not just updating email for existing), save them first
       if (!isExistingUserUpdate && !shouldSkipSave) {
-        const saveResult = await saveBuyerInfoMutation.mutateAsync(enrichedBuyerInfo as BuyerInfoData);
+        const saveResult = await saveBuyerInfoMutation.mutateAsync(enrichedBuyerInfo as unknown as Parameters<typeof saveBuyerInfoMutation.mutateAsync>[0]);
 
         if (saveResult.requiresLogin) {
           // Save current location for redirect after login
@@ -358,13 +358,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         // Proceed with new ID (or let backend infer from cookie)
         await runWithLock(async () => {
           // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(enrichedBuyerInfo as { fullName: string; email: string; mobilePayment: string; city?: string; location?: string }, explicitBookingData, saveResult.buyer?.id);
+          await executePayment(enrichedBuyerInfo as unknown as { fullName: string; email: string; mobilePayment: string; city?: string; location?: string }, explicitBookingData, saveResult.buyer?.id);
         });
       } else {
         // Existing user (skipped save) -> Proceed using backend lookup
         await runWithLock(async () => {
           // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(enrichedBuyerInfo as { fullName: string; email: string; mobilePayment: string; city?: string; location?: string }, explicitBookingData);
+          await executePayment(enrichedBuyerInfo as unknown as { fullName: string; email: string; mobilePayment: string; city?: string; location?: string }, explicitBookingData);
         });
       }
 

@@ -10,7 +10,7 @@ import type { AnalyticsData, RecentOrder } from '../types';
 interface OverviewTabProps {
   analytics: AnalyticsData;
   pendingOverviewOrders: RecentOrder[];
-  sellerProfile: import('@/types').Seller;
+  sellerProfile: import('@/features/auth/types/authTypes').SellerProfile;
   onCopyShopLink: () => Promise<void>;
 }
 

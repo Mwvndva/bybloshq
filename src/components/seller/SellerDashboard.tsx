@@ -52,7 +52,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   });
 
   const settingsForm = useSellerSettingsForm({
-    sellerProfile,
+    sellerProfile: sellerProfile as unknown as import("@/types").ApiSeller,
     toast,
     updateSellerProfile
   });
