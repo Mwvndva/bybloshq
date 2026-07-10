@@ -22,27 +22,35 @@ const isDefaultCoordinate = (lat?: number | null, lng?: number | null) => {
 };
 
 const buildInitialFormData = (sellerProfile: ApiSeller | Record<string, unknown>): SellerSettingsFormData => {
-  const initialPhysicalAddress = sellerProfile?.physicalAddress === 'Nairobi, Kenya'
+  const s = sellerProfile as Record<string, unknown>;
+  const str = (v: unknown, fallback = ''): string => (v === null || v === undefined || v === '') ? fallback : String(v);
+  const optNum = (v: unknown): number | null => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const initialPhysicalAddress = s?.physicalAddress === 'Nairobi, Kenya'
     ? ''
-    : (sellerProfile?.physicalAddress || '');
-  const initialLat = sellerProfile?.latitude;
-  const initialLng = sellerProfile?.longitude;
+    : str(s?.physicalAddress);
+  const initialLat = optNum(s?.latitude);
+  const initialLng = optNum(s?.longitude);
   const isDefaultCoord = isDefaultCoordinate(initialLat, initialLng);
 
   return {
-    fullName: sellerProfile?.fullName || '',
-    shopName: sellerProfile?.shopName || '',
-    city: sellerProfile?.city || '',
-    location: sellerProfile?.location || '',
+    fullName: str(s?.fullName),
+    shopName: str(s?.shopName),
+    city: str(s?.city),
+    location: str(s?.location),
     physicalAddress: initialPhysicalAddress,
     latitude: isDefaultCoord ? null : (initialLat || null),
     longitude: isDefaultCoord ? null : (initialLng || null),
-    instagramLink: sellerProfile?.instagramLink || '',
-    tiktokLink: sellerProfile?.tiktokLink || '',
-    facebookLink: sellerProfile?.facebookLink || '',
-    whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || '',
-    bio: sellerProfile?.bio || '',
-    creatorCommissionRate: Number(sellerProfile?.creatorCommissionRate || 0.01) * 100
+    instagramLink: str(s?.instagramLink),
+    tiktokLink: str(s?.tiktokLink),
+    facebookLink: str(s?.facebookLink),
+    whatsappNumber: str(s?.whatsappNumber || s?.phone),
+    bio: str(s?.bio),
+    creatorCommissionRate: Number(s?.creatorCommissionRate || 0.01) * 100
   };
 };
 
