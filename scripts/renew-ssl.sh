@@ -2,28 +2,35 @@
 # =============================================================================
 # renew-ssl.sh — Renew the Let's Encrypt certificate for bybloshq.space
 #
-# Run this script on the production VPS whenever the SSL cert has expired
-# or is about to expire. It:
-#   1. Runs certbot standalone renewal (stops nginx first, restarts after).
-#   2. Copies the renewed certs into ./ssl/ (the Docker volume mount).
-#   3. Restarts the nginx container to pick up the new certs.
+# Uses the WEBROOT authenticator so renewal works WITHOUT stopping nginx (the
+# Dockerized nginx permanently holds port 80, which is why the old standalone
+# auto-renewal failed silently and the cert expired -> NET::ERR_CERT_DATE_INVALID).
 #
-# Usage:
+# Prerequisite (already wired in this repo): nginx serves
+#   location /.well-known/acme-challenge/ { root /var/www/certbot; }
+# and mounts ./certbot-webroot -> /var/www/certbot (see docker-compose.yml).
+#
+# Usage (on the production VPS as root):
 #   chmod +x scripts/renew-ssl.sh
 #   sudo ./scripts/renew-ssl.sh
 # =============================================================================
 set -euo pipefail
 
 DOMAIN="bybloshq.space"
-SSL_DIR="$(cd "$(dirname "$0")/.." && pwd)/ssl"
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SSL_DIR="$PROJECT_DIR/ssl"
+WEBROOT="$PROJECT_DIR/certbot-webroot"
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN"
 
-echo "==> Stopping nginx container to free port 80..."
-docker compose stop nginx
+echo "==> Ensuring webroot exists and nginx is up to serve the ACME challenge..."
+mkdir -p "$WEBROOT"
+docker compose up -d nginx
 
-echo "==> Running certbot renewal for $DOMAIN..."
+echo "==> Issuing/renewing certificate for $DOMAIN via webroot (zero downtime)..."
+# certonly --webroot also migrates the saved renewal config away from the broken
+# standalone authenticator, so future `certbot renew` runs succeed too.
 certbot certonly \
-  --standalone \
+  --webroot -w "$WEBROOT" \
   --non-interactive \
   --agree-tos \
   --preferred-challenges http \
@@ -37,8 +44,8 @@ cp -f "$CERT_PATH/privkey.pem"   "$SSL_DIR/privkey.pem"
 chmod 600 "$SSL_DIR/privkey.pem"
 chmod 644 "$SSL_DIR/fullchain.pem"
 
-echo "==> Restarting nginx container..."
-docker compose start nginx
+echo "==> Reloading nginx to pick up the new certificate (no downtime)..."
+docker compose kill -s HUP nginx || docker compose restart nginx
 
 echo ""
 echo "✅  SSL certificate renewed successfully."
