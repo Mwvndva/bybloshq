@@ -1,8 +1,7 @@
-import type { Product } from '@/types';
+import type { Product, Theme } from '@/types';
 import type { ApiSellerProduct, ApiProduct } from '@/types/api/product';
 type ProductWithApiFields = Product & Partial<ApiSellerProduct> & Partial<ApiProduct>;
 
-export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 export interface ProductCardThemeClasses {
   card: string;
