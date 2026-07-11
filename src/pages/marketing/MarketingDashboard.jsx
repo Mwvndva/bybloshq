@@ -5,7 +5,7 @@ import {
     BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
-import { marketingApi } from '../../services/marketingApi'
+import { marketingApi } from '../../api/marketingApi'
 import { StatCard } from './components/StatCard'
 import { ChartCard } from './components/ChartCard'
 import { SectionTitle } from './components/SectionTitle'

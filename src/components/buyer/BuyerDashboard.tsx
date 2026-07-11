@@ -9,7 +9,7 @@ import {
   Users, Store, Package
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useWishlist } from '@/contexts/useWishlist';
+import { useWishlist } from '@/hooks/useWishlist';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import WishlistSection from './WishlistSection';
 import SellersGrid from '@/components/SellersGrid';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart3, Loader2, Lock, Mail } from 'lucide-react'
-import { marketingApi } from '@/services/marketingApi'
+import { marketingApi } from '@/api/marketingApi'
 import { getFreshCsrfToken } from '@/lib/apiClient'
 
 export default function MarketingLogin() {
