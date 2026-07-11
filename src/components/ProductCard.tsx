@@ -4,7 +4,7 @@ import { Loader2, Heart } from 'lucide-react';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import { Product, Seller } from '@/types';
 import type { ApiSellerProduct, ApiProduct } from '@/types/api/product';
-import { useWishlist } from '@/contexts/useWishlist';
+import { useWishlist } from '@/hooks/useWishlist';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useCheckBuyerByPhoneMutation } from '@/hooks/buyer/mutations/useBuyerAuthMutations';
