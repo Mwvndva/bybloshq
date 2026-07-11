@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { format, isValid, parseISO } from 'date-fns';
 import type { ApiOrder } from '@/types/api/order';
+import { OrderStatusBadge } from './OrderStatusBadge';
 
 import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download, MapPin, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -263,7 +264,7 @@ export default function SellerOrdersSection() {
                 }
 
                 toast({
-                    title: readyAction === 'hub_dropoff' ? 'Package handed to Mzigo Ego' : 'ApiOrder ready for pickup',
+                    title: readyAction === 'hub_dropoff' ? 'Package handed to Mzigo Ego' : 'Order ready for pickup',
                     description: readyAction === 'hub_dropoff'
                         ? 'Mzigo Ego will secure the package, check it against the order, and update the buyer.'
                         : 'The buyer has been notified that their order is ready for shop pickup.',
@@ -291,7 +292,7 @@ export default function SellerOrdersSection() {
                 await updateOrderStatusMutation.mutateAsync({ orderId, status: 'DELIVERY_COMPLETE' as OrderStatus });
 
                 toast({
-                    title: 'ApiOrder Delivered',
+                    title: 'Order Delivered',
                     description: 'The order has been marked as delivered.',
                 });
             } catch (err) {
@@ -372,7 +373,7 @@ export default function SellerOrdersSection() {
                 const result = await cancelOrderMutation.mutateAsync(cancellingOrderId);
 
                 toast({
-                    title: 'ApiOrder Cancelled',
+                    title: 'Order Cancelled',
                     description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount?.toLocaleString() || '0'}.`,
                 });
             } catch (err) {
@@ -558,12 +559,12 @@ export default function SellerOrdersSection() {
                                     <CardContent className="p-4 sm:p-6">
                                         {/* Mobile-first responsive layout */}
                                         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_240px] gap-4 sm:gap-6">
-                                            {/* ApiOrder Information Section */}
+                                            {/* Order Information Section */}
                                             <div className="space-y-3 sm:space-y-4 flex-1">
-                                                {/* ApiOrder Header */}
+                                                {/* Order Header */}
                                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">ApiOrder #{order.orderNumber}</h3>
+                                                        <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">Order #{order.orderNumber}</h3>
                                                         <p className="text-[10px] sm:text-sm text-white/70">{formatDate(order.createdAt)}</p>
                                                         {(order.buyerName || order.customer?.name) && (
                                                             <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-white bg-blue-500/15 border border-blue-400/30 px-2 py-0.5 rounded-md w-fit max-w-full">
@@ -574,51 +575,7 @@ export default function SellerOrdersSection() {
                                                     </div>
                                                     {/* Status Badge - positioned for mobile */}
                                                     <div className="flex-none">
-                                                        {order.status === 'COMPLETED' ? (
-                                                            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <CheckCircle className="h-3 w-3 mr-1" /> Completed
-                                                            </Badge>
-                                                        ) : order.status === 'AWAITING_SELLER_ACTION' ? (
-                                                            <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <Clock className="h-3 w-3 mr-1" /> Seller Action
-                                                            </Badge>
-                                                        ) : order.status === 'FULFILLING' ? (
-                                                            <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <Truck className="h-3 w-3 mr-1" /> Fulfilling
-                                                            </Badge>
-                                                        ) : order.status === 'READY_FOR_BUYER' ? (
-                                                            <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <Package className="h-3 w-3 mr-1" /> Ready for Buyer
-                                                            </Badge>
-                                                        ) : order.status === 'DELIVERY_COMPLETE' ? (
-                                                            <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <Package className="h-3 w-3 mr-1" /> Delivery Complete
-                                                            </Badge>
-                                                        ) : order.status === 'DELIVERY_PENDING' ? (
-                                                            <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <Truck className="h-3 w-3 mr-1" /> Delivery Pending
-                                                            </Badge>
-                                                        ) : order.status === 'FAILED' ? (
-                                                            <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <XCircle className="h-3 w-3 mr-1" /> Failed
-                                                            </Badge>
-                                                        ) : order.status === 'CANCELLED' ? (
-                                                            <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <XCircle className="h-3 w-3 mr-1" /> Cancelled
-                                                            </Badge>
-                                                        ) : order.status === 'SERVICE_PENDING' ? (
-                                                            <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <CheckCircle className="h-3 w-3 mr-1" /> Service Pending
-                                                            </Badge>
-                                                        ) : order.status === 'COLLECTION_PENDING' ? (
-                                                            <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <Package className="h-3 w-3 mr-1" /> Ready for Collection
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                                <Clock className="h-3 w-3 mr-1" /> Pending
-                                                            </Badge>
-                                                        )}
+                                                        <OrderStatusBadge status={order.status} />
                                                     </div>
                                                 </div>
 
@@ -793,7 +750,7 @@ export default function SellerOrdersSection() {
                                                                 disabled={isUpdating}
                                                             >
                                                                 <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                                Cancel ApiOrder
+                                                                Cancel Order
                                                             </Button>
                                                         </div>
                                                     )}
@@ -867,7 +824,7 @@ export default function SellerOrdersSection() {
                                                                     disabled={isUpdating}
                                                                 >
                                                                     <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                                    Cancel ApiOrder
+                                                                    Cancel Order
                                                                 </Button>
                                                             </div>
                                                         )}
@@ -911,7 +868,7 @@ export default function SellerOrdersSection() {
                             {pickupOrder && (
                                 <div className="grid grid-cols-1 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs sm:grid-cols-3">
                                     <div>
-                                        <p className="text-white/60">ApiOrder</p>
+                                        <p className="text-white/60">Order</p>
                                         <p className="font-semibold text-white">#{pickupOrder.orderNumber}</p>
                                     </div>
                                     <div>
@@ -1084,7 +1041,7 @@ export default function SellerOrdersSection() {
                 </DialogContent>
             </Dialog >
 
-            {/* Cancel ApiOrder Confirmation Dialog */}
+            {/* Cancel Order Confirmation Dialog */}
             < Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog} >
                 <DialogContent className="sm:max-w-[425px] bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
                     <DialogHeader>
@@ -1092,7 +1049,7 @@ export default function SellerOrdersSection() {
                             <div className="w-8 h-8 bg-red-500/10 border border-red-400/20 rounded-full flex items-center justify-center">
                                 <XCircle className="h-4 w-4 text-red-300" />
                             </div>
-                            Cancel ApiOrder
+                            Cancel Order
                         </DialogTitle>
                         <DialogDescription className="text-sm text-white/75 leading-relaxed">
                             Are you sure you want to cancel this order?
@@ -1114,7 +1071,7 @@ export default function SellerOrdersSection() {
                             disabled={isUpdating}
                             className="bg-transparent border-white/20 text-white hover:bg-white/10"
                         >
-                            No, Keep ApiOrder
+                            No, Keep Order
                         </Button>
                         <Button
                             onClick={cancelOrder}
@@ -1127,7 +1084,7 @@ export default function SellerOrdersSection() {
                                     Cancelling...
                                 </>
                             ) : (
-                                'Yes, Cancel ApiOrder'
+                                'Yes, Cancel Order'
                             )}
                         </Button>
                     </DialogFooter>
