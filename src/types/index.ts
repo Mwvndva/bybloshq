@@ -2,7 +2,8 @@
 export type { ApiSeller } from './api/seller';
 export type { ApiSellerProduct } from './api/product';
 
-export type ProductType = 'physical' | 'digital' | 'service';
+import type { ProductType } from './primitives';
+export type { ProductType, Theme } from './primitives';
 
 export type Aesthetic =
   | 'all'
@@ -298,7 +299,7 @@ export type OrderStatus =
 
 export type PaymentStatus = 'pending' | 'success' | 'failed' | 'reversed' | 'completed' | 'paid' | 'cancelled' | 'manual_review';
 
-export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+// ProductType and Theme now live in ./primitives (re-exported at the top of this file).
 
 
 
