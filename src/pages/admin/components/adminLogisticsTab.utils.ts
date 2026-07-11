@@ -1,7 +1,7 @@
 import type { AdminLogisticsStatusFilter } from '@/api/admin';
 import type { LogisticsSort, LogisticsStatusUpdate } from '@/api/logistics';
 
-export export const STATUS_FILTERS: Array<{ value: AdminLogisticsStatusFilter; label: string }> = [
+export const STATUS_FILTERS: Array<{ value: AdminLogisticsStatusFilter; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'failed', label: 'Failed' },
   { value: 'delayed', label: 'Delayed' },
