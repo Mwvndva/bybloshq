@@ -11,19 +11,6 @@ import { Label } from '@/components/ui/label';
 import { format, isValid, parseISO } from 'date-fns';
 import type { ApiOrder } from '@/types/api/order';
 
-// Helper function to safely format dates
-const formatDate = (dateString: string | Date) => {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return isValid(date) ? format(date, 'MMM d, yyyy') : 'Date not available';
-};
-
-// Helper function to safely format currency values
-const formatCurrency = (value: number | undefined, currency: string = 'KSH') => {
-    if (value === undefined || isNaN(value)) return `${currency} 0.00`;
-    return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
-const HUB_DROPOFF_LOCATION = 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32';
 import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download, MapPin, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
@@ -43,19 +30,7 @@ import { sellerDashboardQueryKeys } from './dashboard/queryKeys';
 import LocationPicker from '../common/LocationPicker';
 import { OrderLogisticsTracking } from '../orders/OrderLogisticsTracking';
 
-const hasBuyerPaidDoorDelivery = (order?: ApiOrder | null) => {
-    if (!order) return false;
-    const delivery = (order.metadata?.delivery || {}) as Record<string, unknown>;
-    return delivery.doorDelivery === true
-        || delivery.door_delivery === true
-        || delivery.deliveryMode === 'DOOR_DELIVERY'
-        || delivery.delivery_mode === 'DOOR_DELIVERY'
-        || Boolean(order.logistics?.deliveryLeg);
-};
-
-const getEffectiveFulfillmentType = (order?: ApiOrder | null) => (
-    hasBuyerPaidDoorDelivery(order) ? 'COURIER' : order?.fulfillment_type
-);
+import { formatCurrency, formatDate, getEffectiveFulfillmentType, hasBuyerPaidDoorDelivery, HUB_DROPOFF_LOCATION } from './sellerOrders.utils';
 
 export default function SellerOrdersSection() {
     const queryClient = useQueryClient();
