@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense, type TouchEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerOrdersQuery } from '@/hooks/buyer/queries/useBuyerOrdersQuery';
 
@@ -19,14 +19,12 @@ import { BuyerDashboardSearch } from './dashboard/BuyerDashboardSearch';
 import { BuyerProfileSheet } from './dashboard/BuyerProfileSheet';
 import { MyShopsSection } from './dashboard/MyShopsSection';
 import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
+import { useBuyerSwipeNav } from './dashboard/hooks/useBuyerSwipeNav';
 
 
 type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
 type BuyerSection = DashboardSection | 'profile';
 
-const SWIPE_NAV_SECTIONS: DashboardSection[] = ['shop', 'shops', 'wishlist', 'orders'];
-const SWIPE_MIN_DISTANCE = 64;
-const SWIPE_MAX_VERTICAL_DRIFT = 80;
 const PROFILE_CLOSE_NAV_DELAY_MS = 180;
 
 // Main dashboard component
@@ -60,7 +58,6 @@ function BuyerDashboard() {
   });
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState(false);
   const profileCloseNavigationTimerRef = useRef<number | null>(null);
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Sync active section with URL changes
   useEffect(() => {
@@ -280,35 +277,8 @@ function BuyerDashboard() {
     }
   };
 
-  const handleDashboardTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    if (isProfileSidebarOpen || event.touches.length !== 1) return;
-    const touch = event.touches[0];
-    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
-  };
+  const { onTouchStart: handleDashboardTouchStart, onTouchEnd: handleDashboardTouchEnd } = useBuyerSwipeNav(activeSection, isProfileSidebarOpen, setActiveTab);
 
-  const handleDashboardTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
-    const start = swipeStartRef.current;
-    swipeStartRef.current = null;
-
-    if (!start || isProfileSidebarOpen || event.changedTouches.length !== 1) return;
-    if (!SWIPE_NAV_SECTIONS.includes(activeSection as DashboardSection)) return;
-
-    const touch = event.changedTouches[0];
-    const deltaX = touch.clientX - start.x;
-    const deltaY = touch.clientY - start.y;
-
-    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE || Math.abs(deltaY) > SWIPE_MAX_VERTICAL_DRIFT) {
-      return;
-    }
-
-    const currentIndex = SWIPE_NAV_SECTIONS.indexOf(activeSection as DashboardSection);
-    const targetIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-    const targetSection = SWIPE_NAV_SECTIONS[targetIndex];
-
-    if (targetSection) {
-      setActiveTab(targetSection);
-    }
-  };
 
   return (
     <div className="page-enter byblos-light-page min-w-0 overflow-x-hidden" style={{
