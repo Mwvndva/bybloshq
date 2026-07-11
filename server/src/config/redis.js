@@ -95,11 +95,13 @@ const createRedisClient = () => {
     const client = new Redis(redisUrl, {
         // Retry strategy: wait 1s, then 2s, then 4s, etc., up to max 10s
         retryStrategy(times) {
-            if (times > 10) {
-                // Stop retrying after 10 attempts
-                console.warn('Redis: Max retry attempts reached. Running without Redis.');
-                return null; // Stop retrying
-            }
+            // Never return null. Returning null permanently closes the client,
+            // which previously left the auth rate limiter throwing
+            // "Connection is closed" on every login until a manual backend
+            // restart. Keep reconnecting with a capped backoff so the client
+            // self-heals as soon as Redis returns. The auth limiter fails open
+            // to an in-memory store while the client is not ready
+            // (see middleware/authRateLimiter.js).
             const delay = Math.min(times * 1000, 10000);
             return delay;
         },
