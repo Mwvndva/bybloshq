@@ -16,11 +16,7 @@ import {
   type OptionalBuyerLocation
 } from '@/lib/location';
 
-const PRODUCT_SERVICE_CHARGE_RATE = 0.02;
-const calculateProductServiceCharge = (amount: number) => Math.ceil(amount * PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
-const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 0) => {
-  return Math.ceil(Math.round((productAmount + deliveryFee + calculateProductServiceCharge(productAmount)) * 100) / 100);
-};
+import { calculateBuyerPayableTotal, calculateProductServiceCharge } from '@/components/product-card/productCardUtils';
 
 export interface DoorDeliverySelection {
   doorDelivery: boolean;
