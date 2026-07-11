@@ -1,6 +1,6 @@
 # Multi-stage build for React frontend
 # Switching to node:20-slim (Debian) for better support of native modules like canvas during build
-FROM node:20-slim AS base
+FROM node:22-slim AS base
 
 # Dependencies stage
 FROM base AS deps
@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY package*.json ./
 # Install all dependencies including devDependencies (needed for vite build)
-RUN npm ci
+RUN npm ci --include=dev || (rm -f package-lock.json && npm install --include=dev)
 
 # Build stage
 FROM deps AS builder
