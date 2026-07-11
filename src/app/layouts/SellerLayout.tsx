@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { SellerDashboardLayout } from '@/layouts/BaseDashboardLayout';
+import { SellerDashboardLayout } from '@/app/layouts/BaseDashboardLayout';
 import { Home, ShoppingBag, Settings } from 'lucide-react';
 import { useSellerAuth } from '@/features/auth/contexts';
 

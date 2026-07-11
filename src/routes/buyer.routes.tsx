@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { BuyerProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
-import BuyerLayout from '@/layouts/BuyerLayout';
+import BuyerLayout from '@/app/layouts/BuyerLayout';
 
 // Lazy load components
 const BuyerLogin = safeLazy(() => import('@/components/buyer/BuyerLogin').then(m => m.BuyerLogin));
