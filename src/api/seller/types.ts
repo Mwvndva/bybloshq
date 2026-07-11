@@ -1,7 +1,6 @@
-import type { OrderStatus } from '@/types';
+import type { OrderStatus, Theme } from '@/types';
 import type { ProductType } from '@/types/index';
 
-export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 
 export interface SellerAnalytics {
