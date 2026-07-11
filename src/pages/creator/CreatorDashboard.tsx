@@ -12,70 +12,11 @@ import { useCreatorLogoutMutation } from '@/hooks/creator/mutations/useCreatorAu
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { copyLinkedTextToClipboard, getCreatorShopUrl, getShopUsername } from '@/lib/shopLinks';
+import { money, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS, getWithdrawalFee, getErrorMessage,
+  type AnalysisPeriod, type ApiError, type CreatorProfile, type ShopRequest, type LinkedShop,
+  type AnalysisRow, type WithdrawalRow, type LeaderboardRow, type DashboardData, type ReferralData } from './creatorDashboardUtils';
+import { Metric } from './CreatorMetric';
 
-const money = (amount: number | string) => `KSh ${Number(amount || 0).toLocaleString()}`;
-const MIN_WITHDRAWAL_AMOUNT = 50;
-const WITHDRAWAL_FEE_TIERS = [
-  { min: 50, max: 1500, fee: 21 },
-  { min: 1501, max: 19999.99, fee: 45 },
-  { min: 20000, max: Number.POSITIVE_INFINITY, fee: 63 }
-] as const;
-const getWithdrawalFee = (amount: number) => {
-  if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) return 0;
-  return WITHDRAWAL_FEE_TIERS.find(({ min, max }) => amount >= min && amount <= max)?.fee || 0;
-};
-type AnalysisPeriod = 'daily' | 'weekly' | 'monthly';
-type ApiError = { response?: { data?: { message?: string } }; message?: string };
-type CreatorProfile = {
-  balance?: number;
-  firstName?: string;
-  mpesaNumber?: string;
-  totalEarnings?: number;
-  totalSales?: number;
-};
-type ShopRequest = { id: number; shop_name?: string; seller_name?: string };
-type LinkedShop = {
-  id: number;
-  shop_name?: string;
-  code?: string;
-  commission_rate?: number | string;
-  sales_count?: number | string;
-  click_count?: number | string;
-  earnings?: number | string;
-};
-type AnalysisRow = {
-  period?: string;
-  month?: string;
-  sales?: number | string;
-  sales_value?: number | string;
-  salesValue?: number | string;
-  earnings?: number | string;
-  clicks?: number | string;
-};
-type WithdrawalRow = { id: number; amount?: number | string; withdrawal_fee?: number | string; status?: string };
-type LeaderboardRow = {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  total_sales?: number | string;
-  total_income?: number | string;
-};
-type DashboardData = {
-  creator?: CreatorProfile;
-  shops?: LinkedShop[];
-  shopRequests?: ShopRequest[];
-  analysis?: AnalysisRow[];
-  monthly?: AnalysisRow[];
-  withdrawals?: WithdrawalRow[];
-  leaderboard?: LeaderboardRow[];
-  linkClicks?: number;
-};
-type ReferralData = { referralCode?: string };
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  const apiError = error as ApiError;
-  return apiError?.response?.data?.message || apiError?.message || fallback;
-};
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
@@ -429,16 +370,5 @@ export default function CreatorDashboard() {
   );
 }
 
-function Metric({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/40">{label}</p>
-        {icon}
-      </div>
-      <p className="mt-3 text-2xl font-black">{value}</p>
-    </div>
-  );
-}
 
 

@@ -2,12 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Search } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import L from 'leaflet';
+import { LocationMarker, MapSizeInvalidator, MapFlyTo } from './locationPickerParts';
+
+const MAP_TILE_URLS = [
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+];
 import { cn } from '@/lib/utils';
 import {
     DEFAULT_MAP_CENTER,
@@ -17,64 +20,6 @@ import {
 } from '@/lib/location';
 import { searchLocations, type LocationSearchResult } from '@/api/locationApi';
 
-const MAP_TILE_URLS = [
-    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-];
-
-// Fix Leaflet marker icon issue
-if (typeof window !== 'undefined') {
-    delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-        iconRetinaUrl: markerIcon2x,
-        iconUrl: markerIcon,
-        shadowUrl: markerShadow,
-    });
-}
-
-// Component to handle map clicks
-function LocationMarker({ position, setPosition }: { position: [number, number] | null, setPosition: (pos: [number, number]) => void }) {
-    useMapEvents({
-        click(e) {
-            setPosition([e.latlng.lat, e.latlng.lng]);
-        },
-    });
-
-    return position ? <Marker position={position} /> : null;
-}
-
-function MapSizeInvalidator({ watchKey }: { watchKey: string }) {
-    const map = useMap();
-
-    useEffect(() => {
-        const invalidate = () => map.invalidateSize({ animate: false });
-        const first = window.setTimeout(invalidate, 80);
-        const second = window.setTimeout(invalidate, 300);
-
-        return () => {
-            window.clearTimeout(first);
-            window.clearTimeout(second);
-        };
-    }, [map, watchKey]);
-
-    return null;
-}
-
-// Component to fly to location
-function MapFlyTo({ position }: { position: [number, number] | null }) {
-    const map = useMap();
-    useEffect(() => {
-        if (position) {
-            map.invalidateSize({ animate: false });
-            map.flyTo(position, Math.max(map.getZoom(), 15), {
-                animate: true,
-                duration: 0.6
-            });
-        }
-    }, [position, map]);
-    return null;
-}
 
 interface LocationPickerProps {
     initialAddress?: string;
