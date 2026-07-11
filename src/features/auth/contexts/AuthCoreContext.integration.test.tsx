@@ -2,9 +2,21 @@ import React from 'react';
 import '@testing-library/jest-dom/vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthCoreProvider } from './AuthCoreContext';
 import { useGlobalAuth } from '../hooks/useGlobalAuth';
+
+function renderWithProviders(ui: React.ReactElement, initialEntries: string[]) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
 
 const mocks = vi.hoisted(() => {
   const mockBuyerApi = {
@@ -136,12 +148,11 @@ describe('AuthCoreProvider integration', () => {
       createdAt: '2026-05-09T00:00:00.000Z',
     });
 
-    render(
-      <MemoryRouter initialEntries={['/admin/dashboard']}>
-        <AuthCoreProvider>
-          <AuthProbe />
-        </AuthCoreProvider>
-      </MemoryRouter>
+    renderWithProviders(
+      <AuthCoreProvider>
+        <AuthProbe />
+      </AuthCoreProvider>,
+      ['/admin/dashboard']
     );
 
     await waitFor(() => {
@@ -179,12 +190,11 @@ describe('AuthCoreProvider integration', () => {
       },
     });
 
-    render(
-      <MemoryRouter initialEntries={['/buyer/login']}>
-        <AuthCoreProvider>
-          <BuyerLoginProbe />
-        </AuthCoreProvider>
-      </MemoryRouter>
+    renderWithProviders(
+      <AuthCoreProvider>
+        <BuyerLoginProbe />
+      </AuthCoreProvider>,
+      ['/buyer/login']
     );
 
     await waitFor(() => {
