@@ -1,18 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle, Package, RefreshCw, Users, XCircle } from 'lucide-react';
+import { CheckCircle, Package, RefreshCw, XCircle } from 'lucide-react';
 import type { ApiOrder } from '@/types/api/order';
 import { getImageUrl } from '@/lib/utils';
-import {
-  canConfirmOrderReceipt,
-  formatOrderCurrency,
-  formatOrderDate,
-  getBuyerServiceCharge,
-  getConfirmReceiptLabel,
-  getPaymentStatusBadge,
-  getStatusBadge,
-  isServiceOrder
-} from './ordersSectionUtils';
+import { getBuyerServiceCharge, getConfirmReceiptLabel, isServiceOrder } from './ordersSectionUtils';
+import { OrderDetailsDialog } from './OrderDetailsDialog';
 
 interface BuyerOrderDialogsProps {
   orders: ApiOrder[];
@@ -124,133 +116,7 @@ export function BuyerOrderDialogs({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!selectedOrderForDetails} onOpenChange={(open) => !open && onSelectedOrderChange(null)}>
-        <DialogContent className="sm:max-w-2xl bg-black border border-white/15 text-white">
-          {selectedOrderForDetails && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-white">
-                  ApiOrder Details
-                </DialogTitle>
-                <DialogDescription className="text-white/70">
-                  {formatOrderDate(selectedOrderForDetails)}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-6 max-h-[60dvh] overflow-y-auto pr-2">
-                {selectedOrderForDetails.items.map((item, idx) => (
-                  <div key={idx} className="flex gap-4 items-start">
-                    <div
-                      className="h-20 w-20 rounded-lg bg-white/5 overflow-hidden border border-white/15 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => item.imageUrl && onViewingImageChange(getImageUrl(item.imageUrl))}
-                    >
-                      {item.imageUrl ? (
-                        <img
-                          src={getImageUrl(item.imageUrl)}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-8 w-8 text-white/60" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-bold text-white leading-tight mb-1">{item.name}</h4>
-                      <div className="flex items-center text-sm text-white/70 gap-3">
-                        <span>Qty: {item.quantity}</span>
-                        <span className="w-1 h-1 bg-white/40 rounded-full" />
-                        <span className="text-white font-medium">{formatOrderCurrency(item.price * item.quantity, selectedOrderForDetails.currency)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="border-t border-white/10 my-4" />
-
-                <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-emerald-400" />
-                    <p className="text-xs text-white/60 uppercase tracking-wider font-semibold">Shop Details</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    {selectedOrderForDetails.seller?.shopName && (
-                      <p className="font-bold text-white text-lg">
-                        {selectedOrderForDetails.seller.shopName}
-                      </p>
-                    )}
-
-                    {selectedOrderForDetails.seller?.location && (
-                      <a
-                        href={selectedOrderForDetails.seller.location.startsWith('http') ? selectedOrderForDetails.seller.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrderForDetails.seller.location)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-start gap-2 text-sm text-white/80 hover:text-emerald-300 transition-colors group"
-                      >
-                        <span>
-                          {selectedOrderForDetails.seller.city ? `${selectedOrderForDetails.seller.city} - ` : ''}
-                          {selectedOrderForDetails.seller.location}
-                        </span>
-                      </a>
-                    )}
-                  </div>
-
-                  {selectedOrderForDetails.shippingAddress && (
-                    <div className="pt-2 border-t border-white/10 mt-2">
-                      <p className="text-xs text-white/60 mb-1">Shipping To:</p>
-                      <p className="text-sm text-white/80">
-                        {selectedOrderForDetails.shippingAddress.address}
-                        {selectedOrderForDetails.shippingAddress.city && `, ${selectedOrderForDetails.shippingAddress.city}`}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/15 border border-emerald-400/30">
-                  <div>
-                    <span className="text-lg font-semibold text-white">Total</span>
-                    <p className="mt-1 text-xs font-medium text-white/60">
-                      Includes 2% Byblos service charge{selectedOrderServiceCharge > 0 ? ` (${formatOrderCurrency(selectedOrderServiceCharge, selectedOrderForDetails.currency)})` : ''}
-                    </p>
-                  </div>
-                  <span className="text-2xl font-bold text-emerald-200 text-right">
-                    {formatOrderCurrency((selectedOrderForDetails as unknown as Record<string, unknown>).total_amount as number || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
-                  </span>
-                </div>
-
-                <div className="flex gap-2">
-                  {getStatusBadge(selectedOrderForDetails.status)}
-                  {getPaymentStatusBadge(selectedOrderForDetails.paymentStatus)}
-                </div>
-              </div>
-
-              <DialogFooter className="gap-2">
-                {canConfirmOrderReceipt(selectedOrderForDetails) && (
-                  <Button
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
-                    onClick={() => {
-                      onConfirmReceiptClick(selectedOrderForDetails.id);
-                      onSelectedOrderChange(null);
-                    }}
-                  >
-                    {getConfirmReceiptLabel(selectedOrderForDetails)}
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  className="border-white/20 hover:bg-white/10 text-white"
-                  onClick={() => onSelectedOrderChange(null)}
-                >
-                  Close
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <OrderDetailsDialog order={selectedOrderForDetails} serviceCharge={selectedOrderServiceCharge} onClose={() => onSelectedOrderChange(null)} onViewImage={onViewingImageChange} />
 
       <Dialog open={showReceiptDialog} onOpenChange={onReceiptDialogChange}>
         <DialogContent className="sm:max-w-[425px] bg-black border border-white/15 text-white shadow-xl shadow-black/60">
