@@ -184,4 +184,35 @@ export const getThemeClasses = (theme: Theme): ProductCardThemeClasses => {
   }
 };
 
+const PRODUCT_SERVICE_CHARGE_RATE = 0.02;
 
+export const calculateProductServiceCharge = (amount: number) =>
+  Math.ceil(amount * PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
+
+export const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 0) =>
+  Math.ceil(Math.round((productAmount + deliveryFee + calculateProductServiceCharge(productAmount)) * 100) / 100);
+
+export const normalizeProductImages = (product: Product): string[] => {
+  const rawImages = product.images;
+  const extraImages = Array.isArray(rawImages)
+    ? rawImages
+    : typeof rawImages === 'string'
+      ? (() => {
+        try {
+          const parsed = JSON.parse(rawImages);
+          return Array.isArray(parsed) ? parsed : [rawImages];
+        } catch {
+          return [rawImages];
+        }
+      })()
+      : [];
+
+  return [
+    product.image_url,
+    (product as { imageUrl?: string }).imageUrl,
+    ...extraImages
+  ]
+    .filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
+    .map(image => image.trim())
+    .filter((image, index, allImages) => allImages.indexOf(image) === index);
+};
