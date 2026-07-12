@@ -73,7 +73,7 @@ test('public buyer phone lookup returns no buyer identity or location PII', () =
   const routes = read('server/src/routes/buyer.routes.js');
   const controller = read('server/src/controllers/buyer.controller.js');
 
-  assert.match(routes, /router\.post\('\/check-phone', buyerController\.checkBuyerByPhone\)/);
+  assert.match(routes, /router\.post\('\/check-phone',[\s\S]*?buyerController\.checkBuyerByPhone\)/);
   assert.match(controller, /hasEmail: !!existingBuyer\.email/);
   assert.doesNotMatch(controller, /id:\s*existingBuyer\.id/);
   assert.doesNotMatch(controller, /fullName:\s*existingBuyer/);
