@@ -475,7 +475,21 @@ export function useAdminDashboard() {
 
   // Accessibility labels and aria roles were missing on modals
 
+  // Retry handler for the dashboard error screen: clears the error, resets the
+  // initialized flag (which surfaces the loading state), and bumps the reload
+  // token to force a fresh render pass. Mirrors the pre-decomposition behavior.
+  const retryDashboard = useCallback(() => {
+    setError(null);
+    setIsInitialized(false);
+    setDashboardReloadToken(token => token + 1);
+  }, []);
+
   return {
+    authLoading,
+    isAuthenticated,
+    isInitialized,
+    error,
+    retryDashboard,
     dashboardState,
     activeTab,
     setActiveTab,
