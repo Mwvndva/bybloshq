@@ -1,3 +1,5 @@
+import { validate } from '../middleware/validate.js';
+import * as V from '../validations/referral.validation.js';
 // @ts-check
 'use strict';
 
@@ -11,6 +13,6 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/dashboard', referralController.getDashboard);
-router.post('/generate-code', referralController.generateCode);
+router.post('/generate-code', validate(V.generateCode), referralController.generateCode);
 
 export default router;
