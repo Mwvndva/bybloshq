@@ -331,18 +331,6 @@ export function useProductsList({ products, onDelete, onStatusUpdate, onRefresh 
     }
   };
 
-  if (!products || products.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mb-4">
-          <Plus className="h-8 w-8 text-emerald-400" />
-        </div>
-        <h3 className="text-lg font-medium text-slate-950 mb-1">No products yet</h3>
-        <p className="text-slate-700">Get started by adding your first product from the button above</p>
-      </div>
-    );
-  }
-
   return {
     deletingId,
     updatingId,
