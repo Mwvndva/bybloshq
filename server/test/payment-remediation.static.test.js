@@ -635,7 +635,7 @@ test('manual-review payment mapping failures are terminal and not retried as pen
 
 test('direct order creation routes are retired in favor of payment initiation', () => {
   const controller = read('src/controllers/order.controller.js');
-  const orderRoutes = read('src/routes/orderRoutes.js');
+  const orderRoutes = read('src/routes/order.routes.js');
   const sellerRoutes = read('src/routes/seller.routes.js');
   const orderValidation = read('src/validations/order.validation.js');
   const service = read('src/services/order.service.js');
