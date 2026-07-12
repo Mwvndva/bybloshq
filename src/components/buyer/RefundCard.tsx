@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { usePendingRefundsQuery } from '@/hooks/buyer/queries/usePendingRefundsQuery';
 import { useRefundRequestMutation } from '@/hooks/buyer/mutations/useRefundRequestMutation';
-import { useAsyncLock } from '@/hooks/useAsyncLock';
+import { RefundConfirmDialog } from './RefundConfirmDialog';
+import { useRefundCard } from './useRefundCard';
 
 interface RefundCardProps {
   refundAmount: number;
@@ -16,130 +17,19 @@ interface RefundCardProps {
   onRefundRequested?: () => void;
 }
 
-interface PendingRequest {
-  id: number;
-  amount: number;
-  status: string;
-  requested_at: string;
-}
-
 export default function RefundCard({ refundAmount, compact = false, onRefundRequested }: RefundCardProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  // FIX (Task 16): Prevent duplicate refund submissions via synchronous lock
-  const { runWithLock, isLocked: isSubmitting } = useAsyncLock();
+  const {
+    isDialogOpen,
+    setIsDialogOpen,
+    isSubmitting,
+    pendingRequests,
+    isLoadingPending,
+    formatCurrency,
+    handleWithdrawClick,
+    handleConfirmWithdraw,
+    hasPendingRequest,
+  } = useRefundCard(refundAmount, onRefundRequested);
 
-  // React Query: fetch pending refund requests
-  const pendingRefundsQuery = usePendingRefundsQuery();
-  const pendingRequests: PendingRequest[] = (pendingRefundsQuery.data as { pendingRequests?: PendingRequest[] })?.pendingRequests ?? [];
-  const isLoadingPending = pendingRefundsQuery.isLoading;
-
-  // React Query: refund request mutation
-  const refundMutation = useRefundRequestMutation();
-
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return `KSh ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const handleWithdrawClick = () => {
-    if (refundAmount <= 0) {
-      toast.error('No refunds available to withdraw');
-      return;
-    }
-    if (pendingRequests.length > 0) {
-      toast.error('You already have a pending refund request');
-      return;
-    }
-    setIsDialogOpen(true);
-  };
-
-  const handleConfirmWithdraw = async () => {
-    // FIX (Task 16): Prevents duplicate refund submission
-    await runWithLock(async () => {
-      try {
-        await refundMutation.mutateAsync({ amount: refundAmount });
-
-        setIsDialogOpen(false);
-
-        // Notify parent to refresh data
-        if (onRefundRequested) {
-          onRefundRequested();
-        }
-      } catch (error) {
-        console.error('Error requesting refund:', error);
-      }
-    });
-  };
-
-  const hasPendingRequest = pendingRequests.length > 0;
-
-  const refundDialog = (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="border-stone-200 bg-white text-stone-950 sm:max-w-[500px]">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-2xl text-stone-950">Confirm Refund Withdrawal</DialogTitle>
-          <p className="text-sm text-stone-500">Review the details before confirming your withdrawal request</p>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="rounded-xl border border-green-400/25 bg-green-500/10 p-6 text-center">
-            <p className="mb-2 text-sm font-semibold text-green-800">Amount to withdraw</p>
-            <p className="text-4xl font-black text-green-700">
-              {formatCurrency(refundAmount)}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-blue-400/25 bg-blue-500/10 p-4">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-300" />
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-blue-100">
-                  How you'll receive your refund
-                </p>
-                <p className="text-sm text-blue-100/80">
-                  Your refund will be sent to your registered phone number and email address on file.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-amber-400/25 bg-amber-500/10 p-4">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-300" />
-              <div>
-                <p className="mb-1 text-xs font-semibold text-amber-100">Processing time</p>
-                <p className="text-xs text-amber-100/80">
-                  Once submitted, your request will be reviewed by our admin team.
-                  The refund will be processed within 1-3 business days.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsDialogOpen(false)}
-            disabled={isSubmitting}
-            className="border-stone-200 bg-white px-6 text-stone-700 hover:bg-stone-50"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirmWithdraw}
-            disabled={isSubmitting}
-            className="bg-green-600 px-6 text-white hover:bg-green-700"
-          >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Withdrawal
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 
   if (compact) {
     return (
@@ -202,7 +92,7 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
           </CardContent>
         </Card>
 
-        {refundDialog}
+        <RefundConfirmDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} refundAmount={refundAmount} onConfirm={handleConfirmWithdraw} isSubmitting={isSubmitting} formatCurrency={formatCurrency} />
       </>
     );
   }

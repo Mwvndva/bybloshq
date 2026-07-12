@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Loader2, LogOut, MousePointerClick, Trophy, Wallet } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 import { useCreatorDashboardQuery } from '@/hooks/creator/queries/useCreatorDashboardQuery';
 import { useCreatorReferralDashboardQuery } from '@/hooks/creator/queries/useCreatorReferralDashboardQuery';
@@ -11,71 +10,14 @@ import { useDenyShopRequestMutation } from '@/hooks/creator/mutations/useDenySho
 import { useCreatorLogoutMutation } from '@/hooks/creator/mutations/useCreatorAuthMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { copyLinkedTextToClipboard, getCreatorShopUrl, getShopUsername } from '@/lib/shopLinks';
+import { copyLinkedTextToClipboard } from '@/lib/shopLinks';
+import { money, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS, getWithdrawalFee, getErrorMessage,
+  type AnalysisPeriod, type ApiError, type CreatorProfile, type ShopRequest, type LinkedShop,
+  type AnalysisRow, type WithdrawalRow, type LeaderboardRow, type DashboardData, type ReferralData } from './creatorDashboardUtils';
+import { Metric } from './CreatorMetric';
+import { CreatorAnalysisCharts } from './CreatorAnalysisCharts';
+import { CreatorLinkedShops } from './CreatorLinkedShops';
 
-const money = (amount: number | string) => `KSh ${Number(amount || 0).toLocaleString()}`;
-const MIN_WITHDRAWAL_AMOUNT = 50;
-const WITHDRAWAL_FEE_TIERS = [
-  { min: 50, max: 1500, fee: 21 },
-  { min: 1501, max: 19999.99, fee: 45 },
-  { min: 20000, max: Number.POSITIVE_INFINITY, fee: 63 }
-] as const;
-const getWithdrawalFee = (amount: number) => {
-  if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) return 0;
-  return WITHDRAWAL_FEE_TIERS.find(({ min, max }) => amount >= min && amount <= max)?.fee || 0;
-};
-type AnalysisPeriod = 'daily' | 'weekly' | 'monthly';
-type ApiError = { response?: { data?: { message?: string } }; message?: string };
-type CreatorProfile = {
-  balance?: number;
-  firstName?: string;
-  mpesaNumber?: string;
-  totalEarnings?: number;
-  totalSales?: number;
-};
-type ShopRequest = { id: number; shop_name?: string; seller_name?: string };
-type LinkedShop = {
-  id: number;
-  shop_name?: string;
-  code?: string;
-  commission_rate?: number | string;
-  sales_count?: number | string;
-  click_count?: number | string;
-  earnings?: number | string;
-};
-type AnalysisRow = {
-  period?: string;
-  month?: string;
-  sales?: number | string;
-  sales_value?: number | string;
-  salesValue?: number | string;
-  earnings?: number | string;
-  clicks?: number | string;
-};
-type WithdrawalRow = { id: number; amount?: number | string; withdrawal_fee?: number | string; status?: string };
-type LeaderboardRow = {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  total_sales?: number | string;
-  total_income?: number | string;
-};
-type DashboardData = {
-  creator?: CreatorProfile;
-  shops?: LinkedShop[];
-  shopRequests?: ShopRequest[];
-  analysis?: AnalysisRow[];
-  monthly?: AnalysisRow[];
-  withdrawals?: WithdrawalRow[];
-  leaderboard?: LeaderboardRow[];
-  linkClicks?: number;
-};
-type ReferralData = { referralCode?: string };
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  const apiError = error as ApiError;
-  return apiError?.response?.data?.message || apiError?.message || fallback;
-};
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
@@ -243,92 +185,10 @@ export default function CreatorDashboard() {
           </section>
         )}
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-          <h2 className="text-xl font-black">Linked shops</h2>
-          <div className="mt-4 grid gap-3">
-            {(dashboard?.shops || []).length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm font-medium text-white/45">
-                No linked shops yet.
-              </div>
-            ) : (dashboard?.shops || []).map((shop) => {
-              const link = getCreatorShopUrl(shop.shop_name, shop.code);
-              const shopUsername = getShopUsername(shop.shop_name);
-              return (
-                <div key={shop.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-black">{shop.shop_name}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
-                        {Number(shop.commission_rate || 0.01) * 100}% cut | {shop.sales_count || 0} sales | {shop.click_count || 0} clicks | {money(shop.earnings)}
-                      </p>
-                      {shopUsername && (
-                        <a
-                          href={link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 block break-all text-xs font-bold text-yellow-100 underline decoration-yellow-400 underline-offset-2"
-                          title={link}
-                        >
-                          {shopUsername}
-                        </a>
-                      )}
-                    </div>
-                    <Button variant="outline" onClick={() => copy(link, shopUsername)} className="border-white/10 bg-transparent text-white hover:bg-white/5">
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy link
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <CreatorLinkedShops shops={dashboard?.shops || []} onCopy={copy} />
 
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-black">Ambassador analysis</h2>
-              <div className="grid grid-cols-3 rounded-2xl border border-white/10 bg-black/30 p-1 text-xs font-black">
-                {(['daily', 'weekly', 'monthly'] as AnalysisPeriod[]).map((period) => (
-                  <button
-                    key={period}
-                    type="button"
-                    onClick={() => setAnalysisPeriod(period)}
-                    className={`rounded-xl px-3 py-2 capitalize transition ${analysisPeriod === period ? 'bg-yellow-400 text-black' : 'text-white/50 hover:text-white'}`}
-                  >
-                    {period}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mt-4 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                  <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" fontSize={11} />
-                  <YAxis stroke="rgba(255,255,255,0.45)" fontSize={11} />
-                  <Tooltip contentStyle={{ background: '#050505', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }} />
-                  <Bar dataKey="clicks" fill="#facc15" radius={[6, 6, 0, 0]} barSize={12} />
-                  <Bar dataKey="sales" fill="#22c55e" radius={[6, 6, 0, 0]} barSize={12} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 h-56 rounded-2xl border border-white/10 bg-black/20 p-3">
-              <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-white/40">Sales value</p>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                  <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" fontSize={11} />
-                  <YAxis stroke="rgba(255,255,255,0.45)" fontSize={11} tickFormatter={(value) => `${Number(value) / 1000}k`} />
-                  <Tooltip
-                    formatter={(value) => money(value as number)}
-                    contentStyle={{ background: '#050505', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }}
-                  />
-                  <Line type="monotone" dataKey="salesValue" stroke="#38bdf8" strokeWidth={3} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <CreatorAnalysisCharts chartData={chartData} analysisPeriod={analysisPeriod} setAnalysisPeriod={setAnalysisPeriod} />
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex items-center gap-2">
@@ -429,16 +289,5 @@ export default function CreatorDashboard() {
   );
 }
 
-function Metric({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/40">{label}</p>
-        {icon}
-      </div>
-      <p className="mt-3 text-2xl font-black">{value}</p>
-    </div>
-  );
-}
 
 

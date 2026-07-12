@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Heart, Search } from 'lucide-react';
-import { useWishlist } from '@/contexts/useWishlist';
+import { useWishlist } from '@/hooks/useWishlist';
 import { ProductCard } from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';

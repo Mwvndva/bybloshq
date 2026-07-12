@@ -1,133 +1,38 @@
 import { useState, useEffect, useRef } from 'react';
+import { SellerForgotPasswordDialog } from './SellerForgotPasswordDialog';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useSellerAuth } from '@/features/auth/contexts';
 import { Eye, EyeOff, Loader2, Mail, ArrowLeft, Store, Lock, RefreshCw, AlertCircle } from 'lucide-react';
 import { sellerApi } from '@/api/seller';
 import { VerifyEmailModal } from '../auth/VerifyEmailModal';
+import { useSellerLogin } from './useSellerLogin';
 
 export function SellerLogin() {
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, forgotPassword } = useSellerAuth();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-  const [isSendingResetLink, setIsSendingResetLink] = useState(false);
-  const loginInFlightRef = useRef(false);
-
-  // Keep the standalone auth route aligned with the light app shell.
-  useEffect(() => {
-    const originalBodyStyle = document.body.style.cssText;
-    const originalHtmlStyle = document.documentElement.style.cssText;
-
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
-
-    return () => {
-      document.body.style.cssText = originalBodyStyle;
-      document.documentElement.style.cssText = originalHtmlStyle;
-    };
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (error) setError(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loginInFlightRef.current) return;
-
-    loginInFlightRef.current = true;
-    setIsLoading(true);
-
-    try {
-      await login({ email: formData.email, password: formData.password });
-    } catch (error) {
-      // Extract the actual error message and code from the SDK/API response
-      const apiError = error?.response?.data;
-      const errorMessage = apiError?.message || error?.message || 'Invalid email or password';
-
-      if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED' || apiError?.code === 'TERMS_NOT_ACCEPTED') {
-        const email = apiError.email || formData.email;
-        setUnverifiedEmail(email);
-        setIsVerifyModalOpen(true);
-        return;
-      }
-
-      setError(errorMessage);
-
-      toast({
-        title: 'Login Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      loginInFlightRef.current = false;
-      setIsLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!forgotPasswordEmail) {
-      toast({
-        title: 'Error',
-        description: 'Please enter your email address',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSendingResetLink(true);
-    try {
-      // Call the forgot password from context
-      const success = await forgotPassword(forgotPasswordEmail);
-
-      if (success) {
-        toast({
-          title: 'Reset link sent',
-          description: 'If an account exists with this email, you will receive a password reset link.',
-        });
-        setShowForgotPassword(false);
-        setForgotPasswordEmail('');
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to send reset link. Please try again later.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error sending reset link:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to send reset link. Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSendingResetLink(false);
-    }
-  };
+  const {
+    formData,
+    handleInputChange,
+    handleSubmit,
+    error,
+    isLoading,
+    showPassword,
+    setShowPassword,
+    isVerifyModalOpen,
+    setIsVerifyModalOpen,
+    unverifiedEmail,
+    showForgotPassword,
+    setShowForgotPassword,
+    forgotPasswordEmail,
+    setForgotPasswordEmail,
+    handleForgotPassword,
+    isSendingResetLink,
+  } = useSellerLogin();
 
   return (
     <div
@@ -302,56 +207,7 @@ export function SellerLogin() {
       />
 
       {/* Forgot Password Dialog */}
-      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-        <DialogContent
-          className="w-[90%] sm:w-[95%] sm:max-w-[425px] rounded-2xl border shadow-2xl mx-4 sm:mx-auto"
-          style={{
-            background: '#ffffff',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid #e7e2d6',
-            boxShadow: '0 18px 45px rgba(17, 17, 17, 0.08)'
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold text-slate-950 tracking-tight">Forgot Password</DialogTitle>
-            <DialogDescription className="text-slate-500 font-normal">
-              Enter your email address and we'll send you a link to reset your password.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="forgot-email" className="text-xs font-medium text-slate-700">Email Address</Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none z-10">
-                  <Mail className="h-4 w-4 text-slate-400" />
-                </div>
-                <Input
-                  id="forgot-email"
-                  type="email"
-                  placeholder="your@email.com"
-                  className="!pl-12 h-10 rounded-xl bg-white border-slate-300 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
-                  value={forgotPasswordEmail}
-                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <Button
-              type="submit"
-              disabled={isSendingResetLink}
-              className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold tracking-tight transition-all duration-200 text-sm"
-            >
-              {isSendingResetLink ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : 'Send Reset Link'}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <SellerForgotPasswordDialog open={showForgotPassword} onOpenChange={setShowForgotPassword} email={forgotPasswordEmail} onEmailChange={setForgotPasswordEmail} onSubmit={handleForgotPassword} isSending={isSendingResetLink} />
     </div>
   );
 }

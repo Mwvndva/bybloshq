@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense, type TouchEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useBuyerOrdersQuery } from '@/hooks/buyer/queries/useBuyerOrdersQuery';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
@@ -9,7 +8,7 @@ import {
   Users, Store, Package
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useWishlist } from '@/contexts/useWishlist';
+import { useWishlist } from '@/hooks/useWishlist';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import WishlistSection from './WishlistSection';
 import SellersGrid from '@/components/SellersGrid';
@@ -19,14 +18,15 @@ import { BuyerDashboardSearch } from './dashboard/BuyerDashboardSearch';
 import { BuyerProfileSheet } from './dashboard/BuyerProfileSheet';
 import { MyShopsSection } from './dashboard/MyShopsSection';
 import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
+import { useBuyerSwipeNav } from './dashboard/hooks/useBuyerSwipeNav';
+import { useBuyerActiveSection } from './dashboard/hooks/useBuyerActiveSection';
+import { useBuyerProfileForm } from './dashboard/hooks/useBuyerProfileForm';
+import { useBuyerOrdersNotification } from './dashboard/hooks/useBuyerOrdersNotification';
 
 
 type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
 type BuyerSection = DashboardSection | 'profile';
 
-const SWIPE_NAV_SECTIONS: DashboardSection[] = ['shop', 'shops', 'wishlist', 'orders'];
-const SWIPE_MIN_DISTANCE = 64;
-const SWIPE_MAX_VERTICAL_DRIFT = 80;
 const PROFILE_CLOSE_NAV_DELAY_MS = 180;
 
 // Main dashboard component
@@ -36,121 +36,29 @@ function BuyerDashboard() {
   const { user, logout, updateBuyerProfile } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState<BuyerSection>(() => {
-    // Priority 1: Pathname (new standard for direct linking)
-    const pathname = location.pathname;
-    if (pathname.includes('/buyer/orders')) return 'orders';
-    if (pathname.includes('/buyer/shops')) return 'shops';
-    if (pathname.includes('/buyer/wishlist')) return 'wishlist';
-    if (pathname.includes('/buyer/profile')) return 'shop';
-
-    // Priority 2: Navigation state
-    const stateSection = (location.state as Record<string, unknown>)?.activeSection as string | undefined;
-    if (stateSection) return stateSection as BuyerSection;
-
-    // Priority 3: Query parameters (legacy support)
-    const queryParams = new URLSearchParams(location.search);
-    const querySection = queryParams.get('section') || queryParams.get('tab');
-    if (querySection === 'profile') return 'shop';
-    if (querySection && ['shop', 'shops', 'wishlist', 'orders'].includes(querySection)) {
-      return querySection as "shop" | "shops" | "wishlist" | "orders";
-    }
-
-    return 'shop';
-  });
-  const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState(false);
+  const { activeSection, setActiveSection, isProfileSidebarOpen, setIsProfileSidebarOpen } = useBuyerActiveSection();
   const profileCloseNavigationTimerRef = useRef<number | null>(null);
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Sync active section with URL changes
-  useEffect(() => {
-    const pathname = location.pathname;
-    const queryParams = new URLSearchParams(location.search);
-    const pathMapping: Record<string, typeof activeSection> = {
-      '/buyer/orders': 'orders',
-      '/buyer/shops': 'shops',
-      '/buyer/wishlist': 'wishlist',
-      '/buyer/profile': 'shop',
-      '/buyer/dashboard': 'shop'
-    };
-
-    const targetSection = pathMapping[pathname];
-    const shouldOpenProfileSidebar = pathname === '/buyer/profile'
-      || queryParams.get('section') === 'profile'
-      || queryParams.get('tab') === 'profile';
-
-    if (shouldOpenProfileSidebar) {
-      setIsProfileSidebarOpen(true);
-    } else {
-      setIsProfileSidebarOpen(false);
-    }
-    if (targetSection && targetSection !== activeSection) {
-      setActiveSection(targetSection);
-    }
-  }, [location.pathname, location.search, activeSection]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [fullName, setFullName] = useState<string>(user?.fullName || '');
-  const [city, setCity] = useState<string>(user?.city || '');
-  const [locationArea, setLocationArea] = useState<string>(user?.location || '');
-  const [mobilePayment, setMobilePayment] = useState<string>(user?.mobilePayment || '');
-  const [whatsappNumber, setWhatsappNumber] = useState<string>(user?.whatsappNumber || '');
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const {
+    isEditingProfile, setIsEditingProfile,
+    fullName, setFullName,
+    city, setCity,
+    locationArea, setLocationArea,
+    mobilePayment, setMobilePayment,
+    whatsappNumber, setWhatsappNumber,
+    isSavingProfile, handleSaveProfile,
+  } = useBuyerProfileForm((savedCity) => setFilterCity(savedCity));
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
   const [myShopsMobileTab, setMyShopsMobileTab] = useState<'online' | 'physical'>('online');
   const followedShops = useBuyerFollowedShops(shopsSearchQuery, activeSection === 'shops');
 
-  const ordersQuery = useBuyerOrdersQuery(!!user);
-  // Order notification state
-  const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
-  const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
-    localStorage.getItem('buyer_last_viewed_orders')
-  );
+  const { hasUnreadOrders, markOrdersViewed } = useBuyerOrdersNotification(!!user);
 
   const locationData: Record<string, string[]> = {
     'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
-  };
-
-  const handleSaveProfile = async () => {
-    if (!fullName || !city || !locationArea) {
-      toast({
-        title: "Missing Information",
-        description: "Full name, city, and location are required.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsSavingProfile(true);
-    try {
-      await updateBuyerProfile({
-        fullName,
-        city,
-        location: locationArea,
-        mobilePayment,
-        whatsappNumber
-      });
-
-      toast({
-        title: "Profile Updated",
-        description: "Your profile information has been saved successfully.",
-      });
-
-      // Update the filter city when profile is updated
-      setFilterCity(city);
-      setIsEditingProfile(false);
-    } catch (error) {
-      console.error('Failed to update profile', error);
-      toast({
-        title: "Update Failed",
-        description: "There was a problem saving your profile. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSavingProfile(false);
-    }
   };
 
   // Removed auto-filter by user location - now shows all products by default
@@ -160,28 +68,6 @@ function BuyerDashboard() {
   useEffect(() => {
     console.log('Filters updated:', { filterCity, filterArea });
   }, [filterCity, filterArea]);
-
-  // Check for order updates
-  useEffect(() => {
-    if (ordersQuery.data && ordersQuery.data.length > 0) {
-      // Get the most recent order update time (could be createdAt or updatedAt)
-      const latestUpdateTime = Math.max(
-        ...ordersQuery.data.map(order => {
-          const created = new Date(order.createdAt).getTime();
-          const updated = order.updatedAt ? new Date(order.updatedAt).getTime() : created;
-          return Math.max(created, updated);
-        })
-      );
-
-      const lastViewed = lastViewedOrdersTime
-        ? new Date(lastViewedOrdersTime).getTime()
-        : 0;
-
-      setHasUnreadOrders(latestUpdateTime > lastViewed);
-    } else {
-      setHasUnreadOrders(false);
-    }
-  }, [ordersQuery.data, lastViewedOrdersTime]);
 
   const handleLogout = () => {
     logout();
@@ -273,42 +159,12 @@ function BuyerDashboard() {
     setIsEditingProfile(false);
     navigate(`/buyer/${pathMap[key]}`);
     if (key === 'orders') {
-      const now = new Date().toISOString();
-      setLastViewedOrdersTime(now);
-      localStorage.setItem('buyer_last_viewed_orders', now);
-      setHasUnreadOrders(false);
+      markOrdersViewed();
     }
   };
 
-  const handleDashboardTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    if (isProfileSidebarOpen || event.touches.length !== 1) return;
-    const touch = event.touches[0];
-    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
-  };
+  const { onTouchStart: handleDashboardTouchStart, onTouchEnd: handleDashboardTouchEnd } = useBuyerSwipeNav(activeSection, isProfileSidebarOpen, setActiveTab);
 
-  const handleDashboardTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
-    const start = swipeStartRef.current;
-    swipeStartRef.current = null;
-
-    if (!start || isProfileSidebarOpen || event.changedTouches.length !== 1) return;
-    if (!SWIPE_NAV_SECTIONS.includes(activeSection as DashboardSection)) return;
-
-    const touch = event.changedTouches[0];
-    const deltaX = touch.clientX - start.x;
-    const deltaY = touch.clientY - start.y;
-
-    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE || Math.abs(deltaY) > SWIPE_MAX_VERTICAL_DRIFT) {
-      return;
-    }
-
-    const currentIndex = SWIPE_NAV_SECTIONS.indexOf(activeSection as DashboardSection);
-    const targetIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-    const targetSection = SWIPE_NAV_SECTIONS[targetIndex];
-
-    if (targetSection) {
-      setActiveTab(targetSection);
-    }
-  };
 
   return (
     <div className="page-enter byblos-light-page min-w-0 overflow-x-hidden" style={{

@@ -78,7 +78,7 @@ vi.mock('@/features/auth/contexts', () => ({
   useSellerAuth: () => mocks.auth.seller,
 }));
 
-vi.mock('@/contexts/useWishlist', () => ({
+vi.mock('@/hooks/useWishlist', () => ({
   useWishlist: () => ({ wishlist: [] }),
 }));
 

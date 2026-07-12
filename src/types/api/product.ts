@@ -1,4 +1,4 @@
-import type { ProductType } from '../index';
+import type { ProductType } from '../primitives';
 
 // Used in public transforms (public buyer-facing API)
 export interface ApiProduct {
