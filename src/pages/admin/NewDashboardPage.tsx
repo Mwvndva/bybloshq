@@ -34,6 +34,8 @@ import { AdminLogisticsTab } from './components/AdminLogisticsTab';
 import { AdminSellersTab } from './components/AdminSellersTab';
 import { AdminCreatorsTab } from './components/AdminCreatorsTab';
 import { AdminBuyersTab } from './components/AdminBuyersTab';
+import { AdminWithdrawalsTab } from './components/AdminWithdrawalsTab';
+import { AdminClientsTab } from './components/AdminClientsTab';
 import {
   StatsCard,
   type StatsCardProps
@@ -721,160 +723,20 @@ const NewAdminDashboard = () => {
 
             {/* Withdrawals Tab */}
             <TabsContent value="withdrawals" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                <CardHeader className="p-5 md:p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
-                  <div>
-                    <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Liquidity Requests</CardTitle>
-                    <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Outbound capital movements and merchant payouts</CardDescription>
-                  </div>
-                  <div className="relative group w-full md:w-auto">
-                    <div className="absolute -inset-0.5 bg-green-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-green-500 transition-colors" />
-                    <Input
-                      type="text"
-                      placeholder="Filter transactions..."
-                      className="pl-12 w-full md:w-[320px] lg:w-[400px] h-11 md:h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-green-500/50 focus:ring-green-500/10 transition-all font-medium text-sm"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </CardHeader>
-                <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.012] p-5 md:grid-cols-3 md:p-8">
-                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-200/70">Open orders</p>
-                      <Activity className="h-4 w-4 text-blue-300" />
-                    </div>
-                    <p className="mt-3 text-2xl font-black text-white tabular-nums">{dashboardState.analytics.activeOrders?.toLocaleString() || '0'}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-100/50">Paid and not closed</p>
-                  </div>
-                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200/70">Pending payouts</p>
-                      <DollarSign className="h-4 w-4 text-emerald-300" />
-                    </div>
-                    <p className="mt-3 text-2xl font-black text-white tabular-nums">{pendingPayoutRequests.length.toLocaleString()}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-emerald-100/50">Awaiting settlement</p>
-                  </div>
-                  <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/[0.06] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/70">Pending payout value</p>
-                      <TrendingUp className="h-4 w-4 text-yellow-300" />
-                    </div>
-                    <p className="mt-3 text-2xl font-black text-white tabular-nums">KSh {pendingPayoutAmount.toLocaleString()}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-yellow-100/50">Capital waiting to leave</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.015] p-5 md:grid-cols-3 md:p-8">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Provider health</p>
-                    <div className="mt-3 flex items-center gap-3">
-                      <span className={`h-2.5 w-2.5 rounded-full ${providerHealthOk ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                      <p className="text-sm font-black text-white">{providerHealthOk ? 'Connected' : providerHealthAvailable ? 'Check needed' : 'Loading'}</p>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payment provider balance/status</p>
-                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(providerHealth?.payin)}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Pay-in account</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Payment provider balance/status</p>
-                    <p className="mt-3 text-sm font-black text-white">{formatProviderBalance(providerHealth?.payout)}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Payout account</p>
-                  </div>
-                </div>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                        <tr>
-                          <th className="px-5 md:px-8 py-4 md:py-6">Merchant Beneficiary</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 text-right sm:text-left">Capital Amount</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 hidden xl:table-cell">Provider reference</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Protocol Status</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 text-right">Settlement</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {dashboardState.withdrawalRequests?.map((request) => (
-                          <tr key={request.id} className="hover:bg-white/[0.02] transition-all group">
-                            <td className="px-5 md:px-8 py-4 md:py-6">
-                              <div className="space-y-1">
-                                <p className="text-sm md:text-base font-black text-white tracking-tight">{request.sellerName}</p>
-                                <p className="text-[10px] text-gray-500 font-medium italic opacity-60 truncate max-w-[150px]">{request.sellerEmail}</p>
-                              </div>
-                            </td>
-                            <td className="px-5 md:px-8 py-4 md:py-6 text-right sm:text-left">
-                              <p className="text-sm md:text-lg font-black text-white tracking-tighter tabular-nums">KSh {request.amount.toLocaleString()}</p>
-                              <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">{safeFormatDate(request.createdAt)}</p>
-                            </td>
-                            <td className="px-8 py-6 hidden xl:table-cell">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
-                                  <DollarSign className="h-4 w-4 text-green-500" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-bold text-gray-300 font-mono">{request.providerReference || 'Pending provider reference'}</p>
-                                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">{request.mpesaNumber} · {request.mpesaName}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">
-                              <Badge className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none 
-                              ${request.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' :
-                                  request.status === 'approved' ? 'bg-green-500/10 text-green-400' :
-                                    request.status === 'rejected' ? 'bg-red-500/10 text-red-500' :
-                                      'bg-blue-500/10 text-blue-400'}`}>
-                                {request.status}
-                              </Badge>
-                            </td>
-                            <td className="px-5 md:px-8 py-4 md:py-6 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {request.status === 'pending' ? (
-                                  <>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-9 md:h-10 px-3 md:px-4 rounded-xl border-white/10 bg-white/5 text-green-500 hover:bg-green-500 hover:text-black font-black uppercase tracking-widest text-[9px] border transition-all"
-                                      onClick={() => handleWithdrawalRequestAction(request.id, 'approved')}
-                                    >
-                                      <CheckCircle className="h-3 md:h-3.5 w-3 md:w-3.5" />
-                                      <span className="hidden sm:inline ml-2">Approve</span>
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-9 md:h-10 px-3 md:px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[9px] border transition-all"
-                                      onClick={() => handleWithdrawalRequestAction(request.id, 'rejected')}
-                                    >
-                                      <XCircle className="h-3 md:h-3.5 w-3 md:w-3.5" />
-                                      <span className="hidden sm:inline ml-2">Veto</span>
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <span className="text-[9px] md:text-[10px] font-black text-gray-600 uppercase tracking-widest italic">
-                                    {request.status}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-                <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
-                  <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
-                    Total Liquidity Flow: <span className="text-white ml-2 tabular-nums">{dashboardState.withdrawalRequests?.length || 0} Entries</span>
-                  </p>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Prev</Button>
-                    <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Next</Button>
-                  </div>
-                </CardFooter>
-              </Card>
+              <AdminWithdrawalsTab
+                withdrawalRequests={dashboardState.withdrawalRequests}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                activeOrders={dashboardState.analytics.activeOrders}
+                pendingPayoutCount={pendingPayoutRequests.length}
+                pendingPayoutAmount={pendingPayoutAmount}
+                providerHealth={providerHealth}
+                providerHealthOk={providerHealthOk}
+                providerHealthAvailable={providerHealthAvailable}
+                formatProviderBalance={formatProviderBalance}
+                formatDate={safeFormatDate}
+                onAction={handleWithdrawalRequestAction}
+              />
             </TabsContent>
 
             <TabsContent value="logistics" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -890,80 +752,12 @@ const NewAdminDashboard = () => {
 
             {/* Clients Tab */}
             <TabsContent value="clients" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                <CardHeader className="p-5 md:p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
-                  <div>
-                    <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Client Network</CardTitle>
-                    <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Global mapping of customers and their associated merchants</CardDescription>
-                  </div>
-                  <div className="relative group w-full md:w-auto">
-                    <div className="absolute -inset-0.5 bg-pink-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-pink-500 transition-colors" />
-                    <Input
-                      type="text"
-                      placeholder="Search relations..."
-                      className="pl-12 w-full md:w-[320px] lg:w-[400px] h-11 md:h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-pink-500/50 focus:ring-pink-500/10 transition-all font-medium text-sm"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                        <tr>
-                          <th className="px-5 md:px-8 py-4 md:py-6">Customer Network Node</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 hidden md:table-cell">Associated Merchant</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Contact Protocol</th>
-                          <th className="px-5 md:px-8 py-4 md:py-6 text-right">Activity</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {((dashboardState.clients || []) as Array<Record<string, unknown>>).filter(c =>
-                          String(c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          String(c.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          String(c.sellerName || '').toLowerCase().includes(searchQuery.toLowerCase())
-                        ).map((client) => (
-                          <tr key={String(client.id)} className="hover:bg-white/[0.02] transition-all group">
-                            <td className="px-5 md:px-8 py-4 md:py-6">
-                              <div className="flex items-center gap-3 md:gap-5">
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-pink-500/30 transition-all shadow-inner">
-                                  <Users2 className="w-4 h-4 md:w-5 md:h-5 text-gray-500 group-hover:text-pink-500 transition-all" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm md:text-base font-black text-white tracking-tight truncate">{String(client.name || '')}</p>
-                                  <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50 truncate">CID: {String(client.id).slice(0, 12)}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-5 md:px-8 py-4 md:py-6 hidden md:table-cell">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-yellow-500/5 flex items-center justify-center border border-yellow-500/10">
-                                  <Store className="w-3.5 h-3.5 text-yellow-500/50" />
-                                </div>
-                                <span className="text-sm font-bold text-gray-300 tracking-tight">{String(client.sellerName || '')}</span>
-                              </div>
-                            </td>
-                            <td className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/5 flex items-center justify-center border border-blue-500/10">
-                                  <Mail className="w-3.5 h-3.5 text-blue-500/50" />
-                                </div>
-                                <span className="text-sm font-medium text-gray-400 italic lowercase">{String(client.email || '')}</span>
-                              </div>
-                            </td>
-                            <td className="px-5 md:px-8 py-4 md:py-6 text-right">
-                              <p className="text-[10px] md:text-sm font-bold text-gray-400 tabular-nums">{safeFormatDate(client.createdAt as string)}</p>
-                              <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mt-0.5 hidden sm:block">First Seen</p>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
+              <AdminClientsTab
+                clients={dashboardState.clients}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                formatDate={safeFormatDate}
+              />
             </TabsContent>
           </Tabs>
         </div>
