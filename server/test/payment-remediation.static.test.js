@@ -1193,7 +1193,7 @@ test('webhook rate limiting protects requests with local fallback', () => {
 });
 
 test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for money state', () => {
-  const service = read('src/services/logisticsDashboard.service.js');
+  const service = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const middleware = read('src/middleware/logisticsAuth.js');
   const routes = read('src/routes/logistics.routes.js');
   const routeIndex = read('src/routes/index.js');
@@ -1258,7 +1258,7 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
 test('admin logistics oversight can inspect, override, and resolve disputes without touching money state', () => {
   const adminRoutes = read('src/routes/admin.routes.js');
   const adminController = read('src/controllers/admin.controller.js');
-  const service = read('src/services/logisticsDashboard.service.js');
+  const service = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const escrowManager = read('src/services/EscrowManager.js');
   const orderService = read('src/services/order.service.js');
   const adminApi = read('../src/api/adminApi.ts');
@@ -1313,7 +1313,7 @@ test('admin logistics oversight can inspect, override, and resolve disputes with
 test('logistics regression contracts cover optional delivery, grouping, idempotency, transitions, and milestone dedupe', () => {
   const paymentService = read('src/services/paymentLifecycle.service.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
-  const logisticsDashboardService = read('src/services/logisticsDashboard.service.js');
+  const logisticsDashboardService = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const logisticsMigration = read('migrations/20260510010000_add_logistics_data_model.sql');
   const deliveredLogisticsSyncMigration = read('migrations/20260512170000_sync_delivered_logistics_ready_for_buyer.sql');
   const logisticsEvents = read('src/events/logistics.events.js');
@@ -1426,7 +1426,7 @@ test('logistics WhatsApp notifications are milestone-only and notification-only'
   const logisticsEvents = read('src/events/logistics.events.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
   const logisticsTrackingLinkService = read('src/services/logisticsTrackingLink.service.js');
-  const logisticsDashboardService = read('src/services/logisticsDashboard.service.js');
+  const logisticsDashboardService = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const orderEvents = read('src/events/order.events.js');
   const whatsappService = read('src/services/whatsapp.service.js');
 
