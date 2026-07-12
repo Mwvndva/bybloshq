@@ -121,3 +121,7 @@ export interface DashboardState {
   topShops: unknown[];
   providerHealth: unknown;
 }
+
+export type AdminSeller = DashboardState['sellers'][number];
+export type AdminCreator = DashboardState['creators'][number];
+export type AdminBuyer = DashboardState['buyers'][number];
