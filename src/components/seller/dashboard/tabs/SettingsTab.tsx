@@ -12,6 +12,9 @@ import { getSellerInitials } from '../dashboardUtils';
 import { getShopUrl, getShopUsername } from '@/lib/shopLinks';
 import type { SellerSettingsFormData } from '../types';
 import { SellerAmbassadorInvites } from './SellerAmbassadorInvites';
+import { SectionHeader, SocialInput } from './settingsTab.parts';
+import { SettingsBusinessProfileSection } from './SettingsBusinessProfileSection';
+import { SettingsLocationSection } from './SettingsLocationSection';
 import type { LocationCoordinates } from '@/lib/location';
 
 
@@ -100,114 +103,17 @@ export function SettingsTab({
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-        <SectionHeader title="Business Profile" description="The core identity buyers see on your shop page." />
-        <div className="mt-5 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(220px,320px)_minmax(0,1fr)]">
-          <div className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <BusinessPhotoUpload
-              currentPhotoUrl={sellerProfile?.avatarUrl}
-              fallbackInitials={getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}
-              onPhotoUploaded={handleBusinessPhotoUploaded}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
-              <BannerUpload
-                currentBannerUrl={sellerProfile?.bannerImage}
-                onBannerUploaded={() => undefined}
-              />
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Shop Name</p>
-              {isEditing ? (
-                <div className="space-y-1">
-                  <div className="relative">
-                    <Input
-                      name="shopName"
-                      value={formData.shopName}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\s/g, '');
-                        setFormData(prev => ({ ...prev, shopName: val }));
-                      }}
-                      placeholder="Shop Name"
-                      className={`h-10 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400 pr-10 ${formData.shopName !== sellerProfile?.shopName && shopNameAvailable === false ? 'border-red-500 focus:border-red-500' :
-                        formData.shopName !== sellerProfile?.shopName && shopNameAvailable === true ? 'border-green-500 focus:border-green-500' : ''
-                        }`}
-                    />
-                    {isCheckingShopName && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-                    )}
-                    {!isCheckingShopName && formData.shopName && formData.shopName !== sellerProfile?.shopName && shopNameAvailable !== null && (
-                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full ${shopNameAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
-                    )}
-                  </div>
-                  {formData.shopName !== sellerProfile?.shopName && shopNameAvailable !== null && !isCheckingShopName && (
-                    <p className={`text-[10px] ${shopNameAvailable ? 'text-green-400' : 'text-red-400'}`}>
-                      {shopNameAvailable ? 'Name available' : 'Name already taken'}
-                    </p>
-                  )}
-                  {previewShopUsername && (
-                    <a
-                      href={previewShopUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block truncate text-[10px] font-bold text-slate-600 underline decoration-yellow-400 underline-offset-2"
-                      title={previewShopUrl}
-                    >
-                      {previewShopUsername}
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.shopName || 'Not set'}>
-                  {sellerProfile?.shopName || 'Not set'}
-                </p>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Full Name</p>
-              {isEditing ? (
-                <Input
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                  placeholder="Your Full Name"
-                  className="h-10 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400"
-                />
-              ) : (
-                <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.fullName || 'Not set'}>
-                  {sellerProfile?.fullName || 'Not set'}
-                </p>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
-              <div className="flex items-center justify-between gap-3 mb-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-600">Shop Bio</p>
-                {isEditing && (
-                  <span className="text-[10px] text-slate-500">{formData.bio.length}/500</span>
-                )}
-              </div>
-              {isEditing ? (
-                <Textarea
-                  name="bio"
-                  value={formData.bio}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value.slice(0, 500) }))}
-                  placeholder="Tell buyers what your shop offers."
-                  className="min-h-[92px] text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400 resize-none"
-                />
-              ) : (
-                <p className="text-sm sm:text-base font-semibold text-slate-950 whitespace-pre-line break-words">
-                  {sellerProfile?.bio || 'Not set'}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      <SettingsBusinessProfileSection
+        sellerProfile={sellerProfile}
+        handleBusinessPhotoUploaded={handleBusinessPhotoUploaded}
+        isEditing={isEditing}
+        formData={formData}
+        setFormData={setFormData}
+        shopNameAvailable={shopNameAvailable}
+        isCheckingShopName={isCheckingShopName}
+        previewShopUsername={previewShopUsername}
+        previewShopUrl={previewShopUrl}
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
         <ThemeSelector
@@ -273,131 +179,20 @@ export function SettingsTab({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <SectionHeader title="Location Settings" description="Set where buyers collect orders from your physical shop." />
-              {!isEditing && (
-                <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-auto">
-                  <button
-                    onClick={toggleEdit}
-                    className="text-xs sm:text-sm text-yellow-700 hover:text-yellow-800 font-medium flex items-center justify-center gap-1"
-                  >
-                    <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    Edit Location
-                  </button>
-                  {(sellerProfile?.physicalAddress || sellerProfile?.latitude || sellerProfile?.longitude) && (
-                    <button
-                      type="button"
-                      onClick={handleDeleteLocation}
-                      disabled={isDeletingLocation}
-                      className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {isDeletingLocation ? (
-                        <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      )}
-                      Delete Location
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">City</p>
-                {isEditing ? (
-                  <select
-                    name="city"
-                    value={formData.city}
-                    onChange={handleCityChange}
-                    className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 bg-white text-slate-950"
-                  >
-                    <option value="">Select a city</option>
-                    {Object.keys(cities).map(city => (
-                      <option key={city} value={city}>{city}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-950">
-                    {sellerProfile?.city || 'Not set'}
-                  </p>
-                )}
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Location/Area</p>
-                {isEditing ? (
-                  <select
-                    name="location"
-                    value={formData.location}
-                    onChange={handleLocationChange}
-                    className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 bg-white text-slate-950"
-                    disabled={!formData.city}
-                  >
-                    <option value="">Select a location</option>
-                    {getLocations().map(location => (
-                      <option key={location} value={location}>{location}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-950">
-                    {sellerProfile?.location || 'Not set'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Physical Shop Address</p>
-              {isEditing ? (
-                <div className="mt-2 space-y-3">
-                  <ShopLocationPicker
-                    initialAddress={formData.physicalAddress}
-                    initialCoordinates={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
-                    onLocationChange={handleShopLocationChange}
-                  />
-                  {(formData.physicalAddress || formData.latitude || formData.longitude || sellerProfile?.physicalAddress) && (
-                    <button
-                      type="button"
-                      onClick={handleDeleteLocation}
-                      disabled={isDeletingLocation || isSaving}
-                      className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {isDeletingLocation ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                      Delete Location
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {sellerProfile?.physicalAddress ? (
-                    <>
-                      <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-950">
-                        {sellerProfile.physicalAddress}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {sellerProfile.latitude && sellerProfile.longitude
-                          ? `Coordinates: ${Number(sellerProfile.latitude).toFixed(6)}, ${Number(sellerProfile.longitude).toFixed(6)}`
-                          : 'No map location pinned'}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-500 italic">
-                      No physical address set
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-      </section>
+      <SettingsLocationSection
+        isEditing={isEditing}
+        toggleEdit={toggleEdit}
+        sellerProfile={sellerProfile}
+        handleDeleteLocation={handleDeleteLocation}
+        isDeletingLocation={isDeletingLocation}
+        formData={formData}
+        handleCityChange={handleCityChange}
+        cities={cities}
+        handleLocationChange={handleLocationChange}
+        getLocations={getLocations}
+        handleShopLocationChange={handleShopLocationChange}
+        isSaving={isSaving}
+      />
 
       <SellerAmbassadorInvites formData={formData} setFormData={setFormData} isEditing={isEditing} toggleEdit={toggleEdit} />
 
@@ -417,58 +212,3 @@ export function SettingsTab({
     </div>
   );
 }
-
-function SectionHeader({ title, description }: { title: string; description: string }) {
-  return (
-    <div>
-      <h3 className="text-base font-black tracking-tight text-slate-950 sm:text-lg">{title}</h3>
-      <p className="mt-1 text-xs font-medium text-slate-600 sm:text-sm">{description}</p>
-    </div>
-  );
-}
-
-interface SocialInputProps {
-  displayValue?: string;
-  iconPath: React.ReactNode;
-  isEditing: boolean;
-  label: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  value: string;
-}
-
-function SocialInput({ displayValue, iconPath, isEditing, label, onChange, placeholder, value }: SocialInputProps) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">{label}</p>
-      {isEditing ? (
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="h-10 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400"
-        />
-      ) : (
-        <div className="flex items-center gap-2">
-          {displayValue ? (
-            <a
-              href={displayValue}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm sm:text-base lg:text-lg font-semibold text-blue-700 hover:underline flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {iconPath}
-              </svg>
-              View
-            </a>
-          ) : (
-            <p className="text-sm sm:text-base font-semibold text-slate-500 italic">Not set</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
