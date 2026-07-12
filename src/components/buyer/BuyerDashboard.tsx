@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useBuyerOrdersQuery } from '@/hooks/buyer/queries/useBuyerOrdersQuery';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
@@ -21,6 +20,8 @@ import { MyShopsSection } from './dashboard/MyShopsSection';
 import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
 import { useBuyerSwipeNav } from './dashboard/hooks/useBuyerSwipeNav';
 import { useBuyerActiveSection } from './dashboard/hooks/useBuyerActiveSection';
+import { useBuyerProfileForm } from './dashboard/hooks/useBuyerProfileForm';
+import { useBuyerOrdersNotification } from './dashboard/hooks/useBuyerOrdersNotification';
 
 
 type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
@@ -41,66 +42,23 @@ function BuyerDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [fullName, setFullName] = useState<string>(user?.fullName || '');
-  const [city, setCity] = useState<string>(user?.city || '');
-  const [locationArea, setLocationArea] = useState<string>(user?.location || '');
-  const [mobilePayment, setMobilePayment] = useState<string>(user?.mobilePayment || '');
-  const [whatsappNumber, setWhatsappNumber] = useState<string>(user?.whatsappNumber || '');
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const {
+    isEditingProfile, setIsEditingProfile,
+    fullName, setFullName,
+    city, setCity,
+    locationArea, setLocationArea,
+    mobilePayment, setMobilePayment,
+    whatsappNumber, setWhatsappNumber,
+    isSavingProfile, handleSaveProfile,
+  } = useBuyerProfileForm((savedCity) => setFilterCity(savedCity));
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
   const [myShopsMobileTab, setMyShopsMobileTab] = useState<'online' | 'physical'>('online');
   const followedShops = useBuyerFollowedShops(shopsSearchQuery, activeSection === 'shops');
 
-  const ordersQuery = useBuyerOrdersQuery(!!user);
-  // Order notification state
-  const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
-  const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
-    localStorage.getItem('buyer_last_viewed_orders')
-  );
+  const { hasUnreadOrders, markOrdersViewed } = useBuyerOrdersNotification(!!user);
 
   const locationData: Record<string, string[]> = {
     'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
-  };
-
-  const handleSaveProfile = async () => {
-    if (!fullName || !city || !locationArea) {
-      toast({
-        title: "Missing Information",
-        description: "Full name, city, and location are required.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsSavingProfile(true);
-    try {
-      await updateBuyerProfile({
-        fullName,
-        city,
-        location: locationArea,
-        mobilePayment,
-        whatsappNumber
-      });
-
-      toast({
-        title: "Profile Updated",
-        description: "Your profile information has been saved successfully.",
-      });
-
-      // Update the filter city when profile is updated
-      setFilterCity(city);
-      setIsEditingProfile(false);
-    } catch (error) {
-      console.error('Failed to update profile', error);
-      toast({
-        title: "Update Failed",
-        description: "There was a problem saving your profile. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSavingProfile(false);
-    }
   };
 
   // Removed auto-filter by user location - now shows all products by default
@@ -110,28 +68,6 @@ function BuyerDashboard() {
   useEffect(() => {
     console.log('Filters updated:', { filterCity, filterArea });
   }, [filterCity, filterArea]);
-
-  // Check for order updates
-  useEffect(() => {
-    if (ordersQuery.data && ordersQuery.data.length > 0) {
-      // Get the most recent order update time (could be createdAt or updatedAt)
-      const latestUpdateTime = Math.max(
-        ...ordersQuery.data.map(order => {
-          const created = new Date(order.createdAt).getTime();
-          const updated = order.updatedAt ? new Date(order.updatedAt).getTime() : created;
-          return Math.max(created, updated);
-        })
-      );
-
-      const lastViewed = lastViewedOrdersTime
-        ? new Date(lastViewedOrdersTime).getTime()
-        : 0;
-
-      setHasUnreadOrders(latestUpdateTime > lastViewed);
-    } else {
-      setHasUnreadOrders(false);
-    }
-  }, [ordersQuery.data, lastViewedOrdersTime]);
 
   const handleLogout = () => {
     logout();
@@ -223,10 +159,7 @@ function BuyerDashboard() {
     setIsEditingProfile(false);
     navigate(`/buyer/${pathMap[key]}`);
     if (key === 'orders') {
-      const now = new Date().toISOString();
-      setLastViewedOrdersTime(now);
-      localStorage.setItem('buyer_last_viewed_orders', now);
-      setHasUnreadOrders(false);
+      markOrdersViewed();
     }
   };
 
