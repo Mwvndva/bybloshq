@@ -1,6 +1,6 @@
 import { createBrowserRouter, Outlet } from "react-router-dom";
 
-import { AppProviders } from "@/components/AppProviders";
+import { AppProviders } from "@/app/providers/AppProviders";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { RootErrorElement } from "@/components/common/ErrorBoundary";
 import NotFound from "@/pages/NotFound";

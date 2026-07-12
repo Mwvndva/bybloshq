@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
+import type { Theme } from '@/types';
 
-export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+export type { Theme };
 
 export interface ThemeClasses {
     bgGradient: string;

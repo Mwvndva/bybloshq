@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { RouteObject, Navigate } from 'react-router-dom';
 import { SellerProtectedRoute } from '@/components/auth/AppProtectedRoute';
-import { SellerLayout } from '../layouts/SellerLayout';
+import { SellerLayout } from '@/app/layouts/SellerLayout';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
 
