@@ -116,7 +116,7 @@ export function BuyerOrderDialogs({
         </DialogContent>
       </Dialog>
 
-      <OrderDetailsDialog order={selectedOrderForDetails} serviceCharge={selectedOrderServiceCharge} onClose={() => onSelectedOrderChange(null)} onViewImage={onViewingImageChange} />
+      <OrderDetailsDialog order={selectedOrderForDetails} serviceCharge={selectedOrderServiceCharge} onClose={() => onSelectedOrderChange(null)} onViewImage={onViewingImageChange} onConfirmReceiptClick={onConfirmReceiptClick} />
 
       <Dialog open={showReceiptDialog} onOpenChange={onReceiptDialogChange}>
         <DialogContent className="sm:max-w-[425px] bg-black border border-white/15 text-white shadow-xl shadow-black/60">

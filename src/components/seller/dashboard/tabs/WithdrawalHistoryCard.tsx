@@ -1,4 +1,6 @@
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { getWithdrawalFee } from '../dashboardUtils';
 import type { ApiWithdrawalRequest } from '@/types/api/withdrawal';
 import { formatKes, formatSettlementTime } from './withdrawalsTab.utils';
 

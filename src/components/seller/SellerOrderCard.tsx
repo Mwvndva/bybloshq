@@ -11,6 +11,7 @@ import { formatCurrency, formatDate, getEffectiveFulfillmentType, HUB_DROPOFF_LO
 interface SellerOrderCardProps {
   order: ApiOrder;
   isUpdating: boolean;
+  isRequestingPickup: boolean;
   onReadyForPickup: (orderId: string, action?: 'hub_dropoff' | 'shop_ready') => void;
   onRequestPickup: (order: ApiOrder) => void;
   onSelectHubDropoff: (orderId: string) => void;
@@ -19,7 +20,7 @@ interface SellerOrderCardProps {
   onCancel: (orderId: string) => void;
 }
 
-export function SellerOrderCard({ order, isUpdating, onReadyForPickup, onRequestPickup, onSelectHubDropoff, onMarkServiceReady, onConfirmBooking, onCancel }: SellerOrderCardProps) {
+export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReadyForPickup, onRequestPickup, onSelectHubDropoff, onMarkServiceReady, onConfirmBooking, onCancel }: SellerOrderCardProps) {
                             const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                             const isDigital = order.items?.some(i => i.productType === 'digital');
                             const isPhysicalOrder = !isService && !isDigital;

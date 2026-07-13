@@ -24,7 +24,7 @@ export interface BuyerInfo {
   confirmPassword?: string;
 }
 
-interface BuyerInfoModalProps {
+export interface BuyerInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (buyerInfo: BuyerInfo) => Promise<void>;
@@ -59,7 +59,7 @@ export function BuyerInfoModal({
     handleClose,
     checkPasswordStrength,
     themeClasses,
-  } = useBuyerInfoModal({ isOpen, onClose, onSubmit, theme, phoneNumber, initialData });
+  } = useBuyerInfoModal({ isOpen, onClose, onSubmit, isLoading, theme, phoneNumber, initialData });
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -79,6 +79,7 @@ export function BuyerInfoModal({
           checkPasswordStrength={checkPasswordStrength}
           themeClasses={themeClasses}
           isLoading={isLoading}
+          handleClose={handleClose}
         />
         <TermsModal
           isOpen={isTermsModalOpen}

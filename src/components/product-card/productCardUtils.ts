@@ -1,4 +1,5 @@
 import type { Product, Theme } from '@/types';
+export type { Theme };
 import type { ApiSellerProduct, ApiProduct } from '@/types/api/product';
 type ProductWithApiFields = Product & Partial<ApiSellerProduct> & Partial<ApiProduct>;
 
