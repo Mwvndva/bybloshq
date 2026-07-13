@@ -1,9 +1,9 @@
-import { BadgeDollarSign, Clock, Link as LinkIcon, Package, ShoppingBag, UserRoundCheck } from 'lucide-react';
+import { BadgeDollarSign, Clock, Heart, Megaphone, MousePointerClick, Package, UserRoundCheck, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getShopUrl, getShopUsername } from '@/lib/shopLinks';
+import { getShopUsername } from '@/lib/shopLinks';
 import { formatOrderStatusLabel, getPendingStatusStyles } from '../dashboardUtils';
 import type { AnalyticsData, RecentOrder } from '../types';
 
@@ -19,12 +19,15 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const monthlySales = analytics.monthlySales || [];
   const latestMonthSales = monthlySales[monthlySales.length - 1]?.sales || 0;
   const shopUsername = getShopUsername(sellerProfile?.shopName);
-  const shopUrl = getShopUrl(sellerProfile?.shopName);
   const overviewCards = [
+    { label: 'Balance', value: formatCurrency(analytics.availableBalance ?? analytics.balance ?? 0), icon: Wallet },
+    { label: 'Revenue', value: formatCurrency(analytics.totalRevenue || 0), icon: BadgeDollarSign },
+    { label: 'Clicks', value: Number(analytics.clickCount || 0).toLocaleString(), icon: MousePointerClick },
+    { label: 'Wishlist', value: Number(analytics.wishlistCount || 0).toLocaleString(), icon: Heart },
     { label: 'Live products', value: Number(analytics.totalProducts || 0).toLocaleString(), icon: Package },
-    { label: 'Order value', value: formatCurrency(analytics.totalSales || 0), icon: ShoppingBag },
-    { label: 'Ambassador sales', value: formatCurrency(analytics.creatorGeneratedSales || 0), icon: BadgeDollarSign },
-    { label: 'Ambassadors', value: Number(analytics.creatorCount || 0).toLocaleString(), icon: UserRoundCheck }
+    { label: 'Ambassador sales', value: formatCurrency(analytics.creatorGeneratedSales || 0), icon: Megaphone },
+    { label: 'Ambassadors', value: Number(analytics.creatorCount || 0).toLocaleString(), icon: UserRoundCheck },
+    { label: 'Awaiting fulfillment', value: Number(pendingOverviewOrders.length || 0).toLocaleString(), icon: Clock }
   ];
 
   return (
@@ -36,16 +39,6 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
         </div>
         {shopUsername && (
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <a
-              href={shopUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-950 hover:bg-slate-50 sm:w-auto"
-              title={shopUrl}
-            >
-              <LinkIcon className="h-3 w-3" />
-              {shopUsername}
-            </a>
             <Button
               variant="outline"
               size="sm"
