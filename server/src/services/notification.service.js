@@ -1,5 +1,6 @@
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
+import { sendFcmV1, isFcmConfigured } from '../config/fcm.js';
 
 const VALID_CHANNELS = new Set(['in_app', 'push', 'whatsapp', 'email']);
 const VALID_PLATFORMS = new Set(['android', 'ios', 'web']);
@@ -149,42 +150,46 @@ class NotificationService {
             return { delivered: false, reason: 'no_active_device_tokens' };
         }
 
-        if (!process.env.FCM_SERVER_KEY) {
-            logger.info('[NotificationService] Push skipped: FCM_SERVER_KEY not configured', {
+        if (!isFcmConfigured()) {
+            logger.info('[NotificationService] Push skipped: FCM service account not configured', {
                 recipientUserId,
                 tokenCount: tokens.length
             });
             return { delivered: false, reason: 'push_provider_not_configured', tokenCount: tokens.length };
         }
 
+        const stringData = Object.fromEntries(
+            Object.entries(data || {}).map(([key, value]) => [key, String(value ?? '')])
+        );
+
         const responses = [];
+        const invalidTokens = [];
         for (const device of tokens) {
-            const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-                method: 'POST',
-                headers: {
-                    Authorization: `key=${process.env.FCM_SERVER_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    to: device.token,
-                    notification: { title, body },
-                    data: Object.fromEntries(
-                        Object.entries(data || {}).map(([key, value]) => [key, String(value ?? '')])
-                    )
-                })
-            });
+            const result = await sendFcmV1({ token: device.token, title, body, data: stringData });
+            responses.push({ ok: result.ok, status: result.status });
 
-            const payload = await response.json().catch(() => ({}));
-            responses.push({ ok: response.ok, status: response.status, payload });
-
-            if (!response.ok || payload?.failure > 0) {
+            if (!result.ok) {
                 logger.warn('[NotificationService] Push provider returned a non-success response', {
                     recipientUserId,
                     platform: device.platform,
-                    status: response.status,
-                    payload
+                    status: result.status,
+                    error: result.error
                 });
+                if (result.unregistered) {
+                    invalidTokens.push(device.token);
+                }
             }
+        }
+
+        if (invalidTokens.length > 0) {
+            await pool.query(
+                `UPDATE notification_device_tokens
+                 SET is_active = FALSE
+                 WHERE token = ANY($1::text[])`,
+                [invalidTokens]
+            ).catch(error => logger.error('[NotificationService] Failed to deactivate invalid device tokens', {
+                error: error.message
+            }));
         }
 
         return { delivered: responses.some(item => item.ok), responses };

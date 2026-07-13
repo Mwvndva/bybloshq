@@ -1,3 +1,5 @@
+import { validate } from '../middleware/validate.js';
+import * as V from '../validations/marketing.validation.js';
 /**
  * marketing.routes.js
  * All routes are read-only. No writes happen in this router.
@@ -21,7 +23,7 @@ import {
 const router = express.Router()
 
 // Public: login only
-router.post('/login', authLimiter, marketingLogin)
+router.post('/login', authLimiter, validate(V.login), marketingLogin)
 
 // All remaining routes require marketing JWT
 router.use(protectMarketing)

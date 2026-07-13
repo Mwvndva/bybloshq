@@ -14,7 +14,7 @@ import adminRoutes from './admin.routes.js';
 import refundRoutes from './refund.routes.js';
 import callbackRoutes from './callback.routes.js';
 import webhookRoutes from './webhook.routes.js';
-import orderRoutes from './orderRoutes.js';
+import orderRoutes from './order.routes.js';
 import whatsappRoutes from './whatsapp.routes.js';
 import refreshTokenRoutes from './refreshToken.routes.js';
 import wishlistRoutes from './wishlist.routes.js';

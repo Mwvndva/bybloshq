@@ -48,6 +48,11 @@ import type { DashboardAnalytics, MonthlyMetricsData, WithdrawalRequest, Financi
 
 const NewAdminDashboard = () => {
   const {
+    authLoading,
+    isAuthenticated,
+    isInitialized,
+    error,
+    retryDashboard,
     dashboardState,
     activeTab,
     setActiveTab,
@@ -73,6 +78,8 @@ const NewAdminDashboard = () => {
     handleViewBuyer,
     handleWithdrawalRequestAction,
   } = useAdminDashboard();
+
+  const navigate = useNavigate();
 
   const shouldShowTrend = (trend: number) => {
     return trend !== 0 || dashboardState.analytics.monthlyGrowth?.revenue !== 0;
@@ -154,6 +161,44 @@ const NewAdminDashboard = () => {
     }
   ];
 
+
+  if (authLoading || !isInitialized) {
+    return (
+      <div className="admin-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2]">
+        <div className="flex flex-col items-center gap-4 rounded-full border border-stone-200 bg-white px-6 py-4 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+          <Spinner className="h-12 w-12 text-yellow-500" />
+          <p className="text-stone-600 font-semibold text-sm animate-pulse">Initializing admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    navigate('/admin/login', { replace: true });
+    return null;
+  }
+
+  if (error) {
+    return (
+      <div className="admin-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2] p-4 text-center sm:p-6">
+        <div className="max-w-md space-y-6 rounded-3xl border border-stone-200 bg-white p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+          <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto border border-red-100">
+            <XCircle className="h-10 w-10 text-red-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-stone-950 tracking-tight">System error</h2>
+            <p className="text-stone-600 font-medium">{error}</p>
+          </div>
+          <Button
+            onClick={retryDashboard}
+            className="w-full h-12 bg-yellow-400 text-black font-semibold rounded-2xl hover:bg-yellow-300 transition-all"
+          >
+            Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-light-dashboard min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] text-stone-950 font-sans selection:bg-yellow-500/30 selection:text-black">

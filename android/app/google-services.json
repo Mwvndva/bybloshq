@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "254127777027",
-    "project_id": "byblos-65321",
-    "storage_bucket": "byblos-65321.firebasestorage.app"
+    "project_number": "86278666664",
+    "project_id": "byblos-6a390",
+    "storage_bucket": "byblos-6a390.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:254127777027:android:cf878e6de6d8ff48263536",
+        "mobilesdk_app_id": "1:86278666664:android:8f8d2046f409c89cd3459d",
         "android_client_info": {
           "package_name": "space.bybloshq.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCguW_-kUmLUSS-uMyKDs-yrLcu81QvUh4"
+          "current_key": "AIzaSyDtuhRd-aW6bD2--aMyqMZNC8nbZvNsqmE"
         }
       ],
       "services": {
@@ -27,3 +27,5 @@
   ],
   "configuration_version": "1"
 }
+
+ewogICJwcm9qZWN0X2luZm8iOiB7CiAgICAicHJvamVjdF9udW1iZXIiOiAiODYyNzg2NjY2NjQiLAogICAgInByb2plY3RfaWQiOiAiYnlibG9zLTZhMzkwIiwKICAgICJzdG9yYWdlX2J1Y2tldCI6ICJieWJsb3MtNmEzOTAuZmlyZWJhc2VzdG9yYWdlLmFwcCIKICB9LAogICJjbGllbnQiOiBbCiAgICB7CiAgICAgICJjbGllbnRfaW5mbyI6IHsKICAgICAgICAibW9iaWxlc2RrX2FwcF9pZCI6ICIxOjg2Mjc4NjY2NjY0OmFuZHJvaWQ6OGY4ZDIwNDZmNDA5Yzg5Y2QzNDU5ZCIsCiAgICAgICAgImFuZHJvaWRfY2xpZW50X2luZm8iOiB7CiAgICAgICAgICAicGFja2FnZV9uYW1lIjogInNwYWNlLmJ5Ymxvc2hxLmFwcCIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJvYXV0aF9jbGllbnQiOiBbXSwKICAgICAgImFwaV9rZXkiOiBbCiAgICAgICAgewogICAgICAgICAgImN1cnJlbnRfa2V5IjogIkFJemFTeUR0dWhSZC1hVzZiRDItLWFNeXFNWk5DOG5iWnZOc3FtRSIKICAgICAgICB9CiAgICAgIF0sCiAgICAgICJzZXJ2aWNlcyI6IHsKICAgICAgICAiYXBwaW52aXRlX3NlcnZpY2UiOiB7CiAgICAgICAgICAib3RoZXJfcGxhdGZvcm1fb2F1dGhfY2xpZW50IjogW10KICAgICAgICB9CiAgICAgIH0KICAgIH0KICBdLAogICJjb25maWd1cmF0aW9uX3ZlcnNpb24iOiAiMSIKfQo=root@vmi3200375:/apps/bybloshq#

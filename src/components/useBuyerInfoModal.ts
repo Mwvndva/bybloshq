@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { BuyerInfo, BuyerInfoModalProps } from './BuyerInfoModal';
 
-export function useBuyerInfoModal({ isOpen, onClose, onSubmit, theme = 'default', phoneNumber, initialData }: BuyerInfoModalProps) {
+export function useBuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, theme = 'default', phoneNumber, initialData }: BuyerInfoModalProps) {
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
