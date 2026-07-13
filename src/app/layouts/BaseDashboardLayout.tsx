@@ -5,6 +5,7 @@ import { LogOut, ArrowLeft, Menu, X } from 'lucide-react';
 import { isNativeApp } from '@/lib/mobileApp';
 import { cn } from '@/lib/utils';
 import { useGlobalAuth, UserRole } from '@/features/auth/contexts';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 // ============================================================================
 // TYPES
@@ -229,6 +230,7 @@ export function BaseDashboardLayout({
 
                                 {/* Right: Actions/Logout */}
                                 <div className="flex-1 flex items-center justify-end gap-2">
+                                    <NotificationBell />
                                     {headerActions}
                                     {!showSidebar && shouldShowLogout && (
                                         <Button

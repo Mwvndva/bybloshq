@@ -17,6 +17,12 @@ router.post('/logistics/devices', protectLogistics, validate(V.registerDevice), 
 router.delete('/logistics/devices', protectLogistics, validate(V.unregisterDevice), unregisterDevice);
 router.delete('/logistics/devices/:token', protectLogistics, validate(V.unregisterDeviceByToken), unregisterDevice);
 
+// Logistics partners authenticate differently, so they get their own list/read routes
+// (the controller's currentUserId already resolves req.logisticsPartner.userId).
+router.get('/logistics', protectLogistics, listNotifications);
+router.patch('/logistics/read-all', protectLogistics, markAllNotificationsRead);
+router.patch('/logistics/:notificationId/read', protectLogistics, validate(V.markRead), markNotificationRead);
+
 router.use(protect);
 
 router.get('/', listNotifications);

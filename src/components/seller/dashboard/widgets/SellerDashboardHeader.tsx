@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { isNativeApp } from '@/lib/mobileApp';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 interface SellerDashboardHeaderProps {
   sellerFirstName: string;
@@ -32,7 +33,9 @@ export function SellerDashboardHeader({ sellerFirstName, onBackHome }: SellerDas
             Welcome, {sellerFirstName}
           </h1>
 
-          <div aria-hidden="true" />
+          <div className="justify-self-end">
+            <NotificationBell />
+          </div>
         </div>
       </div>
     </header>

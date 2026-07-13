@@ -1,4 +1,5 @@
 import { Shield } from 'lucide-react';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 export function AdminDashboardHeader() {
   return (
@@ -22,6 +23,7 @@ export function AdminDashboardHeader() {
         </div>
 
         <div className="flex items-center gap-3 bg-stone-50 p-2 rounded-2xl border border-stone-200">
+          <NotificationBell />
           <div className="px-4 py-2 bg-yellow-100 text-stone-950 rounded-xl text-sm font-semibold border border-yellow-200">
             Admin access
           </div>

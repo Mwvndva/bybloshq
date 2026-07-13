@@ -1,5 +1,6 @@
 import eventBus, { AppEvents } from './eventBus.js';
 import whatsappService from '../services/whatsapp.service.js';
+import notificationService from '../services/notification.service.js';
 import logger from '../shared/utils/logger.js';
 import OrderReadService from '../services/orderRead.service.js';
 import OrderNotificationPayloadService from '../services/orderNotificationPayload.service.js';
@@ -42,6 +43,34 @@ async function loadNormalizedOrder(order, fallbackItems = []) {
     }
 }
 
+// Best-effort in-app feed write, delivered alongside the existing WhatsApp sends.
+// Returns null (skipped) when the recipient has no user account; never throws, so a
+// feed-write failure cannot fail the event or block the WhatsApp delivery.
+async function orderUserIds(order, items = []) {
+    try {
+        const { order: n } = await loadNormalizedOrder(order, items);
+        return { buyerUserId: n?.buyer?.userId || null, sellerUserId: n?.seller?.userId || null, orderNumber: n?.orderNumber || null };
+    } catch {
+        return { buyerUserId: null, sellerUserId: null, orderNumber: null };
+    }
+}
+
+function feedDelivery(key, recipientUserId, recipientRole, notif) {
+    if (!recipientUserId) return null;
+    return {
+        key,
+        run: () => notificationService.send({
+            recipientUserId,
+            recipientRole,
+            type: notif.type,
+            title: notif.title,
+            body: notif.body,
+            data: notif.data || {},
+            channels: ['in_app', 'push']
+        }).catch(error => logger.warn('[Feed] in-app notification write failed', { key, error: error.message }))
+    };
+}
+
 /**
  * Handle ORDER.CREATED event
  */
@@ -65,9 +94,13 @@ eventBus.on(AppEvents.ORDER.PAID, async ({ eventId, order, items, seller, buyer 
  */
 eventBus.on(AppEvents.ORDER.UPDATED, async ({ eventId, payload }) => {
     if (!payload) return;
+    const orderId = payload.id || payload.order_id;
+    const ids = await orderUserIds({ id: orderId });
     await deliverAll('Event:OrderUpdated', eventId, [
-        { key: `order:${payload.id || payload.order_id}:buyer:update`, run: () => whatsappService.notifyBuyerStatusUpdate(payload) },
-        { key: `order:${payload.id || payload.order_id}:seller:update`, run: () => whatsappService.notifySellerStatusUpdate(payload) }
+        { key: `order:${orderId}:buyer:update`, run: () => whatsappService.notifyBuyerStatusUpdate(payload) },
+        { key: `order:${orderId}:seller:update`, run: () => whatsappService.notifySellerStatusUpdate(payload) },
+        feedDelivery(`order:${orderId}:buyer:update:feed`, ids.buyerUserId, 'buyer', { type: 'order_update', title: `Order ${ids.orderNumber || orderId} update`, body: 'Your order status has been updated. Tap to view.', data: { path: '/buyer', orderId } }),
+        feedDelivery(`order:${orderId}:seller:update:feed`, ids.sellerUserId, 'seller', { type: 'order_update', title: `Order ${ids.orderNumber || orderId} update`, body: 'An order status changed. Tap to view.', data: { path: '/seller', orderId } })
     ]);
 });
 
@@ -90,7 +123,10 @@ eventBus.on(AppEvents.ORDER.FULFILLED, async ({ eventId, order, items = [] }) =>
             order: notificationOrder,
             location: notificationOrder.location,
             newStatus: notificationOrder.status || 'AWAITING_SELLER_ACTION'
-        }) }
+        }) },
+        hasDigital ? feedDelivery(`order:${order.id}:buyer:digital:feed`, notificationOrder.buyer.userId, 'buyer', { type: 'order_digital_ready', title: 'Your files are ready', body: `Download your digital items for order ${notificationOrder.orderNumber}.`, data: { path: '/buyer', orderId: order.id } }) : null,
+        feedDelivery(`order:${order.id}:buyer:payment_success:feed`, notificationOrder.buyer.userId, 'buyer', { type: 'order_payment_success', title: 'Payment confirmed', body: `We received your payment for order ${notificationOrder.orderNumber}.`, data: { path: '/buyer', orderId: order.id } }),
+        feedDelivery(`order:${order.id}:seller:new_order:feed`, notificationOrder.seller.userId, 'seller', { type: 'order_new', title: 'New order received', body: `Order ${notificationOrder.orderNumber} · KES ${Number(notificationOrder.totalAmount || 0).toLocaleString('en-KE')} — tap to review.`, data: { path: '/seller', orderId: order.id } })
     ]);
 });
 
@@ -99,28 +135,36 @@ eventBus.on(AppEvents.ORDER.FULFILLED, async ({ eventId, order, items = [] }) =>
  */
 eventBus.on(AppEvents.ORDER.CANCELLED, async ({ eventId, order, items, seller, buyer, cancelledBy }) => {
     logger.info(`[Event:OrderCancelled] Processing for Order #${order.id}`);
+    const ids = await orderUserIds(order, items || []);
     await deliverAll('Event:OrderCancelled', eventId, [
         { key: `order:${order.id}:buyer:cancelled`, run: () => whatsappService.sendBuyerOrderCancellationNotification(order, cancelledBy) },
         order.fulfillment_type === 'SELLER_TO_HUB'
             ? { key: `order:${order.id}:logistics:cancelled`, run: () => whatsappService.sendLogisticsCancellationNotification(order, buyer, seller, cancelledBy) }
-            : null
+            : null,
+        feedDelivery(`order:${order.id}:buyer:cancelled:feed`, ids.buyerUserId, 'buyer', { type: 'order_cancelled', title: `Order ${ids.orderNumber || order.id} cancelled`, body: 'Your order has been cancelled.', data: { path: '/buyer', orderId: order.id } })
     ]);
 });
 
 eventBus.on(AppEvents.ORDER.CUSTOM_PRODUCTION_REMINDER, async ({ eventId, order }) => {
     logger.info(`[Event:CustomProductionReminder] Processing for Order #${order.id}`);
+    const ids = await orderUserIds(order);
     await deliverAll('Event:CustomProductionReminder', eventId, [
         { key: `order:${order.id}:buyer:custom-production-reminder`, run: () => whatsappService.sendCustomProductionReminder(order, 'buyer') },
         { key: `order:${order.id}:seller:custom-production-reminder`, run: () => whatsappService.sendCustomProductionReminder(order, 'seller') },
-        { key: `order:${order.id}:mzigo:custom-production-reminder`, run: () => whatsappService.sendCustomProductionReminder(order, 'partner') }
+        { key: `order:${order.id}:mzigo:custom-production-reminder`, run: () => whatsappService.sendCustomProductionReminder(order, 'partner') },
+        feedDelivery(`order:${order.id}:buyer:custom-production-reminder:feed`, ids.buyerUserId, 'buyer', { type: 'custom_production_reminder', title: 'Custom order in progress', body: 'Your custom order is being prepared. Tap for details.', data: { path: '/buyer', orderId: order.id } }),
+        feedDelivery(`order:${order.id}:seller:custom-production-reminder:feed`, ids.sellerUserId, 'seller', { type: 'custom_production_reminder', title: 'Custom order deadline approaching', body: 'A custom order needs to be prepared. Tap for details.', data: { path: '/seller', orderId: order.id } })
     ]);
 });
 
 eventBus.on(AppEvents.ORDER.CUSTOM_PRODUCTION_EXPIRED, async ({ eventId, order, reason }) => {
     logger.info(`[Event:CustomProductionExpired] Processing for Order #${order.id}`);
+    const ids = await orderUserIds(order);
     await deliverAll('Event:CustomProductionExpired', eventId, [
         { key: `order:${order.id}:buyer:custom-production-expired`, run: () => whatsappService.sendCustomProductionExpiredNotification(order, 'buyer', reason) },
-        { key: `order:${order.id}:seller:custom-production-expired`, run: () => whatsappService.sendCustomProductionExpiredNotification(order, 'seller', reason) }
+        { key: `order:${order.id}:seller:custom-production-expired`, run: () => whatsappService.sendCustomProductionExpiredNotification(order, 'seller', reason) },
+        feedDelivery(`order:${order.id}:buyer:custom-production-expired:feed`, ids.buyerUserId, 'buyer', { type: 'custom_production_expired', title: 'Custom order update', body: 'There was an update to your custom order. Tap for details.', data: { path: '/buyer', orderId: order.id } }),
+        feedDelivery(`order:${order.id}:seller:custom-production-expired:feed`, ids.sellerUserId, 'seller', { type: 'custom_production_expired', title: 'Custom order expired', body: 'A custom order production window expired. Tap for details.', data: { path: '/seller', orderId: order.id } })
     ]);
 });
 
