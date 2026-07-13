@@ -66,7 +66,7 @@ function feedDelivery(key, recipientUserId, recipientRole, notif) {
             title: notif.title,
             body: notif.body,
             data: notif.data || {},
-            channels: ['in_app']
+            channels: ['in_app', 'push']
         }).catch(error => logger.warn('[Feed] in-app notification write failed', { key, error: error.message }))
     };
 }

@@ -232,7 +232,7 @@ async function deliverAll(eventId, context, notificationType) {
                         orderId: context.order.id,
                         requestId: context.request.id
                     },
-                    channels: ['in_app']
+                    channels: ['in_app', 'push']
                 }).catch(error => logger.warn('[Feed] logistics notification write failed', { key: recipient.key, error: error.message }))
             )
         ));
