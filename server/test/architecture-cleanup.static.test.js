@@ -48,7 +48,7 @@ test('mobile notification infrastructure is user-owned and channel-neutral', () 
   assert.match(service, /FCM_SERVER_KEY/);
   assert.match(controller, /req\.user\?\.userId \|\| req\.user\?\.id/);
   assert.match(routes, /router\.use\(protect\)/);
-  assert.match(routes, /router\.post\('\/devices', registerDevice\)/);
+  assert.match(routes, /router\.post\('\/devices',[\s\S]*?registerDevice\)/);
   assert.match(routes, /router\.get\('\/', listNotifications\)/);
   assert.match(routeIndex, /router\.use\('\/notifications', notificationRoutes\)/);
 });

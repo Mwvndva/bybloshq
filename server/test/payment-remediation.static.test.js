@@ -74,7 +74,7 @@ test('public order status polling resolves order numbers only and surfaces provi
   const publicController = read('src/controllers/public.controller.js');
   const publicOrderStatusRepository = read('src/repositories/publicOrderStatus.repository.js');
   const paymentModal = read('../src/components/PaymentStatusModal.tsx');
-  const productCard = read('../src/components/ProductCard.tsx');
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
 
   assert.match(publicController, /publicOrderStatusRepository\.findStatusByIdentifier\(id\)/);
   assert.match(publicOrderStatusRepository, /po\.order_number = \$1/);
@@ -134,10 +134,10 @@ test('Paystack payout rollout adds only provider lookup indexes and preserves M-
 });
 
 test('admin payment labels are provider-neutral while raw provider payloads remain durable', () => {
-  const adminDashboard = read('../src/pages/admin/NewDashboardPage.tsx');
+  const adminDashboard = (read('../src/pages/admin/NewDashboardPage.tsx') + read('../src/pages/admin/useAdminDashboard.ts'));
   const adminApi = read('../src/api/adminApi.ts');
   const footer = read('../src/components/Footer.tsx');
-  const productCard = read('../src/components/ProductCard.tsx');
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
   const adminController = read('src/controllers/admin.controller.js');
   const paymentModel = read('src/models/payment.model.js');
   const withdrawalService = read('src/services/withdrawal.service.js');
@@ -327,7 +327,7 @@ test('checkout idempotency is persisted in product_orders', () => {
   const orderModel = read('src/models/order.model.js');
   const paymentService = read('src/services/paymentLifecycle.service.js');
   const controller = read('src/controllers/payment.controller.js');
-  const productCard = read('../src/components/ProductCard.tsx');
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
   const migration = read('migrations/20260507231000_final_fintech_stabilization.sql');
 
   assert.match(orderModel, /client_checkout_token/);
@@ -635,7 +635,7 @@ test('manual-review payment mapping failures are terminal and not retried as pen
 
 test('direct order creation routes are retired in favor of payment initiation', () => {
   const controller = read('src/controllers/order.controller.js');
-  const orderRoutes = read('src/routes/orderRoutes.js');
+  const orderRoutes = read('src/routes/order.routes.js');
   const sellerRoutes = read('src/routes/seller.routes.js');
   const orderValidation = read('src/validations/order.validation.js');
   const service = read('src/services/order.service.js');
@@ -856,10 +856,10 @@ test('door delivery payment totals are recalculated by backend and do not inflat
   const orderService = read('src/services/order.service.js');
   const sanitize = read('src/shared/utils/sanitize.js');
   const logisticsStatusMigration = read('migrations/20260510020000_add_delivery_pending_logistics_status.sql');
-  const productCard = read('../src/components/ProductCard.tsx');
-  const phoneModal = read('../src/components/PhoneCheckModal.tsx');
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
+  const phoneModal = (read('../src/components/PhoneCheckModal.tsx') + read('../src/components/usePhoneCheck.ts'));
   const buyerOrderCard = read('../src/components/orders/BuyerOrderCard.tsx');
-  const sellerOrdersSection = read('../src/components/seller/SellerOrdersSection.tsx');
+  const sellerOrdersSection = (read('../src/components/seller/SellerOrdersSection.tsx') + read('../src/components/seller/SellerOrderActions.tsx') + read('../src/components/seller/SellerOrderDialogs.tsx') + read('../src/components/seller/SellerOrderCard.tsx') + read('../src/components/seller/useSellerOrderActions.ts'));
   const orderLogisticsTracking = read('../src/components/orders/OrderLogisticsTracking.tsx');
 
   assert.match(paymentRoutes, /\/logistics-quote/);
@@ -923,7 +923,7 @@ test('seller pickup fee payment activates pickup logistics without mutating prod
   const orderModel = read('src/models/order.model.js');
   const sanitize = read('src/shared/utils/sanitize.js');
   const sellerOrdersApi = read('../src/api/seller/ordersApi.ts');
-  const sellerOrdersSection = read('../src/components/seller/SellerOrdersSection.tsx');
+  const sellerOrdersSection = (read('../src/components/seller/SellerOrdersSection.tsx') + read('../src/components/seller/SellerOrderActions.tsx') + read('../src/components/seller/SellerOrderDialogs.tsx') + read('../src/components/seller/SellerOrderCard.tsx') + read('../src/components/seller/useSellerOrderActions.ts'));
   const buyerOrderCard = read('../src/components/orders/BuyerOrderCard.tsx');
   const orderLogisticsTracking = read('../src/components/orders/OrderLogisticsTracking.tsx');
 
@@ -986,7 +986,7 @@ test('payout callback references cannot resolve ambiguously across withdrawals',
 
 test('CORS allows idempotency and request tracing headers used by safe retries', () => {
   const expressLoader = read('src/loaders/express.js');
-  const productCard = read('../src/components/ProductCard.tsx');
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
   const buyerApi = read('../src/api/buyerApi.ts');
   const sellerWithdrawalsApi = read('../src/api/seller/withdrawalsApi.ts');
 
@@ -1118,8 +1118,8 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
   const sellerDashboardQueryKeys = read('../src/components/seller/dashboard/queryKeys.ts');
   const sellerAnalyticsRepository = read('src/repositories/sellerAnalytics.repository.js');
   const paymentService = read('src/services/paymentLifecycle.service.js');
-  const productCard = read('../src/components/ProductCard.tsx');
-  const adminDashboard = read('../src/pages/admin/NewDashboardPage.tsx');
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
+  const adminDashboard = (read('../src/pages/admin/NewDashboardPage.tsx') + read('../src/pages/admin/useAdminDashboard.ts'));
 
   assert.match(sellerDashboard, /useSellerDashboardData/);
   assert.match(sellerDashboardDataHook, /useQuery/);
@@ -1193,7 +1193,7 @@ test('webhook rate limiting protects requests with local fallback', () => {
 });
 
 test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for money state', () => {
-  const service = read('src/services/logisticsDashboard.service.js');
+  const service = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const middleware = read('src/middleware/logisticsAuth.js');
   const routes = read('src/routes/logistics.routes.js');
   const routeIndex = read('src/routes/index.js');
@@ -1258,11 +1258,11 @@ test('Mzigo logistics dashboard is protected, partner-scoped, and read-only for 
 test('admin logistics oversight can inspect, override, and resolve disputes without touching money state', () => {
   const adminRoutes = read('src/routes/admin.routes.js');
   const adminController = read('src/controllers/admin.controller.js');
-  const service = read('src/services/logisticsDashboard.service.js');
+  const service = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const escrowManager = read('src/services/EscrowManager.js');
   const orderService = read('src/services/order.service.js');
   const adminApi = read('../src/api/adminApi.ts');
-  const adminDashboard = read('../src/pages/admin/NewDashboardPage.tsx');
+  const adminDashboard = (read('../src/pages/admin/NewDashboardPage.tsx') + read('../src/pages/admin/useAdminDashboard.ts'));
   const adminLogisticsTab = read('../src/pages/admin/components/AdminLogisticsTab.tsx');
 
   assert.match(adminRoutes, /router\.get\('\/logistics\/requests'/);
@@ -1313,13 +1313,13 @@ test('admin logistics oversight can inspect, override, and resolve disputes with
 test('logistics regression contracts cover optional delivery, grouping, idempotency, transitions, and milestone dedupe', () => {
   const paymentService = read('src/services/paymentLifecycle.service.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
-  const logisticsDashboardService = read('src/services/logisticsDashboard.service.js');
+  const logisticsDashboardService = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const logisticsMigration = read('migrations/20260510010000_add_logistics_data_model.sql');
   const deliveredLogisticsSyncMigration = read('migrations/20260512170000_sync_delivered_logistics_ready_for_buyer.sql');
   const logisticsEvents = read('src/events/logistics.events.js');
   const recipientDelivery = read('src/events/recipientDelivery.js');
-  const phoneModal = read('../src/components/PhoneCheckModal.tsx');
-  const productCard = read('../src/components/ProductCard.tsx');
+  const phoneModal = (read('../src/components/PhoneCheckModal.tsx') + read('../src/components/usePhoneCheck.ts'));
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
   const productCardUtils = read('../src/components/product-card/productCardUtils.ts');
   const productCardModals = read('../src/components/product-card/ProductCardModals.tsx');
 
@@ -1384,7 +1384,7 @@ test('unified order flow exposes seller hub handoff and service booking actions'
   const sellerRoutes = read('src/routes/seller.routes.js');
   const orderController = read('src/controllers/order.controller.js');
   const sellerApi = read('../src/api/seller/ordersApi.ts');
-  const sellerOrders = read('../src/components/seller/SellerOrdersSection.tsx');
+  const sellerOrders = (read('../src/components/seller/SellerOrdersSection.tsx') + read('../src/components/seller/SellerOrderActions.tsx') + read('../src/components/seller/SellerOrderDialogs.tsx') + read('../src/components/seller/SellerOrderCard.tsx') + read('../src/components/seller/useSellerOrderActions.ts'));
 
   assert.match(migration, /AWAITING_SELLER_ACTION/);
   assert.match(migration, /FULFILLING/);
@@ -1426,7 +1426,7 @@ test('logistics WhatsApp notifications are milestone-only and notification-only'
   const logisticsEvents = read('src/events/logistics.events.js');
   const logisticsRequestService = read('src/services/logisticsRequest.service.js');
   const logisticsTrackingLinkService = read('src/services/logisticsTrackingLink.service.js');
-  const logisticsDashboardService = read('src/services/logisticsDashboard.service.js');
+  const logisticsDashboardService = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const orderEvents = read('src/events/order.events.js');
   const whatsappService = read('src/services/whatsapp.service.js');
 
@@ -1541,10 +1541,10 @@ test('custom physical products validate production SLA and buyer instructions at
   const productService = read('src/services/product.service.js');
   const productModel = read('src/models/product.model.js');
   const paymentService = read('src/services/paymentLifecycle.service.js');
-  const phoneModal = read('../src/components/PhoneCheckModal.tsx');
-  const productCard = read('../src/components/ProductCard.tsx');
-  const addProductForm = read('../src/components/seller/AddProductForm.tsx');
-  const editDialog = read('../src/components/seller/products-list/ProductEditDialog.tsx');
+  const phoneModal = (read('../src/components/PhoneCheckModal.tsx') + read('../src/components/usePhoneCheck.ts'));
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
+  const addProductForm = (read('../src/components/seller/AddProductForm.tsx') + read('../src/components/seller/AddProductFormSteps.tsx'));
+  const editDialog = (read('../src/components/seller/products-list/ProductEditDialog.tsx') + read('../src/components/seller/products-list/ProductEditPhysicalOptions.tsx'));
 
   assert.match(migration, /is_custom_product BOOLEAN NOT NULL DEFAULT FALSE/);
   assert.match(migration, /production_days INTEGER/);
@@ -1582,11 +1582,11 @@ test('imported physical products expose pre-order ready SLA without customizatio
   const sellerController = read('src/controllers/seller.controller.js');
   const core = read('src/core/CorePaymentService.js');
   const whatsapp = read('src/services/whatsapp.service.js');
-  const phoneModal = read('../src/components/PhoneCheckModal.tsx');
-  const productCard = read('../src/components/ProductCard.tsx');
-  const addProductForm = read('../src/components/seller/AddProductForm.tsx');
-  const productsList = read('../src/components/seller/ProductsList.tsx');
-  const editDialog = read('../src/components/seller/products-list/ProductEditDialog.tsx');
+  const phoneModal = (read('../src/components/PhoneCheckModal.tsx') + read('../src/components/usePhoneCheck.ts'));
+  const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
+  const addProductForm = (read('../src/components/seller/AddProductForm.tsx') + read('../src/components/seller/AddProductFormSteps.tsx'));
+  const productsList = (read('../src/components/seller/ProductsList.tsx') + read('../src/components/seller/useProductsList.ts'));
+  const editDialog = (read('../src/components/seller/products-list/ProductEditDialog.tsx') + read('../src/components/seller/products-list/ProductEditPhysicalOptions.tsx'));
   const receiptTemplate = read('email-templates/product-payment-receipt.ejs');
   const confirmationTemplate = read('email-templates/product-order-confirmation.ejs');
 

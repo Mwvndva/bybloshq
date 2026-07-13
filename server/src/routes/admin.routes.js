@@ -1,3 +1,5 @@
+import { validate } from '../middleware/validate.js';
+import * as V from '../validations/admin.validation.js';
 import express from 'express';
 import * as adminController from '../controllers/admin.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
@@ -8,7 +10,7 @@ import logger from '../shared/utils/logger.js';
 const router = express.Router();
 
 // Public route for admin login
-router.post('/login', authLimiter, adminController.adminLogin);
+router.post('/login', authLimiter, validate(V.login), adminController.adminLogin);
 
 router.post('/logout', async (req, res) => {
     // Blacklist the current token so it can't be reused
@@ -50,11 +52,11 @@ router.post('/process-pending-payments', adminController.processPendingPayments)
 // Seller management
 router.get('/sellers', adminController.getAllSellers);
 router.get('/sellers/:id', adminController.getSellerById);
-router.patch('/sellers/:id/status', adminController.updateSellerStatus);
+router.patch('/sellers/:id/status', validate(V.updateSellerStatus), adminController.updateSellerStatus);
 
 // Creator management
 router.get('/creators', adminController.getAllCreators);
-router.delete('/creators/:id', adminController.deleteCreator);
+router.delete('/creators/:id', validate(V.deleteCreator), adminController.deleteCreator);
 
 // Buyer management
 router.get('/buyers', adminController.getAllBuyers);
@@ -76,16 +78,16 @@ router.get('/payment-provider/balances', adminController.getPaymentProviderBalan
 router.get('/clients', adminController.getAllClients);
 
 // User management (Delete/Block)
-router.delete('/users/:id', adminController.deleteUser);
+router.delete('/users/:id', validate(V.deleteUser), adminController.deleteUser);
 
 // Withdrawal requests management
 router.get('/withdrawal-requests', adminController.getAllWithdrawalRequests);
-router.patch('/withdrawal-requests/:id/status', adminController.updateWithdrawalRequestStatus);
+router.patch('/withdrawal-requests/:id/status', validate(V.updateWithdrawalStatus), adminController.updateWithdrawalRequestStatus);
 
 // Logistics oversight
 router.get('/logistics/requests', adminController.getAdminLogisticsRequests);
-router.patch('/logistics/requests/:requestId/legs/:legType/status', adminController.adminUpdateLogisticsLegStatus);
-router.post('/logistics/requests/:requestId/disputes/resolve', adminController.adminResolveLogisticsDispute);
+router.patch('/logistics/requests/:requestId/legs/:legType/status', validate(V.adminUpdateLegStatus), adminController.adminUpdateLogisticsLegStatus);
+router.post('/logistics/requests/:requestId/disputes/resolve', validate(V.resolveDispute), adminController.adminResolveLogisticsDispute);
 
 export default router;
 

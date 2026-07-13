@@ -10,9 +10,10 @@ interface OrderDetailsDialogProps {
   serviceCharge: number;
   onClose: () => void;
   onViewImage: (image: string | null) => void;
+  onConfirmReceiptClick: (orderId: string) => void;
 }
 
-export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage }: OrderDetailsDialogProps) {
+export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage, onConfirmReceiptClick }: OrderDetailsDialogProps) {
   return (
       <Dialog open={!!order} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="sm:max-w-2xl bg-black border border-white/15 text-white">

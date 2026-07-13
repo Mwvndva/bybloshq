@@ -8,7 +8,7 @@ import * as orderController from '../controllers/order.controller.js';
 import { inviteCreator, listSellerInvites } from '../controllers/creator.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect, hasPermission } from '../middleware/auth.js';
-import referralRoutes from './referral_routes.js';
+import referralRoutes from './referral.routes.js';
 import { createWithdrawal, getWithdrawals, getWithdrawalById } from '../controllers/withdrawal.controller.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 

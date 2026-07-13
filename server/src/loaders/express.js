@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import { xss } from 'express-xss-sanitizer';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
@@ -15,6 +14,7 @@ import routes from '../routes/index.js';
 import { globalErrorHandler, notFoundHandler } from '../shared/utils/errorHandler.js';
 import requestId from '../middleware/requestId.js';
 import fixApiPrefix from '../middleware/fixApiPrefix.js';
+import { globalLimiter } from '../middleware/globalRateLimiter.js';
 
 
 export default async (app) => {
@@ -126,7 +126,8 @@ export default async (app) => {
             'X-Idempotency-Key',
             'X-Request-Id',
             'Cache-Control',
-            'Pragma'
+            'Pragma',
+            'Expires'
         ],
         exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token', 'X-Request-Id'],
         maxAge: 86400,
@@ -157,15 +158,9 @@ export default async (app) => {
     // 4. CSRF Protection (initialized in src/utils/csrf.js)
 
     // 5. Rate Limiting & Parsing
-    const limiter = rateLimit({
-        max: 5000,
-        windowMs: 60 * 60 * 1000,
-        message: 'Too many requests from this IP, please try again in an hour!',
-        standardHeaders: true,
-        legacyHeaders: false,
-    });
-
-    app.use('/api', limiter);
+    // Global limiter shares one Redis counter across horizontally-scaled
+    // instances (fail-open). See middleware/globalRateLimiter.js.
+    app.use('/api', globalLimiter);
     // Enable JSON body parsing with raw body capture for HMAC verification.
     // Large binary uploads must use upload endpoints, not base64 JSON bodies.
     app.use(express.json({
