@@ -18,21 +18,10 @@ export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, sh
   const navigate = useNavigate();
   const isBuyer = location.pathname.startsWith('/buyer');
 
-  // The buyer opens a shop from a dashboard tab (browse shops or "My Shops").
-  // "Back" should return them to that exact tab, not reset to the default
-  // dashboard view — so step back through history when there is an in-app
-  // entry, falling back to the dashboard for direct / shared links.
+  // A buyer opens a shop from the Shops tab (the browse grid at /buyer/dashboard),
+  // so send them back there; non-buyers go to the public home page.
   const handleBack = () => {
-    if (!isBuyer) {
-      navigate('/');
-      return;
-    }
-    const historyIdx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
-    if (historyIdx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/buyer/dashboard');
-    }
+    navigate(isBuyer ? '/buyer/dashboard' : '/');
   };
 
   return (
@@ -77,16 +66,18 @@ export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, sh
           >
             <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
             <span className="hidden sm:inline">
-              {isBuyer ? "Back to Dashboard" : "Back to Home"}
+              {isBuyer ? "Shops" : "Back to Home"}
             </span>
             <span className="sm:hidden">
-              {isBuyer ? "Dashboard" : "Home"}
+              {isBuyer ? "Shops" : "Home"}
             </span>
           </Button>
         </div>
 
-        {/* Hero Content - Centered */}
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 pt-10 sm:pt-14">
+        {/* Hero Content - Centered. pointer-events-none so this full-size overlay
+            does not swallow clicks meant for the back button / other controls
+            beneath it; interactive children below re-enable pointer events. */}
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 pt-10 sm:pt-14">
           {/* Shop Name at the top */}
           <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl break-words max-w-2xl px-4">
             {sellerInfo?.shopName || 'Shop'}
@@ -100,7 +91,7 @@ export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, sh
           )}
 
           {/* Followers, Shop Type, and Social Links at the bottom */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-white font-medium text-[9px] sm:text-xs">
+          <div className="pointer-events-auto mt-3 flex flex-wrap items-center justify-center gap-2 text-white font-medium text-[9px] sm:text-xs">
             {/* Followers (Icon and count only) */}
             <span className="flex items-center gap-1 backdrop-blur-sm bg-black/35 px-2.5 py-1 rounded-full border border-white/10 shadow-lg" title="Followers">
               <Users className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
