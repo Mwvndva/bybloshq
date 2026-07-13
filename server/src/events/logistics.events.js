@@ -3,6 +3,7 @@ import whatsappService from '../services/whatsapp.service.js';
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import LogisticsTrackingLinkService from '../services/logisticsTrackingLink.service.js';
+import notificationService from '../services/notification.service.js';
 
 const IMPORTANT_LOGISTICS_NOTIFICATION_TYPES = new Set([
     'new_order',
@@ -50,6 +51,7 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
             lp.name AS partner_name,
             lp.phone AS partner_phone,
             lp.whatsapp_number AS partner_whatsapp_number,
+            lp.user_id AS partner_user_id,
             po.id AS order_id,
             po.order_number,
             po.total_amount,
@@ -61,6 +63,7 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
             po.buyer_whatsapp_number,
             po.location_address,
             s.id AS seller_id,
+            s.user_id AS seller_user_id,
             s.full_name AS seller_name,
             s.shop_name,
             s.whatsapp_number AS seller_whatsapp_number,
@@ -68,6 +71,7 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
             s.location AS seller_location,
             b.full_name AS buyer_profile_name,
             b.whatsapp_number AS buyer_profile_whatsapp_number,
+            b.user_id AS buyer_user_id,
             ll.id AS leg_id,
             ll.leg_type,
             ll.status AS leg_status,
@@ -131,17 +135,20 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
             items: parseItems(row.items)
         },
         buyer: {
+            userId: row.buyer_user_id || null,
             name: firstPresent(row.buyer_profile_name, row.buyer_name, 'Buyer'),
             phone: firstPresent(row.buyer_profile_whatsapp_number, row.buyer_whatsapp_number, row.buyer_mobile_payment)
         },
         seller: {
             id: row.seller_id,
+            userId: row.seller_user_id || null,
             name: firstPresent(row.shop_name, row.seller_name, 'Seller'),
             phone: row.seller_whatsapp_number,
             location: firstPresent(row.seller_physical_address, row.seller_location)
         },
         partner: {
             id: row.partner_id,
+            userId: row.partner_user_id || null,
             name: row.partner_name || 'Mzigo Ego',
             phone: firstPresent(row.partner_whatsapp_number, row.partner_phone, whatsappService.COURIER_NUMBER)
         },
@@ -158,6 +165,20 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
         },
         trackingLinks
     };
+}
+
+function logisticsFeedTitle(notificationType) {
+    if (notificationType === 'new_order') return 'New pickup available';
+    if (String(notificationType).includes('cancel')) return 'Delivery cancelled';
+    return 'Delivery update';
+}
+
+function logisticsFeedBody(notificationType, context) {
+    const ref = context.order?.orderNumber || ('#' + (context.order?.id || ''));
+    if (notificationType === 'new_order') return `Order ${ref} is ready for pickup at ${context.seller?.location || 'the seller'}.`;
+    const status = context.leg?.status || context.request?.status || 'updated';
+    const leg = context.leg?.type ? `${context.leg.type} ` : '';
+    return `Order ${ref}: ${leg}${status}.`;
 }
 
 async function deliverAll(eventId, context, notificationType) {
@@ -190,6 +211,32 @@ async function deliverAll(eventId, context, notificationType) {
             }
             : null
     ].filter(Boolean);
+
+    // Additive in-app feed writes (best-effort; gated on userId, independent of phone).
+    const feedRecipients = [
+        !partnerOnly && context.buyer.userId ? { key: `${requestKey}:buyer`, role: 'buyer', userId: context.buyer.userId } : null,
+        !partnerOnly && context.seller.userId ? { key: `${requestKey}:seller`, role: 'seller', userId: context.seller.userId } : null,
+        !skipPartner && context.partner.userId ? { key: `${requestKey}:partner`, role: 'partner', userId: context.partner.userId } : null
+    ].filter(Boolean);
+    if (feedRecipients.length) {
+        await Promise.allSettled(feedRecipients.map(recipient =>
+            eventBus.deliverRecipient(eventId, `${recipient.key}:feed`, () =>
+                notificationService.send({
+                    recipientUserId: recipient.userId,
+                    recipientRole: recipient.role === 'partner' ? 'logistics' : recipient.role,
+                    type: `logistics_${notificationType}`,
+                    title: logisticsFeedTitle(notificationType),
+                    body: logisticsFeedBody(notificationType, context),
+                    data: {
+                        path: recipient.role === 'partner' ? '/mzigo/dashboard' : (recipient.role === 'seller' ? '/seller' : '/buyer'),
+                        orderId: context.order.id,
+                        requestId: context.request.id
+                    },
+                    channels: ['in_app']
+                }).catch(error => logger.warn('[Feed] logistics notification write failed', { key: recipient.key, error: error.message }))
+            )
+        ));
+    }
 
     if (!deliveries.length) {
         logger.warn('[Event:LogisticsNotification] No WhatsApp recipients for logistics notification', {
