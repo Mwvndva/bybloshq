@@ -22,7 +22,7 @@ function feedSend(recipientUserId, recipientRole, notif) {
     return notificationService.send({
         recipientUserId, recipientRole,
         type: notif.type, title: notif.title, body: notif.body,
-        data: notif.data || {}, channels: ['in_app']
+        data: notif.data || {}, channels: ['in_app', 'push']
     }).catch(error => logger.warn('[Feed] in-app notification write failed', { type: notif.type, error: error.message }));
 }
 

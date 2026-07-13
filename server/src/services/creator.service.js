@@ -623,7 +623,7 @@ class CreatorService {
         title: 'You earned KSh ' + amountText,
         body: 'Your link generated a sale on order ' + orderRef + '.',
         data: { path: '/creator/dashboard', orderId: order.id },
-        channels: ['in_app']
+        channels: ['in_app', 'push']
       }).catch((error) => logger.warn('[Feed] creator sale notification failed', { creatorId, error: error.message }));
     }
 
