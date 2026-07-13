@@ -26,18 +26,25 @@ export function SellerProfileHero({ sellerProfile, followers, sales }: SellerPro
         {banner ? (
           <img src={banner} alt={`${shopName} banner`} className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-yellow-200 via-yellow-100 to-stone-100" />
+          <div
+            className="h-full w-full"
+            style={{ background: 'linear-gradient(135deg, rgba(var(--theme-accent-rgb, 245, 158, 11), 0.28), rgba(var(--theme-accent-rgb, 245, 158, 11), 0.04))' }}
+          />
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
       </div>
 
-      {/* Business profile photo — circular frame, centered, overlapping the banner */}
+      {/* Business profile photo — circular frame, centered, overlapping the banner.
+          relative+z-10 keeps it above the positioned banner so its top half stays visible. */}
       <div className="flex flex-col items-center px-4 pb-5 sm:pb-6">
-        <div className="-mt-12 h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-stone-100 shadow-lg ring-1 ring-stone-200 sm:-mt-14 sm:h-28 sm:w-28">
+        <div className="relative z-10 -mt-12 h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-stone-100 shadow-lg ring-1 ring-stone-200 sm:-mt-14 sm:h-28 sm:w-28">
           {avatar ? (
             <img src={avatar} alt={shopName} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-yellow-400 text-3xl font-black text-black">
+            <div
+              className="flex h-full w-full items-center justify-center text-3xl font-black"
+              style={{ backgroundColor: 'var(--theme-button-bg, #facc15)', color: 'var(--theme-button-text, #000000)' }}
+            >
               {initial}
             </div>
           )}

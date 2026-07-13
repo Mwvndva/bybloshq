@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Download, Loader2, RefreshCw, Users } from 'lucide-react';
+import { ChevronDown, Download, Loader2, Package, RefreshCw, Users } from 'lucide-react';
 import type { ApiOrder } from '@/types/api/order';
-import { getImageUrl } from '@/lib/utils';
+import { cn, getImageUrl } from '@/lib/utils';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 import { OrderLogisticsTracking } from './OrderLogisticsTracking';
 import {
@@ -64,9 +65,47 @@ export function BuyerOrderCard({
     isService ? 'bg-purple-500/10 border-purple-400/25' : isDigital ? 'bg-red-500/10 border-red-400/25' : 'bg-white/8 border-white/12'
   ].join(' ');
 
+  const [expanded, setExpanded] = useState(false);
+  const itemCount = order.items?.length || 0;
+  const extraCount = itemCount > 1 ? itemCount - 1 : 0;
+  const summaryName = mainItem?.name || `#${order.orderNumber || order.id.slice(0, 8).toUpperCase()}`;
+
   return (
     <Card className={cardClasses}>
       <CardContent className="p-0">
+        {/* Collapsed summary bar — always visible */}
+        <div className="flex items-center gap-3 p-4 sm:p-5">
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-white/10 sm:h-14 sm:w-14">
+            {mainImage ? (
+              <img src={mainImage} alt={summaryName} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-white/40">
+                <Package className="h-5 w-5" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white sm:text-base">
+              {summaryName}
+              {extraCount > 0 && <span className="text-white/60"> +{extraCount} more</span>}
+            </p>
+            <p className="text-[11px] text-white/60 sm:text-xs">{formatOrderDate(order)}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className="shrink-0 gap-1 rounded-lg border border-white/15 px-2.5 text-xs font-semibold text-white hover:bg-white/10 hover:text-white sm:px-3"
+          >
+            <span className="hidden sm:inline">{expanded ? 'Hide details' : 'View details'}</span>
+            <span className="sm:hidden">{expanded ? 'Hide' : 'Details'}</span>
+            <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} />
+          </Button>
+        </div>
+
+        {expanded && (
+        <>
         <div className="p-4 sm:p-6 border-b border-white/10">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
             <div className="flex-1">
@@ -227,6 +266,8 @@ export function BuyerOrderCard({
             )}
           </div>
         </div>
+        </>
+        )}
       </CardContent>
     </Card>
   );

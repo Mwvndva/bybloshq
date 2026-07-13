@@ -18,6 +18,8 @@ import { SellerDashboardHeader } from './dashboard/widgets/SellerDashboardHeader
 import { SellerDashboardErrorState, SellerDashboardLoadingState } from './dashboard/widgets/SellerDashboardState';
 import { SellerDashboardTabs } from './dashboard/widgets/SellerDashboardTabs';
 import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/shopLinks';
+import { useShopTheme } from '@/hooks/useShopTheme';
+import type { Theme } from '@/types';
 import type { SellerDashboardProps, SellerTabId } from './dashboard/types';
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
@@ -25,6 +27,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const location = useLocation();
   const { toast } = useToast();
   const { seller: sellerProfile, isLoading: isAuthLoading, updateSellerProfile, logout } = useSellerAuth();
+
+  // Drive the whole dashboard's accent from the seller's chosen shop theme
+  // (sets --theme-accent / --theme-button-* CSS vars on :root).
+  useShopTheme((sellerProfile?.theme as Theme) || 'default');
 
   const [activeTab, setActiveTab] = useState<SellerTabId>('overview');
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
