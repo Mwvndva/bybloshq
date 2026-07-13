@@ -67,6 +67,7 @@ class OrderReadService {
               b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, 
               b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
               b.latitude AS buyer_latitude, b.longitude AS buyer_longitude,
+              b.user_id AS buyer_user_id, s.user_id AS seller_user_id,
               COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
               COALESCE(s.whatsapp_number, NULL) as seller_phone, 
               s.whatsapp_number as seller_whatsapp, 

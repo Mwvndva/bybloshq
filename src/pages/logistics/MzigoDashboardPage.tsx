@@ -21,6 +21,7 @@ import { isNativeApp } from '@/lib/mobileApp';
 import { ACTIVE_GROUPS, COMPLETED_GROUP, SORT_OPTIONS } from './mzigoDashboard.constants';
 import { DashboardStat, RequestCard } from './mzigoDashboard.components';
 import { useMzigoDashboard } from './useMzigoDashboard';
+import { MzigoActivityPanel } from './MzigoActivityPanel';
 
 const MzigoDashboardPage = () => {
     const navigate = useNavigate();
@@ -64,6 +65,7 @@ const MzigoDashboardPage = () => {
       </header>
 
       <section className="w-full px-4 py-6 sm:px-6 lg:px-8">
+        <MzigoActivityPanel />
         <div className="mb-6 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <p className="flex items-center gap-2 text-sm font-medium text-stone-700">

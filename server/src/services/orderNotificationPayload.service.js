@@ -24,11 +24,13 @@ class OrderNotificationPayloadService {
       downloadUrl: metadata.download_url || metadata.downloadUrl || null,
       downloadUrls: metadata.download_urls || metadata.downloadUrls || [],
       buyer: {
+        userId: fullOrder.buyer_user_id || null,
         name: fullOrder.buyer_name || 'Customer',
         phone: fullOrder.buyer_mobile_payment || 'N/A',
         email: fullOrder.buyer_email || null,
       },
       seller: {
+        userId: fullOrder.seller_user_id || null,
         name: fullOrder.seller_name || 'Seller',
         shopName: fullOrder.shop_name || 'Shop',
         phone: fullOrder.seller_phone || 'N/A',

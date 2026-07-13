@@ -1579,7 +1579,7 @@ test('imported physical products expose pre-order ready SLA without customizatio
   const productService = read('src/services/product.service.js');
   const paymentService = read('src/services/paymentLifecycle.service.js');
   const paymentController = read('src/controllers/payment.controller.js');
-  const sellerController = read('src/controllers/seller.controller.js');
+  const sellerController = (read('src/controllers/seller.controller.js') + read('src/controllers/seller.auth.controller.js') + read('src/controllers/seller.shop.controller.js') + read('src/controllers/seller.profile.controller.js') + read('src/controllers/seller.clientele.controller.js'));
   const core = read('src/core/CorePaymentService.js');
   const whatsapp = read('src/services/whatsapp.service.js');
   const phoneModal = (read('../src/components/PhoneCheckModal.tsx') + read('../src/components/usePhoneCheck.ts'));
