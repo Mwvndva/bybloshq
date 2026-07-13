@@ -182,6 +182,7 @@ export default function SellerOrdersSection() {
                                 key={order.id}
                                 order={order}
                                 isUpdating={isUpdating}
+                                isRequestingPickup={isRequestingPickup}
                                 onReadyForPickup={handleReadyForPickupClick}
                                 onRequestPickup={openRequestPickupDialog}
                                 onSelectHubDropoff={selectHubDropoff}

@@ -23,6 +23,7 @@ import { DashboardStat, RequestCard } from './mzigoDashboard.components';
 import { useMzigoDashboard } from './useMzigoDashboard';
 
 const MzigoDashboardPage = () => {
+    const navigate = useNavigate();
   const {
     sort,
     setSort,

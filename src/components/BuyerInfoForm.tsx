@@ -9,6 +9,7 @@ import type { BuyerInfo } from './BuyerInfoModal';
 
 interface BuyerInfoFormProps {
   handleSubmit: (e: React.FormEvent) => Promise<void>;
+  handleClose: () => void;
   buyerInfo: BuyerInfo;
   setBuyerInfo: React.Dispatch<React.SetStateAction<BuyerInfo>>;
   errors: Partial<BuyerInfo & { termsAccepted?: string }>;
@@ -26,6 +27,7 @@ interface BuyerInfoFormProps {
 
 export function BuyerInfoForm({
   handleSubmit,
+  handleClose,
   buyerInfo,
   setBuyerInfo,
   errors,

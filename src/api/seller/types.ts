@@ -1,4 +1,5 @@
 import type { OrderStatus, Theme } from '@/types';
+export type { Theme };
 import type { ProductType } from '@/types/index';
 
 
