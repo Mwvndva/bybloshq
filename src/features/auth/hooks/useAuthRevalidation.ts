@@ -1,12 +1,15 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef } from 'react';
+import type { NavigateFunction } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStateManager } from '@/lib/authState';
+import { storage } from '@/lib/storage';
 import {
   AUTH_REVALIDATION_TTL_MS,
+  getDashboardPath,
   getRoleFromRoute,
   isPublicRoute,
 } from '../utils/authRouting';
-import { clearRoleSession, markRoleSessionActive } from '../services/authSession';
+import { clearRoleSession, getSessionKey, markRoleSessionActive } from '../services/authSession';
 import type { GlobalUser, UserRole } from '../types/authTypes';
 import {
   buyerProfileQueryOptions,
@@ -21,6 +24,7 @@ interface UseAuthRevalidationOptions {
   setUser: Dispatch<SetStateAction<GlobalUser | null>>;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
   setInitializing: Dispatch<SetStateAction<boolean>>;
+  navigate: NavigateFunction;
 }
 
 export function useAuthRevalidation({
@@ -29,6 +33,7 @@ export function useAuthRevalidation({
   setUser,
   setIsLoading,
   setInitializing,
+  navigate,
 }: UseAuthRevalidationOptions) {
   const authCheckInProgress = useRef(false);
   const initialized = useRef(false);
@@ -142,6 +147,62 @@ export function useAuthRevalidation({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [pathname, checkAuth]);
+
+  // Cold-start session restore. On native the app relaunches at "/" (a public
+  // route), so the route-based checkAuth never re-fetches the profile and a
+  // still-valid persisted token looks logged-out. If a role's session marker
+  // survived, restore that session from its stored token and land on its
+  // dashboard so the user is not forced to log in again.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const bootPath = pathname;
+      if (getRoleFromRoute(bootPath) || !isPublicRoute(bootPath)) return;
+      if (user) return;
+      if (['/reset-password', '/forgot-password', '/payment', '/checkout'].some((p) => bootPath.includes(p))) return;
+
+      const roles: UserRole[] = ['seller', 'buyer', 'creator', 'admin'];
+      let activeRole: UserRole | null = null;
+      for (const r of roles) {
+        if ((await storage.get(getSessionKey(r))) === 'true') {
+          activeRole = r;
+          break;
+        }
+      }
+      if (!activeRole || cancelled) return;
+
+      let queryOpts;
+      if (activeRole === 'buyer') queryOpts = buyerProfileQueryOptions;
+      else if (activeRole === 'seller') queryOpts = sellerProfileQueryOptions;
+      else if (activeRole === 'admin') queryOpts = adminProfileQueryOptions;
+      else queryOpts = creatorProfileQueryOptions;
+
+      try {
+        const profileData = await queryClient.fetchQuery(queryOpts);
+        if (cancelled) return;
+        if (!profileData) {
+          await clearRoleSession(activeRole);
+          return;
+        }
+        setUser({
+          role: activeRole,
+          profile: profileData as import('@/features/auth/types/authTypes').UserProfile,
+          isAuthenticated: true,
+        });
+        await markRoleSessionActive(activeRole);
+        markAuthChecked();
+        if (bootPath === '/') navigate(getDashboardPath(activeRole), { replace: true });
+      } catch {
+        // Token invalid/expired — drop the marker and leave the user on the landing page.
+        if (!cancelled) await clearRoleSession(activeRole);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Boot-only: run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { markAuthChecked };
 }
