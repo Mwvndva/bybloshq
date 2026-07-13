@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Store, Users } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils';
@@ -15,6 +15,26 @@ interface ShopHeroProps {
 
 export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, showSellerAvatar, setAvatarLoadFailed, sellerInitials }: ShopHeroProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const isBuyer = location.pathname.startsWith('/buyer');
+
+  // The buyer opens a shop from a dashboard tab (browse shops or "My Shops").
+  // "Back" should return them to that exact tab, not reset to the default
+  // dashboard view — so step back through history when there is an in-app
+  // entry, falling back to the dashboard for direct / shared links.
+  const handleBack = () => {
+    if (!isBuyer) {
+      navigate('/');
+      return;
+    }
+    const historyIdx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (historyIdx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/buyer/dashboard');
+    }
+  };
+
   return (
     <>
       {/* Modern Hero Section */}
@@ -51,18 +71,17 @@ export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, sh
         {/* Back to Home/Dashboard Button - Top Left */}
         <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-20">
           <Button
-            asChild
-            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-300 flex items-center group"
+            type="button"
+            onClick={handleBack}
+            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-300 flex items-center gap-1 sm:gap-2 group"
           >
-            <Link to={location.pathname.startsWith('/buyer') ? "/buyer/dashboard" : "/"} className="flex items-center gap-1 sm:gap-2">
-              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
-              <span className="hidden sm:inline">
-                {location.pathname.startsWith('/buyer') ? "Back to Dashboard" : "Back to Home"}
-              </span>
-              <span className="sm:hidden">
-                {location.pathname.startsWith('/buyer') ? "Dashboard" : "Home"}
-              </span>
-            </Link>
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="hidden sm:inline">
+              {isBuyer ? "Back to Dashboard" : "Back to Home"}
+            </span>
+            <span className="sm:hidden">
+              {isBuyer ? "Dashboard" : "Home"}
+            </span>
           </Button>
         </div>
 
