@@ -7,6 +7,7 @@ import { sendEmail, sendVerificationEmail } from '../shared/utils/email.js';
 import Fees from '../config/fees.js';
 import logger from '../shared/utils/logger.js';
 import whatsappService from './whatsapp.service.js';
+import notificationService from './notification.service.js';
 import WithdrawalService from './withdrawal.service.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
@@ -601,6 +602,7 @@ class CreatorService {
     const { rows } = await client.query(
       `SELECT c.first_name,
               c.whatsapp_number,
+              c.user_id,
               s.shop_name
        FROM creators c
        LEFT JOIN sellers s ON s.id = $2
@@ -609,7 +611,23 @@ class CreatorService {
       [creatorId, order.seller_id || null]
     );
     const creator = rows[0];
-    if (!creator?.whatsapp_number) return;
+    if (!creator) return;
+
+    if (creator.user_id) {
+      const amountText = Number(amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const orderRef = order.order_number || order.orderNumber || ('#' + order.id);
+      notificationService.send({
+        recipientUserId: creator.user_id,
+        recipientRole: 'creator',
+        type: 'creator_sale',
+        title: 'You earned KSh ' + amountText,
+        body: 'Your link generated a sale on order ' + orderRef + '.',
+        data: { path: '/creator/dashboard', orderId: order.id },
+        channels: ['in_app']
+      }).catch((error) => logger.warn('[Feed] creator sale notification failed', { creatorId, error: error.message }));
+    }
+
+    if (!creator.whatsapp_number) return;
 
     const orderRef = order.order_number || order.orderNumber || `#${order.id}`;
     const amountText = Number(amount || 0).toLocaleString('en-KE', {

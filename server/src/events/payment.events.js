@@ -3,6 +3,28 @@ import logger from '../shared/utils/logger.js';
 import whatsappService from '../services/whatsapp.service.js';
 import LogisticsRequestService from '../services/logisticsRequest.service.js';
 import PaymentReceiptService from '../services/paymentReceipt.service.js';
+import notificationService from '../services/notification.service.js';
+import { pool } from '../shared/db/database.js';
+
+// --- In-app feed helpers (additive, best-effort; never throw, skip accountless) ---
+async function buyerUserIdById(buyerId) {
+    if (!buyerId) return null;
+    try { const { rows } = await pool.query('SELECT user_id FROM buyers WHERE id = $1 LIMIT 1', [Number(buyerId)]); return rows[0]?.user_id || null; }
+    catch (error) { logger.warn('[Feed] buyer userId lookup failed', { buyerId, error: error.message }); return null; }
+}
+async function sellerUserIdById(sellerId) {
+    if (!sellerId) return null;
+    try { const { rows } = await pool.query('SELECT user_id FROM sellers WHERE id = $1 LIMIT 1', [Number(sellerId)]); return rows[0]?.user_id || null; }
+    catch (error) { logger.warn('[Feed] seller userId lookup failed', { sellerId, error: error.message }); return null; }
+}
+function feedSend(recipientUserId, recipientRole, notif) {
+    if (!recipientUserId) return Promise.resolve();
+    return notificationService.send({
+        recipientUserId, recipientRole,
+        type: notif.type, title: notif.title, body: notif.body,
+        data: notif.data || {}, channels: ['in_app']
+    }).catch(error => logger.warn('[Feed] in-app notification write failed', { type: notif.type, error: error.message }));
+}
 
 /**
  * Handle PAYMENT.COMPLETED event
@@ -154,6 +176,10 @@ eventBus.on(AppEvents.REFUND.APPROVED, async ({ eventId, refund, buyer }) => {
     if (buyer?.whatsapp_number) {
         await eventBus.deliverRecipient(eventId, `refund:${refund.id}:buyer:approved`, () => whatsappService.sendRefundApprovedNotification(buyer, Number(refund.amount || 0)));
     }
+    const buyerUserId = await buyerUserIdById(buyer?.id || refund?.buyer_id);
+    if (buyerUserId) {
+        await eventBus.deliverRecipient(eventId, `refund:${refund.id}:buyer:approved:feed`, () => feedSend(buyerUserId, 'buyer', { type: 'refund_approved', title: 'Refund approved', body: `KES ${Number(refund.amount || 0).toLocaleString('en-KE')} is on its way back to you.`, data: { path: '/buyer', refundId: refund.id } }));
+    }
 });
 
 eventBus.on(AppEvents.REFUND.REJECTED, async ({ eventId, refund, buyer }) => {
@@ -161,16 +187,24 @@ eventBus.on(AppEvents.REFUND.REJECTED, async ({ eventId, refund, buyer }) => {
     if (buyer?.whatsapp_number) {
         await eventBus.deliverRecipient(eventId, `refund:${refund.id}:buyer:rejected`, () => whatsappService.sendRefundRejectedNotification(buyer, Number(refund.amount || 0), refund.adminNotes));
     }
+    const buyerUserId = await buyerUserIdById(buyer?.id || refund?.buyer_id);
+    if (buyerUserId) {
+        await eventBus.deliverRecipient(eventId, `refund:${refund.id}:buyer:rejected:feed`, () => feedSend(buyerUserId, 'buyer', { type: 'refund_rejected', title: 'Refund update', body: refund.adminNotes ? String(refund.adminNotes) : 'Your refund request was not approved. Tap for details.', data: { path: '/buyer', refundId: refund.id } }));
+    }
 });
 
 eventBus.on(AppEvents.REFERRAL.REWARD_CREATED, async ({ eventId, seller, reward }) => {
     logger.info(`[Event:ReferralRewardCreated] Seller ${seller?.id} reward ${reward?.amount}`);
+    const amount = Number(reward.amount || 0);
     if (seller?.whatsapp_number) {
-        const amount = Number(reward.amount || 0);
         const unitsSold = Number(reward.unitsSold || 0);
         const unitText = unitsSold > 0 ? ` from ${unitsSold.toLocaleString('en-KE')} referred product${unitsSold === 1 ? '' : 's'} sold` : '';
         const message = `Byblos: You earned KES ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${unitText} by ${reward.referredShopName} this month. Keep building your squad!`;
         await eventBus.deliverRecipient(eventId, `referral:${reward.id || reward.referredSellerId || amount}:seller:${seller.id}`, () => whatsappService.sendMessage(seller.whatsapp_number, message));
+    }
+    const sellerUserId = await sellerUserIdById(seller?.id);
+    if (sellerUserId) {
+        await eventBus.deliverRecipient(eventId, `referral:${reward.id || reward.referredSellerId || amount}:seller:${seller.id}:feed`, () => feedSend(sellerUserId, 'seller', { type: 'referral_reward', title: `You earned KES ${amount.toLocaleString('en-KE')}`, body: `From ${reward.referredShopName || 'a referred shop'} this month. Keep building your squad!`, data: { path: '/seller' } }));
     }
 });
 
