@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDeleteProductMutation, useUpdateProductMutation } from '@/hooks/seller/useSellerProducts';
 import { useToast } from '@/hooks/use-toast';
 import { useSellerAuth } from '@/features/auth/contexts';
-import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
+import { SellerProfileHero } from './SellerProfileHero';
 import { pendingOverviewStatuses } from './dashboard/dashboardUtils';
 import { useSellerDashboardData } from './dashboard/hooks/useSellerDashboardData';
 import { useSellerOrders } from './dashboard/hooks/useSellerOrders';
@@ -180,7 +180,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
       <div className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="mb-6 sm:mb-7 md:mb-8">
-          <UnifiedAnalyticsHub analytics={analytics} />
+          <SellerProfileHero
+            sellerProfile={sellerProfile}
+            followers={analytics.clientCount || 0}
+            sales={analytics.totalSales || 0}
+          />
         </div>
 
         <SellerDashboardTabs
