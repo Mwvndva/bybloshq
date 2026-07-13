@@ -1,4 +1,5 @@
 import { ChevronLeft } from 'lucide-react';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 interface BuyerDashboardHeaderProps {
   onBack: () => void;
@@ -24,7 +25,7 @@ export function BuyerDashboardHeader({ onBack }: BuyerDashboardHeaderProps) {
       <span style={{ fontSize: 15, fontWeight: 700, color: '#111111', letterSpacing: '-0.2px' }}>
         Trusted Businesses
       </span>
-      <div style={{ width: 30, height: 30 }} />
+      <NotificationBell />
     </div>
   );
 }

@@ -21,9 +21,10 @@ function timeAgo(iso: string): string {
 
 export interface NotificationBellProps {
   variant?: NotificationVariant;
+  triggerClassName?: string;
 }
 
-export function NotificationBell({ variant = 'default' }: NotificationBellProps) {
+export function NotificationBell({ variant = 'default', triggerClassName }: NotificationBellProps) {
   const navigate = useNavigate();
   const { notifications, unreadCount, isLoading, markRead, markAllRead } = useNotifications(variant);
 
@@ -36,7 +37,7 @@ export function NotificationBell({ variant = 'default' }: NotificationBellProps)
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+        <Button variant="ghost" size="icon" className={cn('relative', triggerClassName)} aria-label="Notifications">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-yellow-500 text-black text-[11px] font-bold flex items-center justify-center">
