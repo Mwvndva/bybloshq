@@ -1,0 +1,80 @@
+import { useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import apiClient from '@/lib/apiClient';
+
+export interface AppNotification {
+  id: number | string;
+  recipient_role: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown> | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export type NotificationVariant = 'default' | 'logistics';
+
+const basePath = (variant: NotificationVariant) =>
+  variant === 'logistics' ? '/notifications/logistics' : '/notifications';
+
+/**
+ * Notification feed for the bell / notification screen. Works for any logged-in
+ * role on web or app (plain API, no push permission needed). Pass
+ * variant="logistics" for the Mzigo partner (separate auth endpoint).
+ */
+export function useNotifications(variant: NotificationVariant = 'default', enabled = true) {
+  const queryClient = useQueryClient();
+  const queryKey = ['notifications', variant] as const;
+  const base = basePath(variant);
+
+  const query = useQuery({
+    queryKey,
+    queryFn: async (): Promise<AppNotification[]> => {
+      const res = await apiClient.get(`${base}?limit=30`);
+      return (res.data?.data ?? []) as AppNotification[];
+    },
+    enabled,
+    refetchInterval: 45000,
+    refetchOnWindowFocus: true,
+    staleTime: 15000,
+  });
+
+  const notifications = query.data ?? [];
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+
+  const markReadMutation = useMutation({
+    mutationFn: async (id: AppNotification['id']) => {
+      await apiClient.patch(`${base}/${id}/read`);
+    },
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData<AppNotification[]>(queryKey, (current = []) =>
+        current.map((n) => (n.id === id ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n))
+      );
+    },
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.patch(`${base}/read-all`);
+    },
+    onSuccess: () => {
+      queryClient.setQueryData<AppNotification[]>(queryKey, (current = []) =>
+        current.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() }))
+      );
+    },
+  });
+
+  const refetch = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['notifications', variant] });
+  }, [queryClient, variant]);
+
+  return {
+    notifications,
+    unreadCount,
+    isLoading: query.isLoading,
+    markRead: markReadMutation.mutate,
+    markAllRead: markAllReadMutation.mutate,
+    refetch,
+  };
+}

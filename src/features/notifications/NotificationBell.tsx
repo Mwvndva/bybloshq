@@ -1,0 +1,94 @@
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useNotifications, type AppNotification, type NotificationVariant } from './useNotifications';
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const secs = Math.max(1, Math.floor((Date.now() - then) / 1000));
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+export interface NotificationBellProps {
+  variant?: NotificationVariant;
+}
+
+export function NotificationBell({ variant = 'default' }: NotificationBellProps) {
+  const navigate = useNavigate();
+  const { notifications, unreadCount, isLoading, markRead, markAllRead } = useNotifications(variant);
+
+  const handleItem = (n: AppNotification) => {
+    if (!n.read_at) markRead(n.id);
+    const path = typeof n.data?.path === 'string' ? (n.data.path as string) : null;
+    if (path && path.startsWith('/')) navigate(path);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-yellow-500 text-black text-[11px] font-bold flex items-center justify-center">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+          <span className="font-semibold text-sm text-slate-900">Notifications</span>
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={() => markAllRead()}
+              className="text-xs text-slate-500 hover:text-slate-900 inline-flex items-center gap-1"
+            >
+              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+            </button>
+          )}
+        </div>
+        <div className="max-h-96 overflow-y-auto">
+          {isLoading ? (
+            <div className="px-4 py-10 text-center text-sm text-slate-400">Loading…</div>
+          ) : notifications.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-slate-400">No notifications yet</div>
+          ) : (
+            notifications.map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => handleItem(n)}
+                className={cn(
+                  'w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors',
+                  !n.read_at && 'bg-yellow-50/60'
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  {!n.read_at && <span className="mt-1.5 h-2 w-2 rounded-full bg-yellow-500 flex-shrink-0" />}
+                  <div className={cn('flex-1 min-w-0', n.read_at && 'pl-4')}>
+                    <div className="text-sm font-medium text-slate-900 truncate">{n.title}</div>
+                    <div className="text-xs text-slate-500 line-clamp-2">{n.body}</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">{timeAgo(n.created_at)}</div>
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export default NotificationBell;
