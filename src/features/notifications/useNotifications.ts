@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/apiClient';
 
@@ -67,6 +67,34 @@ export function useNotifications(variant: NotificationVariant = 'default', enabl
 
   const refetch = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['notifications', variant] });
+  }, [queryClient, variant]);
+
+  // On the native app, refetch the feed the moment a push arrives so the bell
+  // badge updates instantly instead of waiting for the poll. No-op on web.
+  useEffect(() => {
+    let removeListener: (() => void) | undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { isNativeApp } = await import('@/lib/mobileApp');
+        if (!isNativeApp()) return;
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        const handle = await PushNotifications.addListener('pushNotificationReceived', () => {
+          void queryClient.invalidateQueries({ queryKey: ['notifications', variant] });
+        });
+        if (cancelled) {
+          void handle.remove();
+          return;
+        }
+        removeListener = () => { void handle.remove(); };
+      } catch {
+        // Web build or plugin unavailable — the 45s poll handles refresh.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (removeListener) removeListener();
+    };
   }, [queryClient, variant]);
 
   return {
