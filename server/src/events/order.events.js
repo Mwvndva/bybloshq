@@ -1,5 +1,6 @@
 import eventBus, { AppEvents } from './eventBus.js';
 import whatsappService from '../services/whatsapp.service.js';
+import notificationService from '../services/notification.service.js';
 import logger from '../shared/utils/logger.js';
 import OrderReadService from '../services/orderRead.service.js';
 import OrderNotificationPayloadService from '../services/orderNotificationPayload.service.js';
@@ -40,6 +41,25 @@ async function loadNormalizedOrder(order, fallbackItems = []) {
         });
         return { order, items: fallbackItems };
     }
+}
+
+// Best-effort in-app feed write, delivered alongside the existing WhatsApp sends.
+// Returns null (skipped) when the recipient has no user account; never throws, so a
+// feed-write failure cannot fail the event or block the WhatsApp delivery.
+function feedDelivery(key, recipientUserId, recipientRole, notif) {
+    if (!recipientUserId) return null;
+    return {
+        key,
+        run: () => notificationService.send({
+            recipientUserId,
+            recipientRole,
+            type: notif.type,
+            title: notif.title,
+            body: notif.body,
+            data: notif.data || {},
+            channels: ['in_app']
+        }).catch(error => logger.warn('[Feed] in-app notification write failed', { key, error: error.message }))
+    };
 }
 
 /**
@@ -90,7 +110,10 @@ eventBus.on(AppEvents.ORDER.FULFILLED, async ({ eventId, order, items = [] }) =>
             order: notificationOrder,
             location: notificationOrder.location,
             newStatus: notificationOrder.status || 'AWAITING_SELLER_ACTION'
-        }) }
+        }) },
+        hasDigital ? feedDelivery(`order:${order.id}:buyer:digital:feed`, notificationOrder.buyer.userId, 'buyer', { type: 'order_digital_ready', title: 'Your files are ready', body: `Download your digital items for order ${notificationOrder.orderNumber}.`, data: { path: '/buyer', orderId: order.id } }) : null,
+        feedDelivery(`order:${order.id}:buyer:payment_success:feed`, notificationOrder.buyer.userId, 'buyer', { type: 'order_payment_success', title: 'Payment confirmed', body: `We received your payment for order ${notificationOrder.orderNumber}.`, data: { path: '/buyer', orderId: order.id } }),
+        feedDelivery(`order:${order.id}:seller:new_order:feed`, notificationOrder.seller.userId, 'seller', { type: 'order_new', title: 'New order received', body: `Order ${notificationOrder.orderNumber} · KES ${Number(notificationOrder.totalAmount || 0).toLocaleString('en-KE')} — tap to review.`, data: { path: '/seller', orderId: order.id } })
     ]);
 });
 
