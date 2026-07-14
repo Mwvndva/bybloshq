@@ -1,5 +1,4 @@
 import eventBus, { AppEvents } from './eventBus.js';
-import whatsappService from '../services/whatsapp.service.js';
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import LogisticsTrackingLinkService from '../services/logisticsTrackingLink.service.js';
@@ -150,7 +149,7 @@ async function loadLogisticsNotificationContext({ requestId, legId, orderId }) {
             id: row.partner_id,
             userId: row.partner_user_id || null,
             name: row.partner_name || 'Mzigo Ego',
-            phone: firstPresent(row.partner_whatsapp_number, row.partner_phone, whatsappService.COURIER_NUMBER)
+            phone: firstPresent(row.partner_whatsapp_number, row.partner_phone)
         },
         leg: {
             id: row.leg_id,
@@ -188,80 +187,43 @@ async function deliverAll(eventId, context, notificationType) {
     const partnerOnly = notificationType === 'new_order';
     const skipPartner = ['delivery_paid', 'pickup_paid'].includes(notificationType);
 
-    const deliveries = [
-        !partnerOnly && context.buyer.phone
-            ? {
-                key: `${requestKey}:buyer`,
-                role: 'buyer',
-                phone: context.buyer.phone
-            }
-            : null,
-        !partnerOnly && context.seller.phone
-            ? {
-                key: `${requestKey}:seller`,
-                role: 'seller',
-                phone: context.seller.phone
-            }
-            : null,
-        !skipPartner && context.partner.phone
-            ? {
-                key: `${requestKey}:partner`,
-                role: 'partner',
-                phone: context.partner.phone
-            }
-            : null
-    ].filter(Boolean);
-
-    // Additive in-app feed writes (best-effort; gated on userId, independent of phone).
+    // In-app feed + push writes, gated on the recipient having a user account.
     const feedRecipients = [
         !partnerOnly && context.buyer.userId ? { key: `${requestKey}:buyer`, role: 'buyer', userId: context.buyer.userId } : null,
         !partnerOnly && context.seller.userId ? { key: `${requestKey}:seller`, role: 'seller', userId: context.seller.userId } : null,
         !skipPartner && context.partner.userId ? { key: `${requestKey}:partner`, role: 'partner', userId: context.partner.userId } : null
     ].filter(Boolean);
-    if (feedRecipients.length) {
-        await Promise.allSettled(feedRecipients.map(recipient =>
-            eventBus.deliverRecipient(eventId, `${recipient.key}:feed`, () =>
-                notificationService.send({
-                    recipientUserId: recipient.userId,
-                    recipientRole: recipient.role === 'partner' ? 'logistics' : recipient.role,
-                    type: `logistics_${notificationType}`,
-                    title: logisticsFeedTitle(notificationType),
-                    body: logisticsFeedBody(notificationType, context),
-                    data: {
-                        path: recipient.role === 'partner' ? '/mzigo/dashboard' : (recipient.role === 'seller' ? '/seller' : '/buyer'),
-                        orderId: context.order.id,
-                        requestId: context.request.id
-                    },
-                    channels: ['in_app', 'push']
-                }).catch(error => logger.warn('[Feed] logistics notification write failed', { key: recipient.key, error: error.message }))
-            )
-        ));
-    }
 
-    if (!deliveries.length) {
-        logger.warn('[Event:LogisticsNotification] No WhatsApp recipients for logistics notification', {
+    if (!feedRecipients.length) {
+        logger.warn('[Event:LogisticsNotification] No feed recipients for logistics notification', {
             requestId: context.request.id,
-            legId: context.leg.id,
+            legId: context.leg?.id,
             notificationType
         });
         return;
     }
 
-    const results = await Promise.allSettled(deliveries.map(delivery =>
-        eventBus.deliverRecipient(
-            eventId,
-            delivery.key,
-            () => whatsappService.sendLogisticsMilestoneNotification(delivery.phone, {
-                recipientRole: delivery.role,
-                notificationType,
-                context
+    const results = await Promise.allSettled(feedRecipients.map(recipient =>
+        eventBus.deliverRecipient(eventId, `${recipient.key}:feed`, () =>
+            notificationService.send({
+                recipientUserId: recipient.userId,
+                recipientRole: recipient.role === 'partner' ? 'logistics' : recipient.role,
+                type: `logistics_${notificationType}`,
+                title: logisticsFeedTitle(notificationType),
+                body: logisticsFeedBody(notificationType, context),
+                data: {
+                    path: recipient.role === 'partner' ? '/mzigo/dashboard' : (recipient.role === 'seller' ? '/seller' : '/buyer'),
+                    orderId: context.order.id,
+                    requestId: context.request.id
+                },
+                channels: ['in_app', 'push']
             })
         )
     ));
 
     const failures = results.filter(result => result.status === 'rejected');
     if (failures.length) {
-        const error = new Error(`Logistics WhatsApp notification failed for ${failures.length} recipient(s)`);
+        const error = new Error(`Logistics notification failed for ${failures.length} recipient(s)`);
         error.causes = failures.map(result => result.reason);
         error.retryable = failures.some(result => result.reason?.retryable !== false);
         throw error;
@@ -291,8 +253,8 @@ eventBus.on(AppEvents.LOGISTICS.NOTIFICATION, async (payload) => {
         throw error;
     }
 
-    // WhatsApp is notification-only. Tracking, payments, escrow, and payouts are
-    // already durably updated before this event is dispatched.
+    // Notifications only. Tracking, payments, escrow, and payouts are already
+    // durably updated before this event is dispatched.
     await deliverAll(payload.eventId, context, notificationType);
 });
 

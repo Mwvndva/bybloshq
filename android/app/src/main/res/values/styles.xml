@@ -13,7 +13,7 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@color/byblos_launch_background</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:statusBarColor">@color/byblos_launch_background</item>
         <item name="android:navigationBarColor">@color/byblos_launch_background</item>
     </style>
@@ -23,7 +23,7 @@
         <item name="android:background">@drawable/splash</item>
         <item name="windowSplashScreenBackground">@color/byblos_launch_background</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:statusBarColor">@color/byblos_launch_background</item>
         <item name="android:navigationBarColor">@color/byblos_launch_background</item>
     </style>

@@ -20,12 +20,12 @@ export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNav
   return (
     <div style={{
       height: 56,
-      background: '#ffffff',
-      borderTop: '1px solid #e7e2d6',
+      background: '#000000',
+      borderTop: '1px solid rgba(255,255,255,0.10)',
       display: 'flex',
       alignItems: 'stretch',
       flexShrink: 0,
-      boxShadow: '0 -10px 30px rgba(17,17,17,0.06)',
+      boxShadow: '0 -10px 30px rgba(0,0,0,0.55)',
     }}>
       {navItems.map(item => (
         <button
@@ -43,11 +43,11 @@ export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNav
         >
           <item.Icon
             size={18}
-            color={activeNav === item.key ? '#111111' : '#7b756a'}
+            color={activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.5)'}
           />
           <span style={{
             fontSize: 9, fontWeight: 500,
-            color: activeNav === item.key ? '#111111' : '#7b756a',
+            color: activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.5)',
           }}>
             {item.label}
           </span>

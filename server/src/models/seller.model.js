@@ -28,6 +28,15 @@ export const findSellerByEmail = async (email) => {
   return toCamelCase(result.rows[0]);
 };
 
+export const findSellerByWhatsappNumber = async (whatsappNumber) => {
+  if (!whatsappNumber) return null;
+  const result = await query(
+    `SELECT id, user_id AS "userId" FROM sellers WHERE whatsapp_number = $1 LIMIT 1`,
+    [String(whatsappNumber).trim()]
+  );
+  return result.rows[0] || null;
+};
+
 export const findSellerByUserId = async (userId) => {
   const result = await query(
     `SELECT 

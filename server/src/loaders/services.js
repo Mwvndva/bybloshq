@@ -1,15 +1,9 @@
 import cron from 'node-cron';
-import whatsappService from '../services/whatsapp.service.js';
 import WithdrawalService from '../services/withdrawal.service.js';
 import eventBus from '../events/eventBus.js';
 import logger from '../shared/utils/logger.js';
 
 export default async () => {
-    logger.info('Initializing WhatsApp service...');
-    whatsappService.initialize().catch(err => {
-        logger.error('WhatsApp initialization failed:', err.message);
-    });
-
     WithdrawalService.retryPendingApiCalls().catch(err => {
         logger.error('Withdrawal startup retry failed:', err.message);
     });

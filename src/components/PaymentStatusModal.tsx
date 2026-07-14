@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGetOrderStatusMutation } from '@/hooks/buyer/queries/useOrderStatusQuery';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import { formatCurrency } from '@/lib/utils';
+import { isNativeApp, APP_DOWNLOAD_URL } from '@/lib/mobileApp';
 
 type ModalState = 'POLLING' | 'SUCCESS' | 'FAILED' | 'TIMEOUT';
 
@@ -28,6 +29,7 @@ export const PaymentStatusModal = ({
   onClose,
   onSuccess,
   isGuest,
+  email,
   paymentSummary
 }: Props) => {
   const [state, setState] = useState<ModalState>('POLLING');
@@ -189,6 +191,25 @@ export const PaymentStatusModal = ({
               <div className="mb-3 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5">
                 <p className="text-[11px] leading-relaxed text-slate-500">{serviceChargeText}</p>
               </div>
+              {isGuest && !isNativeApp() && (
+                <div className="mb-3 w-full rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-left">
+                  <p className="text-xs font-bold text-slate-950">Your Byblos account is ready</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                    Log in anytime with{email ? <> <span className="font-semibold text-slate-900">{email}</span></> : ' your email'} and the password you set to track this order.
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+                    Get the app for delivery updates and instant notifications.
+                  </p>
+                  <a
+                    href={APP_DOWNLOAD_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 text-xs font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.98]"
+                  >
+                    Get it on Google Play
+                  </a>
+                </div>
+              )}
               <div className="mt-2 w-full space-y-2">
                 <a
                   href="/buyer/orders"
