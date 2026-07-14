@@ -11,20 +11,21 @@ body,
     width: 100%;
     height: 100%;
     overflow-x: hidden;
-    background: #f8f7f2;
+    background: #000000;
     font-family: 'Nunito Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
 }
 
 :root {
-    --byblos-bg: #f8f7f2;
-    --byblos-surface: #ffffff;
-    --byblos-surface-soft: #f3f1ea;
-    --byblos-text: #111111;
-    --byblos-muted: #6f6a60;
-    --byblos-border: #e7e2d6;
+    /* Byblos dark theme — pure black base, charcoal surfaces, yellow accent. */
+    --byblos-bg: #000000;
+    --byblos-surface: #0a0a0a;
+    --byblos-surface-soft: #141414;
+    --byblos-text: #f5f5f5;
+    --byblos-muted: #a3a3a3;
+    --byblos-border: #262626;
     --byblos-yellow: #f5c518;
-    --byblos-yellow-soft: #fff7d6;
+    --byblos-yellow-soft: #26210a;
     --byblos-black: #050505;
     --bg: var(--byblos-bg);
     --surface: var(--byblos-surface);
@@ -34,7 +35,7 @@ body,
     --accent-dim: var(--byblos-yellow-soft);
     --text: var(--byblos-text);
     --text-muted: var(--byblos-muted);
-    --text-sub: #8b8579;
+    --text-sub: #8f8a80;
     --radius-sm: 8px;
     --radius-md: 14px;
     --radius-lg: 18px;
@@ -92,43 +93,43 @@ body,
     }
 
     :root {
-        --background: 45 30% 96%;
-        --foreground: 0 0% 7%;
+        --background: 0 0% 0%;
+        --foreground: 0 0% 96%;
 
-        --card: 0 0% 100%;
-        --card-foreground: 0 0% 7%;
+        --card: 0 0% 4%;
+        --card-foreground: 0 0% 96%;
 
-        --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 7%;
+        --popover: 0 0% 4%;
+        --popover-foreground: 0 0% 96%;
 
         --primary: 47 91% 53%;
         --primary-foreground: 0 0% 0%;
 
-        --secondary: 45 27% 93%;
-        --secondary-foreground: 0 0% 7%;
+        --secondary: 0 0% 10%;
+        --secondary-foreground: 0 0% 96%;
 
-        --muted: 45 27% 93%;
-        --muted-foreground: 34 7% 41%;
+        --muted: 0 0% 12%;
+        --muted-foreground: 0 0% 64%;
 
-        --accent: 45 96% 53%;
-        --accent-foreground: 0 0% 7%;
+        --accent: 0 0% 14%;
+        --accent-foreground: 0 0% 96%;
 
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
 
-        --border: 41 23% 87%;
-        --input: 41 23% 87%;
+        --border: 0 0% 16%;
+        --input: 0 0% 16%;
         --ring: 47 91% 53%;
 
         --radius: 1rem;
 
-        --sidebar-background: 0 0% 100%;
-        --sidebar-foreground: 0 0% 7%;
+        --sidebar-background: 0 0% 3%;
+        --sidebar-foreground: 0 0% 96%;
         --sidebar-primary: 45 100% 60%;
         --sidebar-primary-foreground: 0 0% 5%;
-        --sidebar-accent: 45 27% 93%;
-        --sidebar-accent-foreground: 0 0% 7%;
-        --sidebar-border: 41 23% 87%;
+        --sidebar-accent: 0 0% 10%;
+        --sidebar-accent-foreground: 0 0% 96%;
+        --sidebar-border: 0 0% 16%;
         --sidebar-ring: 45 100% 60%;
     }
 
@@ -462,7 +463,7 @@ body.dashboard-active .seller-service-charge-notice * {
 .byblos-light-page input,
 .byblos-light-page textarea,
 .byblos-light-page select {
-    background-color: #ffffff !important;
+    background-color: #0a0a0a !important;
     border-color: var(--byblos-border) !important;
     color: var(--byblos-text) !important;
 }
@@ -479,9 +480,9 @@ body.dashboard-active .seller-service-charge-notice * {
 }
 
 .auth-page header {
-    background: rgba(255, 255, 255, 0.96) !important;
+    background: rgba(10, 10, 10, 0.96) !important;
     border-color: var(--byblos-border) !important;
-    box-shadow: 0 8px 28px rgba(17, 17, 17, 0.06);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
 .auth-page .rounded-2xl,
@@ -497,8 +498,8 @@ body.dashboard-active .seller-service-charge-notice * {
 }
 
 .auth-page .rounded-2xl[style] {
-    background: #ffffff !important;
-    box-shadow: 0 18px 45px rgba(17, 17, 17, 0.08) !important;
+    background: #0a0a0a !important;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6) !important;
 }
 
 .theme-swatch {
@@ -596,22 +597,53 @@ body.dashboard-active .seller-service-charge-notice * {
 
 .admin-light-dashboard thead,
 .marketing-light-dashboard thead {
-    background: #f4f1e8 !important;
+    background: #141414 !important;
 }
 
 .admin-light-dashboard tbody,
 .marketing-light-dashboard tbody {
-    background: #ffffff !important;
+    background: #0a0a0a !important;
 }
 
 .admin-light-dashboard input,
 .marketing-light-dashboard input {
-    background: #ffffff !important;
+    background: #0a0a0a !important;
     border-color: var(--byblos-border) !important;
     color: var(--byblos-text) !important;
 }
 
 .admin-light-dashboard .recharts-cartesian-grid line,
 .marketing-light-dashboard .recharts-cartesian-grid line {
-    stroke: #e7e5df;
+    stroke: #262626;
+}
+
+/* ── Dark-theme visibility layer ───────────────────────────────────────────
+   Components were authored dark-on-light. On the black theme, remap dark
+   neutral text utilities to light and light-surface utilities to charcoal so
+   nothing renders black-on-black. Accent hues (yellow/green/red/…) and
+   text-black (used on yellow buttons) are intentionally left untouched. */
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="text-slate-"], [class*="text-stone-"], [class*="text-neutral-"]) {
+    color: var(--byblos-text) !important;
+}
+
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="text-slate-400"], [class*="text-slate-500"], [class*="text-stone-400"], [class*="text-stone-500"], [class*="text-neutral-400"], [class*="text-neutral-500"]) {
+    color: var(--byblos-muted) !important;
+}
+
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="bg-white"], [class*="bg-slate-50"], [class*="bg-slate-100"], [class*="bg-stone-50"], [class*="bg-stone-100"], [class*="bg-stone-200"], [class*="bg-gray-50"], [class*="bg-gray-100"], [class*="bg-neutral-50"], [class*="bg-neutral-100"]) {
+    background-color: var(--byblos-surface) !important;
+}
+
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="border-slate-"], [class*="border-stone-"], [class*="border-neutral-"]) {
+    border-color: var(--byblos-border) !important;
+}
+
+/* Yellow frame around every page (fixed viewport overlay, no layout shift). */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    border: 2px solid var(--byblos-yellow);
+    pointer-events: none;
+    z-index: 2147483000;
 }

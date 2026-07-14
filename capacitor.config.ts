@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
     androidScheme: 'https'
   },
   android: {
-    backgroundColor: '#ffffff'
+    backgroundColor: '#000000'
   },
   plugins: {
     PushNotifications: {
