@@ -20,6 +20,7 @@ const CreatorLogin = safeLazy(() => import('@/features/auth/pages/CreatorLogin')
 const CreatorRegister = safeLazy(() => import('@/features/auth/pages/CreatorRegister'));
 const CreatorDashboard = safeLazy(() => import('@/pages/creator/CreatorDashboard'));
 const LegalPage = safeLazy(() => import('@/pages/LegalPage'));
+const DeleteAccountPage = safeLazy(() => import('@/pages/DeleteAccountPage'));
 
 // Main routes configuration
 export const routes = [
@@ -123,6 +124,14 @@ export const routes = [
   ...sellerRoutes,
   ...buyerRoutes,
   // Public legal pages (stable URLs for the Play Console / app store listings)
+  {
+    path: '/delete-account',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <DeleteAccountPage />
+      </Suspense>
+    ),
+  },
   {
     path: '/privacy',
     element: (
