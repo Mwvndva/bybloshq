@@ -134,7 +134,7 @@ const MzigoDashboardPage = () => {
         {requestsQuery.isLoading ? (
           <div className="grid gap-4 lg:grid-cols-3">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="h-64 animate-pulse rounded-2xl border border-stone-200 bg-white" />
+              <div key={item} className="h-64 animate-pulse rounded-2xl border border-white/10 bg-[#0a0a0a]" />
             ))}
           </div>
         ) : (
