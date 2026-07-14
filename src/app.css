@@ -644,12 +644,3 @@ body.dashboard-active .seller-service-charge-notice * {
     background-color: var(--byblos-surface) !important;
 }
 
-/* Yellow frame around every page (fixed viewport overlay, no layout shift). */
-body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    border: 2px solid var(--byblos-yellow);
-    pointer-events: none;
-    z-index: 2147483000;
-}

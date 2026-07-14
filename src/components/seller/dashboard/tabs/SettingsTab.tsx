@@ -105,7 +105,6 @@ export function SettingsTab({
 
       <SettingsBusinessProfileSection
         sellerProfile={sellerProfile}
-        handleBusinessPhotoUploaded={handleBusinessPhotoUploaded}
         isEditing={isEditing}
         formData={formData}
         setFormData={setFormData}
@@ -196,13 +195,12 @@ export function SettingsTab({
 
       <SellerAmbassadorInvites formData={formData} setFormData={setFormData} isEditing={isEditing} toggleEdit={toggleEdit} />
 
-      <section className="rounded-2xl border border-red-200 bg-red-50/60 p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="rounded-2xl border border-white/10 bg-[#000000] p-4 shadow-sm sm:p-5 lg:p-6">
         <SectionHeader title="Account" description="Sign out of your seller account on this device." />
         <div className="mt-4">
           <Button
-            variant="outline"
             onClick={onLogout}
-            className="h-10 w-full border-red-200 bg-white font-black text-red-600 hover:bg-red-50 sm:w-auto"
+            className="h-10 w-full bg-red-600 font-black text-white hover:bg-red-500 sm:w-auto"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
