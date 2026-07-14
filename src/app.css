@@ -638,6 +638,12 @@ body.dashboard-active .seller-service-charge-notice * {
     border-color: var(--byblos-border) !important;
 }
 
+/* Catch hardcoded arbitrary-hex light backgrounds (cream / near-white) the
+   Tailwind-class remaps miss, so no light panels survive on the black theme. */
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="bg-[#f8f7f2]"], [class*="bg-[#f9fafb]"], [class*="bg-[#fafafa]"], [class*="bg-[#fefce8]"], [class*="bg-[#fff"], [class*="bg-[#FFF"]) {
+    background-color: var(--byblos-surface) !important;
+}
+
 /* Yellow frame around every page (fixed viewport overlay, no layout shift). */
 body::after {
     content: "";

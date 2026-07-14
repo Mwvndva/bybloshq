@@ -43,7 +43,7 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
               <span>{label}</span>
 
               {id === 'orders' && hasUnreadOrders && (
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full border-2 border-black animate-pulse" />
               )}
             </button>
           );

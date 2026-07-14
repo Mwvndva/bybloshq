@@ -195,6 +195,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             sellerProfile={sellerProfile}
             followers={analytics.clientCount || 0}
             sales={analytics.totalSales || 0}
+            shopUsername={getShopUsername(sellerProfile?.shopName)}
+            onCopyShopLink={handleCopyShopLink}
           />
         </div>
 
@@ -217,8 +219,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <OverviewTab
             analytics={analytics}
             pendingOverviewOrders={pendingOverviewOrders}
-            sellerProfile={sellerProfile}
-            onCopyShopLink={handleCopyShopLink}
           />
         )}
 
