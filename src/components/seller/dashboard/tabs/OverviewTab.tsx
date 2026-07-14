@@ -1,4 +1,4 @@
-import { BadgeDollarSign, Clock, Heart, Megaphone, MousePointerClick, Package, TrendingUp, UserRoundCheck, Wallet } from 'lucide-react';
+import { BadgeDollarSign, Clock, Heart, Megaphone, MousePointerClick, Package, UserRoundCheck, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { formatOrderStatusLabel, getPendingStatusStyles } from '../dashboardUtils';
@@ -9,23 +9,8 @@ interface OverviewTabProps {
   pendingOverviewOrders: RecentOrder[];
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function monthLabel(m: unknown): string {
-  if (!m) return '';
-  const s = String(m);
-  const match = s.match(/(\d{4})-(\d{2})/);
-  if (match) return MONTHS[Number(match[2]) - 1] || s.slice(0, 3);
-  return s.slice(0, 3);
-}
-
 export function OverviewTab({ analytics, pendingOverviewOrders }: OverviewTabProps) {
   const recentOrders = (analytics.recentOrders || []).slice(0, 5);
-  const monthlySales = (analytics.monthlySales || []).slice(-8);
-  const latestMonthSales = monthlySales[monthlySales.length - 1]?.sales || 0;
-  const prevMonthSales = monthlySales[monthlySales.length - 2]?.sales || 0;
-  const maxSales = Math.max(1, ...monthlySales.map((m) => Number(m.sales) || 0));
-  const trendPct = prevMonthSales > 0 ? Math.round(((latestMonthSales - prevMonthSales) / prevMonthSales) * 100) : null;
 
   const overviewCards = [
     { label: 'Balance', value: formatCurrency(analytics.availableBalance ?? analytics.balance ?? 0), icon: Wallet },
@@ -43,77 +28,6 @@ export function OverviewTab({ analytics, pendingOverviewOrders }: OverviewTabPro
       <div className="px-1 sm:px-0">
         <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white">Overview</h2>
         <p className="mt-1 text-xs sm:text-sm text-white/60 font-medium">What needs attention and how your shop is moving.</p>
-      </div>
-
-      {/* Sales graph — highlight coloured by the shop theme */}
-      <div
-        className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0a0a0a] p-4 sm:p-5"
-        style={{ boxShadow: '0 18px 45px rgba(0,0,0,0.45)' }}
-      >
-        <div
-          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl"
-          style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.16)' }}
-        />
-        <div className="relative flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-white/50">Latest month sales</p>
-            <p className="mt-1 text-2xl sm:text-3xl font-black text-white">{formatCurrency(latestMonthSales)}</p>
-            {trendPct !== null && (
-              <span
-                className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
-                style={{
-                  backgroundColor: trendPct >= 0 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                  color: trendPct >= 0 ? '#4ade80' : '#f87171'
-                }}
-              >
-                <TrendingUp className={`h-3 w-3 ${trendPct >= 0 ? '' : 'rotate-180'}`} />
-                {trendPct >= 0 ? '+' : ''}{trendPct}% vs last month
-              </span>
-            )}
-          </div>
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.16)' }}
-          >
-            <TrendingUp className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-          </span>
-        </div>
-
-        {monthlySales.length > 0 ? (
-          <div className="relative mt-5">
-            <div className="flex h-28 items-end gap-1.5 sm:gap-2.5">
-              {monthlySales.map((m, i) => {
-                const val = Number(m.sales) || 0;
-                const pct = Math.max(4, Math.round((val / maxSales) * 100));
-                const isLast = i === monthlySales.length - 1;
-                return (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-t-lg transition-all"
-                    title={formatCurrency(val)}
-                    style={{
-                      height: `${pct}%`,
-                      backgroundColor: isLast
-                        ? 'var(--theme-accent, #f5c518)'
-                        : 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.30)'
-                    }}
-                  />
-                );
-              })}
-            </div>
-            <div className="mt-1.5 flex gap-1.5 sm:gap-2.5">
-              {monthlySales.map((m, i) => (
-                <span key={i} className="flex-1 text-center text-[9px] font-semibold uppercase text-white/40">
-                  {monthLabel(m.month)}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-6 text-center text-sm text-white/50">
-            No sales yet — your monthly trend will appear here.
-          </p>
-        )}
       </div>
 
       {/* Stat grid — themed icon chips */}

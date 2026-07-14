@@ -42,6 +42,7 @@ export const transformBuyer = (data: unknown): Buyer => {
 
 export const getBuyerProfile = () => buyerApiInstance.get('/buyers/profile');
 export const updateBuyerProfile = (data: Record<string, unknown>) => buyerApiInstance.patch('/buyers/update-profile', data);
+export const deleteBuyerAccount = () => buyerApiInstance.delete('/buyers/account');
 
 export async function getProfile(): Promise<Buyer> {
   try {

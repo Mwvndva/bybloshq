@@ -21,9 +21,6 @@ export function SellerDashboardLoadingState() {
           ))}
         </div>
 
-        {/* Sales graph */}
-        <Skeleton className="mb-4 h-52 w-full rounded-3xl" />
-
         {/* Stat grid */}
         <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (

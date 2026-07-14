@@ -4,6 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards } from 'lucide-react';
 import RefundCard from '../RefundCard';
+import { DeleteAccountButton } from '@/components/account/DeleteAccountButton';
+import { deleteBuyerAccount } from '@/api/buyer/profile';
 
 interface BuyerProfileSheetProps {
   city: string;
@@ -173,7 +175,7 @@ export function BuyerProfileSheet({
           </section>
         </div>
 
-        <div className="border-t border-white/10 bg-black p-4">
+        <div className="space-y-2 border-t border-white/10 bg-black p-4">
           <Button
             onClick={onLogout}
             className="h-10 w-full justify-center gap-2 bg-red-600 font-bold text-white hover:bg-red-500"
@@ -181,6 +183,7 @@ export function BuyerProfileSheet({
             <LogOut className="h-4 w-4" />
             Logout
           </Button>
+          <DeleteAccountButton deleteAccount={deleteBuyerAccount} onDeleted={onLogout} />
         </div>
       </SheetContent>
     </Sheet>

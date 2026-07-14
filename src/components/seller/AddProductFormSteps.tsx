@@ -1,5 +1,6 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from 'react';
 import { Input } from '@/components/ui/input';
+import { isNativeApp } from '@/lib/mobileApp';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -46,12 +47,12 @@ export const AddProductFormSteps = ({
         <p className="text-white text-sm">What are you selling today?</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <div className={cn("grid gap-2 sm:gap-4", isNativeApp() ? "grid-cols-2" : "grid-cols-3")}>
         {[
           { id: 'physical', label: 'Physical', icon: Package, desc: 'Shippable goods' },
           { id: 'digital', label: 'Digital', icon: FileText, desc: 'Downloads, Keys' },
           { id: 'service', label: 'Service', icon: Sparkles, desc: 'Bookings, Tasks' }
-        ].map(type => (
+        ].filter(type => !(isNativeApp() && type.id === 'digital')).map(type => (
           <button
             key={type.id}
             type="button"

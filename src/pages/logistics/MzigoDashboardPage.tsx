@@ -22,6 +22,7 @@ import { ACTIVE_GROUPS, COMPLETED_GROUP, SORT_OPTIONS } from './mzigoDashboard.c
 import { DashboardStat, RequestCard } from './mzigoDashboard.components';
 import { useMzigoDashboard } from './useMzigoDashboard';
 import { MzigoActivityPanel } from './MzigoActivityPanel';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 const MzigoDashboardPage = () => {
     const navigate = useNavigate();
@@ -59,6 +60,10 @@ const MzigoDashboardPage = () => {
             <p className="text-xs font-semibold text-yellow-600">Mzigo Ego</p>
             <h1 className="text-xl font-semibold text-stone-950">Delivery Orders</h1>
             <p className="text-xs text-stone-500">{partner?.name || 'Logistics partner'} workspace</p>
+          </div>
+
+          <div className="flex items-center justify-center sm:justify-end">
+            <NotificationBell variant="logistics" />
           </div>
 
         </div>

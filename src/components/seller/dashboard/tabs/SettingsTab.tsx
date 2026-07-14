@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Edit, Loader2, LogOut, Trash2 } from 'lucide-react';
+import { DeleteAccountButton } from '@/components/account/DeleteAccountButton';
+import { deleteSellerAccount } from '@/api/seller/profileApi';
 import type { Theme } from '@/api/seller';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -205,6 +207,9 @@ export function SettingsTab({
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
+        </div>
+        <div className="mt-3">
+          <DeleteAccountButton deleteAccount={deleteSellerAccount} onDeleted={onLogout} />
         </div>
       </section>
     </div>

@@ -4,6 +4,7 @@ import { useSellerByShopNameQuery, usePublicSellerProductsQuery } from '@/hooks/
 import { useTrackCreatorLinkMutation } from '@/hooks/creator/mutations/useTrackCreatorLinkMutation';
 import type { ApiSellerProduct } from '@/types/api/product';
 import { useBuyerAuth } from '@/features/auth/contexts';
+import { isNativeApp } from '@/lib/mobileApp';
 import { useShopTheme, type Theme } from '@/hooks/useShopTheme';
 import { isAesthetic, getSellerInitials, type ShopProduct, type ShopSeller } from './shopPage.shared';
 
@@ -107,8 +108,17 @@ export function useShopPage() {
     setIsLoading(false);
   }, [seller, sellerProducts, isSellerLoading, isProductsLoading, sellerError, shopName]);
 
+  // Digital products are hidden inside the native app: Google Play requires
+  // digital goods to be sold via Play Billing, so they stay web-only.
+  const visibleProducts = isNativeApp()
+    ? products.filter(product => {
+        const p = product as { productType?: string; isDigital?: boolean };
+        return p.productType !== 'digital' && !p.isDigital;
+      })
+    : products;
+
   // Filter products based on search query
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = visibleProducts.filter(product => {
     if (!searchQuery.trim()) return true;
 
     const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
@@ -126,7 +136,7 @@ export function useShopPage() {
   return {
     sellerInfo,
     themeClasses,
-    products,
+    products: visibleProducts,
     filteredProducts,
     searchQuery,
     setSearchQuery,

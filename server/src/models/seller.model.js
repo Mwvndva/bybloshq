@@ -2,6 +2,7 @@
 import { pool } from '../shared/db/database.js';
 import { toCamelCase } from '../shared/utils/caseUtils.js';
 import logger from '../shared/utils/logger.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 
 const SALT_ROUNDS = 10;
 
@@ -494,4 +495,45 @@ export const findSellersByUserId = async (userId, options = {}) => {
 };
 
 
-
+// Soft-delete a seller: block if they still hold a balance, otherwise anonymise
+// PII, hide the shop (status='deleted' + tombstoned unique name/slug), and
+// deactivate the auth account. Orders/withdrawals are preserved via FK.
+export const softDeleteSeller = async (sellerId, userId) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const balRes = await client.query('SELECT balance FROM sellers WHERE id = $1 FOR UPDATE', [sellerId]);
+    if (!balRes.rows.length) {
+      throw new AppError('Seller account not found.', 404);
+    }
+    if (Number(balRes.rows[0].balance || 0) > 0) {
+      throw new AppError('Please withdraw your available balance before deleting your account.', 400);
+    }
+    const tag = `${userId || sellerId}_${Date.now()}`;
+    const tombstone = `deleted_seller_${tag}@deleted.byblos`;
+    await client.query(
+      `UPDATE sellers SET status = 'deleted', full_name = 'Deleted user', email = $1,
+         shop_name = $2, slug = $3, whatsapp_number = NULL, instagram_link = NULL,
+         tiktok_link = NULL, facebook_link = NULL, banner_image = NULL,
+         city = NULL, location = NULL, physical_address = NULL,
+         latitude = NULL, longitude = NULL, updated_at = NOW() WHERE id = $4`,
+      [tombstone, `deleted-shop-${tag}`, `deleted-shop-${tag}`, sellerId]
+    );
+    if (userId) {
+      await client.query(
+        "UPDATE users SET is_active = FALSE, email = $1, password_hash = 'DELETED' WHERE id = $2",
+        [tombstone, userId]
+      );
+    }
+    await client.query('COMMIT');
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (!(error instanceof AppError)) {
+      logger.error('softDeleteSeller failed', { sellerId, userId, error: error.message });
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+};

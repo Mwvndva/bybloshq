@@ -184,6 +184,36 @@ class Buyer {
   }
 
 
+
+  // Soft-delete: anonymise PII and deactivate the auth account so the buyer can
+  // no longer sign in, while preserving legally-retained transaction records.
+  static async softDeleteAccount(buyerId, userId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const tombstone = `deleted_buyer_${userId || buyerId}_${Date.now()}@deleted.byblos`;
+      await client.query(
+        `UPDATE buyers SET full_name = 'Deleted user', email = $1, mobile_payment = 'deleted',
+           whatsapp_number = NULL, city = NULL, location = NULL, latitude = NULL, longitude = NULL,
+           full_address = NULL, updated_at = NOW() WHERE id = $2`,
+        [tombstone, buyerId]
+      );
+      if (userId) {
+        await client.query(
+          "UPDATE users SET is_active = FALSE, email = $1, password_hash = 'DELETED' WHERE id = $2",
+          [tombstone, userId]
+        );
+      }
+      await client.query('COMMIT');
+      return true;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('Buyer.softDeleteAccount failed', { buyerId, userId, error: error.message });
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export default Buyer;
