@@ -43,7 +43,7 @@ COPY . .
 EXPOSE 3002
 
 # Create necessary directories and ensure node user can write to them
-RUN mkdir -p uploads baileys_auth_info && chown -R node:node /app
+RUN mkdir -p uploads && chown -R node:node /app
 
 # Switch to non-root user
 USER node

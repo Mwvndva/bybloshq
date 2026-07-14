@@ -5,7 +5,7 @@
 
 /**
  * Determines if a seller has a physical shop address.
- * Standardizes detection across OrderService, WhatsAppService, and Controllers.
+ * Standardizes detection across OrderService and Controllers.
  * 
  * A seller HAS a physical shop IF:
  * 1. A physical address is present

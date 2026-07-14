@@ -10,7 +10,7 @@ import logger from '../shared/utils/logger.js';
  *
  * BYBLOS_PROCESS_ROLE:
  * - all/default: API + worker services in one process, preserving current behavior.
- * - api/web: API-only process; cron, outbox replay, WhatsApp boot, and withdrawal retry
+ * - api/web: API-only process; cron, outbox replay, and withdrawal retry
  *   workers are expected to run from src/worker.js.
  *
  * @param {import('express').Application} app
