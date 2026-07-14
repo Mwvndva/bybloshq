@@ -59,9 +59,10 @@ apiClient.interceptors.request.use(
         else if (url.includes('/creators')) token = await storage.get('creatorToken');
         else if (url.includes('/admin')) token = await storage.get('adminToken');
         else if (url.includes('/buyers')) token = await storage.get('buyerToken');
+        else if (url.includes('/logistics') || url.includes('/mzigo')) { try { token = localStorage.getItem('mzigoLogisticsToken'); } catch { token = null; } }
         
         if (!token) {
-            for (const r of ['buyer', 'seller', 'creator', 'admin']) {
+            for (const r of (url.includes('/logistics') || url.includes('/mzigo')) ? [] : ['buyer', 'seller', 'creator', 'admin']) {
                 token = await storage.get(`${r}Token`);
                 if (token) break;
             }

@@ -5,29 +5,29 @@ export const ACTIVE_GROUPS = [
     key: 'pickupDelivery',
     title: 'Pickup + Delivery',
     description: 'Seller pickup and buyer delivery are both active for the same package.',
-    tone: 'border-yellow-200 bg-yellow-50',
+    tone: 'border-yellow-400/25 bg-yellow-400/[0.08]',
     pill: 'bg-yellow-400 text-black',
   },
   {
     key: 'deliveryOnly',
     title: 'Delivery Only',
     description: 'Buyer paid for door delivery. Seller is expected to drop off the package.',
-    tone: 'border-stone-200 bg-white',
-    pill: 'bg-stone-950 text-[#ffffff]',
+    tone: 'border-sky-400/25 bg-sky-400/[0.06]',
+    pill: 'bg-white/10 text-white',
   },
   {
     key: 'pickupOnly',
     title: 'Pickup Only',
     description: 'Seller paid for pickup. Buyer will collect separately or no door delivery exists.',
-    tone: 'border-stone-200 bg-white',
-    pill: 'bg-stone-200 text-stone-950',
+    tone: 'border-violet-400/25 bg-violet-400/[0.06]',
+    pill: 'bg-white/10 text-white',
   },
   {
     key: 'hubDropoff',
     title: 'Hub Drop-off / Hub Collection',
     description: 'Seller is dropping off at the hub without a paid Mzigo pickup leg.',
-    tone: 'border-stone-200 bg-white',
-    pill: 'bg-stone-200 text-stone-950',
+    tone: 'border-white/10 bg-white/[0.03]',
+    pill: 'bg-white/10 text-white',
   },
 ] as const;
 
@@ -35,8 +35,8 @@ export const COMPLETED_GROUP = {
   key: 'completed',
   title: 'Completed Deliveries',
   description: 'Orders and logistics requests already completed. Cards are kept here for delivery history.',
-  tone: 'border-stone-200 bg-white',
-  pill: 'bg-stone-200 text-stone-950',
+  tone: 'border-emerald-400/20 bg-white/[0.02]',
+  pill: 'bg-white/10 text-white',
 } as const;
 
 export const SORT_OPTIONS: Array<{ value: LogisticsSort; label: string }> = [
