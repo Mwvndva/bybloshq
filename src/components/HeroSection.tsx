@@ -29,7 +29,7 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
 
           <div className="space-y-3 sm:space-y-4">
             <img
-              src="/byblos-mark.png"
+              src="/byblos-icon.png"
               alt="Byblos logo"
               className="mx-auto h-auto w-[min(42vw,150px)] sm:w-[min(24vw,220px)] lg:w-[260px]"
             />

@@ -13,7 +13,7 @@ const NativeAppHome = () => (
     </Link>
     <main className="flex w-full max-w-sm flex-col items-center gap-8 text-center">
       <img
-        src="/byblos-mark.png"
+        src="/byblos-icon.png"
         alt="Byblos logo"
         className="h-auto w-[min(68vw,260px)]"
       />
