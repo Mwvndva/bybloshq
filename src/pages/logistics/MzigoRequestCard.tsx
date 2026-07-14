@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
-import { ExternalLink, Loader2, Mail, MapPin, PackageCheck, Phone, ShoppingBag, Store, UserRound } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, ExternalLink, Loader2, Mail, MapPin, PackageCheck, Phone, ShoppingBag, Store, UserRound } from 'lucide-react';
 import { LogisticsLeg, LogisticsLegType, LogisticsRequestCard, LogisticsStatusUpdate } from '@/api/logistics';
+import { getImageUrl } from '@/lib/utils';
 import { deadlineText, formatCurrency, formatDate, nextActions, statusLabel } from './mzigoDashboard.utils';
 
 function mapAnchor(label: string, href?: string | null) {
@@ -30,12 +31,12 @@ function DetailField({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2">
-      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-stone-500">
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-white/60">
         {icon}
         {label}
       </p>
-      <div className="text-sm text-stone-950">{value || children || 'Not provided'}</div>
+      <div className="text-sm text-white">{value || children || 'Not provided'}</div>
     </div>
   );
 }
@@ -147,8 +148,13 @@ export function RequestCard({
   updatingStatusKey?: string | null;
   readOnly?: boolean;
 }) {
+  // Cards default to collapsed so dispatch can scan the queue by image, order
+  // name and a short description, then expand the one they want to act on.
+  const [expanded, setExpanded] = useState(false);
+
   const primaryProduct = request.product.items[0];
   const productSummary = request.product.summary || primaryProduct?.name || 'Package';
+  const imageSrc = primaryProduct?.imageUrl ? getImageUrl(primaryProduct.imageUrl) : '';
   const isCompleted = readOnly || request.isCompleted || request.status === 'completed';
   const completedAt = request.completedAt || request.order.completedAt || null;
   const sellerDisplayName = request.seller.shopName || request.seller.name || 'Seller not available';
@@ -159,18 +165,35 @@ export function RequestCard({
   const buyerMapLink = request.deliveryLeg?.destination.mapLink || null;
 
   return (
-    <article className={`rounded-2xl border p-4 text-stone-950 shadow-[0_18px_45px_rgba(17,17,17,0.08)] ${tone}`}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-white/60">Order</p>
-          <h3 className="text-lg font-semibold text-white">{request.order.orderNumber}</h3>
-          <p className="text-sm text-white/75">{request.packageCode || `Package #${request.id}`}</p>
-          <span className="mt-2 inline-flex rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[11px] font-semibold uppercase text-white/75">
-            {isCompleted ? 'completed' : statusLabel(request.status)}
-          </span>
+    <article className={`rounded-2xl border p-4 text-white shadow-[0_18px_45px_rgba(0,0,0,0.45)] ${tone}`}>
+      {/* Compact header — always visible: image, order name, description, status. */}
+      <div className="flex items-start gap-3">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/45">
+          {imageSrc ? (
+            <img src={imageSrc} alt={productSummary} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-white/40">
+              <ShoppingBag size={22} />
+            </div>
+          )}
         </div>
-        <div className="rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-right">
-          <p className="text-xs text-white/60">{isCompleted ? 'Completed' : 'Deadline'}</p>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] uppercase tracking-wide text-white/60">Order</p>
+          <h3 className="truncate text-base font-semibold text-white">{request.order.orderNumber}</h3>
+          <p className="truncate text-sm text-white/75">{productSummary}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className="inline-flex rounded-full border border-white/15 bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-white/75">
+              {isCompleted ? 'completed' : statusLabel(request.status)}
+            </span>
+            <span className="inline-flex rounded-full border border-white/10 bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-white/60">
+              {request.group.replace(/_/g, ' ')}
+            </span>
+          </div>
+        </div>
+
+        <div className="shrink-0 rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-right">
+          <p className="text-[11px] text-white/60">{isCompleted ? 'Completed' : 'Deadline'}</p>
           <p className={request.isOverdue ? 'text-sm font-semibold text-red-300' : 'text-sm font-semibold text-yellow-200'}>
             {isCompleted ? 'Done' : deadlineText(request.deadlineAt, now)}
           </p>
@@ -178,107 +201,121 @@ export function RequestCard({
         </div>
       </div>
 
-      <div className="mb-4 grid gap-3 xl:grid-cols-[1.1fr_1fr_1fr]">
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <ShoppingBag size={15} />
-            Product details
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
+      >
+        {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        {expanded ? 'Hide details' : 'Show details'}
+      </button>
+
+      {expanded && (
+        <div className="mt-4">
+          <div className="mb-4 grid gap-3 xl:grid-cols-[1.1fr_1fr_1fr]">
+            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                <ShoppingBag size={15} />
+                Product details
+              </div>
+              <p className="text-sm text-white">{productSummary}</p>
+              <div className="mt-2 space-y-1 text-xs text-white/70">
+                {request.product.items.map((item) => (
+                  <p key={item.id}>
+                    {item.name} x{item.quantity} - {formatCurrency(item.subtotal)}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                <Store size={15} />
+                Seller details
+              </div>
+              <div className="space-y-2">
+                <DetailField label="Shop" value={sellerDisplayName} icon={<Store size={12} />} />
+                <DetailField label="Phone" value={request.seller.phone || 'No seller phone'} icon={<Phone size={12} />} />
+                <DetailField label="Address" icon={<MapPin size={12} />}>
+                  <p>{sellerAddress}</p>
+                  {request.seller.mapLink ? (
+                    <div className="mt-1">{mapAnchor('Open seller map', request.seller.mapLink)}</div>
+                  ) : (
+                    <p className="mt-1 text-xs text-white/50">No seller map pin saved.</p>
+                  )}
+                </DetailField>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                <UserRound size={15} />
+                Buyer details
+              </div>
+              <div className="space-y-2">
+                <DetailField label="Buyer" value={request.buyer.name || 'Buyer not available'} icon={<UserRound size={12} />} />
+                <DetailField label="Phone" value={request.buyer.phone || 'No buyer phone'} icon={<Phone size={12} />} />
+                {request.buyer.email && (
+                  <DetailField label="Email" value={request.buyer.email} icon={<Mail size={12} />} />
+                )}
+                <DetailField label="Delivery" icon={<MapPin size={12} />}>
+                  <p>{buyerDeliveryAddress || 'No door delivery. Buyer follows hub or shop collection flow.'}</p>
+                  {buyerMapLink && <div className="mt-1">{mapAnchor('Open buyer map', buyerMapLink)}</div>}
+                </DetailField>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-white">{productSummary}</p>
-          <div className="mt-2 space-y-1 text-xs text-white/70">
-            {request.product.items.map((item) => (
-              <p key={item.id}>
-                {item.name} x{item.quantity} - {formatCurrency(item.subtotal)}
+
+          <div className="mb-4 grid gap-3 lg:grid-cols-2">
+            <LegPanel
+              title="Pickup"
+              leg={request.pickupLeg}
+              legType="pickup"
+              requestId={request.id}
+              onStatusUpdate={onStatusUpdate}
+              updatingStatusKey={updatingStatusKey}
+              readOnly={isCompleted}
+            />
+            <LegPanel
+              title="Delivery"
+              leg={request.deliveryLeg}
+              legType="delivery"
+              requestId={request.id}
+              onStatusUpdate={onStatusUpdate}
+              updatingStatusKey={updatingStatusKey}
+              readOnly={isCompleted}
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+              <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
+                <MapPin size={15} />
+                Seller handoff / hub
               </p>
-            ))}
+              <p className="text-sm text-white">{request.sellerDropoff.address || request.sellerDropoff.label || 'Not set'}</p>
+              {mapAnchor('Open drop-off map', request.sellerDropoff.mapLink)}
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+              <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
+                <PackageCheck size={15} />
+                Card classification
+              </p>
+              <p className="text-sm capitalize text-white">{request.group.replace(/_/g, ' ')}</p>
+              <p className="mt-1 text-xs text-white/70">
+                Pickup fee: {statusLabel(request.pickupFeeStatus)} | Delivery fee: {statusLabel(request.deliveryFeeStatus)}
+              </p>
+            </div>
           </div>
+
+          {request.events[0]?.message && (
+            <p className="mt-4 rounded-xl border border-white/10 bg-black/45 p-3 text-xs text-white/75">
+              Latest update: {request.events[0].message}
+            </p>
+          )}
         </div>
-
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <Store size={15} />
-            Seller details
-          </div>
-          <div className="space-y-2">
-            <DetailField label="Shop" value={sellerDisplayName} icon={<Store size={12} />} />
-            <DetailField label="Phone" value={request.seller.phone || 'No seller phone'} icon={<Phone size={12} />} />
-            <DetailField label="Address" icon={<MapPin size={12} />}>
-              <p>{sellerAddress}</p>
-              {request.seller.mapLink ? (
-                <div className="mt-1">{mapAnchor('Open seller map', request.seller.mapLink)}</div>
-              ) : (
-                <p className="mt-1 text-xs text-white/50">No seller map pin saved.</p>
-              )}
-            </DetailField>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <UserRound size={15} />
-            Buyer details
-          </div>
-          <div className="space-y-2">
-            <DetailField label="Buyer" value={request.buyer.name || 'Buyer not available'} icon={<UserRound size={12} />} />
-            <DetailField label="Phone" value={request.buyer.phone || 'No buyer phone'} icon={<Phone size={12} />} />
-            {request.buyer.email && (
-              <DetailField label="Email" value={request.buyer.email} icon={<Mail size={12} />} />
-            )}
-            <DetailField label="Delivery" icon={<MapPin size={12} />}>
-              <p>{buyerDeliveryAddress || 'No door delivery. Buyer follows hub or shop collection flow.'}</p>
-              {buyerMapLink && <div className="mt-1">{mapAnchor('Open buyer map', buyerMapLink)}</div>}
-            </DetailField>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-4 grid gap-3 lg:grid-cols-2">
-        <LegPanel
-          title="Pickup"
-          leg={request.pickupLeg}
-          legType="pickup"
-          requestId={request.id}
-          onStatusUpdate={onStatusUpdate}
-          updatingStatusKey={updatingStatusKey}
-          readOnly={isCompleted}
-        />
-        <LegPanel
-          title="Delivery"
-          leg={request.deliveryLeg}
-          legType="delivery"
-          requestId={request.id}
-          onStatusUpdate={onStatusUpdate}
-          updatingStatusKey={updatingStatusKey}
-          readOnly={isCompleted}
-        />
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-          <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
-            <MapPin size={15} />
-            Seller handoff / hub
-          </p>
-          <p className="text-sm text-white">{request.sellerDropoff.address || request.sellerDropoff.label || 'Not set'}</p>
-          {mapAnchor('Open drop-off map', request.sellerDropoff.mapLink)}
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-          <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
-            <PackageCheck size={15} />
-            Card classification
-          </p>
-          <p className="text-sm capitalize text-white">{request.group.replace(/_/g, ' ')}</p>
-          <p className="mt-1 text-xs text-white/70">
-            Pickup fee: {statusLabel(request.pickupFeeStatus)} | Delivery fee: {statusLabel(request.deliveryFeeStatus)}
-          </p>
-        </div>
-      </div>
-
-      {request.events[0]?.message && (
-        <p className="mt-4 rounded-xl border border-white/10 bg-black/45 p-3 text-xs text-white/75">
-          Latest update: {request.events[0].message}
-        </p>
       )}
     </article>
   );
