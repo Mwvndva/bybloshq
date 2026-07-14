@@ -1,10 +1,10 @@
 export function StatCard({ title, value, subtitle, trend, color = 'yellow', prefix = '', suffix = '' }) {
     const colors = {
-        yellow: 'border-yellow-200 bg-yellow-50',
-        green: 'border-emerald-100 bg-emerald-50',
-        blue: 'border-stone-200 bg-white',
-        purple: 'border-stone-200 bg-white',
-        red: 'border-red-100 bg-red-50',
+        yellow: 'border-yellow-400/25 bg-yellow-400/10',
+        green: 'border-emerald-400/25 bg-emerald-400/10',
+        blue: 'border-sky-400/25 bg-sky-400/10',
+        purple: 'border-violet-400/25 bg-violet-400/10',
+        red: 'border-red-400/25 bg-red-400/10',
     }
 
     const formatValue = (v) => {
@@ -15,16 +15,16 @@ export function StatCard({ title, value, subtitle, trend, color = 'yellow', pref
     }
 
     return (
-        <div className={`border rounded-2xl p-4 md:p-5 shadow-[0_18px_45px_rgba(17,17,17,0.08)] transition-all hover:border-yellow-300 ${colors[color]}`}>
-            <p className="text-stone-500 text-xs font-semibold mb-1.5 md:mb-2">{title}</p>
-            <p className="text-xl md:text-2xl font-semibold text-stone-950 tracking-tight">{formatValue(value)}</p>
-            {subtitle && <p className="text-stone-500 text-[10px] md:text-xs mt-1 font-medium">{subtitle}</p>}
+        <div className={`border rounded-2xl p-4 md:p-5 shadow-[0_18px_45px_rgba(0,0,0,0.45)] transition-all hover:border-yellow-300 ${colors[color]}`}>
+            <p className="text-white/60 text-xs font-semibold mb-1.5 md:mb-2">{title}</p>
+            <p className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatValue(value)}</p>
+            {subtitle && <p className="text-white/50 text-[10px] md:text-xs mt-1 font-medium">{subtitle}</p>}
             {trend !== undefined && (
                 <div className="flex items-center gap-1.5 mt-2 md:mt-3">
                     <span className={`text-[9px] md:text-[10px] font-black px-1.5 py-0.5 rounded ${trend >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                         {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
                     </span>
-                    <span className="text-stone-500 text-[9px] md:text-[10px] font-semibold">vs last month</span>
+                    <span className="text-white/50 text-[9px] md:text-[10px] font-semibold">vs last month</span>
                 </div>
             )}
         </div>
