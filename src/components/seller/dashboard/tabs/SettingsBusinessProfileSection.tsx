@@ -1,15 +1,11 @@
 import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { BannerUpload } from '../../BannerUpload';
-import { BusinessPhotoUpload } from '../../BusinessPhotoUpload';
-import { getSellerInitials } from '../dashboardUtils';
 import type { SellerSettingsFormData } from '../types';
 import { SectionHeader } from './settingsTab.parts';
 
 interface SettingsBusinessProfileSectionProps {
   sellerProfile: import("@/features/auth/types/authTypes").SellerProfile;
-  handleBusinessPhotoUploaded: () => void;
   isEditing: boolean;
   formData: SellerSettingsFormData;
   setFormData: React.Dispatch<React.SetStateAction<SellerSettingsFormData>>;
@@ -19,27 +15,11 @@ interface SettingsBusinessProfileSectionProps {
   previewShopUrl: string;
 }
 
-export function SettingsBusinessProfileSection({ sellerProfile, handleBusinessPhotoUploaded, isEditing, formData, setFormData, shopNameAvailable, isCheckingShopName, previewShopUsername, previewShopUrl }: SettingsBusinessProfileSectionProps) {
+export function SettingsBusinessProfileSection({ sellerProfile, isEditing, formData, setFormData, shopNameAvailable, isCheckingShopName, previewShopUsername, previewShopUrl }: SettingsBusinessProfileSectionProps) {
   return (
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-        <SectionHeader title="Business Profile" description="The core identity buyers see on your shop page." />
-        <div className="mt-5 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(220px,320px)_minmax(0,1fr)]">
-          <div className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <BusinessPhotoUpload
-              currentPhotoUrl={sellerProfile?.avatarUrl}
-              fallbackInitials={getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}
-              onPhotoUploaded={handleBusinessPhotoUploaded}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
-              <BannerUpload
-                currentBannerUrl={sellerProfile?.bannerImage}
-                onBannerUploaded={() => undefined}
-              />
-            </div>
-
+        <SectionHeader title="Business Profile" description="The core identity buyers see on your shop page. Update your photo and banner from the business card above." />
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Shop Name</p>
               {isEditing ? (
@@ -88,21 +68,12 @@ export function SettingsBusinessProfileSection({ sellerProfile, handleBusinessPh
               )}
             </div>
 
+            {/* Full name is fixed to the registered account holder and is not editable here. */}
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Full Name</p>
-              {isEditing ? (
-                <Input
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                  placeholder="Your Full Name"
-                  className="h-10 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400"
-                />
-              ) : (
-                <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.fullName || 'Not set'}>
-                  {sellerProfile?.fullName || 'Not set'}
-                </p>
-              )}
+              <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.fullName || 'Not set'}>
+                {sellerProfile?.fullName || 'Not set'}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
@@ -126,7 +97,6 @@ export function SettingsBusinessProfileSection({ sellerProfile, handleBusinessPh
                 </p>
               )}
             </div>
-          </div>
         </div>
       </section>
   );

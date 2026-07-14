@@ -1,6 +1,10 @@
-import { Link2, TrendingUp, Users } from 'lucide-react';
+import { useState } from 'react';
+import { ImagePlus, Link2, TrendingUp, Users, X } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { SellerProfile } from '@/features/auth/types/authTypes';
+import { BannerUpload } from './BannerUpload';
+import { BusinessPhotoUpload } from './BusinessPhotoUpload';
+import { getSellerInitials } from './dashboard/dashboardUtils';
 
 interface SellerProfileHeroProps {
   sellerProfile: SellerProfile;
@@ -8,17 +12,21 @@ interface SellerProfileHeroProps {
   sales: number;
   shopUsername?: string | null;
   onCopyShopLink?: () => void | Promise<void>;
+  canEdit?: boolean;
 }
 
 /**
  * Shop identity hero for the seller dashboard: banner, the business profile
  * photo centered in a circular frame themed to the shop's colour, a "Shop link"
- * action, the shop name, and follower / sales stats.
+ * action, the shop name, bio, follower / sales stats, and (when editable) an
+ * inline panel to update the business photo and banner.
  */
-export function SellerProfileHero({ sellerProfile, followers, sales, shopUsername, onCopyShopLink }: SellerProfileHeroProps) {
+export function SellerProfileHero({ sellerProfile, followers, sales, shopUsername, onCopyShopLink, canEdit }: SellerProfileHeroProps) {
+  const [isEditingMedia, setIsEditingMedia] = useState(false);
   const shopName = sellerProfile?.shopName?.trim() || 'Your shop';
   const banner = sellerProfile?.bannerImage;
   const avatar = sellerProfile?.avatarUrl;
+  const bio = sellerProfile?.bio?.trim();
   const initial = shopName.charAt(0).toUpperCase();
 
   return (
@@ -34,6 +42,20 @@ export function SellerProfileHero({ sellerProfile, followers, sales, shopUsernam
           />
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+        {/* Edit media (photo + banner) */}
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setIsEditingMedia((v) => !v)}
+            aria-label={isEditingMedia ? 'Close photo & banner editor' : 'Edit business photo & banner'}
+            className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black shadow-[0_8px_22px_rgba(0,0,0,0.5)] transition-transform active:scale-95"
+            style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
+          >
+            {isEditingMedia ? <X className="h-3.5 w-3.5" /> : <ImagePlus className="h-3.5 w-3.5" />}
+            {isEditingMedia ? 'Close' : 'Edit'}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col items-center px-4 pb-5 sm:pb-6">
@@ -75,6 +97,13 @@ export function SellerProfileHero({ sellerProfile, followers, sales, shopUsernam
           {shopName}
         </h2>
 
+        {/* Shop bio — sits directly below the shop name. */}
+        {bio && (
+          <p className="mt-1.5 max-w-md text-center text-xs font-medium leading-5 text-white/60 sm:text-sm [overflow-wrap:anywhere]">
+            {bio}
+          </p>
+        )}
+
         {/* Followers (left) + Sales (right) */}
         <div className="mt-4 grid w-full max-w-md grid-cols-2 gap-3">
           <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
@@ -92,6 +121,22 @@ export function SellerProfileHero({ sellerProfile, followers, sales, shopUsernam
             </div>
           </div>
         </div>
+
+        {/* Inline photo + banner editor (opened from the banner's Edit button). */}
+        {canEdit && isEditingMedia && (
+          <div className="mt-5 w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <BusinessPhotoUpload
+              currentPhotoUrl={avatar}
+              fallbackInitials={getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}
+              onPhotoUploaded={() => undefined}
+            />
+            <div className="h-px w-full bg-white/10" />
+            <BannerUpload
+              currentBannerUrl={banner}
+              onBannerUploaded={() => undefined}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

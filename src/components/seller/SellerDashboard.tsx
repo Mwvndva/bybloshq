@@ -192,11 +192,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       <div className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="mb-6 sm:mb-7 md:mb-8">
           <SellerProfileHero
-            sellerProfile={sellerProfile}
+            sellerProfile={(liveSellerProfile as unknown as typeof sellerProfile) || sellerProfile}
             followers={analytics.clientCount || 0}
             sales={analytics.totalSales || 0}
             shopUsername={getShopUsername(sellerProfile?.shopName)}
             onCopyShopLink={handleCopyShopLink}
+            canEdit
           />
         </div>
 
