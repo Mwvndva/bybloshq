@@ -100,7 +100,7 @@ const VerifyEmail = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8f7f2] flex items-center justify-center p-4 relative overflow-hidden"
+        <div className="auth-page min-h-screen bg-[#f8f7f2] flex items-center justify-center p-4 relative overflow-hidden"
             style={{
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}

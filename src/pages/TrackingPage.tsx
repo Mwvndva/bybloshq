@@ -91,7 +91,7 @@ export default function TrackingPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[#f8f7f2] text-stone-950">
+      <main className="byblos-light-page min-h-screen bg-[#f8f7f2] text-stone-950">
         <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4">
           <div className="rounded-3xl border border-stone-200 bg-white px-6 py-5 text-center shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
             <Clock className="mx-auto h-6 w-6 animate-pulse text-yellow-500" />
@@ -104,7 +104,7 @@ export default function TrackingPage() {
 
   if (isError || !data) {
     return (
-      <main className="min-h-screen bg-[#f8f7f2] text-stone-950">
+      <main className="byblos-light-page min-h-screen bg-[#f8f7f2] text-stone-950">
         <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4">
           <div className="rounded-3xl border border-stone-200 bg-white p-6 text-center shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
             <ShieldCheck className="mx-auto h-8 w-8 text-yellow-500" />
