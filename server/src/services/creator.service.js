@@ -6,7 +6,6 @@ import { signToken } from '../shared/utils/jwt.js';
 import { sendEmail, sendVerificationEmail } from '../shared/utils/email.js';
 import Fees from '../config/fees.js';
 import logger from '../shared/utils/logger.js';
-import whatsappService from './whatsapp.service.js';
 import notificationService from './notification.service.js';
 import WithdrawalService from './withdrawal.service.js';
 
@@ -627,33 +626,6 @@ class CreatorService {
       }).catch((error) => logger.warn('[Feed] creator sale notification failed', { creatorId, error: error.message }));
     }
 
-    if (!creator.whatsapp_number) return;
-
-    const orderRef = order.order_number || order.orderNumber || `#${order.id}`;
-    const amountText = Number(amount || 0).toLocaleString('en-KE', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    const shopLine = creator.shop_name ? `Shop: ${creator.shop_name}\n` : '';
-    const message = [
-      `Hi ${creator.first_name || 'creator'},`,
-      '',
-      'Your Byblos creator link has generated a successful sale.',
-      `Order: ${orderRef}`,
-      shopLine.trim(),
-      `Creator earning: KSh ${amountText}`,
-      '',
-      'Open your creator dashboard to track your performance and balance.'
-    ].filter(Boolean).join('\n');
-
-    setImmediate(() => {
-      whatsappService.sendMessage(creator.whatsapp_number, message)
-        .catch((error) => logger.warn('Failed to send creator sale WhatsApp notification', {
-          creatorId,
-          orderId: order.id,
-          error: error.message
-        }));
-    });
   }
 
   static async creditCreatorReferral(client, { creatorId, order }) {

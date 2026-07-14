@@ -2,7 +2,6 @@ import fs from 'fs';
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import os from 'os';
-import whatsappService from './whatsapp.service.js';
 import tokenBlacklist from './tokenBlacklist.service.js';
 
 /**
@@ -125,18 +124,6 @@ class HealthCheckService {
     async checkServices() {
         const services = {};
 
-        // Check if WhatsApp service is available
-        try {
-            services.whatsapp = {
-                status: whatsappService.isClientReady() ? 'connected' : 'disconnected',
-                available: true
-            };
-        } catch (error) {
-            services.whatsapp = {
-                status: 'unavailable',
-                available: false
-            };
-        }
 
         // Check token blacklist service
         try {

@@ -2,7 +2,7 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import { sendFcmV1, isFcmConfigured } from '../config/fcm.js';
 
-const VALID_CHANNELS = new Set(['in_app', 'push', 'whatsapp', 'email']);
+const VALID_CHANNELS = new Set(['in_app', 'push', 'email']);
 const VALID_PLATFORMS = new Set(['android', 'ios', 'web']);
 const VALID_ROLES = new Set(['buyer', 'seller', 'creator', 'admin', 'logistics']);
 
@@ -126,12 +126,10 @@ class NotificationService {
             });
         }
 
-        // WhatsApp and email stay behind their existing direct services for now.
-        // This facade gives new app flows a stable API while those senders are migrated.
-        for (const deferredChannel of ['whatsapp', 'email']) {
-            if (channels.includes(deferredChannel)) {
-                results[deferredChannel] = { delivered: false, deferred: true };
-            }
+        // Email stays behind its existing direct service for now. This facade
+        // gives new app flows a stable API while that sender is migrated.
+        if (channels.includes('email')) {
+            results.email = { delivered: false, deferred: true };
         }
 
         return results;

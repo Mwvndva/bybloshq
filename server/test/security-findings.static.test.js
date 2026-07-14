@@ -9,17 +9,6 @@ function read(relativePath) {
   return readFileSync(resolve(root, relativePath), 'utf8');
 }
 
-test('WhatsApp control routes require admin permission after authentication', () => {
-  const source = read('server/src/routes/whatsapp.routes.js');
-
-  assert.match(source, /import\s+\{\s*protect,\s*hasPermission\s*\}/);
-  assert.match(source, /const requireAdmin = hasPermission\('manage-all'\)/);
-  assert.match(source, /router\.get\('\/qr', protect, requireAdmin,/);
-  assert.match(source, /router\.post\('\/initialize', protect, requireAdmin,/);
-  assert.match(source, /router\.post\('\/logout', protect, requireAdmin,/);
-  assert.match(source, /router\.post\('\/test', protect, requireAdmin,/);
-});
-
 test('creator routes require a real creator profile and never fall back to profileId', () => {
   const routes = read('server/src/routes/creator.routes.js');
   const controller = read('server/src/controllers/creator.controller.js');
