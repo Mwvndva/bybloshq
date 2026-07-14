@@ -737,5 +737,22 @@ export const markOrderAsCollected = async (req, res, next) => {
 };
 
 
-
-
+// Self-service account deletion (Google Play data-deletion requirement).
+export const deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    let buyerId = req.user.buyerId;
+    if (!buyerId && userId) {
+      const buyer = await Buyer.findByUserId(userId);
+      buyerId = buyer?.id;
+    }
+    if (!buyerId) {
+      return next(new AppError('Buyer account not found.', 404));
+    }
+    await Buyer.softDeleteAccount(buyerId, userId);
+    res.clearCookie('token');
+    res.status(200).json({ status: 'success', message: 'Your account has been deleted.' });
+  } catch (error) {
+    next(error);
+  }
+};

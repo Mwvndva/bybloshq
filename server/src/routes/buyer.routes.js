@@ -62,6 +62,9 @@ router.post('/sellers/:sellerId/leave-client', validate(V.leaveClient), sellerCo
 
 
 
+// Delete account (Play data-deletion requirement)
+router.delete('/account', buyerController.deleteAccount);
+
 export default router;
 
 
