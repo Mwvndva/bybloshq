@@ -41,7 +41,7 @@ test('mobile notification infrastructure is user-owned and channel-neutral', () 
   assert.match(migration, /user_id INTEGER NOT NULL REFERENCES users\(id\) ON DELETE CASCADE/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS app_notifications/);
   assert.match(migration, /recipient_user_id INTEGER NOT NULL REFERENCES users\(id\) ON DELETE CASCADE/);
-  assert.match(service, /VALID_CHANNELS = new Set\(\['in_app', 'push', 'whatsapp', 'email'\]\)/);
+  assert.match(service, /VALID_CHANNELS = new Set\(\['in_app', 'push', 'email'\]\)/);
   assert.match(service, /registerDeviceToken/);
   assert.match(service, /createInAppNotification/);
   assert.match(service, /sendPush/);

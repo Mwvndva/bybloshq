@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Store, Users } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils';
@@ -15,6 +15,15 @@ interface ShopHeroProps {
 
 export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, showSellerAvatar, setAvatarLoadFailed, sellerInitials }: ShopHeroProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const isBuyer = location.pathname.startsWith('/buyer');
+
+  // A buyer opens a shop from the Shops tab (the browse grid at /buyer/dashboard),
+  // so send them back there; non-buyers go to the public home page.
+  const handleBack = () => {
+    navigate(isBuyer ? '/buyer/dashboard' : '/');
+  };
+
   return (
     <>
       {/* Modern Hero Section */}
@@ -51,23 +60,24 @@ export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, sh
         {/* Back to Home/Dashboard Button - Top Left */}
         <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-20">
           <Button
-            asChild
-            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-300 flex items-center group"
+            type="button"
+            onClick={handleBack}
+            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-300 flex items-center gap-1 sm:gap-2 group"
           >
-            <Link to={location.pathname.startsWith('/buyer') ? "/buyer/dashboard" : "/"} className="flex items-center gap-1 sm:gap-2">
-              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
-              <span className="hidden sm:inline">
-                {location.pathname.startsWith('/buyer') ? "Back to Dashboard" : "Back to Home"}
-              </span>
-              <span className="sm:hidden">
-                {location.pathname.startsWith('/buyer') ? "Dashboard" : "Home"}
-              </span>
-            </Link>
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="hidden sm:inline">
+              {isBuyer ? "Shops" : "Back to Home"}
+            </span>
+            <span className="sm:hidden">
+              {isBuyer ? "Shops" : "Home"}
+            </span>
           </Button>
         </div>
 
-        {/* Hero Content - Centered */}
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 pt-10 sm:pt-14">
+        {/* Hero Content - Centered. pointer-events-none so this full-size overlay
+            does not swallow clicks meant for the back button / other controls
+            beneath it; interactive children below re-enable pointer events. */}
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 pt-10 sm:pt-14">
           {/* Shop Name at the top */}
           <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl break-words max-w-2xl px-4">
             {sellerInfo?.shopName || 'Shop'}
@@ -81,7 +91,7 @@ export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, sh
           )}
 
           {/* Followers, Shop Type, and Social Links at the bottom */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-white font-medium text-[9px] sm:text-xs">
+          <div className="pointer-events-auto mt-3 flex flex-wrap items-center justify-center gap-2 text-white font-medium text-[9px] sm:text-xs">
             {/* Followers (Icon and count only) */}
             <span className="flex items-center gap-1 backdrop-blur-sm bg-black/35 px-2.5 py-1 rounded-full border border-white/10 shadow-lg" title="Followers">
               <Users className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />

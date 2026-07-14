@@ -39,6 +39,7 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
         setUser,
         setIsLoading,
         setInitializing,
+        navigate,
     });
 
     const {

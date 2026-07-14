@@ -33,7 +33,7 @@ const MzigoLoginPage = () => {
   };
 
   return (
-    <main className="min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] px-4 py-6 text-stone-950">
+    <main className="auth-page min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] px-4 py-6 text-stone-950">
       <button
         type="button"
         onClick={() => navigate('/')}

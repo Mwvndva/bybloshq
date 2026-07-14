@@ -38,22 +38,25 @@ export function NotificationBell({ variant = 'default', triggerClassName }: Noti
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className={cn('relative', triggerClassName)} aria-label="Notifications">
-          <Bell className="h-5 w-5" />
+          <Bell className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-yellow-500 text-black text-[11px] font-bold flex items-center justify-center">
+            <span
+              className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-bold flex items-center justify-center"
+              style={{ backgroundColor: 'var(--theme-accent, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
+            >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <span className="font-semibold text-sm text-slate-900">Notifications</span>
+      <PopoverContent align="end" className="w-80 p-0 overflow-hidden bg-[#0a0a0a] border border-white/10 text-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <span className="font-semibold text-sm text-white">Notifications</span>
           {unreadCount > 0 && (
             <button
               type="button"
               onClick={() => markAllRead()}
-              className="text-xs text-slate-500 hover:text-slate-900 inline-flex items-center gap-1"
+              className="text-xs text-white/60 hover:text-white inline-flex items-center gap-1"
             >
               <CheckCheck className="h-3.5 w-3.5" /> Mark all read
             </button>
@@ -61,26 +64,29 @@ export function NotificationBell({ variant = 'default', triggerClassName }: Noti
         </div>
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
-            <div className="px-4 py-10 text-center text-sm text-slate-400">Loading…</div>
+            <div className="px-4 py-10 text-center text-sm text-white/40">Loading…</div>
           ) : notifications.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-slate-400">No notifications yet</div>
+            <div className="px-4 py-10 text-center text-sm text-white/40">No notifications yet</div>
           ) : (
             notifications.map((n) => (
               <button
                 key={n.id}
                 type="button"
                 onClick={() => handleItem(n)}
-                className={cn(
-                  'w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors',
-                  !n.read_at && 'bg-yellow-50/60'
-                )}
+                className="w-full text-left px-4 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/5 transition-colors"
+                style={!n.read_at ? { backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.10)' } : undefined}
               >
                 <div className="flex items-start gap-2">
-                  {!n.read_at && <span className="mt-1.5 h-2 w-2 rounded-full bg-yellow-500 flex-shrink-0" />}
+                  {!n.read_at && (
+                    <span
+                      className="mt-1.5 h-2 w-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: 'var(--theme-accent, #f5c518)' }}
+                    />
+                  )}
                   <div className={cn('flex-1 min-w-0', n.read_at && 'pl-4')}>
-                    <div className="text-sm font-medium text-slate-900 truncate">{n.title}</div>
-                    <div className="text-xs text-slate-500 line-clamp-2">{n.body}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">{timeAgo(n.created_at)}</div>
+                    <div className="text-sm font-medium text-white truncate">{n.title}</div>
+                    <div className="text-xs text-white/60 line-clamp-2">{n.body}</div>
+                    <div className="text-[11px] text-white/40 mt-0.5">{timeAgo(n.created_at)}</div>
                   </div>
                 </div>
               </button>

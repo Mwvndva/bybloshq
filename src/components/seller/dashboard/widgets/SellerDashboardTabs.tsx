@@ -35,7 +35,7 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
               key={id}
               onClick={() => onSelectTab(id)}
               className={`relative flex min-h-10 flex-shrink-0 items-center justify-center space-x-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all duration-300 sm:space-x-2 sm:px-4 sm:text-sm lg:min-h-0 lg:px-5 lg:py-2.5 ${activeTab === id
-                ? 'text-black border-yellow-300 bg-yellow-400 shadow-[0_8px_22px_rgba(245,197,24,0.25)]'
+                ? 'bg-[var(--theme-button-bg,#facc15)] text-[var(--theme-button-text,#000000)] border-[var(--theme-accent,#facc15)] shadow-[0_8px_22px_rgba(0,0,0,0.18)]'
                 : 'text-stone-600 border-transparent hover:text-black hover:bg-stone-100'
                 } ${activeTab === id ? 'seller-tab-selected' : ''}`}
             >
@@ -43,7 +43,7 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
               <span>{label}</span>
 
               {id === 'orders' && hasUnreadOrders && (
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full border-2 border-black animate-pulse" />
               )}
             </button>
           );

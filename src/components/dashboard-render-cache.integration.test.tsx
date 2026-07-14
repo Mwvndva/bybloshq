@@ -126,11 +126,10 @@ vi.mock('@/components/buyer/RefundCard', () => ({
   default: () => <div data-testid="refund-card" />,
 }));
 
-vi.mock('@/components/seller/UnifiedAnalyticsHub', () => ({
-  UnifiedAnalyticsHub: ({ analytics }: { analytics: { totalProducts?: number, clientCount?: number } }) => (
+vi.mock('@/components/seller/SellerProfileHero', () => ({
+  SellerProfileHero: ({ followers }: { followers?: number }) => (
     <section data-testid="seller-analytics">
-      <span>Products: {analytics.totalProducts}</span>
-      <span>Followers: {analytics.clientCount}</span>
+      <span>Followers: {followers}</span>
     </section>
   ),
 }));
@@ -240,7 +239,7 @@ describe('dashboard render and cache behavior', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Welcome, Ada')).toBeInTheDocument();
-      expect(screen.getByTestId('seller-analytics')).toHaveTextContent('Products: 1');
+      expect(screen.getByTestId('seller-analytics')).toHaveTextContent('Followers: 11');
     });
     expect(mocks.sellerApi.getProducts).toHaveBeenCalledTimes(1);
     expect(mocks.sellerApi.getAnalytics).toHaveBeenCalledTimes(1);

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDeleteProductMutation, useUpdateProductMutation } from '@/hooks/seller/useSellerProducts';
 import { useToast } from '@/hooks/use-toast';
 import { useSellerAuth } from '@/features/auth/contexts';
-import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
+import { SellerProfileHero } from './SellerProfileHero';
 import { pendingOverviewStatuses } from './dashboard/dashboardUtils';
 import { useSellerDashboardData } from './dashboard/hooks/useSellerDashboardData';
 import { useSellerOrders } from './dashboard/hooks/useSellerOrders';
@@ -18,6 +18,9 @@ import { SellerDashboardHeader } from './dashboard/widgets/SellerDashboardHeader
 import { SellerDashboardErrorState, SellerDashboardLoadingState } from './dashboard/widgets/SellerDashboardState';
 import { SellerDashboardTabs } from './dashboard/widgets/SellerDashboardTabs';
 import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/shopLinks';
+import { useShopTheme } from '@/hooks/useShopTheme';
+import { useSellerProfileQuery } from '@/hooks/seller/useSellerProfile';
+import type { Theme } from '@/types';
 import type { SellerDashboardProps, SellerTabId } from './dashboard/types';
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
@@ -25,6 +28,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const location = useLocation();
   const { toast } = useToast();
   const { seller: sellerProfile, isLoading: isAuthLoading, updateSellerProfile, logout } = useSellerAuth();
+
+  // Drive the whole dashboard's accent from the seller's chosen shop theme
+  // (sets --theme-accent / --theme-button-* CSS vars on :root). Read from the
+  // live seller-profile query (not the auth-context snapshot) so a theme change
+  // in Settings — which invalidates ['seller-profile'] — updates the accent
+  // immediately instead of only after a full reload.
+  const { data: liveSellerProfile } = useSellerProfileQuery(!!sellerProfile);
+  useShopTheme(((liveSellerProfile?.theme ?? sellerProfile?.theme) as Theme) || 'default');
 
   const [activeTab, setActiveTab] = useState<SellerTabId>('overview');
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
@@ -180,7 +191,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
       <div className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="mb-6 sm:mb-7 md:mb-8">
-          <UnifiedAnalyticsHub analytics={analytics} />
+          <SellerProfileHero
+            sellerProfile={(liveSellerProfile as unknown as typeof sellerProfile) || sellerProfile}
+            followers={analytics.clientCount || 0}
+            sales={analytics.totalSales || 0}
+            shopUsername={getShopUsername(sellerProfile?.shopName)}
+            onCopyShopLink={handleCopyShopLink}
+            canEdit
+          />
         </div>
 
         <SellerDashboardTabs
@@ -202,8 +220,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <OverviewTab
             analytics={analytics}
             pendingOverviewOrders={pendingOverviewOrders}
-            sellerProfile={sellerProfile}
-            onCopyShopLink={handleCopyShopLink}
           />
         )}
 

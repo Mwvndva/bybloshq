@@ -4,6 +4,10 @@ export const isNativeApp = () => Capacitor.isNativePlatform();
 
 export const getNativePlatform = () => Capacitor.getPlatform();
 
+// Google Play listing for the Byblos Android app (package space.bybloshq.app).
+// Used to nudge web buyers to install the app so push notifications reach them.
+export const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=space.bybloshq.app';
+
 export const getStableDeviceId = () => {
   const storageKey = 'byblosNativeDeviceId';
   const existing = localStorage.getItem(storageKey);

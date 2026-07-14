@@ -440,8 +440,9 @@ test('external notification side effects are emitted through EventBus from criti
   assert.match(buyerController, /WithdrawalService\.createWithdrawalRequest\(\{[\s\S]*entityType:\s*'buyer_refund'/);
   assert.match(refundController, /AppEvents\.REFUND\.REJECTED/);
   assert.match(referralService, /AppEvents\.REFERRAL\.REWARD_CREATED/);
-  assert.match(events, /notifyBuyerDigitalDelivery/);
-  assert.match(events, /notifySellerWithdrawalUpdate/);
+  assert.match(events, /order_digital_ready/);
+  assert.match(events, /withdrawal_created/);
+  assert.doesNotMatch(events, /whatsappService\./);
   assert.doesNotMatch(events, /Event:OrderFulfilled[\s\S]*notifySellerNewOrder/);
 });
 
@@ -713,21 +714,17 @@ test('successful product payments send buyer order confirmation and unique recei
   assert.match(receiptTemplate, /Receipt ID/);
 });
 
-test('email templates resolve from docker root and order WhatsApp events use normalized contacts', () => {
+test('email templates resolve from docker root and order events use normalized contacts', () => {
   const emailUtils = read('src/shared/utils/email.js');
   const orderEvents = read('src/events/order.events.js');
-  const whatsappService = read('src/services/whatsapp.service.js');
 
   assert.match(emailUtils, /\.\.\/\.\.\/\.\.\/email-templates/);
   assert.match(emailUtils, /Email template not found/);
   assert.match(orderEvents, /OrderReadService\.getStatusNotificationDetails/);
   assert.match(orderEvents, /OrderNotificationPayloadService\.prepareNormalizedNotificationPayload/);
-  assert.match(orderEvents, /WhatsApp waits for payment completion/);
+  assert.match(orderEvents, /notifications wait for payment completion/);
   assert.doesNotMatch(orderEvents, /notifySellerNewOrder|notifyBuyerOrderConfirmation/);
-  assert.doesNotMatch(whatsappService, /async notifySellerNewOrder|async notifyBuyerOrderConfirmation/);
-  assert.match(whatsappService, /async notifyBuyerPaymentSuccess/);
-  assert.match(whatsappService, /async notifyBuyerDigitalDelivery/);
-  assert.match(whatsappService, /async notifyCourierNewOrder/);
+  assert.doesNotMatch(orderEvents, /whatsappService/);
 });
 
 test('EventBus defers side effects when outbox claim DB is unavailable', () => {
@@ -1090,14 +1087,6 @@ test('order service delegates inventory reservation lifecycle to dedicated servi
   assert.doesNotMatch(orderService, /ProductModel\.commit/);
 });
 
-test('WhatsApp delivery suppresses duplicate notifications', () => {
-  const whatsapp = read('src/services/whatsapp.service.js');
-
-  assert.match(whatsapp, /recentMessageKeys/);
-  assert.match(whatsapp, /Duplicate notification suppressed/);
-  assert.match(whatsapp, /buildMessageKey\(jid,\s*message\)/);
-});
-
 test('buyer product grid uses React Query cache instead of local fetch effect churn', () => {
   const productGrid = read('../src/components/ProductGrid.tsx');
   const productGridHook = read('../src/components/product-grid/usePublicProductsGrid.ts');
@@ -1420,7 +1409,7 @@ test('unified order flow exposes seller hub handoff and service booking actions'
   assert.match(sellerOrders, /within 24 hours/);
 });
 
-test('logistics WhatsApp notifications are milestone-only and notification-only', () => {
+test('logistics notifications are milestone-only and notification-only', () => {
   const index = read('src/index.js');
   const eventTypes = read('src/events/eventTypes.js');
   const logisticsEvents = read('src/events/logistics.events.js');
@@ -1428,7 +1417,6 @@ test('logistics WhatsApp notifications are milestone-only and notification-only'
   const logisticsTrackingLinkService = read('src/services/logisticsTrackingLink.service.js');
   const logisticsDashboardService = (read('src/services/logisticsDashboard.service.js') + read('src/services/logisticsDashboard.helpers.js'));
   const orderEvents = read('src/events/order.events.js');
-  const whatsappService = read('src/services/whatsapp.service.js');
 
   assert.match(index, /await import\('\.\/events\/logistics\.events\.js'\)/);
   assert.match(eventTypes, /LOGISTICS:\s*\{[\s\S]*NOTIFICATION:\s*'logistics\.notification'/);
@@ -1450,21 +1438,14 @@ test('logistics WhatsApp notifications are milestone-only and notification-only'
   assert.match(logisticsDashboardService, /eventBus\.enqueueInTransaction\(client,\s*AppEvents\.LOGISTICS\.NOTIFICATION/);
   assert.match(logisticsEvents, /IMPORTANT_LOGISTICS_NOTIFICATION_TYPES/);
   assert.match(logisticsEvents, /new_order/);
-  assert.match(logisticsEvents, /whatsappService\.COURIER_NUMBER/);
   assert.match(logisticsEvents, /partnerOnly/);
   assert.match(logisticsEvents, /delivery_paid/);
   assert.match(logisticsEvents, /pickup_paid/);
-  assert.match(logisticsEvents, /sendLogisticsMilestoneNotification/);
   assert.match(logisticsEvents, /eventBus\.deliverRecipient/);
   assert.match(logisticsEvents, /LogisticsTrackingLinkService\.getLinksForRequest/);
   assert.match(logisticsTrackingLinkService, /buildToken/);
   assert.match(logisticsTrackingLinkService, /timingSafeEqual/);
-  assert.match(logisticsEvents, /WhatsApp is notification-only/);
-  assert.match(whatsappService, /WhatsApp is notification only\. Byblos tracking is the source of truth/);
-  assert.match(whatsappService, /New Mzigo Order/);
-  assert.match(whatsappService, /Open the Mzigo dashboard/);
-  assert.match(whatsappService, /COURIER_WHATSAPP_NUMBER/);
-  assert.match(whatsappService, /Track here:/);
+  assert.match(logisticsEvents, /Notifications only/);
   assert.doesNotMatch(logisticsEvents, /UPDATE\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
   assert.doesNotMatch(logisticsEvents, /INSERT INTO\s+(payments|product_orders|withdrawal_requests|seller_balances|wallets)/i);
   assert.doesNotMatch(orderEvents, /sendLogisticsNotification\(order\)/);
@@ -1581,7 +1562,6 @@ test('imported physical products expose pre-order ready SLA without customizatio
   const paymentController = read('src/controllers/payment.controller.js');
   const sellerController = (read('src/controllers/seller.controller.js') + read('src/controllers/seller.auth.controller.js') + read('src/controllers/seller.shop.controller.js') + read('src/controllers/seller.profile.controller.js') + read('src/controllers/seller.clientele.controller.js'));
   const core = read('src/core/CorePaymentService.js');
-  const whatsapp = read('src/services/whatsapp.service.js');
   const phoneModal = (read('../src/components/PhoneCheckModal.tsx') + read('../src/components/usePhoneCheck.ts'));
   const productCard = (read('../src/components/ProductCard.tsx') + read('../src/components/product-card/useProductCheckout.ts'));
   const addProductForm = (read('../src/components/seller/AddProductForm.tsx') + read('../src/components/seller/AddProductFormSteps.tsx'));
@@ -1610,7 +1590,6 @@ test('imported physical products expose pre-order ready SLA without customizatio
   assert.match(sellerController, /p\.import_note/);
 
   assert.match(core, /import_waiting/);
-  assert.match(whatsapp, /Imported \/ pre-order item/);
   assert.match(receiptTemplate, /Imported \/ Pre-order Item|Imported \/ pre-order item/);
   assert.match(confirmationTemplate, /Imported \/ Pre-order Item|Imported \/ pre-order item/);
 
@@ -1628,7 +1607,6 @@ test('custom production SLA deadlines, reminders, refunds, and notifications are
   const deadlineService = read('src/services/orderDeadline.service.js');
   const eventTypes = read('src/events/eventTypes.js');
   const orderEvents = read('src/events/order.events.js');
-  const whatsapp = read('src/services/whatsapp.service.js');
   const logisticsEvents = read('src/events/logistics.events.js');
   const cronLoader = read('src/loaders/cron.js');
   const orderDeadlineCron = read('src/cron/orderDeadlineCron.js');
@@ -1656,12 +1634,8 @@ test('custom production SLA deadlines, reminders, refunds, and notifications are
 
   assert.match(eventTypes, /CUSTOM_PRODUCTION_REMINDER:\s*'order\.custom_production_reminder'/);
   assert.match(eventTypes, /CUSTOM_PRODUCTION_EXPIRED:\s*'order\.custom_production_expired'/);
-  assert.match(orderEvents, /sendCustomProductionReminder/);
-  assert.match(orderEvents, /sendCustomProductionExpiredNotification/);
-  assert.match(whatsapp, /sendCustomProductionReminder/);
-  assert.match(whatsapp, /sendCustomProductionExpiredNotification/);
-  assert.match(whatsapp, /Delivery starts after seller handoff/);
-  assert.match(whatsapp, /check the package against the buyer instructions at handoff/i);
+  assert.match(orderEvents, /custom_production_reminder/);
+  assert.match(orderEvents, /custom_production_expired/);
   assert.match(logisticsEvents, /custom_production_deadline_at/);
   assert.match(logisticsEvents, /metadata', oi\.metadata/);
 

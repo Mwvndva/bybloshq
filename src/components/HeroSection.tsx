@@ -8,20 +8,19 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   return (
-    <section className="relative flex min-h-[calc(100svh-88px)] items-center justify-center overflow-hidden bg-white py-10 sm:min-h-[calc(100svh-73px)] sm:py-12 lg:py-14">
+    <section className="relative flex min-h-[calc(100svh-88px)] items-center justify-center overflow-hidden bg-black py-10 sm:min-h-[calc(100svh-73px)] sm:py-12 lg:py-14">
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
         <Link to="/creator/login">
-          <Button className="rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-900 shadow-[0_10px_28px_rgba(17,17,17,0.08)] transition-all duration-300 hover:bg-yellow-400 hover:text-black sm:px-5 sm:py-2.5 sm:text-sm">
+          <Button className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-semibold text-white shadow-[0_10px_28px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-yellow-400 hover:text-black sm:px-5 sm:py-2.5 sm:text-sm">
             Ambassador
           </Button>
         </Link>
       </div>
 
       <div
-        className="absolute inset-0 z-0 opacity-70"
+        className="absolute inset-0 z-0"
         style={{
-          background: '#ffffff',
-          backgroundColor: '#ffffff'
+          background: 'radial-gradient(60% 50% at 50% 0%, rgba(245,197,24,0.08), transparent 70%)'
         }}
       />
 
@@ -35,11 +34,11 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
               className="mx-auto h-auto w-[min(42vw,150px)] sm:w-[min(24vw,220px)] lg:w-[260px]"
             />
 
-            <p className="mx-auto max-w-4xl text-2xl font-extrabold leading-tight tracking-normal text-stone-950 sm:text-4xl md:text-5xl">
+            <p className="mx-auto max-w-4xl text-2xl font-extrabold leading-tight tracking-normal text-white sm:text-4xl md:text-5xl">
               Start and run your business in Nairobi.
             </p>
 
-            <p className="mx-auto max-w-3xl text-xs leading-5 text-stone-600 sm:text-sm sm:leading-6 md:text-base">
+            <p className="mx-auto max-w-3xl text-xs leading-5 text-white/70 sm:text-sm sm:leading-6 md:text-base">
               Create a trusted shop link, sell from Instagram, TikTok, or WhatsApp, collect secure payments, manage orders, delivery, receipts, refunds, and withdrawals in one place.
             </p>
           </div>
@@ -47,7 +46,7 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
           <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
             <Link to="/buyer/login" className="w-full sm:w-auto">
               <Button
-                className="group w-full rounded-full border border-stone-200 bg-white px-5 py-4 text-sm font-medium text-stone-950 shadow-[0_10px_28px_rgba(17,17,17,0.07)] transition-all duration-300 hover:bg-stone-50 sm:w-auto sm:px-8 sm:py-5 sm:text-base"
+                className="group w-full rounded-full border border-white/15 bg-white/[0.06] px-5 py-4 text-sm font-medium text-white shadow-[0_10px_28px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-white/10 sm:w-auto sm:px-8 sm:py-5 sm:text-base"
               >
                 Browse Trusted Shops
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -63,7 +62,7 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
             </Link>
           </div>
 
-          <p className="max-w-2xl text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+          <p className="max-w-2xl text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
             Trust infrastructure for Nairobi social businesses
           </p>
 
@@ -74,5 +73,3 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
 };
 
 export default HeroSection;
-
-

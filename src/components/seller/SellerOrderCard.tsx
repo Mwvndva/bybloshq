@@ -1,5 +1,8 @@
-import { Calendar, CheckCircle, Clock, MapPin, Package, Truck, User, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, CheckCircle, ChevronDown, Clock, MapPin, Package, Truck, User, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import type { ApiOrder } from '@/types/api/order';
 import { SellerOrderActions } from './SellerOrderActions';
@@ -21,6 +24,10 @@ interface SellerOrderCardProps {
 }
 
 export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReadyForPickup, onRequestPickup, onSelectHubDropoff, onMarkServiceReady, onConfirmBooking, onCancel }: SellerOrderCardProps) {
+                            const [expanded, setExpanded] = useState(false);
+                            const firstItem = order.items?.[0];
+                            const itemCount = order.items?.length || 0;
+                            const extraCount = itemCount > 1 ? itemCount - 1 : 0;
                             const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                             const isDigital = order.items?.some(i => i.productType === 'digital');
                             const isPhysicalOrder = !isService && !isDigital;
@@ -75,8 +82,39 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
                             return (
                                 <Card key={order.id} className={cardClasses}>
                                     <CardContent className="p-4 sm:p-6">
-                                        {/* Mobile-first responsive layout */}
-                                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_240px] gap-4 sm:gap-6">
+                                        {/* Collapsed summary bar — always visible */}
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-white/10 sm:h-14 sm:w-14">
+                                                {firstItem?.imageUrl ? (
+                                                    <img src={firstItem.imageUrl} alt={firstItem.name} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <div className="flex h-full w-full items-center justify-center text-white/40">
+                                                        <Package className="h-5 w-5" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-semibold text-white sm:text-base">
+                                                    {firstItem?.name || `Order #${order.orderNumber}`}
+                                                    {extraCount > 0 && <span className="text-white/60"> +{extraCount} more</span>}
+                                                </p>
+                                                <p className="text-[11px] text-white/60 sm:text-xs">{formatDate(order.createdAt)}</p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setExpanded((v) => !v)}
+                                                aria-expanded={expanded}
+                                                className="shrink-0 gap-1 rounded-lg border border-white/15 px-2.5 text-xs font-semibold text-white hover:bg-white/10 hover:text-white sm:px-3"
+                                            >
+                                                <span className="hidden sm:inline">{expanded ? 'Hide details' : 'View details'}</span>
+                                                <span className="sm:hidden">{expanded ? 'Hide' : 'Details'}</span>
+                                                <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} />
+                                            </Button>
+                                        </div>
+
+                                        {expanded && (
+                                        <div className="mt-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_240px] gap-4 sm:gap-6">
                                             {/* Order Information Section */}
                                             <div className="space-y-3 sm:space-y-4 flex-1">
                                                 {/* Order Header */}
@@ -215,6 +253,7 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
                                                 onMarkServiceReady={onMarkServiceReady}
                                             />
                                         </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             );
