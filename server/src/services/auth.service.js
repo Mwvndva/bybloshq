@@ -324,11 +324,20 @@ class AuthService {
     }
 
     static async registerGuestBuyer(data) {
-        const effectivePassword = data.password || crypto.randomBytes(16).toString('hex');
+        // Every buyer created at checkout MUST be able to log in later, otherwise
+        // their in-app notification feed (order/payment/delivery updates) is
+        // orphaned — unreachable once they install the app. A random fallback
+        // password produced exactly that: an account nobody can ever sign into.
+        // Require a real, buyer-chosen password (the checkout modal always sends
+        // one; this guards any other caller / future flow).
+        if (!data.password || String(data.password).trim().length < 6) {
+            const error = new Error('A password is required to create your account.');
+            error.statusCode = 400;
+            throw error;
+        }
 
         return AuthService.register({
             ...data,
-            password: effectivePassword,
             location: data.location || data.city || 'Not specified',
             termsAccepted: data.termsAccepted !== undefined ? data.termsAccepted : true
         }, 'buyer');
