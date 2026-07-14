@@ -114,6 +114,8 @@ export const checkShopNameAvailability = async (shopName: string): Promise<{ ava
   }
 };
 
+export const deleteSellerAccount = () => sellerApiInstance.delete('/sellers/account');
+
 export const sellerProfileApi = {
   login: async (credentials: { email: string; password: string }): Promise<{ seller: ApiSeller; token?: string }> => {
     try {
