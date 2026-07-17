@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { authStateManager } from './authState';
 import { buildApiBaseUrl } from './apiBaseUrl';
 import { storage } from './storage';
+import { isNativeApp } from './mobileApp';
 
 const baseURL = buildApiBaseUrl();
 
@@ -177,6 +178,77 @@ const handleUnauthorized = async (error: import('axios').AxiosError) => {
     }
 };
 
+/**
+ * Map a request URL to the role whose token it uses, so we know which stored
+ * refresh token to spend when that request comes back 401.
+ */
+const roleFromRequestUrl = (url: string): 'buyer' | 'seller' | 'creator' | 'admin' | null => {
+    if (url.includes('/sellers')) return 'seller';
+    if (url.includes('/creators')) return 'creator';
+    if (url.includes('/admin')) return 'admin';
+    if (url.includes('/buyers')) return 'buyer';
+    return null;
+};
+
+/**
+ * Native-only silent session renewal. The access token lives 24h; when it
+ * expires an authenticated request returns 401. Instead of forcing the user to
+ * log in again, we exchange the long-lived rolling refresh token (stored in
+ * Capacitor Preferences at login) for a fresh access token and replay the
+ * original request once. This is what lets a user log in a single time and keep
+ * reopening the app without re-entering their details.
+ *
+ * Returns the retried response on success, or null to fall through to the normal
+ * 401 handling (which sends the user to the login screen).
+ */
+const tryRefreshAndRetry = async (error: import('axios').AxiosError) => {
+    if (!isNativeApp()) return null;
+
+    const config = error.config as (import('axios').InternalAxiosRequestConfig & { _refreshRetried?: boolean }) | undefined;
+    if (!config) return null;
+
+    const url = config.url || '';
+    // Never loop on the refresh call itself, and don't try to refresh a failed
+    // login/logout (there is no valid session yet, or it is being torn down).
+    if (config._refreshRetried) return null;
+    if (url.includes('/auth/refresh-token') || url.includes('/login') || url.includes('/logout')) return null;
+
+    const role = roleFromRequestUrl(url);
+    if (!role) return null;
+
+    const refreshToken = await storage.get(`${role}RefreshToken`);
+    if (!refreshToken) return null;
+
+    try {
+        // Use a bare axios call (not apiClient) so this cannot recurse through the
+        // response interceptor. CSRF still applies, so send a fresh double-submit token.
+        let csrf = getCachedCsrfToken();
+        if (!csrf) csrf = await getFreshCsrfToken();
+        const resp = await axios.post(
+            `${baseURL}/auth/refresh-token`,
+            { refreshToken },
+            { withCredentials: true, headers: csrf ? { 'X-CSRF-Token': csrf } : {} }
+        );
+
+        const data = (resp.data as { data?: { accessToken?: string; refreshToken?: string } })?.data;
+        const newAccess = data?.accessToken;
+        if (!newAccess) return null;
+
+        await storage.set(`${role}Token`, newAccess);
+        if (data?.refreshToken) await storage.set(`${role}RefreshToken`, data.refreshToken);
+
+        config._refreshRetried = true;
+        config.headers = config.headers || {};
+        (config.headers as Record<string, string>)['Authorization'] = `Bearer ${newAccess}`;
+        return await apiClient(config);
+    } catch {
+        // Refresh token expired or invalid — drop it so we stop retrying and let the
+        // user log in again cleanly.
+        await storage.remove(`${role}RefreshToken`);
+        return null;
+    }
+};
+
 // Response Interceptor: Global Error Handling
 apiClient.interceptors.response.use(
     (response) => {
@@ -201,6 +273,8 @@ apiClient.interceptors.response.use(
 
         // Handle Status Codes
         if (status === 401) {
+            const retried = await tryRefreshAndRetry(error);
+            if (retried) return retried;
             await handleUnauthorized(error);
         } else if (status && status >= 500) {
             toast.error('Server Error', {

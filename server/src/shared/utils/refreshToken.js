@@ -17,7 +17,7 @@ export const generateRefreshToken = (id, role = 'buyer') => {
   return jwt.sign(
     { id, role, type: 'refresh' },
     secret,
-    { expiresIn: '7d' }
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '90d' }
   );
 };
 
@@ -61,11 +61,17 @@ export const refreshAccessToken = (refreshToken) => {
   const accessToken = jwt.sign(
     { id: decoded.id, role: decoded.role },
     process.env.JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
+
+  // Rolling refresh: mint a brand-new refresh token on every refresh so a user
+  // who keeps opening the app never has to log in again — the window slides
+  // forward each time instead of expiring a fixed period after first login.
+  const newRefreshToken = generateRefreshToken(decoded.id, decoded.role);
 
   return {
     accessToken,
+    refreshToken: newRefreshToken,
     user: {
       id: decoded.id,
       role: decoded.role
