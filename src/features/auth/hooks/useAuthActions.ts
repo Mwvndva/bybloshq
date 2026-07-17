@@ -7,7 +7,7 @@ import { clearAllAuthData } from '@/lib/authCleanup';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 import { isNativeApp } from '@/lib/mobileApp';
 import { getDashboardPath, getLoginPath } from '../utils/authRouting';
-import { clearRoleSessionMarkers, markRoleSessionActive } from '../services/authSession';
+import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
 import type {
   BuyerRegistrationData,
   GlobalUser,
@@ -88,6 +88,12 @@ export function useAuthActions({
 
       const profileData = role === 'buyer' ? response.buyer : role === 'creator' ? response.creator : response.seller;
 
+      // Single active account: drop any other account's cached data and evict its
+      // stored credentials/session before establishing this one, so the app can
+      // never bind to a leftover session from a different user.
+      queryClient.clear();
+      await enforceSingleActiveRole(role);
+
       setUser({
         role,
         profile: profileData as UserProfile,
@@ -131,7 +137,7 @@ export function useAuthActions({
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerLoginMut, sellerLoginMut, creatorLoginMut]);
+  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerLoginMut, sellerLoginMut, creatorLoginMut, queryClient]);
 
   const loginWithToken = useCallback(async (token: string, role: UserRole) => {
     setIsLoading(true);
@@ -156,6 +162,7 @@ export function useAuthActions({
       });
 
       await markRoleSessionActive(role);
+      await setActiveRole(role);
       markAuthChecked();
       void registerNativePushNotifications(role);
     } finally {
@@ -174,6 +181,11 @@ export function useAuthActions({
         if (!adminProfile?.id) {
           throw new Error('Admin profile could not be verified after login');
         }
+
+        // Single active account: clear any prior user's cache + evict other sessions.
+        queryClient.clear();
+        await enforceSingleActiveRole('admin');
+
         setUser({
           role: 'admin',
           profile: adminProfile,
@@ -211,6 +223,7 @@ export function useAuthActions({
 
   const logout = useCallback(async () => {
     await clearRoleSessionMarkers();
+    queryClient.clear();
 
     if (!user) {
       try { await clearAllAuthData(); } catch { /* ignore */ }
@@ -239,7 +252,7 @@ export function useAuthActions({
       toast('Logged out', { description: 'You have been successfully logged out.' });
       navigate('/', { replace: true });
     }
-  }, [navigate, setUser, user]);
+  }, [navigate, setUser, user, queryClient]);
 
   const refreshRole = useCallback(async (newRole: UserRole) => {
     setIsLoading(true);
@@ -266,6 +279,7 @@ export function useAuthActions({
       });
 
       await markRoleSessionActive(newRole);
+      await setActiveRole(newRole);
       markAuthChecked();
       void registerNativePushNotifications(newRole);
 

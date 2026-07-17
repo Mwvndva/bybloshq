@@ -62,10 +62,20 @@ apiClient.interceptors.request.use(
         else if (url.includes('/buyers')) token = await storage.get('buyerToken');
         else if (url.includes('/logistics') || url.includes('/mzigo')) { try { token = localStorage.getItem('mzigoLogisticsToken'); } catch { token = null; } }
         
-        if (!token) {
-            for (const r of (url.includes('/logistics') || url.includes('/mzigo')) ? [] : ['buyer', 'seller', 'creator', 'admin']) {
-                token = await storage.get(`${r}Token`);
-                if (token) break;
+        if (!token && !(url.includes('/logistics') || url.includes('/mzigo'))) {
+            // Generic URL with no role segment: use the token of the account that
+            // is actually signed in (the recorded active role) rather than the
+            // first token found in a fixed priority order, which could belong to a
+            // different, leftover account and leak that user's data.
+            const activeRole = await storage.get('activeRole');
+            if (activeRole) {
+                token = await storage.get(`${activeRole}Token`);
+            }
+            if (!token) {
+                for (const r of ['buyer', 'seller', 'creator', 'admin']) {
+                    token = await storage.get(`${r}Token`);
+                    if (token) break;
+                }
             }
         }
 
