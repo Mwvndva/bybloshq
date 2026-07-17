@@ -7,7 +7,8 @@ import { clearAllAuthData } from '@/lib/authCleanup';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 import { isNativeApp } from '@/lib/mobileApp';
 import { getDashboardPath, getLoginPath } from '../utils/authRouting';
-import { clearRoleSessionMarkers, markRoleSessionActive } from '../services/authSession';
+import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
+import { switchAccountRequest, type SwitchableRole } from '@/api/account';
 import type {
   BuyerRegistrationData,
   GlobalUser,
@@ -88,6 +89,12 @@ export function useAuthActions({
 
       const profileData = role === 'buyer' ? response.buyer : role === 'creator' ? response.creator : response.seller;
 
+      // Single active account: drop any other account's cached data and evict its
+      // stored credentials/session before establishing this one, so the app can
+      // never bind to a leftover session from a different user.
+      queryClient.clear();
+      await enforceSingleActiveRole(role);
+
       setUser({
         role,
         profile: profileData as UserProfile,
@@ -97,6 +104,8 @@ export function useAuthActions({
       if (isNativeApp() && response.token) {
         const { storage } = await import('@/lib/storage');
         await storage.set(`${role}Token`, response.token);
+        const refreshToken = (response as { refreshToken?: string }).refreshToken;
+        if (refreshToken) await storage.set(`${role}RefreshToken`, refreshToken);
       }
       await markRoleSessionActive(role);
       markAuthChecked();
@@ -129,7 +138,7 @@ export function useAuthActions({
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerLoginMut, sellerLoginMut, creatorLoginMut]);
+  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerLoginMut, sellerLoginMut, creatorLoginMut, queryClient]);
 
   const loginWithToken = useCallback(async (token: string, role: UserRole) => {
     setIsLoading(true);
@@ -154,6 +163,7 @@ export function useAuthActions({
       });
 
       await markRoleSessionActive(role);
+      await setActiveRole(role);
       markAuthChecked();
       void registerNativePushNotifications(role);
     } finally {
@@ -172,6 +182,11 @@ export function useAuthActions({
         if (!adminProfile?.id) {
           throw new Error('Admin profile could not be verified after login');
         }
+
+        // Single active account: clear any prior user's cache + evict other sessions.
+        queryClient.clear();
+        await enforceSingleActiveRole('admin');
+
         setUser({
           role: 'admin',
           profile: adminProfile,
@@ -181,6 +196,8 @@ export function useAuthActions({
         if (isNativeApp() && response?.data?.token) {
           const { storage } = await import('@/lib/storage');
           await storage.set('adminToken', response.data.token);
+          const adminRefreshToken = (response.data as { refreshToken?: string }).refreshToken;
+          if (adminRefreshToken) await storage.set('adminRefreshToken', adminRefreshToken);
         }
         await markRoleSessionActive('admin');
         markAuthChecked();
@@ -207,6 +224,7 @@ export function useAuthActions({
 
   const logout = useCallback(async () => {
     await clearRoleSessionMarkers();
+    queryClient.clear();
 
     if (!user) {
       try { await clearAllAuthData(); } catch { /* ignore */ }
@@ -235,7 +253,57 @@ export function useAuthActions({
       toast('Logged out', { description: 'You have been successfully logged out.' });
       navigate('/', { replace: true });
     }
-  }, [navigate, setUser, user]);
+  }, [navigate, setUser, user, queryClient]);
+
+  const switchAccount = useCallback(async (role: SwitchableRole) => {
+    setIsLoading(true);
+    try {
+      const { token, refreshToken } = await switchAccountRequest(role);
+
+      // Establish the target role as the single active account: drop the prior
+      // account's cache + credentials, then persist the freshly-minted token.
+      queryClient.clear();
+      await enforceSingleActiveRole(role);
+      if (isNativeApp() && token) {
+        const { storage } = await import('@/lib/storage');
+        await storage.set(`${role}Token`, token);
+        if (refreshToken) await storage.set(`${role}RefreshToken`, refreshToken);
+      }
+
+      let queryOpts;
+      if (role === 'buyer') queryOpts = buyerProfileQueryOptions;
+      else if (role === 'seller') queryOpts = sellerProfileQueryOptions;
+      else queryOpts = creatorProfileQueryOptions;
+
+      const profileData = await queryClient.fetchQuery(queryOpts);
+
+      setUser({
+        role,
+        profile: profileData as UserProfile,
+        isAuthenticated: true,
+      });
+
+      await markRoleSessionActive(role);
+      await setActiveRole(role);
+      markAuthChecked();
+      void registerNativePushNotifications(role);
+
+      const dashboardPath = getDashboardPath(role);
+      navigate(typeof dashboardPath === 'string' ? dashboardPath : '/', { replace: true });
+
+      toast.success('Account switched', {
+        description: `You are now using your ${role === 'creator' ? 'ambassador' : role} account.`,
+        duration: 2000,
+      });
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || err.message || 'Could not switch account';
+      toast.error('Switch failed', { description: message });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [markAuthChecked, navigate, setIsLoading, setUser, queryClient]);
 
   const refreshRole = useCallback(async (newRole: UserRole) => {
     setIsLoading(true);
@@ -262,6 +330,7 @@ export function useAuthActions({
       });
 
       await markRoleSessionActive(newRole);
+      await setActiveRole(newRole);
       markAuthChecked();
       void registerNativePushNotifications(newRole);
 
@@ -285,6 +354,7 @@ export function useAuthActions({
     loginAdmin,
     register,
     logout,
+    switchAccount,
     refreshRole,
     forgotPassword,
     resetPassword,

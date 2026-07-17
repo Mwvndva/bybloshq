@@ -7,12 +7,14 @@ interface LoginApiResponse {
   data: {
     buyer: Buyer;
     token?: string;
+    refreshToken?: string;
   };
 }
 
 export interface LoginResponse {
   buyer?: Buyer;
   token?: string;
+  refreshToken?: string;
   status?: string;
   message?: string;
 }
@@ -63,13 +65,13 @@ export async function login(credentials: { email: string; password: string }): P
       throw new Error('Invalid response from server - missing buyer data');
     }
 
-    const { buyer, token } = data;
+    const { buyer, token, refreshToken } = data;
 
     delete buyerApiInstance.defaults.headers.common['Authorization'];
 
     await getFreshCsrfToken();
 
-    return { buyer: transformBuyer(buyer), token };
+    return { buyer: transformBuyer(buyer), token, refreshToken };
   } catch (error) {
     console.error('Login error:', error);
     throw error;

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Loader2, LogOut, MousePointerClick, Trophy, Wallet } from 'lucide-react';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
+import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
 import { toast } from 'sonner';
 import { useCreatorDashboardQuery } from '@/hooks/creator/queries/useCreatorDashboardQuery';
 import { useCreatorReferralDashboardQuery } from '@/hooks/creator/queries/useCreatorReferralDashboardQuery';
@@ -131,14 +132,15 @@ export default function CreatorDashboard() {
   return (
     <main className="byblos-light-page min-h-screen bg-black px-4 py-6 text-white">
       <div className="space-y-5">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <header className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <NotificationBell triggerClassName="text-white hover:bg-white/10 hover:text-white" />
+            <AccountSwitcher />
+          </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Ambassador dashboard</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight">Welcome, {creator.firstName}</h1>
             <p className="mt-1 text-sm font-medium text-white/50">Track clicks, sales, earnings, referrals, and withdrawals.</p>
-          </div>
-          <div className="sm:self-center">
-            <NotificationBell triggerClassName="text-white hover:bg-white/10 hover:text-white" />
           </div>
         </header>
 

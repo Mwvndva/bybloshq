@@ -25,6 +25,7 @@ export const login = async (emailOrCredentials: string | { email: string; passwo
   return {
     creator: response.data?.data?.creator,
     token: response.data?.data?.token,
+    refreshToken: response.data?.data?.refreshToken,
     ...response.data
   };
 };

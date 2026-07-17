@@ -18,6 +18,7 @@ import { SellerDashboardHeader } from './dashboard/widgets/SellerDashboardHeader
 import { SellerDashboardErrorState, SellerDashboardLoadingState } from './dashboard/widgets/SellerDashboardState';
 import { SellerDashboardTabs } from './dashboard/widgets/SellerDashboardTabs';
 import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/shopLinks';
+import { isNativeApp } from '@/lib/mobileApp';
 import { useShopTheme } from '@/hooks/useShopTheme';
 import { useSellerProfileQuery } from '@/hooks/seller/useSellerProfile';
 import type { Theme } from '@/types';
@@ -184,12 +185,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   return (
     <>
-      <SellerDashboardHeader
-        sellerFirstName={sellerFirstName}
-        onBackHome={() => navigate('/')}
-      />
+      <SellerDashboardHeader sellerFirstName={sellerFirstName} />
 
-      <div className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+      <div
+        className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6"
+        style={isNativeApp() ? { paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' } : undefined}
+      >
         <div className="mb-6 sm:mb-7 md:mb-8">
           <SellerProfileHero
             sellerProfile={(liveSellerProfile as unknown as typeof sellerProfile) || sellerProfile}
