@@ -10,12 +10,26 @@ import { useMyAccounts } from '../hooks/useMyAccounts';
 import { useGlobalAuth } from '../hooks/useGlobalAuth';
 import type { SwitchableRole } from '@/api/account';
 
-const ROLE_ORDER: SwitchableRole[] = ['buyer', 'seller', 'creator'];
+interface RoleMeta {
+  label: string;
+  icon: LucideIcon;
+}
 
-const ROLE_META: Record<SwitchableRole, { label: string; icon: LucideIcon }> = {
-  buyer: { label: 'Buyer', icon: ShoppingBag },
-  seller: { label: 'Seller', icon: Store },
-  creator: { label: 'Ambassador', icon: Megaphone },
+const isSwitchableRole = (role: unknown): role is SwitchableRole =>
+  role === 'buyer' || role === 'seller' || role === 'creator';
+
+// Fixed switch (not a keyed object) so there is no dynamic object indexing —
+// avoids the object-injection lint sink and keeps the mapping exhaustive.
+const metaForRole = (role: SwitchableRole): RoleMeta => {
+  switch (role) {
+    case 'seller':
+      return { label: 'Seller', icon: Store };
+    case 'creator':
+      return { label: 'Ambassador', icon: Megaphone };
+    case 'buyer':
+    default:
+      return { label: 'Buyer', icon: ShoppingBag };
+  }
 };
 
 /**
@@ -29,17 +43,24 @@ export function AccountSwitcher() {
   const { switchAccount, role: currentRole } = useGlobalAuth();
   const [switching, setSwitching] = useState<SwitchableRole | null>(null);
 
-  const owned = useMemo<SwitchableRole[]>(
-    () => (data ? ROLE_ORDER.filter((r) => data.accounts[r]) : []),
-    [data],
-  );
+  // Build the owned list by explicit field access (no dynamic indexing).
+  const owned = useMemo<SwitchableRole[]>(() => {
+    if (!data) return [];
+    const list: SwitchableRole[] = [];
+    if (data.accounts.buyer) list.push('buyer');
+    if (data.accounts.seller) list.push('seller');
+    if (data.accounts.creator) list.push('creator');
+    return list;
+  }, [data]);
 
   if (owned.length < 2) return null;
 
-  const active = (currentRole && ROLE_META[currentRole as SwitchableRole]
-    ? (currentRole as SwitchableRole)
-    : data?.current) as SwitchableRole;
-  const activeMeta = ROLE_META[active] ?? ROLE_META.buyer;
+  const active: SwitchableRole = isSwitchableRole(currentRole)
+    ? currentRole
+    : isSwitchableRole(data?.current)
+      ? data.current
+      : owned[0];
+  const activeMeta = metaForRole(active);
   const ActiveIcon = activeMeta.icon;
 
   const handleSwitch = async (role: SwitchableRole) => {
@@ -75,7 +96,7 @@ export function AccountSwitcher() {
           Switch account
         </div>
         {owned.map((role) => {
-          const meta = ROLE_META[role];
+          const meta = metaForRole(role);
           const Icon = meta.icon;
           const isActive = role === active;
           const isSwitching = switching === role;
