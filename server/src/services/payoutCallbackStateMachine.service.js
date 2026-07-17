@@ -2,6 +2,7 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import payoutService from './payout.service.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import { getWithdrawalReservedAmount } from '../shared/utils/withdrawalUtils.js';
 
 const PAYOUT_SUCCESS_STATUSES = new Set(['0', 'success', 'successful', 'completed', 'complete', 'paid', 'sent', 'delivered']);
 const PAYOUT_FAILURE_STATUSES = new Set(['failed', 'failure', 'cancelled', 'canceled', 'rejected', 'reversed', 'error']);
@@ -246,7 +247,7 @@ class PayoutCallbackStateMachineService {
             }
 
             let newBalance = null;
-            if (!isSuccess) {
+            if (request.seller_id) {
                 await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
             }
 
@@ -291,6 +292,14 @@ class PayoutCallbackStateMachineService {
 
             if (!isSuccess) {
                 newBalance = await payoutService.refundToWallet(client, request);
+            } else if (request.seller_id) {
+                await client.query(
+                    `UPDATE sellers
+                     SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                         updated_at = NOW()
+                     WHERE id = $2`,
+                    [getWithdrawalReservedAmount(request), request.seller_id]
+                );
             }
 
             await this.updatePayoutProviderAttempt(client, request.id, transactionReference, finalStatus, data);

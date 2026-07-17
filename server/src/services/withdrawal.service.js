@@ -8,6 +8,7 @@ import PayoutCallbackStateMachineService, {
     providerPayloadIndicatesFailure
 } from './payoutCallbackStateMachine.service.js';
 import WithdrawalRetryWorkerService from './withdrawalRetryWorker.service.js';
+import { getWithdrawalReservedAmount } from '../shared/utils/withdrawalUtils.js';
 
 const AMBIGUOUS_PAYOUT_ERROR_CODES = new Set([
     'CONNECTION_FAILED',
@@ -35,7 +36,7 @@ function isAmbiguousPayoutProviderError(error) {
  * Flow:
  * 1. Validate inputs
  * 2. Lock entity row, check balance
- * 3. Deduct balance from entity wallet
+ * 3. Move available balance into withdrawal reserve
  * 4. Insert withdrawal_requests record (status: 'processing')
  * 5. Commit DB transaction
  * 6. Call payout provider asynchronously (non-blocking to caller)
@@ -178,7 +179,7 @@ class WithdrawalService {
             if (!request) throw new Error('Withdrawal request not found');
 
             // FIXED BUG-WD-02: Lock sellers row to prevent race conditions during balance updates
-            if (newStatus === 'failed') {
+            if (['completed', 'failed'].includes(newStatus)) {
                 await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
             }
 
@@ -215,6 +216,15 @@ class WithdrawalService {
                 logger.info(`[WithdrawalService] Request ${requestId} failed. Refunded KES ${request.amount} to seller ${request.seller_id}`);
             } else if (newStatus === 'failed') {
                 logger.warn(`[WithdrawalService] Request ${requestId} marked failed without refund: ${remarks || 'skipRefund=true'}`);
+            } else if (newStatus === 'completed') {
+                const reservedAmount = getWithdrawalReservedAmount(request);
+                await client.query(
+                    `UPDATE sellers
+                     SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+                         updated_at = NOW()
+                     WHERE id = $2`,
+                    [reservedAmount, request.seller_id]
+                );
             }
 
             const updatedEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.UPDATED, {
@@ -294,7 +304,11 @@ class WithdrawalService {
 
             // Lock entity row and fetch current balance
             const { rows } = await client.query(
-                'SELECT id, balance, full_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE',
+                `SELECT id, balance, pending_settlement_balance, withdrawal_reserved_balance,
+                        full_name, whatsapp_number
+                 FROM sellers
+                 WHERE id = $1
+                 FOR UPDATE`,
                 [entityId]
             );
             const entityRow = rows[0];
@@ -331,13 +345,18 @@ class WithdrawalService {
             if (currentBalance < deductionAmount) {
                 throw new Error(
                     `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
-                    `Required: KES ${deductionAmount.toLocaleString()} including withdrawal charge`
+                    `Required: KES ${deductionAmount.toLocaleString()} including withdrawal charge. ` +
+                    'Recent sales may still be pending Paystack settlement.'
                 );
             }
 
-            // Deduct from entity balance
+            // Reserve available funds while Paystack processes the transfer.
             await client.query(
-                `UPDATE sellers SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
+                `UPDATE sellers
+                 SET balance = balance - $1,
+                     withdrawal_reserved_balance = COALESCE(withdrawal_reserved_balance, 0) + $1,
+                     updated_at = NOW()
+                 WHERE id = $2`,
                 [deductionAmount, entityId]
             );
 

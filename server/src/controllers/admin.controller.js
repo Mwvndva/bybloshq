@@ -15,6 +15,7 @@ import { PaymentService } from '../services/payment.service.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
 import LogisticsDashboardService from '../services/logisticsDashboard.service.js';
+import { getWithdrawalReservedAmount } from '../shared/utils/withdrawalUtils.js';
 
 const paymentService = new PaymentService();
 
@@ -487,7 +488,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
         throw new AppError(`Already finalized as "${lockedRequest.status}" — cannot override`, 400);
       }
 
-      if (status === 'failed' && lockedRequest.seller_id) {
+      if (lockedRequest.seller_id) {
         await sellerRepository.lockById(lockedRequest.seller_id, client);
       }
 
@@ -504,6 +505,14 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
       let newBalance = null;
       if (status === 'failed') {
         newBalance = await payoutService.refundToWallet(client, request);
+      } else if (status === 'completed' && request.seller_id) {
+        await client.query(
+          `UPDATE sellers
+           SET withdrawal_reserved_balance = GREATEST(COALESCE(withdrawal_reserved_balance, 0) - $1, 0),
+               updated_at = NOW()
+           WHERE id = $2`,
+          [getWithdrawalReservedAmount(request), request.seller_id]
+        );
       }
 
       const updatedEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.UPDATED, {

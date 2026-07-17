@@ -72,17 +72,19 @@ test('public polling and cron delegate successful completion to CorePaymentServi
 
 test('public order status polling resolves order numbers and surfaces provider failures', () => {
   const publicController = read('src/controllers/public.controller.js');
+  const publicOrderStatusRepository = read('src/repositories/publicOrderStatus.repository.js');
   const paymentModal = read('../src/components/PaymentStatusModal.tsx');
   const productCard = read('../src/components/ProductCard.tsx');
 
-  assert.match(publicController, /po\.order_number = \$1[\s\S]*OR po\.id::text = \$1/);
+  assert.match(publicOrderStatusRepository, /po\.order_number = \$1[\s\S]*OR po\.id::text = \$1/);
+  assert.match(publicController, /publicOrderStatusRepository\.findStatusByIdentifier/);
   assert.match(publicController, /paymentService\.checkTransactionStatus\(reference\)/);
   assert.match(publicController, /CorePaymentService\.completeVerifiedPayment/);
   assert.match(publicController, /source:\s*'public_order_status_poll'/);
   assert.match(publicController, /PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS = 15000/);
   assert.match(publicController, /failureReason: extractPublicPaymentFailureReason\(order\)/);
   assert.match(productCard, /invoiceId:\s*String\(orderNumber \|\| orderId\)/);
-  assert.match(paymentModal, /const isOrderPaid = \['PAID', 'FULFILLMENT_PENDING', 'FULFILLED', 'DELIVERED', 'COMPLETED', 'BOOKED', 'COLLECTION_PENDING'\]/);
+  assert.match(paymentModal, /const isOrderPaid = \[[\s\S]*'PAID'[\s\S]*'COLLECTION_PENDING'[\s\S]*\]\.includes\(orderStatus\)/);
   assert.match(paymentModal, /const isPaymentFailure = \['failed', 'cancelled', 'manual_review_required', 'payment_mapping_failed', 'compensation_required'\]/);
   assert.doesNotMatch(paymentModal, /!?\['PENDING', 'RESERVED'\]\.includes\(orderStatus\)/);
   assert.match(paymentModal, /insufficient balance, a wrong M-Pesa PIN, cancellation, or timeout/);
@@ -113,8 +115,8 @@ test('withdrawal payouts route through configured provider after wallet deductio
   assert.match(payoutService, /this\.transferClient = this\.payoutProviderClient/);
   assert.match(payoutService, /this\.transferClient\.initiateTransfer/);
   assert.match(payoutService, /this\.transferClient\.verifyTransfer/);
-  assert.match(withdrawalService, /UPDATE sellers SET balance = balance - \$1[\s\S]*INSERT INTO withdrawal_requests[\s\S]*await client\.query\('COMMIT'\)[\s\S]*this\._callProviderAndUpdate/);
-  assert.match(payoutService, /UPDATE sellers SET balance = balance \+ \$1/);
+  assert.match(withdrawalService, /SET balance = balance - \$1,[\s\S]*withdrawal_reserved_balance = COALESCE\(withdrawal_reserved_balance, 0\) \+ \$1[\s\S]*INSERT INTO withdrawal_requests[\s\S]*await client\.query\('COMMIT'\)[\s\S]*this\._callProviderAndUpdate/);
+  assert.match(payoutService, /withdrawal_reserved_balance = GREATEST\(COALESCE\(withdrawal_reserved_balance, 0\) - \$1, 0\)[\s\S]*balance = COALESCE\(balance, 0\) \+ \$1/);
 });
 
 test('Paystack payout rollout adds only provider lookup indexes and preserves M-PESA wallet columns', () => {
@@ -303,13 +305,44 @@ test('EscrowManager remains isolated behind buyer confirmation release callers',
   assert.match(orderService, /nonConfirmableStatuses/);
   assert.match(orderService, /deliveryStatus === 'delivered' \|\| deliveryStatus === 'completed'/);
   assert.doesNotMatch(orderService, /!canConfirmReceipt && order\.status === OrderStatus\.FULFILLING/);
-  assert.match(escrowManager, /COALESCE\(balance, 0\)\s+\+\s+\$1/);
+  assert.match(escrowManager, /pending_settlement_balance = COALESCE\(pending_settlement_balance, 0\) \+ \$1/);
+  assert.doesNotMatch(escrowManager, /SET balance\s+=\s+COALESCE\(balance, 0\)\s+\+\s+\$1/);
   assert.match(escrowManager, /orderStatus !== 'COMPLETED'/);
   assert.match(escrowManager, /reason: 'order_not_completed'/);
-  assert.match(escrowManager, /RETURNING balance, net_revenue, total_sales/);
+  assert.match(escrowManager, /RETURNING balance, pending_settlement_balance, net_revenue, total_sales/);
   assert.match(escrowManager, /Seller \$\{sellerId\} not found for escrow release/);
   assert.match(ordersSectionUtils, /terminalStatuses/);
   assert.match(ordersSectionUtils, /deliveryStatus === 'delivered' \|\| deliveryStatus === 'completed'/);
+});
+
+test('seller wallet is settlement-aware from escrow through withdrawal reserve', () => {
+  const migration = read('migrations/20260526120000_settlement_aware_seller_wallet.sql');
+  const escrowManager = read('src/services/EscrowManager.js');
+  const settlementService = read('src/services/settlement.service.js');
+  const settlementCron = read('src/cron/settlementCron.js');
+  const withdrawalService = read('src/services/withdrawal.service.js');
+  const callbackStateMachine = read('src/services/payoutCallbackStateMachine.service.js');
+  const analyticsController = read('src/controllers/analytics.controller.js');
+  const sellerAnalyticsRepository = read('src/repositories/sellerAnalytics.repository.js');
+
+  assert.match(migration, /pending_settlement_balance/);
+  assert.match(migration, /withdrawal_reserved_balance/);
+  assert.match(migration, /refund_reserved_balance/);
+  assert.match(migration, /available_at/);
+  assert.match(migration, /settlement_status/);
+  assert.match(migration, /backfilled_as_settled/);
+  assert.match(escrowManager, /'pending_settlement'/);
+  assert.match(escrowManager, /availableAt = settlementService\.calculateAvailableAt/);
+  assert.match(escrowManager, /pending_settlement_balance = COALESCE\(pending_settlement_balance, 0\) \+ \$1/);
+  assert.doesNotMatch(escrowManager, /SET balance\s+=\s+COALESCE\(balance, 0\)\s+\+\s+\$1/);
+  assert.match(settlementService, /FOR UPDATE SKIP LOCKED/);
+  assert.match(settlementService, /pending_settlement_balance = GREATEST\(COALESCE\(pending_settlement_balance, 0\) - \$1, 0\)[\s\S]*balance = COALESCE\(balance, 0\) \+ \$1/);
+  assert.match(settlementCron, /promoteEligibleSettlements/);
+  assert.match(withdrawalService, /Recent sales may still be pending Paystack settlement/);
+  assert.match(withdrawalService, /withdrawal_reserved_balance = COALESCE\(withdrawal_reserved_balance, 0\) \+ \$1/);
+  assert.match(callbackStateMachine, /withdrawal_reserved_balance = GREATEST\(COALESCE\(withdrawal_reserved_balance, 0\) - \$1, 0\)/);
+  assert.match(analyticsController, /pendingSettlementBalance/);
+  assert.match(sellerAnalyticsRepository, /next_settlement_at/);
 });
 
 test('fulfillment retry cron routes through fulfillment queue', () => {
@@ -487,8 +520,8 @@ test('important post-commit lifecycle events prefer durable outbox rows', () => 
   assert.match(refundController, /enqueueAndDispatch\(AppEvents\.REFUND\.REJECTED/);
   assert.match(adminController, /enqueueInTransaction\(client,\s*AppEvents\.WITHDRAWAL\.UPDATED/);
   assert.match(referralService, /enqueueInTransaction\(client,\s*AppEvents\.REFERRAL\.REWARD_CREATED/);
-  assert.match(orderService, /eventBus\.emit\(AppEvents\.INVENTORY\.LOW_STOCK/);
-  assert.match(orderService, /eventBus\.emit\(AppEvents\.INVENTORY\.OUT_OF_STOCK/);
+  assert.doesNotMatch(orderService, /eventBus\.emit\(AppEvents\.INVENTORY\.LOW_STOCK/);
+  assert.doesNotMatch(orderService, /eventBus\.emit\(AppEvents\.INVENTORY\.OUT_OF_STOCK/);
   assert.doesNotMatch(coreOrder, /eventBus\.emit|setImmediate/);
 
   const activeRuntime = [
@@ -522,10 +555,7 @@ test('important post-commit lifecycle events prefer durable outbox rows', () => 
       }))
   ).sort((a, b) => `${a.file}:${a.namespace}:${a.event}`.localeCompare(`${b.file}:${b.namespace}:${b.event}`));
 
-  assert.deepEqual(directEmitSites, [
-    { file: 'order.service.js', namespace: 'INVENTORY', event: 'LOW_STOCK' },
-    { file: 'order.service.js', namespace: 'INVENTORY', event: 'OUT_OF_STOCK' }
-  ]);
+  assert.deepEqual(directEmitSites, []);
 });
 
 test('EventBus outbox only completes after listener delivery succeeds', () => {
@@ -699,7 +729,7 @@ test('successful product payments send buyer order confirmation and unique recei
   assert.match(receiptService, /payment:\$\{payment\.id\}:buyer:order_confirmation/);
   assert.match(receiptService, /payment:\$\{payment\.id\}:buyer:payment_receipt/);
   assert.match(receiptService, /Door delivery fee/);
-  assert.match(receiptService, /Service charge/);
+  assert.match(receiptService, /Byblos service charge \(2%\)/);
   assert.match(receiptService, /buyer_service_charge/);
   assert.match(receiptService, /sendSellerPickupReceiptAfterPayment/);
   assert.match(receiptService, /payment:\$\{payment\.id\}:seller:pickup_receipt/);
@@ -864,20 +894,23 @@ test('door delivery payment totals are recalculated by backend and do not inflat
   assert.match(quoteService, /Math\.ceil\(distance\)\s*\*\s*rate/);
   assert.match(paymentService, /assertDoorDeliveryLocation\(buyerDeliveryLocation\)/);
   assert.match(paymentService, /LogisticsQuoteService\.quoteBuyerDoorDelivery\(buyerDeliveryLocation\)/);
-  assert.match(paymentService, /BUYER_SERVICE_CHARGE_RATE\s*=\s*0\.015/);
+  assert.match(paymentService, /PRODUCT_SERVICE_CHARGE_RATE = Fees\.PRODUCT_SERVICE_CHARGE_RATE/);
+  assert.match(read('src/config/fees.js'), /PRODUCT_SERVICE_CHARGE_RATE:\s*0\.02/);
+  assert.match(read('src/config/fees.js'), /PLATFORM_COMMISSION_AMOUNT:\s*10/);
   assert.match(paymentService, /roundPayableTotal\s*=\s*\(amount\)\s*=>\s*Math\.ceil\(roundMoney\(amount\)\)/);
   assert.match(paymentService, /paymentBaseTotal\s*=\s*roundMoney\(productSubtotal \+ buyerDeliveryFee\)/);
-  assert.match(paymentService, /buyerServiceCharge\s*=\s*calculateBuyerServiceCharge\(paymentBaseTotal\)/);
-  assert.match(paymentService, /payableTotal\s*=\s*roundPayableTotal\(paymentBaseTotal \+ buyerServiceCharge\)/);
-  assert.match(paymentService, /buyer_service_charge:\s*buyerServiceCharge/);
+  assert.match(paymentService, /productServiceCharge\s*=\s*calculateProductServiceCharge\(productSubtotal\)/);
+  assert.match(paymentService, /payableTotal\s*=\s*roundPayableTotal\(paymentBaseTotal \+ productServiceCharge\)/);
+  assert.match(paymentService, /buyer_service_charge:\s*productServiceCharge/);
   assert.match(paymentService, /amount:\s*payableTotal/);
   assert.match(paymentService, /service:\s*\{[\s\S]*total:\s*payableTotal/);
   assert.match(paymentService, /price:\s*dbPrice/);
   assert.match(paymentService, /subtotal:\s*productSubtotal/);
   assert.match(paymentService, /seller_payout_base:\s*productSubtotal/);
   assert.match(paymentService, /seller_payout_excludes_delivery_fee:\s*true/);
-  assert.match(orderService, /const \{ totalAmount, platformFee, sellerPayout \} = this\._calculateTotals\(items\)/);
-  assert.match(orderService, /total_amount:\s*service\.total \|\| totalAmount/);
+  assert.match(orderService, /let \{ totalAmount, platformFee, sellerPayout \} = this\._calculateTotals\(items\)/);
+  assert.match(orderService, /const payableTotal = this\._roundMoney\(service\.total \|\| totalAmount\)/);
+  assert.match(orderService, /total_amount:\s*payableTotal/);
   assert.match(orderService, /seller_payout_amount:\s*sellerPayout/);
   assert.match(paymentService, /LogisticsRequestService\.createDoorDeliveryPaymentPending\(client/);
   assert.match(paymentService, /LogisticsRequestService\.createDoorDeliveryPaymentPending\(client[\s\S]*await this\.createPaymentProviderAttempt\(client[\s\S]*await client\.query\('COMMIT'\)[\s\S]*await this\.initiatePayment\(gwPayload\)/);
@@ -904,7 +937,7 @@ test('door delivery payment totals are recalculated by backend and do not inflat
   assert.match(sellerOrdersSection, /OrderLogisticsTracking/);
   assert.match(orderLogisticsTracking, /Door delivery tracking/);
   assert.match(productCard, /deliveryMode:\s*'DOOR_DELIVERY'/);
-  assert.match(phoneModal, /Deliveries are made within 24 hours/);
+  assert.match(phoneModal, /delivers within 24 hours/);
   assert.doesNotMatch(paymentService, /buyerDeliveryFee\s*=\s*deliveryRequest\.frontendQuote/);
 });
 
@@ -946,11 +979,11 @@ test('seller pickup fee payment activates pickup logistics without mutating prod
   assert.match(orderModel, /'pickupLeg'/);
   assert.match(sanitize, /pickupLeg:\s*sanitizeLeg/);
   assert.match(sellerOrdersApi, /requestPickup/);
-  assert.match(sellerOrdersSection, /Request pickup/);
+  assert.match(sellerOrdersSection, /Request Mzigo pickup/);
   assert.match(sellerOrdersSection, /const isPhysicalOrder = !isService && !isDigital/);
-  assert.match(sellerOrdersSection, /const canRequestPickup = isPhysicalOrder/);
-  assert.match(sellerOrdersSection, /Mzigo Ego can pick up from your physical shop/);
-  assert.match(sellerOrdersSection, /drop the package at the hub within 24 hours/);
+  assert.match(sellerOrdersSection, /const canRequestPickup = isPhysicalOnline/);
+  assert.match(sellerOrdersSection, /Mzigo Ego collects the package/);
+  assert.match(sellerOrdersSection, /Drop at \{HUB_DROPOFF_LOCATION\} within 24 hours/);
   assert.match(buyerOrderCard, /OrderLogisticsTracking/);
   assert.match(orderLogisticsTracking, /Seller pickup/);
 });
@@ -1122,8 +1155,10 @@ test('seller dashboard summary uses React Query cache and avoids page reload ref
   assert.match(sellerDashboardDataHook, /staleTime:\s*60_000/);
   assert.match(sellerDashboardDataHook, /queryClient\.fetchQuery/);
   assert.match(sellerDashboardDataHook, /queryClient\.invalidateQueries/);
-  assert.match(sellerAnalyticsRepository, /JOIN payouts p[\s\S]*p\.order_id = o\.id[\s\S]*p\.status = 'completed'/);
+  assert.match(sellerAnalyticsRepository, /JOIN payouts p[\s\S]*p\.order_id = o\.id[\s\S]*p\.settlement_status IN \('pending_settlement', 'settled'/);
+  assert.match(sellerAnalyticsRepository, /next_settlement_at[\s\S]*p\.available_at IS NOT NULL/);
   assert.match(sellerAnalyticsRepository, /COALESCE\(p\.completed_at, p\.processed_at, o\.updated_at, o\.created_at\)/);
+  assert.doesNotMatch(sellerAnalyticsRepository, /COALESCE\(p\.completed_at, p\.processed_at, p\.available_at, o\.updated_at, o\.created_at\)/);
   assert.doesNotMatch(sellerAnalyticsRepository, /COALESCE\(SUM\(o\.total_amount\), 0\) as total_sales[\s\S]{0,120}WHERE o\.seller_id = s\.id[\s\S]{0,80}AND o\.payment_status = 'completed'/);
   assert.doesNotMatch(sellerDashboard, /window\.location\.reload/);
   assert.doesNotMatch(productCard, /Math\.random/);
@@ -1166,10 +1201,13 @@ test('global auth revalidates on TTL expiry, route role change, focus, and visib
 
 test('public pagination and lists use deterministic ordering', () => {
   const publicController = read('src/controllers/public.controller.js');
+  const publicCatalogRepository = read('src/repositories/publicCatalog.repository.js');
+  const sellerRepository = read('src/repositories/seller.repository.js');
 
-  assert.match(publicController, /ORDER BY p\.created_at DESC, p\.id DESC LIMIT/);
-  assert.match(publicController, /ORDER BY total_wishlist_count DESC, s\.id ASC/);
-  assert.match(publicController, /ORDER BY time_slot ASC, id ASC/);
+  assert.match(publicCatalogRepository, /ORDER BY p\.created_at DESC, p\.id DESC LIMIT/);
+  assert.match(sellerRepository, /ORDER BY total_wishlist_count DESC, s\.id ASC/);
+  assert.match(publicCatalogRepository, /ORDER BY time_slot ASC, id ASC/);
+  assert.match(publicController, /publicCatalogRepository\.findActiveProductsWithSeller/);
 });
 
 test('webhook rate limiting protects requests with local fallback', () => {
@@ -1326,11 +1364,12 @@ test('logistics regression contracts cover optional delivery, grouping, idempote
   assert.match(paymentService, /if \(wantsDoorDelivery\)/);
   assert.match(paymentService, /assertDoorDeliveryLocation\(buyerDeliveryLocation\)/);
   assert.match(paymentService, /buyerDeliveryFee = deliveryQuote\.feeAmount/);
-  assert.match(paymentService, /BUYER_SERVICE_CHARGE_RATE\s*=\s*0\.015/);
+  assert.match(paymentService, /PRODUCT_SERVICE_CHARGE_RATE = Fees\.PRODUCT_SERVICE_CHARGE_RATE/);
+  assert.match(read('src/config/fees.js'), /PRODUCT_SERVICE_CHARGE_RATE:\s*0\.02/);
   assert.match(paymentService, /roundPayableTotal\s*=\s*\(amount\)\s*=>\s*Math\.ceil\(roundMoney\(amount\)\)/);
   assert.match(paymentService, /paymentBaseTotal\s*=\s*roundMoney\(productSubtotal \+ buyerDeliveryFee\)/);
-  assert.match(paymentService, /buyerServiceCharge\s*=\s*calculateBuyerServiceCharge\(paymentBaseTotal\)/);
-  assert.match(paymentService, /payableTotal\s*=\s*roundPayableTotal\(paymentBaseTotal \+ buyerServiceCharge\)/);
+  assert.match(paymentService, /productServiceCharge\s*=\s*calculateProductServiceCharge\(productSubtotal\)/);
+  assert.match(paymentService, /payableTotal\s*=\s*roundPayableTotal\(paymentBaseTotal \+ productServiceCharge\)/);
   assert.doesNotMatch(paymentService, /payableTotal\s*=\s*.*frontendQuote/);
 
   assert.match(paymentService, /LogisticsQuoteService\.quoteSellerPickup\(pickup\)/);
@@ -1380,28 +1419,30 @@ test('unified order flow exposes seller hub handoff and service booking actions'
   assert.match(logisticsRequestService, /seller_handoff\.awaiting_choice/);
   assert.match(paymentEvents, /ensurePhysicalOnlineRequestAfterPayment/);
 
-  assert.match(orderService, /static async selectHubDropoff/);
-  assert.match(orderService, /static async markDroppedAtHub/);
+  const orderHubDropoffService = read('src/services/orderHubDropoff.service.js');
+
+  assert.match(orderHubDropoffService, /static async selectHubDropoff/);
+  assert.match(orderHubDropoffService, /static async markDroppedAtHub/);
   assert.match(orderService, /static async confirmBooking/);
-  assert.match(orderService, /seller_handoff\.dropoff_selected/);
-  assert.match(orderService, /seller_handoff\.dropped_at_hub/);
+  assert.match(orderHubDropoffService, /seller_handoff\.dropoff_selected/);
+  assert.match(orderHubDropoffService, /seller_handoff\.dropped_at_hub/);
   assert.doesNotMatch(orderService, /BookingService/);
 
   assert.match(sellerRoutes, /\/orders\/:id\/select-hub-dropoff/);
   assert.match(sellerRoutes, /\/orders\/:id\/mark-dropped-at-hub/);
   assert.match(sellerRoutes, /\/orders\/:id\/confirm-booking/);
-  assert.match(orderController, /OrderService\.selectHubDropoff/);
-  assert.match(orderController, /OrderService\.markDroppedAtHub/);
+  assert.match(orderController, /OrderHubDropoffService\.selectHubDropoff/);
+  assert.match(orderController, /OrderHubDropoffService\.markDroppedAtHub/);
   assert.match(orderController, /OrderService\.confirmBooking/);
   assert.match(sellerApi, /selectHubDropoff/);
   assert.match(sellerApi, /markDroppedAtHub/);
   assert.match(sellerApi, /confirmBooking/);
 
-  assert.match(sellerOrders, /I will drop off at hub/);
-  assert.match(sellerOrders, /Request pickup/);
+  assert.match(sellerOrders, /Drop off at Mzigo Ego/);
+  assert.match(sellerOrders, /Request Mzigo pickup/);
   assert.match(sellerOrders, /const canSelectHubDropoff = canChooseHandoff/);
-  assert.match(sellerOrders, /const canRequestPickup = isPhysicalOrder/);
-  assert.match(sellerOrders, /Mark Dropped Off at Hub/);
+  assert.match(sellerOrders, /const canRequestPickup = isPhysicalOnline/);
+  assert.match(sellerOrders, /Mark Handed to Mzigo Ego/);
   assert.match(sellerOrders, /Confirm Booking/);
   assert.match(sellerOrders, /Mark Service Delivered/);
   assert.match(sellerOrders, /within 24 hours/);

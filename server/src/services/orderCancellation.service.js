@@ -4,6 +4,7 @@ import { OrderStatus, OrderType } from '../shared/constants/enums.js';
 import Order from '../models/order.model.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
 import InventoryReservationService from './inventoryReservation.service.js';
+import settlementService from './settlement.service.js';
 
 class OrderCancellationService {
   static async cancelOrder(orderId, reason = null) {
@@ -35,6 +36,7 @@ class OrderCancellationService {
              WHERE id = $2`,
             [refundAmount, order.buyer_id]
           );
+          await settlementService.reverseOrderSettlementForRefund(client, orderId, 'order_cancellation');
         }
 
         if (order.order_type === OrderType.SERVICE) {
