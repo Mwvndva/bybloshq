@@ -9,7 +9,7 @@ import {
   getRoleFromRoute,
   isPublicRoute,
 } from '../utils/authRouting';
-import { clearRoleSession, getSessionKey, markRoleSessionActive } from '../services/authSession';
+import { clearRoleSession, getActiveRole, getSessionKey, markRoleSessionActive } from '../services/authSession';
 import type { GlobalUser, UserRole } from '../types/authTypes';
 import {
   buyerProfileQueryOptions,
@@ -161,12 +161,21 @@ export function useAuthRevalidation({
       if (user) return;
       if (['/reset-password', '/forgot-password', '/payment', '/checkout'].some((p) => bootPath.includes(p))) return;
 
-      const roles: UserRole[] = ['seller', 'buyer', 'creator', 'admin'];
+      // Prefer the explicitly-recorded active account so we restore exactly who
+      // the user last signed in as — not whichever role marker comes first in a
+      // fixed priority list (which would silently switch accounts when a stale
+      // session from another user is still on the device).
       let activeRole: UserRole | null = null;
-      for (const r of roles) {
-        if ((await storage.get(getSessionKey(r))) === 'true') {
-          activeRole = r;
-          break;
+      const persistedRole = await getActiveRole();
+      if (persistedRole && (await storage.get(getSessionKey(persistedRole))) === 'true') {
+        activeRole = persistedRole;
+      } else {
+        const roles: UserRole[] = ['seller', 'buyer', 'creator', 'admin'];
+        for (const r of roles) {
+          if ((await storage.get(getSessionKey(r))) === 'true') {
+            activeRole = r;
+            break;
+          }
         }
       }
       if (!activeRole || cancelled) return;

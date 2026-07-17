@@ -4,6 +4,7 @@ import AuthService from '../services/auth.service.js';
 import ReferralService from '../services/referral.service.js';
 import logger from '../shared/utils/logger.js';
 import { getTokenFromRequest, verifyToken } from '../shared/utils/jwt.js';
+import { generateRefreshToken } from '../shared/utils/refreshToken.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 import { sanitizeSeller } from '../shared/utils/sanitize.js';
 
@@ -12,6 +13,10 @@ const sendTokenResponse = (data, statusCode, res, message) => {
   const { user, profile, token } = data;
 
   setAuthCookie(res, token);
+
+  // Long-lived rolling refresh token so the mobile app can silently renew the
+  // 24h access token and keep the seller logged in across app restarts.
+  const refreshToken = user?.id ? generateRefreshToken(user.id, 'seller') : undefined;
 
   const registrationMessage = statusCode === 201
     ? 'Account created! Please verify your email before listing products.'
@@ -30,6 +35,7 @@ const sendTokenResponse = (data, statusCode, res, message) => {
     data: {
       seller: sanitizeSeller(profile),
       token: token,
+      refreshToken: refreshToken,
       user: { email: user.email, role: user.role, is_verified: user.is_verified },
       emailVerificationRequired: !user?.is_verified,
       emailVerificationSent: statusCode === 201 && !user?.is_verified

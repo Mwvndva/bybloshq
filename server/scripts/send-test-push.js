@@ -1,21 +1,16 @@
 /**
- * One-off test push. Sends an FCM notification to the most recently active
- * device token (optionally filtered by platform), reusing the backend's FCM
- * config and database.
+ * One-off test notification. Sends through the backend NotificationService so it
+ * exercises BOTH surfaces: the in-app bell feed (app_notifications) and the FCM
+ * push (system tray), targeting the most recently active device token.
  *
  * Usage (inside the backend container):
  *   docker compose exec backend node scripts/send-test-push.js
  *   docker compose exec backend node scripts/send-test-push.js android
  */
 import { pool } from '../src/shared/db/database.js';
-import { sendFcmV1, isFcmConfigured } from '../src/config/fcm.js';
+import NotificationService from '../src/services/notification.service.js';
 
 async function main() {
-  if (!isFcmConfigured()) {
-    console.error('❌ FCM is not configured (FIREBASE_SERVICE_ACCOUNT missing on this environment).');
-    process.exit(1);
-  }
-
   const platform = process.argv[2] || 'android';
   const { rows } = await pool.query(
     `SELECT token, user_id, role, platform, last_seen_at
@@ -32,24 +27,23 @@ async function main() {
   }
 
   const t = rows[0];
-  console.log(`→ Sending test push to user_id=${t.user_id} role=${t.role} (last seen ${t.last_seen_at})`);
+  console.log(`→ Sending test notification (in-app + push) to user_id=${t.user_id} role=${t.role} (last seen ${t.last_seen_at})`);
 
-  const result = await sendFcmV1({
-    token: t.token,
+  const results = await NotificationService.send({
+    recipientUserId: t.user_id,
+    recipientRole: t.role,
+    type: 'test',
     title: 'Byblos test 🔔',
-    body: 'Push notifications are working. You can dismiss this.',
+    body: 'Test notification — it should show in your bell and as a push.',
     data: { path: '/', type: 'test' },
+    channels: ['in_app', 'push'],
   });
 
-  console.log('FCM result:', JSON.stringify(result));
-  if (result.ok) {
-    console.log('✅ Push sent — check the device.');
-  } else {
-    console.error('❌ Push failed.', result.unregistered ? '(token is stale/unregistered)' : '');
-    process.exitCode = 1;
-  }
+  console.log('Results:', JSON.stringify(results));
+  console.log('✅ Done — check the in-app bell (may take a few seconds to poll) and the phone tray (background the app to see it).');
 
   await pool.end();
+  process.exit(0);
 }
 
 main().catch((error) => {
