@@ -12,14 +12,15 @@ export const refreshToken = async (req, res, next) => {
       return next(new AppError('Refresh token is required', 400));
     }
 
-    // Generate new access token
-    const { accessToken, user } = refreshAccessToken(refreshToken);
+    // Generate new access token (plus a rolling refresh token)
+    const { accessToken, refreshToken: newRefreshToken, user } = refreshAccessToken(refreshToken);
 
     res.status(200).json({
       status: 'success',
       message: 'Token refreshed successfully',
       data: {
         accessToken,
+        refreshToken: newRefreshToken,
         user
       }
     });

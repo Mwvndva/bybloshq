@@ -63,6 +63,7 @@ interface LoginResponse {
   data: {
     seller: ApiSeller;
     token?: string;
+    refreshToken?: string;
   };
 }
 
@@ -117,7 +118,7 @@ export const checkShopNameAvailability = async (shopName: string): Promise<{ ava
 export const deleteSellerAccount = () => sellerApiInstance.delete('/sellers/account');
 
 export const sellerProfileApi = {
-  login: async (credentials: { email: string; password: string }): Promise<{ seller: ApiSeller; token?: string }> => {
+  login: async (credentials: { email: string; password: string }): Promise<{ seller: ApiSeller; token?: string; refreshToken?: string }> => {
     try {
       const response = await sellerApiInstance.post<LoginResponse>('/sellers/login', credentials);
       const responseData = response.data.data;
@@ -126,7 +127,7 @@ export const sellerProfileApi = {
         throw new Error('Invalid response from server');
       }
 
-      const { seller, token } = responseData;
+      const { seller, token, refreshToken } = responseData;
 
       if (!seller) {
         throw new Error('Invalid response from server - missing seller');
@@ -134,7 +135,7 @@ export const sellerProfileApi = {
 
       await getFreshCsrfToken();
 
-      return { seller: transformSeller(seller), token };
+      return { seller: transformSeller(seller), token, refreshToken };
     } catch (error) {
       console.error('Login error:', error);
       if (error.response?.data?.message) {

@@ -16,6 +16,7 @@ export const clearRoleSessionMarkers = async (): Promise<void> => {
   for (const role of roles) {
     await storage.remove(`${role}SessionActive`);
     await storage.remove(`${role}Token`);
+    await storage.remove(`${role}RefreshToken`);
   }
 };
 

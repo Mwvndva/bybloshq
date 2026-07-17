@@ -7,6 +7,7 @@ import logger from '../shared/utils/logger.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 import { signToken, verifyToken, getTokenFromRequest } from '../shared/utils/jwt.js';
+import { generateRefreshToken } from '../shared/utils/refreshToken.js';
 import OrderService from "../services/order.service.js";
 import OrderModel from "../models/order.model.js";
 import { OrderStatus } from "../shared/constants/enums.js";
@@ -36,6 +37,11 @@ const createSendToken = (data, statusCode, req, res, next) => {
   setAuthCookie(res, token);
   if (buyer.password) buyer.password = undefined;
 
+  // Long-lived rolling refresh token: lets the mobile app silently renew the 24h
+  // access token so a buyer stays logged in without re-entering their details.
+  const buyerUserId = user?.id || buyer?.user_id || buyer?.userId;
+  const refreshToken = buyerUserId ? generateRefreshToken(buyerUserId, 'buyer') : undefined;
+
   // Ensure is_verified is attached to profile for sanitization
   if (user && user.is_verified !== undefined) {
     buyer.is_verified = user.is_verified;
@@ -49,6 +55,7 @@ const createSendToken = (data, statusCode, req, res, next) => {
     data: {
       buyer: sanitizeBuyer(buyer),
       token: token,
+      refreshToken: refreshToken,
       emailVerificationRequired: !user?.is_verified,
       emailVerificationSent: statusCode === 201 && !user?.is_verified
     }

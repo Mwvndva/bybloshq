@@ -97,6 +97,8 @@ export function useAuthActions({
       if (isNativeApp() && response.token) {
         const { storage } = await import('@/lib/storage');
         await storage.set(`${role}Token`, response.token);
+        const refreshToken = (response as { refreshToken?: string }).refreshToken;
+        if (refreshToken) await storage.set(`${role}RefreshToken`, refreshToken);
       }
       await markRoleSessionActive(role);
       markAuthChecked();
@@ -181,6 +183,8 @@ export function useAuthActions({
         if (isNativeApp() && response?.data?.token) {
           const { storage } = await import('@/lib/storage');
           await storage.set('adminToken', response.data.token);
+          const adminRefreshToken = (response.data as { refreshToken?: string }).refreshToken;
+          if (adminRefreshToken) await storage.set('adminRefreshToken', adminRefreshToken);
         }
         await markRoleSessionActive('admin');
         markAuthChecked();

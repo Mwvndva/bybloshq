@@ -3,6 +3,7 @@ import WithdrawalService from '../services/withdrawal.service.js';
 import { sanitizeWithdrawalRequest } from '../shared/utils/sanitize.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 import { getTokenFromRequest, verifyToken } from '../shared/utils/jwt.js';
+import { generateRefreshToken } from '../shared/utils/refreshToken.js';
 import logger from '../shared/utils/logger.js';
 
 const sanitizeCreator = (creator = {}) => ({
@@ -88,11 +89,14 @@ export const login = async (req, res, next) => {
     }
 
     setAuthCookie(res, result.token);
+    // Rolling refresh token keeps the creator signed in on the mobile app.
+    const refreshToken = result.user?.id ? generateRefreshToken(result.user.id, 'creator') : undefined;
     res.status(200).json({
       status: 'success',
       data: {
         creator: sanitizeCreator(result.profile),
         token: result.token,
+        refreshToken: refreshToken,
         user: {
           email: result.user.email,
           role: 'creator',
