@@ -48,6 +48,7 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
         loginAdmin,
         register,
         logout,
+        switchAccount,
         refreshRole,
         forgotPassword,
         resetPassword,
@@ -74,12 +75,13 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
         loginAdmin,
         register,
         logout,
+        switchAccount,
         refreshRole,
         forgotPassword,
         resetPassword,
         getProfile,
         updateProfile,
-    }), [user, isLoading, login, loginWithToken, loginAdmin, register, logout, refreshRole, forgotPassword, resetPassword, getProfile, updateProfile]);
+    }), [user, isLoading, login, loginWithToken, loginAdmin, register, logout, switchAccount, refreshRole, forgotPassword, resetPassword, getProfile, updateProfile]);
 
     // ============================================================================
     // RENDER GATING (Prevents Flickering)

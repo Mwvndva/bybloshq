@@ -100,8 +100,6 @@ function BuyerDashboard() {
     };
   }, []);
 
-  const handleBack = () => navigate('/');
-
   const handleProfileSidebarOpenChange = useCallback((open: boolean) => {
     if (profileCloseNavigationTimerRef.current !== null) {
       window.clearTimeout(profileCloseNavigationTimerRef.current);
@@ -174,7 +172,7 @@ function BuyerDashboard() {
       overflow: 'hidden',
       background: '#000000',
     }}>
-      <BuyerDashboardHeader onBack={handleBack} />
+      <BuyerDashboardHeader />
       <BuyerDashboardSearch
         activeSection={activeSection}
         productSearchQuery={searchQuery}

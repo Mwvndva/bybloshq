@@ -104,6 +104,7 @@ export interface GlobalAuthContextType {
   loginAdmin: (email: string, password: string) => Promise<void>;
   register: (data: RegistrationData, role: UserRole) => Promise<{ status: string; message?: string } | void>;
   logout: () => void;
+  switchAccount: (role: 'buyer' | 'seller' | 'creator') => Promise<void>;
   refreshRole: (newRole: UserRole) => Promise<void>;
   forgotPassword: (email: string, role: UserRole) => Promise<boolean>;
   resetPassword: (token: string, newPassword: string, email: string, role: UserRole) => Promise<void>;

@@ -8,6 +8,7 @@ import { registerNativePushNotifications, unregisterNativePushNotifications } fr
 import { isNativeApp } from '@/lib/mobileApp';
 import { getDashboardPath, getLoginPath } from '../utils/authRouting';
 import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
+import { switchAccountRequest, type SwitchableRole } from '@/api/account';
 import type {
   BuyerRegistrationData,
   GlobalUser,
@@ -254,6 +255,56 @@ export function useAuthActions({
     }
   }, [navigate, setUser, user, queryClient]);
 
+  const switchAccount = useCallback(async (role: SwitchableRole) => {
+    setIsLoading(true);
+    try {
+      const { token, refreshToken } = await switchAccountRequest(role);
+
+      // Establish the target role as the single active account: drop the prior
+      // account's cache + credentials, then persist the freshly-minted token.
+      queryClient.clear();
+      await enforceSingleActiveRole(role);
+      if (isNativeApp() && token) {
+        const { storage } = await import('@/lib/storage');
+        await storage.set(`${role}Token`, token);
+        if (refreshToken) await storage.set(`${role}RefreshToken`, refreshToken);
+      }
+
+      let queryOpts;
+      if (role === 'buyer') queryOpts = buyerProfileQueryOptions;
+      else if (role === 'seller') queryOpts = sellerProfileQueryOptions;
+      else queryOpts = creatorProfileQueryOptions;
+
+      const profileData = await queryClient.fetchQuery(queryOpts);
+
+      setUser({
+        role,
+        profile: profileData as UserProfile,
+        isAuthenticated: true,
+      });
+
+      await markRoleSessionActive(role);
+      await setActiveRole(role);
+      markAuthChecked();
+      void registerNativePushNotifications(role);
+
+      const dashboardPath = getDashboardPath(role);
+      navigate(typeof dashboardPath === 'string' ? dashboardPath : '/', { replace: true });
+
+      toast.success('Account switched', {
+        description: `You are now using your ${role === 'creator' ? 'ambassador' : role} account.`,
+        duration: 2000,
+      });
+    } catch (error) {
+      const err = error as AuthRequestError;
+      const message = err.response?.data?.message || err.message || 'Could not switch account';
+      toast.error('Switch failed', { description: message });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [markAuthChecked, navigate, setIsLoading, setUser, queryClient]);
+
   const refreshRole = useCallback(async (newRole: UserRole) => {
     setIsLoading(true);
     try {
@@ -303,6 +354,7 @@ export function useAuthActions({
     loginAdmin,
     register,
     logout,
+    switchAccount,
     refreshRole,
     forgotPassword,
     resetPassword,
