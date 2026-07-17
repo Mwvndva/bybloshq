@@ -184,10 +184,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   return (
     <>
-      <SellerDashboardHeader
-        sellerFirstName={sellerFirstName}
-        onBackHome={() => navigate('/')}
-      />
+      <SellerDashboardHeader sellerFirstName={sellerFirstName} />
 
       <div className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="mb-6 sm:mb-7 md:mb-8">
