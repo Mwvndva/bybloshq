@@ -2,6 +2,7 @@ import { validate } from '../middleware/validate.js';
 import * as V from '../validations/buyer.validation.js';
 import express from 'express';
 import * as buyerController from '../controllers/buyer.controller.js';
+import * as membershipController from '../controllers/membership.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
 import { AppError } from '../shared/utils/errorHandler.js';
 import wishlistRoutes from './wishlist.routes.js';
@@ -34,6 +35,10 @@ router.get('/profile', buyerController.getProfile);
 
 // Update profile
 router.patch('/update-profile', validate(V.updateProfile), buyerController.updateProfile);
+
+// Byblos membership card — status + opt-in (mints the membership number)
+router.get('/membership', membershipController.getMembership);
+router.post('/membership/join', membershipController.joinMembership);
 
 // Request refund withdrawal
 router.post('/refund-request', withdrawalRateLimiter, validate(V.refundRequest), buyerController.requestRefund);
