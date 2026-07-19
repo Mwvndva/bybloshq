@@ -32,13 +32,30 @@ export function MembershipGate({ enabled }: MembershipGateProps) {
   const fullCardRef = useRef<HTMLDivElement>(null);
   const pngRef = useRef<string | null>(null);
 
-  // Open the invite for a non-member who hasn't been prompted this session.
+  // Open the invite for a non-member. Auto-opens once per session, and ALWAYS
+  // opens when the buyer arrived via the membership push deep-link (?membership=1),
+  // even if they dismissed it earlier this session.
   useEffect(() => {
-    if (!enabled || isLoading || !data) return;
-    if (data.isMember || promptedThisSession) return;
+    if (!enabled || isLoading || !data || data.isMember) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const viaDeepLink = params.get('membership') === '1';
+    if (!viaDeepLink && promptedThisSession) return;
+
     promptedThisSession = true;
     setStep('invite');
     setOpen(true);
+
+    if (viaDeepLink) {
+      // Strip the flag so a refresh / back-nav doesn't reopen the popup.
+      params.delete('membership');
+      const qs = params.toString();
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash,
+      );
+    }
   }, [enabled, isLoading, data]);
 
   const handleJoin = async () => {
