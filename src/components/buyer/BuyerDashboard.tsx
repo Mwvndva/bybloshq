@@ -17,6 +17,7 @@ import { BuyerDashboardHeader } from './dashboard/BuyerDashboardHeader';
 import { BuyerDashboardSearch } from './dashboard/BuyerDashboardSearch';
 import { BuyerProfileSheet } from './dashboard/BuyerProfileSheet';
 import { MyShopsSection } from './dashboard/MyShopsSection';
+import { MembershipGate } from '@/features/membership/MembershipGate';
 import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
 import { useBuyerSwipeNav } from './dashboard/hooks/useBuyerSwipeNav';
 import { useBuyerActiveSection } from './dashboard/hooks/useBuyerActiveSection';
@@ -259,6 +260,9 @@ function BuyerDashboard() {
       />
 
       <BuyerBottomNav activeNav={activeNav} navItems={navItems} onSelect={setActiveTab} />
+
+      {/* First-login Byblos membership card opt-in + share */}
+      <MembershipGate enabled={!!user} />
     </div>
   );
 }
