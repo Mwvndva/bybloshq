@@ -96,6 +96,9 @@ export const sanitizeBuyer = (buyer) => {
         refunds: b.refunds || 0,
         hasLocation: !!(b.latitude && b.longitude),
         is_verified: !!(b.is_verified || b.isVerified),
+        isMember: !!(b.isMember || b.is_member),
+        memberNumber: b.memberNumber ?? b.member_number ?? null,
+        membershipJoinedAt: b.membershipJoinedAt || b.membership_joined_at || null,
         role: 'buyer',
         createdAt: b.createdAt || b.created_at || null,
     };

@@ -229,6 +229,60 @@ class NotificationService {
         );
         return rowCount;
     }
+
+    // One-time re-engagement blast inviting existing buyers to become members.
+    // Idempotent: skips buyers who already joined or already got the invite, so
+    // it is safe to re-run. Deep-links to the dashboard with ?membership=1 which
+    // force-opens the opt-in popup (see MembershipGate).
+    async broadcastMembershipInvite({ dryRun = false } = {}) {
+        const { rows: recipients } = await pool.query(
+            `SELECT b.user_id
+               FROM buyers b
+              WHERE b.user_id IS NOT NULL
+                AND b.is_member = FALSE
+                AND NOT EXISTS (
+                    SELECT 1 FROM app_notifications an
+                     WHERE an.recipient_user_id = b.user_id
+                       AND an.type = 'membership_invite'
+                )
+              GROUP BY b.user_id`
+        );
+
+        const title = 'You’re invited to become a Byblos member 🛡️';
+        const body = 'Claim your founder card and show you shop protected.';
+        const data = { path: '/buyer/dashboard?membership=1', type: 'membership_invite' };
+
+        if (dryRun) {
+            return { eligible: recipients.length, dryRun: true };
+        }
+
+        let sent = 0;
+        let pushed = 0;
+        let failed = 0;
+        for (const recipient of recipients) {
+            try {
+                const result = await this.send({
+                    recipientUserId: recipient.user_id,
+                    recipientRole: 'buyer',
+                    type: 'membership_invite',
+                    title,
+                    body,
+                    data,
+                    channels: ['in_app', 'push'],
+                });
+                sent += 1;
+                if (result.push?.delivered) pushed += 1;
+            } catch (error) {
+                failed += 1;
+                logger.error('[NotificationService] Membership invite failed', {
+                    userId: recipient.user_id,
+                    error: error.message,
+                });
+            }
+        }
+
+        return { eligible: recipients.length, sent, pushed, failed };
+    }
 }
 
 export default new NotificationService();

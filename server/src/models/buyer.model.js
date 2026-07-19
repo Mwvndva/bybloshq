@@ -214,6 +214,24 @@ class Buyer {
       client.release();
     }
   }
+
+  // Opt a buyer into Byblos membership and mint their membership number.
+  // Atomic and idempotent: the number is drawn from byblos_member_seq only the
+  // first time (COALESCE short-circuits nextval when member_number already set),
+  // so calling this again just returns the buyer's existing number.
+  static async joinMembership(buyerId) {
+    const query = `
+      UPDATE buyers
+      SET is_member = TRUE,
+          member_number = COALESCE(member_number, nextval('byblos_member_seq')),
+          membership_joined_at = COALESCE(membership_joined_at, NOW()),
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING id, is_member, member_number, membership_joined_at
+    `;
+    const result = await pool.query(query, [buyerId]);
+    return result.rows.length ? toCamelCase(result.rows[0]) : null;
+  }
 }
 
 export default Buyer;
