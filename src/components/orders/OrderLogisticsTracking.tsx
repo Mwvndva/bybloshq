@@ -1,5 +1,7 @@
-import { CalendarClock, Clock, MapPin, Route, ShieldCheck, Truck } from 'lucide-react';
+import { Clock, MapPin, Navigation, ShieldCheck, Truck } from 'lucide-react';
 import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/types/api/order';
+import { deriveJourneyFromStatuses } from '@/pages/logistics/mzigoJourney';
+import { MzigoJourneyStepper } from '@/pages/logistics/MzigoJourneyStepper';
 
 type TrackingView = 'buyer' | 'seller';
 
@@ -53,29 +55,11 @@ function getDeliveryAddress(leg?: ApiOrderLogisticsDeliveryLeg | null, order?: A
     || 'Delivery address pending';
 }
 
-function StatBox({
-  title,
-  value,
-  detail,
-}: {
-  title: string;
-  value: string;
-  detail?: string | null;
-}) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-black/55 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/55">{title}</p>
-      <p className="mt-1 text-sm font-semibold capitalize text-white">{value}</p>
-      {detail && <p className="mt-1 text-xs text-white/65">{detail}</p>}
-    </div>
-  );
-}
-
 function Timeline({ events }: { events: NonNullable<ApiOrder['logistics']>['events'] }) {
   if (!events?.length) {
     return (
       <p className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-white/65">
-        Timeline will appear as Mzigo Ego updates this package.
+        Updates will appear here as Mzigo Ego moves your package.
       </p>
     );
   }
@@ -112,136 +96,115 @@ export function OrderLogisticsTracking({
     return null;
   }
 
-  const fallbackDropoffDeadline = addHours(order.createdAt, 24);
-  const hubDropoffDeadline = logistics?.deadlineAt || deliveryLeg?.deadlineAt || fallbackDropoffDeadline;
-  const deliveryAddress = getDeliveryAddress(deliveryLeg, order);
-  const deliveryMapLink = mapLink(
-    deliveryLeg?.destinationLat,
-    deliveryLeg?.destinationLng,
-    deliveryAddress
+  const journey = deriveJourneyFromStatuses(
+    pickupLeg?.status,
+    deliveryLeg?.status,
+    logistics?.status === 'completed',
   );
+
+  const fallbackDeadline = addHours(order.createdAt, 24);
+  const etaSource = logistics?.deadlineAt || deliveryLeg?.deadlineAt || fallbackDeadline;
+
+  const deliveryAddress = getDeliveryAddress(deliveryLeg, order);
+  const deliveryMapLink = mapLink(deliveryLeg?.destinationLat, deliveryLeg?.destinationLng, deliveryAddress);
   const pickupAddress = pickupLeg?.originAddress || pickupLeg?.originLabel || 'Seller pickup location pending';
   const pickupMapLink = mapLink(pickupLeg?.originLat, pickupLeg?.originLng, pickupAddress);
-  const latestMessage = logistics?.events?.[logistics.events.length - 1]?.message;
 
   return (
-    <section className="mt-4 rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-white">
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-yellow-300" />
-            <h4 className="text-sm font-semibold text-white">
-              {view === 'buyer' ? 'Door delivery tracking' : 'Mzigo Ego logistics tracking'}
-            </h4>
-          </div>
-          <p className="mt-1 text-xs text-white/75">
-            {latestMessage || (view === 'buyer'
-              ? 'Mzigo Ego handles your package securely and checks it against the order before delivery.'
-              : 'Choose drop-off or pickup so Mzigo Ego can secure and check the package.')}
-          </p>
-        </div>
-        <span className="w-fit rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold capitalize text-yellow-100">
-          {label(deliveryLeg?.status || pickupLeg?.status || logistics?.status)}
+    <section className="mt-4 rounded-xl border border-yellow-400/30 bg-yellow-400/[0.08] p-4 text-white">
+      {/* Headline: one plain status. */}
+      <div className="flex items-center gap-2">
+        <Truck className="h-4 w-4 text-yellow-300" />
+        <h4 className="text-sm font-semibold text-white">
+          {view === 'buyer' ? 'Delivery tracking' : 'Mzigo Ego tracking'}
+        </h4>
+        <span className="ml-auto rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-100">
+          {journey.label}
         </span>
       </div>
 
-      <div className="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
-        {deliveryLeg && (
-          <>
-            <StatBox
-              title="Delivery status"
-              value={label(deliveryLeg.status)}
-              detail="Estimated within 24 hours"
-            />
-            <StatBox
-              title="Delivery fee"
-              value={formatCurrency(deliveryLeg.feeAmount || 0, deliveryLeg.feeCurrency || order.currency)}
-              detail={`${deliveryLeg.distanceKm || 0} km billed route`}
-            />
-            <div className="rounded-lg border border-white/10 bg-black/55 p-3 sm:col-span-2">
-              <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-white/55">
-                <MapPin className="h-3 w-3" />
-                Delivery address
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">{deliveryAddress}</p>
-              {deliveryMapLink && (
-                <a
-                  href={deliveryMapLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex text-xs font-semibold text-yellow-200 hover:text-yellow-100"
-                >
-                  Open map
-                </a>
-              )}
-            </div>
-          </>
-        )}
+      {/* Journey stepper. */}
+      <div className="mt-3 rounded-xl border border-white/10 bg-black/40 px-3 py-3">
+        <MzigoJourneyStepper journey={journey} />
+      </div>
+
+      {/* Plain ETA. */}
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm">
+        <Clock className="h-4 w-4 shrink-0 text-yellow-300" />
+        <span className="text-white">
+          {journey.isDelivered
+            ? `Delivered ${formatDateTime(deliveryLeg?.completedAt || logistics?.completedAt || etaSource)}`
+            : `Arrives by ${formatDateTime(etaSource)}`}
+        </span>
+      </div>
+
+      {/* Where it's going (and, for sellers, where it's coming from). */}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+            <MapPin className="h-3 w-3" />
+            Delivery address
+          </p>
+          <p className="mt-1 text-sm font-semibold text-white">{deliveryAddress}</p>
+          {deliveryMapLink && (
+            <a
+              href={deliveryMapLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-yellow-200 hover:text-yellow-100"
+            >
+              <Navigation className="h-3 w-3" /> Open map
+            </a>
+          )}
+        </div>
 
         {isSeller && pickupLeg && (
-          <>
-            <StatBox
-              title="Pickup status"
-              value={label(pickupLeg.status)}
-              detail={formatCurrency(pickupLeg.feeAmount || 0, pickupLeg.feeCurrency || order.currency)}
-            />
-            <div className="rounded-lg border border-white/10 bg-black/55 p-3 sm:col-span-2">
-              <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-white/55">
-                <Route className="h-3 w-3" />
-                Pickup address
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">{pickupAddress}</p>
-              {pickupMapLink && (
-                <a
-                  href={pickupMapLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex text-xs font-semibold text-yellow-200 hover:text-yellow-100"
-                >
-                  Open pickup map
-                </a>
-              )}
-            </div>
-          </>
+          <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              <MapPin className="h-3 w-3" />
+              Pickup address
+            </p>
+            <p className="mt-1 text-sm font-semibold text-white">{pickupAddress}</p>
+            {pickupMapLink && (
+              <a
+                href={pickupMapLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-yellow-200 hover:text-yellow-100"
+              >
+                <Navigation className="h-3 w-3" /> Open map
+              </a>
+            )}
+          </div>
         )}
 
-        {isSeller && !pickupLeg && isPhysical && (
-          <div className="rounded-lg border border-white/10 bg-black/55 p-3 sm:col-span-2">
-            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-white/55">
-              <CalendarClock className="h-3 w-3" />
-              Hub drop-off deadline
+        {deliveryLeg && (
+          <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Delivery fee</p>
+            <p className="mt-1 text-sm font-semibold text-white">
+              {formatCurrency(deliveryLeg.feeAmount || 0, deliveryLeg.feeCurrency || order.currency)}
             </p>
-            <p className="mt-1 text-sm font-semibold text-white">{formatDateTime(hubDropoffDeadline)}</p>
-            <p className="mt-1 text-xs text-white/65">
-              No seller pickup is active. Drop this package at Mzigo Ego within 24 hours.
-            </p>
+            {deliveryLeg.distanceKm ? (
+              <p className="mt-0.5 text-xs text-white/55">{deliveryLeg.distanceKm} km route</p>
+            ) : null}
           </div>
         )}
       </div>
 
-      <div className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-3">
-        <div className="flex items-start gap-2">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-          <div>
-            <p className="text-xs font-semibold text-emerald-100">Secure Mzigo Ego handling</p>
-            <p className="mt-1 text-xs leading-relaxed text-white/75">
-              {view === 'buyer'
-                ? 'Mzigo Ego keeps the package safe and checks it against your order before delivery.'
-                : 'Mzigo Ego keeps the package safe and checks it against the buyer order before it moves forward.'}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* One-line trust note (was three blocks). */}
+      <p className="mt-3 flex items-start gap-2 text-xs text-white/70">
+        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
+        Mzigo Ego keeps your package safe and checks it against the order before delivery.
+      </p>
 
+      {/* Plain timeline. */}
       <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-3">
-        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/60">
+        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/55">
           <Clock className="h-3.5 w-3.5 text-yellow-300" />
-          Logistics timeline
+          Updates
         </p>
         <Timeline events={logistics?.events || []} />
       </div>
     </section>
   );
 }
-
-
