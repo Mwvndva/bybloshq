@@ -62,6 +62,21 @@ export interface ApiOrderLogisticsDeliveryLeg {
   completedAt?: string | null;
 }
 
+export interface OrderLiveLocationPoint {
+  lat: number;
+  lng: number;
+  accuracy?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+  updatedAt: string;
+}
+
+export interface OrderLiveLocation {
+  available: boolean;
+  phase: 'delivery' | 'pickup' | null;
+  location: OrderLiveLocationPoint | null;
+}
+
 export interface ApiOrderLogisticsTracking {
   requestId: string | number | null;
   packageCode: string | null;

@@ -1,4 +1,5 @@
 import LogisticsDashboardService from '../services/logisticsDashboard.service.js';
+import { setCourierLocation } from '../services/logisticsLiveLocation.service.js';
 
 export const loginLogisticsPartner = async (req, res, next) => {
     try {
@@ -53,6 +54,27 @@ export const updateLogisticsLegStatus = async (req, res, next) => {
             requestId: req.params.requestId,
             legType: req.params.legType,
             status: req.body?.status
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const postLogisticsLocation = async (req, res, next) => {
+    try {
+        const result = await setCourierLocation({
+            requestId: req.params.requestId,
+            partnerId: req.logisticsPartner.id,
+            lat: req.body?.lat,
+            lng: req.body?.lng,
+            accuracy: req.body?.accuracy,
+            heading: req.body?.heading,
+            speed: req.body?.speed
         });
 
         res.status(200).json({

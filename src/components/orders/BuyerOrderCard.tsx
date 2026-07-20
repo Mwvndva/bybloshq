@@ -8,7 +8,7 @@ import { getOrderInstruction } from '@/utils/orderInstructions';
 import { OrderLogisticsTracking } from './OrderLogisticsTracking';
 import {
   canConfirmOrderReceipt,
-  detailPillClass,
+  OrderMetaPills,
   formatOrderCurrency,
   formatOrderDate,
   getConfirmReceiptLabel,
@@ -118,7 +118,6 @@ export function BuyerOrderCard({
                   {getPaymentStatusBadge(order.paymentStatus)}
                 </div>
               </div>
-              <p className="text-xs sm:text-sm text-white/70">{formatOrderDate(order)}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-white/70 uppercase tracking-wider mb-1">Total</p>
@@ -130,24 +129,13 @@ export function BuyerOrderCard({
               </p>
             </div>
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div className={detailPillClass}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">Shop</p>
-              <p className="mt-0.5 truncate text-sm font-semibold text-white">{order.seller?.shopName || order.seller?.name || 'Store'}</p>
-            </div>
-            <div className={detailPillClass}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">Payment</p>
-              <p className="mt-0.5 text-sm font-semibold text-white">{order.paymentStatus || 'Pending'}</p>
-            </div>
-            <div className={detailPillClass}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">Items</p>
-              <p className="mt-0.5 text-sm font-semibold text-white">{order.items?.length || 0} item{order.items?.length === 1 ? '' : 's'}</p>
-            </div>
-            <div className={detailPillClass}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">ApiOrder ID</p>
-              <p className="mt-0.5 truncate text-sm font-semibold text-white">{String(order.id).slice(0, 12)}</p>
-            </div>
-          </div>
+          <OrderMetaPills
+            pills={[
+              { label: 'Shop', value: order.seller?.shopName || order.seller?.name || 'Store' },
+              { label: 'Items', value: `${itemCount} item${itemCount === 1 ? '' : 's'}` },
+              { label: 'Placed', value: formatOrderDate(order) },
+            ]}
+          />
         </div>
 
         {instruction && (
