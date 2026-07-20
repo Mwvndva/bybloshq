@@ -72,7 +72,7 @@ export function useCourierBroadcast(requestIds: number[], enabled: boolean): Bro
       { enableHighAccuracy: true, maximumAge: 5_000, timeout: 20_000 }
     );
 
-    return () => navigator.geolocation.clearWatch(watchId);
+    return () => { navigator.geolocation.clearWatch(watchId); };
     // Restart only when sharing toggles or we cross the empty/non-empty boundary.
   }, [enabled, hasTargets]);
 
