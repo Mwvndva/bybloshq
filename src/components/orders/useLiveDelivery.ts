@@ -30,8 +30,8 @@ export function useLiveDelivery(orderId: string, view: 'buyer' | 'seller', enabl
       }
     };
 
-    tick();
-    timerRef.current = window.setInterval(tick, POLL_INTERVAL_MS);
+    void tick();
+    timerRef.current = window.setInterval(() => { void tick(); }, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;

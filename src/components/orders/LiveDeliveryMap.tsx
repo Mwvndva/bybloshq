@@ -63,8 +63,8 @@ export function LiveDeliveryMap({
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 10_000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(() => { setNow(Date.now()); }, 10_000);
+    return () => { window.clearInterval(timer); };
   }, []);
 
   const points = useMemo<LatLng[]>(
@@ -72,7 +72,7 @@ export function LiveDeliveryMap({
     [courier, destination]
   );
   const watchKey = points.map((p) => p.join(',')).join('|');
-  const tileUrl = MAP_TILE_URLS[tileIndex] || MAP_TILE_URLS[0];
+  const tileUrl = MAP_TILE_URLS.at(tileIndex) ?? MAP_TILE_URLS[0];
 
   return (
     <div>
@@ -88,7 +88,7 @@ export function LiveDeliveryMap({
             attribution='&copy; OpenStreetMap &copy; CARTO'
             url={tileUrl}
             eventHandlers={{
-              tileerror: () => setTileIndex((i) => Math.min(i + 1, MAP_TILE_URLS.length - 1)),
+              tileerror: () => { setTileIndex((i) => Math.min(i + 1, MAP_TILE_URLS.length - 1)); },
             }}
           />
           <Marker position={courier} icon={courierIcon} />
