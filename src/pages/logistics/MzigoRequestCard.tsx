@@ -1,135 +1,28 @@
-import { useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, ExternalLink, Loader2, Mail, MapPin, PackageCheck, Phone, ShoppingBag, Store, UserRound } from 'lucide-react';
-import { LogisticsLeg, LogisticsLegType, LogisticsRequestCard, LogisticsStatusUpdate } from '@/api/logistics';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, Loader2, MapPin, Navigation, Phone, ShoppingBag, Store, UserRound } from 'lucide-react';
+import { LogisticsLegType, LogisticsRequestCard, LogisticsStatusUpdate } from '@/api/logistics';
 import { getImageUrl } from '@/lib/utils';
-import { deadlineText, formatCurrency, formatDate, nextActions, statusLabel } from './mzigoDashboard.utils';
+import { deadlineText, formatCurrency, formatDate, statusLabel } from './mzigoDashboard.utils';
+import { courierActions, deriveJourney, routeLink } from './mzigoJourney';
+import { MzigoJourneyStepper } from './MzigoJourneyStepper';
 
-function mapAnchor(label: string, href?: string | null) {
-  if (!href) return null;
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-1 text-xs font-medium text-yellow-600 underline-offset-4 hover:underline"
-    >
-      {label}
-      <ExternalLink size={12} />
-    </a>
-  );
-}
-
-function DetailField({
-  label,
-  value,
-  icon,
-  children,
-}: {
-  label: string;
-  value?: ReactNode;
-  icon?: ReactNode;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-white/60">
-        {icon}
-        {label}
-      </p>
-      <div className="text-sm text-white">{value || children || 'Not provided'}</div>
-    </div>
-  );
-}
-
-function LegPanel({
-  title,
-  leg,
-  legType,
-  requestId,
-  onStatusUpdate,
-  updatingStatusKey,
-  readOnly = false,
-}: {
-  title: string;
-  leg?: LogisticsLeg | null;
-  legType: LogisticsLegType;
-  requestId: number;
-  onStatusUpdate: (requestId: number, legType: LogisticsLegType, status: LogisticsStatusUpdate) => void;
-  updatingStatusKey?: string | null;
-  readOnly?: boolean;
-}) {
-  if (!leg) {
+function CallButton({ name, phone }: { name: string; phone?: string | null }) {
+  if (!phone) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-        <p className="text-xs uppercase tracking-wide text-white/60">{title}</p>
-        <p className="mt-1 text-sm text-white">Not requested</p>
-      </div>
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white/40">
+        <Phone size={13} />
+        {name}: no number
+      </span>
     );
   }
-
-  const actions = readOnly ? [] : nextActions(legType, leg);
-
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs uppercase tracking-wide text-white/60">{title}</p>
-        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold uppercase text-black">
-          {statusLabel(leg.status)}
-        </span>
-      </div>
-
-      <div className="space-y-3 text-sm text-white">
-        <div>
-          <p className="text-xs text-white/60">From</p>
-          <p>{leg.origin.address || leg.origin.label || 'Not provided'}</p>
-          {mapAnchor('Open origin map', leg.origin.mapLink)}
-        </div>
-        <div>
-          <p className="text-xs text-white/60">To</p>
-          <p>{leg.destination.address || leg.destination.label || 'Not provided'}</p>
-          {mapAnchor('Open destination map', leg.destination.mapLink)}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="text-xs text-white/60">Fee</p>
-            <p>{formatCurrency(leg.feeAmount)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-white/60">Payment</p>
-            <p className="capitalize">{statusLabel(leg.feeStatus)}</p>
-          </div>
-        </div>
-      </div>
-
-      {readOnly ? (
-        <p className="mt-4 rounded-lg bg-black/35 px-3 py-2 text-xs text-white/60">
-          Completed delivery history. Status changes are closed.
-        </p>
-      ) : actions.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {actions.map((action) => {
-            const statusKey = `${requestId}:${legType}:${action.status}`;
-            const isUpdating = updatingStatusKey === statusKey;
-            return (
-              <button
-                key={action.status}
-                type="button"
-                disabled={Boolean(updatingStatusKey)}
-                onClick={() => onStatusUpdate(requestId, legType, action.status)}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-yellow-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-55"
-              >
-                {isUpdating && <Loader2 size={13} className="animate-spin" />}
-                {action.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="mt-4 rounded-lg bg-black/35 px-3 py-2 text-xs text-white/60">
-          No further status update is available for this leg.
-        </p>
-      )}
-    </div>
+    <a
+      href={`tel:${phone}`}
+      className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10"
+    >
+      <Phone size={13} />
+      Call {name}
+    </a>
   );
 }
 
@@ -148,8 +41,6 @@ export function RequestCard({
   updatingStatusKey?: string | null;
   readOnly?: boolean;
 }) {
-  // Cards default to collapsed so dispatch can scan the queue by image, order
-  // name and a short description, then expand the one they want to act on.
   const [expanded, setExpanded] = useState(false);
 
   const primaryProduct = request.product.items[0];
@@ -157,16 +48,25 @@ export function RequestCard({
   const imageSrc = primaryProduct?.imageUrl ? getImageUrl(primaryProduct.imageUrl) : '';
   const isCompleted = readOnly || request.isCompleted || request.status === 'completed';
   const completedAt = request.completedAt || request.order.completedAt || null;
-  const sellerDisplayName = request.seller.shopName || request.seller.name || 'Seller not available';
+
+  const journey = deriveJourney(request);
+  const actions = isCompleted ? null : courierActions(request);
+  const route = routeLink(request);
+
+  const sellerDisplayName = request.seller.shopName || request.seller.name || 'Seller';
   const sellerAddress = request.seller.physicalAddress || request.seller.location || 'No seller address saved';
-  const buyerDeliveryAddress = request.deliveryLeg?.destination.address
+  const buyerName = request.buyer.name || 'Buyer';
+  const buyerAddress = request.deliveryLeg?.destination.address
     || request.deliveryLeg?.destination.label
-    || null;
-  const buyerMapLink = request.deliveryLeg?.destination.mapLink || null;
+    || 'No door delivery — buyer collects.';
+
+  const bannerTone = journey.state === 'attention'
+    ? 'border-red-400/40 bg-red-400/10 text-red-200'
+    : 'border-amber-400/40 bg-amber-400/10 text-amber-100';
 
   return (
     <article className={`rounded-2xl border p-4 text-white shadow-[0_18px_45px_rgba(0,0,0,0.45)] ${tone}`}>
-      {/* Compact header — always visible: image, order name, description, status. */}
+      {/* Header — image, order, plain status, deadline. */}
       <div className="flex items-start gap-3">
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/45">
           {imageSrc ? (
@@ -179,139 +79,145 @@ export function RequestCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-wide text-white/60">Order</p>
-          <h3 className="truncate text-base font-semibold text-white">{request.order.orderNumber}</h3>
-          <p className="truncate text-sm text-white/75">{productSummary}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span className="inline-flex rounded-full border border-white/15 bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-white/75">
-              {isCompleted ? 'completed' : statusLabel(request.status)}
-            </span>
-            <span className="inline-flex rounded-full border border-white/10 bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-white/60">
-              {request.group.replace(/_/g, ' ')}
-            </span>
-          </div>
+          <p className="text-[11px] uppercase tracking-wide text-white/50">Order {request.order.orderNumber}</p>
+          <h3 className="truncate text-base font-semibold text-white">{productSummary}</h3>
+          <p className="mt-1 text-sm font-semibold text-yellow-300">{journey.label}</p>
         </div>
 
         <div className="shrink-0 rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-right">
           <p className="text-[11px] text-white/60">{isCompleted ? 'Completed' : 'Deadline'}</p>
-          <p className={request.isOverdue ? 'text-sm font-semibold text-red-300' : 'text-sm font-semibold text-yellow-200'}>
+          <p className={request.isOverdue && !isCompleted ? 'text-sm font-semibold text-red-300' : 'text-sm font-semibold text-yellow-200'}>
             {isCompleted ? 'Done' : deadlineText(request.deadlineAt, now)}
           </p>
-          <p className="text-[11px] text-white/60">{formatDate(isCompleted ? completedAt : request.deadlineAt)}</p>
+          <p className="text-[11px] text-white/50">{formatDate(isCompleted ? completedAt : request.deadlineAt)}</p>
         </div>
       </div>
 
+      {/* Journey stepper — the two legs shown as one linear story. */}
+      <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-3 py-3">
+        <MzigoJourneyStepper journey={journey} />
+      </div>
+
+      {/* Delayed / needs-attention overlay. */}
+      {journey.state !== 'normal' && !isCompleted && (
+        <p className={`mt-3 rounded-lg border px-3 py-2 text-xs font-medium ${bannerTone}`}>
+          {journey.detail}
+        </p>
+      )}
+
+      {/* Primary next action — one clear thing to do. */}
+      {actions?.primary && (
+        <button
+          type="button"
+          disabled={Boolean(updatingStatusKey)}
+          onClick={() => onStatusUpdate(request.id, actions.primary!.legType, actions.primary!.status)}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-yellow-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          {updatingStatusKey === `${request.id}:${actions.primary.legType}:${actions.primary.status}` && (
+            <Loader2 size={15} className="animate-spin" />
+          )}
+          {actions.primary.label}
+        </button>
+      )}
+
+      {/* Issue actions — smaller, secondary. */}
+      {actions && actions.secondary.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {actions.secondary.map((action) => (
+            <button
+              key={action.status}
+              type="button"
+              disabled={Boolean(updatingStatusKey)}
+              onClick={() => onStatusUpdate(request.id, action.legType, action.status)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {updatingStatusKey === `${request.id}:${action.legType}:${action.status}` && (
+                <Loader2 size={12} className="animate-spin" />
+              )}
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Quick contacts + one combined route link. */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <CallButton name="seller" phone={request.seller.phone} />
+        <CallButton name="buyer" phone={request.buyer.phone} />
+        {route && (
+          <a
+            href={route.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1.5 text-xs font-semibold text-yellow-200 transition hover:bg-yellow-400/20"
+          >
+            <Navigation size={13} />
+            {route.label}
+          </a>
+        )}
+      </div>
+
+      {/* Details — collapsed by default so the queue scans fast. */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
+        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
       >
         {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         {expanded ? 'Hide details' : 'Show details'}
       </button>
 
       {expanded && (
-        <div className="mt-4">
-          <div className="mb-4 grid gap-3 xl:grid-cols-[1.1fr_1fr_1fr]">
-            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                <ShoppingBag size={15} />
-                Product details
-              </div>
-              <p className="text-sm text-white">{productSummary}</p>
-              <div className="mt-2 space-y-1 text-xs text-white/70">
-                {request.product.items.map((item) => (
-                  <p key={item.id}>
-                    {item.name} x{item.quantity} - {formatCurrency(item.subtotal)}
-                  </p>
-                ))}
-              </div>
+        <div className="mt-3 space-y-3 text-sm">
+          <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+              <ShoppingBag size={13} />
+              What&apos;s in the package
+            </p>
+            <div className="space-y-1 text-xs text-white/75">
+              {request.product.items.map((item) => (
+                <p key={item.id}>
+                  {item.name} &times;{item.quantity} — {formatCurrency(item.subtotal)}
+                </p>
+              ))}
             </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                <Store size={15} />
-                Seller details
-              </div>
-              <div className="space-y-2">
-                <DetailField label="Shop" value={sellerDisplayName} icon={<Store size={12} />} />
-                <DetailField label="Phone" value={request.seller.phone || 'No seller phone'} icon={<Phone size={12} />} />
-                <DetailField label="Address" icon={<MapPin size={12} />}>
-                  <p>{sellerAddress}</p>
-                  {request.seller.mapLink ? (
-                    <div className="mt-1">{mapAnchor('Open seller map', request.seller.mapLink)}</div>
-                  ) : (
-                    <p className="mt-1 text-xs text-white/50">No seller map pin saved.</p>
-                  )}
-                </DetailField>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                <UserRound size={15} />
-                Buyer details
-              </div>
-              <div className="space-y-2">
-                <DetailField label="Buyer" value={request.buyer.name || 'Buyer not available'} icon={<UserRound size={12} />} />
-                <DetailField label="Phone" value={request.buyer.phone || 'No buyer phone'} icon={<Phone size={12} />} />
-                {request.buyer.email && (
-                  <DetailField label="Email" value={request.buyer.email} icon={<Mail size={12} />} />
-                )}
-                <DetailField label="Delivery" icon={<MapPin size={12} />}>
-                  <p>{buyerDeliveryAddress || 'No door delivery. Buyer follows hub or shop collection flow.'}</p>
-                  {buyerMapLink && <div className="mt-1">{mapAnchor('Open buyer map', buyerMapLink)}</div>}
-                </DetailField>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-4 grid gap-3 lg:grid-cols-2">
-            <LegPanel
-              title="Pickup"
-              leg={request.pickupLeg}
-              legType="pickup"
-              requestId={request.id}
-              onStatusUpdate={onStatusUpdate}
-              updatingStatusKey={updatingStatusKey}
-              readOnly={isCompleted}
-            />
-            <LegPanel
-              title="Delivery"
-              leg={request.deliveryLeg}
-              legType="delivery"
-              requestId={request.id}
-              onStatusUpdate={onStatusUpdate}
-              updatingStatusKey={updatingStatusKey}
-              readOnly={isCompleted}
-            />
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-              <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
-                <MapPin size={15} />
-                Seller handoff / hub
+            <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+              <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+                <Store size={13} />
+                Pick up from
               </p>
-              <p className="text-sm text-white">{request.sellerDropoff.address || request.sellerDropoff.label || 'Not set'}</p>
-              {mapAnchor('Open drop-off map', request.sellerDropoff.mapLink)}
+              <p className="text-sm font-semibold text-white">{sellerDisplayName}</p>
+              <p className="text-xs text-white/65">{sellerAddress}</p>
+              <p className="mt-1 text-xs text-white/50">{request.seller.phone || 'No phone saved'}</p>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-black/45 p-3">
-              <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
-                <PackageCheck size={15} />
-                Card classification
+            <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+              <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+                <UserRound size={13} />
+                Deliver to
               </p>
-              <p className="text-sm capitalize text-white">{request.group.replace(/_/g, ' ')}</p>
-              <p className="mt-1 text-xs text-white/70">
-                Pickup fee: {statusLabel(request.pickupFeeStatus)} | Delivery fee: {statusLabel(request.deliveryFeeStatus)}
-              </p>
+              <p className="text-sm font-semibold text-white">{buyerName}</p>
+              <p className="text-xs text-white/65">{buyerAddress}</p>
+              <p className="mt-1 text-xs text-white/50">{request.buyer.phone || 'No phone saved'}</p>
             </div>
           </div>
 
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/40 p-3 text-xs">
+            <span className="flex items-center gap-1.5 text-white/55">
+              <MapPin size={13} />
+              Handover: {request.sellerDropoff.address || request.sellerDropoff.label || 'hub'}
+            </span>
+            <span className="text-white/70">
+              Fees — pickup {statusLabel(request.pickupFeeStatus)}, delivery {statusLabel(request.deliveryFeeStatus)}
+            </span>
+          </div>
+
           {request.events[0]?.message && (
-            <p className="mt-4 rounded-xl border border-white/10 bg-black/45 p-3 text-xs text-white/75">
+            <p className="rounded-xl border border-white/10 bg-black/40 p-3 text-xs text-white/70">
               Latest update: {request.events[0].message}
             </p>
           )}
