@@ -39,6 +39,24 @@ function has(status: string | null | undefined, ...needles: string[]) {
   return needles.some((needle) => value.includes(needle));
 }
 
+// Mirrors the server (logisticsLiveLocation.service.js): which leg statuses mean
+// the courier is actively in motion and worth live-tracking. Kept in sync so the
+// courier only broadcasts, and buyers/sellers only poll, when it's useful.
+export function isPickupTrackable(status: string | null | undefined) {
+  const s = String(status || '').toLowerCase();
+  if (/picked|dropped|failed|cancelled/.test(s)) return false;
+  return /assigned|started|out_for_pickup|en_route/.test(s);
+}
+
+export function isDeliveryTrackable(status: string | null | undefined) {
+  return /out_for_delivery|out for delivery/.test(String(status || '').toLowerCase());
+}
+
+/** A courier request currently in motion on either leg. */
+export function isRequestTrackable(request: LogisticsRequestCard) {
+  return isDeliveryTrackable(request.deliveryLeg?.status) || isPickupTrackable(request.pickupLeg?.status);
+}
+
 /** Collapse pickup + delivery leg statuses into one linear journey. */
 export function deriveJourney(request: LogisticsRequestCard): Journey {
   return deriveJourneyFromStatuses(

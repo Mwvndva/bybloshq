@@ -135,6 +135,23 @@ export async function fetchLogisticsRequests(sort: LogisticsSort = 'priority') {
   return response.data?.data as LogisticsDashboardResponse;
 }
 
+export interface CourierLocationInput {
+  lat: number;
+  lng: number;
+  accuracy?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+}
+
+export async function postLogisticsLocation(requestId: number, coords: CourierLocationInput) {
+  const response = await apiClient.post(
+    `/logistics/requests/${requestId}/location`,
+    coords,
+    { headers: logisticsHeaders() }
+  );
+  return response.data?.data as { updatedAt: string };
+}
+
 export async function updateLogisticsLegStatus({
   requestId,
   legType,
