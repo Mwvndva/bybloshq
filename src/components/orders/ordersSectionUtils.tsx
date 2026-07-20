@@ -11,6 +11,24 @@ const badgeGlow = 'shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_10px_20px_rgba(0,0
 
 export const detailPillClass = 'rounded-xl border border-white/15 bg-white/8 px-3 py-2';
 
+/**
+ * Uniform order-detail pills shared by the buyer and seller order cards, so both
+ * roles get the same clean 3-up layout. Only customer-facing facts belong here —
+ * never raw database IDs or other backend internals.
+ */
+export function OrderMetaPills({ pills }: { pills: Array<{ label: string; value: string }> }) {
+  return (
+    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+      {pills.map((pill) => (
+        <div key={pill.label} className={detailPillClass}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">{pill.label}</p>
+          <p className="mt-0.5 truncate text-sm font-semibold text-white">{pill.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export const formatOrderDate = (dateInput: DateLike | null | undefined): string => {
   if (!dateInput) return 'Date not available';
 

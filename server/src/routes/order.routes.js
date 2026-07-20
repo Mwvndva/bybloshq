@@ -10,7 +10,8 @@ import {
   sellerCancelOrder,
   downloadDigitalProduct,
   locationPreview,
-  getByReference
+  getByReference,
+  getOrderLiveLocation
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -63,6 +64,14 @@ router.get('/seller', getSellerOrders);
  *     summary: Get order by ID
  */
 router.get('/:id', getOrderById);
+
+/**
+ * @swagger
+ * /api/orders/{id}/live-location:
+ *   get:
+ *     summary: Phase-scoped live courier location for the order's buyer or seller
+ */
+router.get('/:id/live-location', getOrderLiveLocation);
 
 /**
  * @swagger

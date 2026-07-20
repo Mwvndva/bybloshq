@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, CheckCircle, ChevronDown, Clock, MapPin, Package, Truck, User, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, ChevronDown, Clock, MapPin, Package, Truck, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { SellerOrderActions } from './SellerOrderActions';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 import { OrderLogisticsTracking } from '../orders/OrderLogisticsTracking';
 import { OrderStatusBadge } from './OrderStatusBadge';
+import { OrderMetaPills } from '../orders/ordersSectionUtils';
 import { formatCurrency, formatDate, getEffectiveFulfillmentType, HUB_DROPOFF_LOCATION } from './sellerOrders.utils';
 
 interface SellerOrderCardProps {
@@ -121,19 +122,20 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
                                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                                                     <div className="flex-1 min-w-0">
                                                         <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">Order #{order.orderNumber}</h3>
-                                                        <p className="text-[10px] sm:text-sm text-white/70">{formatDate(order.createdAt)}</p>
-                                                        {(order.buyerName || order.customer?.name) && (
-                                                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-white bg-blue-500/15 border border-blue-400/30 px-2 py-0.5 rounded-md w-fit max-w-full">
-                                                                <User className="h-3 w-3" />
-                                                                <span className="font-medium truncate max-w-[180px] sm:max-w-xs">{order.buyerName || order.customer?.name}</span>
-                                                            </div>
-                                                        )}
                                                     </div>
                                                     {/* Status Badge - positioned for mobile */}
                                                     <div className="flex-none">
                                                         <OrderStatusBadge status={order.status} />
                                                     </div>
                                                 </div>
+
+                                                <OrderMetaPills
+                                                    pills={[
+                                                        { label: 'Buyer', value: order.buyerName || order.customer?.name || 'Buyer' },
+                                                        { label: 'Items', value: `${itemCount} item${itemCount === 1 ? '' : 's'}` },
+                                                        { label: 'Placed', value: formatDate(order.createdAt) },
+                                                    ]}
+                                                />
 
                                                 {/* NEW: Instruction Banner */}
                                                 {(() => {
