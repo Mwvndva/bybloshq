@@ -1,7 +1,9 @@
-import { Clock, MapPin, Navigation, ShieldCheck, Truck } from 'lucide-react';
+import { Clock, MapPin, Navigation, Radio, ShieldCheck, Truck } from 'lucide-react';
 import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/types/api/order';
-import { deriveJourneyFromStatuses } from '@/pages/logistics/mzigoJourney';
+import { deriveJourneyFromStatuses, isDeliveryTrackable, isPickupTrackable } from '@/pages/logistics/mzigoJourney';
 import { MzigoJourneyStepper } from '@/pages/logistics/MzigoJourneyStepper';
+import { useLiveDelivery } from './useLiveDelivery';
+import { LiveDeliveryMap } from './LiveDeliveryMap';
 
 type TrackingView = 'buyer' | 'seller';
 
@@ -45,6 +47,13 @@ function mapLink(lat?: number | string | null, lng?: number | string | null, add
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
   }
   return null;
+}
+
+function toPoint(lat?: number | string | null, lng?: number | string | null): [number, number] | null {
+  const nLat = lat === null || lat === undefined ? NaN : Number(lat);
+  const nLng = lng === null || lng === undefined ? NaN : Number(lng);
+  if (!Number.isFinite(nLat) || !Number.isFinite(nLng)) return null;
+  return [nLat, nLng];
 }
 
 function getDeliveryAddress(leg?: ApiOrderLogisticsDeliveryLeg | null, order?: ApiOrder) {
@@ -92,6 +101,19 @@ export function OrderLogisticsTracking({
   const hasLogistics = Boolean(deliveryLeg || pickupLeg);
   const isSeller = view === 'seller';
 
+  // Live tracking is phase-scoped: the buyer watches during delivery, the seller
+  // during pickup. Only poll while the caller's own leg is actually in motion.
+  const trackablePhase = isSeller
+    ? isPickupTrackable(pickupLeg?.status)
+    : isDeliveryTrackable(deliveryLeg?.status);
+  const live = useLiveDelivery(String(order.id), view, trackablePhase);
+  const courierPoint = live?.available && live.location
+    ? [live.location.lat, live.location.lng] as [number, number]
+    : null;
+  const destinationPoint = isSeller
+    ? toPoint(pickupLeg?.originLat, pickupLeg?.originLng)
+    : toPoint(deliveryLeg?.destinationLat, deliveryLeg?.destinationLng);
+
   if (!hasLogistics && (!isSeller || !isPhysical)) {
     return null;
   }
@@ -118,10 +140,28 @@ export function OrderLogisticsTracking({
         <h4 className="text-sm font-semibold text-white">
           {view === 'buyer' ? 'Delivery tracking' : 'Mzigo Ego tracking'}
         </h4>
-        <span className="ml-auto rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-100">
-          {journey.label}
-        </span>
+        {courierPoint ? (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-yellow-400/20 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200">
+            <Radio className="h-3 w-3 animate-pulse" /> Live
+          </span>
+        ) : (
+          <span className="ml-auto rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-100">
+            {journey.label}
+          </span>
+        )}
       </div>
+
+      {/* Live map — only while the courier is moving on the caller's leg. */}
+      {courierPoint && (
+        <div className="mt-3">
+          <LiveDeliveryMap
+            courier={courierPoint}
+            destination={destinationPoint}
+            updatedAt={live?.location?.updatedAt}
+            destinationLabel={isSeller ? 'Your shop' : 'You'}
+          />
+        </div>
+      )}
 
       {/* Journey stepper. */}
       <div className="mt-3 rounded-xl border border-white/10 bg-black/40 px-3 py-3">
@@ -184,9 +224,6 @@ export function OrderLogisticsTracking({
             <p className="mt-1 text-sm font-semibold text-white">
               {formatCurrency(deliveryLeg.feeAmount || 0, deliveryLeg.feeCurrency || order.currency)}
             </p>
-            {deliveryLeg.distanceKm ? (
-              <p className="mt-0.5 text-xs text-white/55">{deliveryLeg.distanceKm} km route</p>
-            ) : null}
           </div>
         )}
       </div>

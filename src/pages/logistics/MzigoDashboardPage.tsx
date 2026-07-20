@@ -1,5 +1,5 @@
-import { ArrowLeft, CalendarClock, CheckCircle2, LogOut, PackageCheck, RefreshCw, Truck } from 'lucide-react';
-import { useMemo } from 'react';
+import { ArrowLeft, CalendarClock, CheckCircle2, LogOut, PackageCheck, Radio, RefreshCw, Truck } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isNativeApp } from '@/lib/mobileApp';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
@@ -7,6 +7,8 @@ import { SORT_OPTIONS } from './mzigoDashboard.constants';
 import { DashboardStat, RequestCard } from './mzigoDashboard.components';
 import { useMzigoDashboard } from './useMzigoDashboard';
 import { MzigoActivityPanel } from './MzigoActivityPanel';
+import { isRequestTrackable } from './mzigoJourney';
+import { useCourierBroadcast } from './useCourierBroadcast';
 
 // Buttons are always yellow (primary) or outlined-white (secondary), never a
 // dark fill, so every action reads clearly on the black theme.
@@ -39,6 +41,13 @@ const MzigoDashboardPage = () => {
     [dashboard?.requests],
   );
   const done = grouped.completed;
+
+  // Live location: broadcast the courier's position to every delivery currently
+  // in motion, but only while the courier opts in (web geolocation, phase-scoped
+  // on the viewer side).
+  const [shareLocation, setShareLocation] = useState(false);
+  const trackableIds = useMemo(() => todo.filter(isRequestTrackable).map((request) => request.id), [todo]);
+  const broadcast = useCourierBroadcast(trackableIds, shareLocation);
 
   return (
     <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white">
@@ -108,6 +117,31 @@ const MzigoDashboardPage = () => {
               {activeCount} {activeCount === 1 ? 'delivery' : 'deliveries'} to do
             </p>
             <p className="mt-1 text-xs text-white/50">Finished deliveries move to Done below.</p>
+
+            {/* Live location sharing — lets buyers/sellers watch active deliveries. */}
+            <button
+              type="button"
+              onClick={() => setShareLocation((v) => !v)}
+              aria-pressed={shareLocation}
+              className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                shareLocation
+                  ? 'border border-yellow-400/40 bg-yellow-400/15 text-yellow-200'
+                  : 'border border-white/15 bg-white/[0.05] text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <Radio size={13} className={shareLocation && broadcast.active ? 'animate-pulse' : ''} />
+              {shareLocation
+                ? `Sharing live location (${trackableIds.length})`
+                : 'Share my live location'}
+            </button>
+            {shareLocation && broadcast.error && (
+              <p className="mt-1 text-[11px] text-red-300">{broadcast.error}</p>
+            )}
+            {shareLocation && !broadcast.error && trackableIds.length === 0 && (
+              <p className="mt-1 text-[11px] text-white/40">
+                Starts automatically once a delivery is picked up or out for delivery.
+              </p>
+            )}
           </div>
 
           <div className="w-full overflow-x-auto pb-1 sm:w-auto">

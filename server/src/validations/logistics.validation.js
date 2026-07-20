@@ -12,3 +12,4 @@ const anyId = z.union([z.string(), z.number()]).optional();
 
 export const login = z.object({ email: s, username: s, password: s }).passthrough();
 export const updateLegStatus = z.object({ requestId: id, legType: id, status: s }).passthrough();
+export const updateLocation = z.object({ requestId: id, lat: n, lng: n, accuracy: n, heading: n, speed: n }).passthrough();
