@@ -20,15 +20,15 @@ export const AdminClientsTab = ({ clients, searchQuery, onSearchChange, formatDa
     <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
       <CardHeader className="p-5 md:p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div>
-          <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Client Network</CardTitle>
-          <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Global mapping of customers and their associated merchants</CardDescription>
+          <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Clients</CardTitle>
+          <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Customers and the sellers they buy from</CardDescription>
         </div>
         <div className="relative group w-full md:w-auto">
           <div className="absolute -inset-0.5 bg-pink-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-pink-500 transition-colors" />
           <Input
             type="text"
-            placeholder="Search relations..."
+            placeholder="Search clients..."
             className="pl-12 w-full md:w-[320px] lg:w-[400px] h-11 md:h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-pink-500/50 focus:ring-pink-500/10 transition-all font-medium text-sm"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -40,9 +40,9 @@ export const AdminClientsTab = ({ clients, searchQuery, onSearchChange, formatDa
           <table className="w-full text-left border-collapse">
             <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
               <tr>
-                <th className="px-5 md:px-8 py-4 md:py-6">Customer Network Node</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 hidden md:table-cell">Associated Merchant</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Contact Protocol</th>
+                <th className="px-5 md:px-8 py-4 md:py-6">Client</th>
+                <th className="px-5 md:px-8 py-4 md:py-6 hidden md:table-cell">Seller</th>
+                <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Contact</th>
                 <th className="px-5 md:px-8 py-4 md:py-6 text-right">Activity</th>
               </tr>
             </thead>
