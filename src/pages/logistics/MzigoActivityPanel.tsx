@@ -32,18 +32,18 @@ export function MzigoActivityPanel() {
   };
 
   return (
-    <div className="mb-6 rounded-2xl border border-stone-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-stone-100 px-5 py-3">
+    <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03]">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
         <div className="flex items-center gap-2">
           <span className="relative inline-flex">
-            <Bell className="h-4 w-4 text-yellow-600" />
+            <Bell className="h-4 w-4 text-yellow-400" />
             {unreadCount > 0 && (
-              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-yellow-500" />
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-yellow-400" />
             )}
           </span>
-          <h2 className="text-sm font-semibold text-stone-950">Activity</h2>
+          <h2 className="text-sm font-semibold text-white">Activity</h2>
           {unreadCount > 0 && (
-            <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-bold text-yellow-700">
+            <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-bold text-yellow-300">
               {unreadCount} new
             </span>
           )}
@@ -52,30 +52,30 @@ export function MzigoActivityPanel() {
           <button
             type="button"
             onClick={() => markAllRead()}
-            className="inline-flex items-center gap-1 text-xs text-stone-500 transition hover:text-stone-900"
+            className="inline-flex items-center gap-1 text-xs text-white/50 transition hover:text-white"
           >
             <CheckCheck className="h-3.5 w-3.5" /> Mark all read
           </button>
         )}
       </div>
-      <div className="max-h-72 divide-y divide-stone-100 overflow-y-auto">
+      <div className="max-h-72 divide-y divide-white/5 overflow-y-auto">
         {isLoading ? (
-          <div className="px-5 py-8 text-center text-sm text-stone-400">Loading activity…</div>
+          <div className="px-5 py-8 text-center text-sm text-white/40">Loading activity…</div>
         ) : notifications.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-stone-400">No new pickups or updates yet</div>
+          <div className="px-5 py-8 text-center text-sm text-white/40">No new pickups or updates yet</div>
         ) : (
           notifications.map((n) => (
             <button
               key={n.id}
               type="button"
               onClick={() => handleItem(n)}
-              className={`flex w-full items-start gap-3 px-5 py-3 text-left transition hover:bg-yellow-50/60 ${n.read_at ? '' : 'bg-yellow-50/40'}`}
+              className={`flex w-full items-start gap-3 px-5 py-3 text-left transition hover:bg-white/[0.04] ${n.read_at ? '' : 'bg-yellow-400/[0.06]'}`}
             >
-              <span className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${n.read_at ? 'bg-transparent' : 'bg-yellow-500'}`} />
+              <span className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${n.read_at ? 'bg-transparent' : 'bg-yellow-400'}`} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-stone-900">{n.title}</span>
-                <span className="block text-xs text-stone-500 line-clamp-2">{n.body}</span>
-                <span className="mt-0.5 block text-[11px] text-stone-400">{timeAgo(n.created_at)}</span>
+                <span className="block truncate text-sm font-medium text-white">{n.title}</span>
+                <span className="block text-xs text-white/60 line-clamp-2">{n.body}</span>
+                <span className="mt-0.5 block text-[11px] text-white/40">{timeAgo(n.created_at)}</span>
               </span>
             </button>
           ))

@@ -1,14 +1,15 @@
 import { ArrowLeft, CalendarClock, CheckCircle2, LogOut, PackageCheck, RefreshCw, Truck } from 'lucide-react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isNativeApp } from '@/lib/mobileApp';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
-import { ACTIVE_GROUPS, COMPLETED_GROUP, SORT_OPTIONS } from './mzigoDashboard.constants';
+import { SORT_OPTIONS } from './mzigoDashboard.constants';
 import { DashboardStat, RequestCard } from './mzigoDashboard.components';
 import { useMzigoDashboard } from './useMzigoDashboard';
 import { MzigoActivityPanel } from './MzigoActivityPanel';
 
-// Shared button styles — buttons are always yellow (primary) or white (secondary),
-// never a dark/black fill, so every action reads clearly on the black theme.
+// Buttons are always yellow (primary) or outlined-white (secondary), never a
+// dark fill, so every action reads clearly on the black theme.
 const BTN_PRIMARY = 'bg-yellow-400 text-black font-semibold hover:bg-yellow-300';
 const BTN_SECONDARY = 'border border-white/15 bg-white/[0.05] text-white hover:bg-white/10';
 
@@ -29,8 +30,18 @@ const MzigoDashboardPage = () => {
     requestsQuery,
   } = useMzigoDashboard();
 
+  // Two buckets only: everything still moving ("To do") and history ("Done").
+  // The flat `requests` list keeps the server's global sort across old groups.
+  const todo = useMemo(
+    () => (dashboard?.requests || []).filter(
+      (request) => !(request.isCompleted || request.status === 'completed' || request.group === 'completed'),
+    ),
+    [dashboard?.requests],
+  );
+  const done = grouped.completed;
+
   return (
-    <main className="mzigo-light-dashboard min-h-[100svh] overflow-x-hidden bg-black text-white">
+    <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white">
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 border-b border-white/10 bg-black/95 px-4 py-3 backdrop-blur">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -49,8 +60,8 @@ const MzigoDashboardPage = () => {
 
           <div className="text-center">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-yellow-400">Mzigo Ego</p>
-            <h1 className="text-lg font-black tracking-tight text-white sm:text-xl">Delivery Orders</h1>
-            <p className="text-[11px] text-white/50">{partner?.name || 'Logistics partner'} workspace</p>
+            <h1 className="text-lg font-black tracking-tight text-white sm:text-xl">Deliveries</h1>
+            <p className="text-[11px] text-white/50">{partner?.name || 'Logistics partner'}</p>
           </div>
 
           <div className="flex justify-end">
@@ -65,40 +76,38 @@ const MzigoDashboardPage = () => {
         {/* ── Overview stats ───────────────────────────────────── */}
         <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardStat
-            label="Active"
+            label="To do"
             value={activeCount}
             icon={<Truck size={18} />}
             tone="border-yellow-400/25 bg-yellow-400/[0.08]"
           />
           <DashboardStat
-            label="Overdue"
+            label="Running late"
             value={overdueCount}
             icon={<CalendarClock size={18} />}
             tone={overdueCount > 0 ? 'border-red-400/30 bg-red-400/10' : 'border-white/10 bg-white/[0.03]'}
           />
           <DashboardStat
-            label="Completed"
-            value={grouped.completed.length}
+            label="Done"
+            value={done.length}
             icon={<CheckCircle2 size={18} />}
             tone="border-emerald-400/25 bg-emerald-400/[0.08]"
           />
           <DashboardStat
-            label="Total Visible"
+            label="All visible"
             value={dashboard?.count || 0}
             icon={<PackageCheck size={18} />}
           />
         </div>
 
-        {/* ── Controls: what's active + how it's sorted ────────── */}
+        {/* ── Sort controls ────────────────────────────────────── */}
         <div className="mb-6 flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center">
           <div>
             <p className="flex items-center gap-2 text-sm font-bold text-white">
               <Truck size={16} className="text-yellow-400" />
-              {activeCount} active logistics orders
+              {activeCount} {activeCount === 1 ? 'delivery' : 'deliveries'} to do
             </p>
-            <p className="mt-1 text-xs text-white/50">
-              Completed orders are separated below so dispatch can focus on open movement.
-            </p>
+            <p className="mt-1 text-xs text-white/50">Finished deliveries move to Done below.</p>
           </div>
 
           <div className="w-full overflow-x-auto pb-1 sm:w-auto">
@@ -127,7 +136,7 @@ const MzigoDashboardPage = () => {
           </div>
         </div>
 
-        {/* ── Order groups ─────────────────────────────────────── */}
+        {/* ── Buckets ──────────────────────────────────────────── */}
         {requestsQuery.isLoading ? (
           <div className="grid gap-4 lg:grid-cols-3">
             {[0, 1, 2].map((item) => (
@@ -136,64 +145,59 @@ const MzigoDashboardPage = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {ACTIVE_GROUPS.map((group) => {
-              const cards = grouped[group.key];
-              return (
-                <section key={group.key}>
-                  <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-                    <div>
-                      <h2 className="text-lg font-bold text-white">{group.title}</h2>
-                      <p className="text-sm text-white/50">{group.description}</p>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${group.pill}`}>
-                      {cards.length} orders
-                    </span>
-                  </div>
+            <section>
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <h2 className="text-lg font-bold text-white">To do</h2>
+                  <p className="text-sm text-white/50">Deliveries still on the move, most urgent first.</p>
+                </div>
+                <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-black">
+                  {todo.length} {todo.length === 1 ? 'delivery' : 'deliveries'}
+                </span>
+              </div>
 
-                  {cards.length === 0 ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/50">
-                      No {group.title.toLowerCase()} orders right now.
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-                      {cards.map((request) => (
-                        <RequestCard
-                          key={request.id}
-                          request={request}
-                          tone={group.tone}
-                          now={now}
-                          onStatusUpdate={handleStatusUpdate}
-                          updatingStatusKey={updatingStatusKey}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+              {todo.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/50">
+                  Nothing to do right now. New deliveries appear here automatically.
+                </div>
+              ) : (
+                <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+                  {todo.map((request) => (
+                    <RequestCard
+                      key={request.id}
+                      request={request}
+                      tone="border-white/10 bg-white/[0.03]"
+                      now={now}
+                      onStatusUpdate={handleStatusUpdate}
+                      updatingStatusKey={updatingStatusKey}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
 
             <section>
               <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-bold text-white">{COMPLETED_GROUP.title}</h2>
-                  <p className="text-sm text-white/50">{COMPLETED_GROUP.description}</p>
+                  <h2 className="text-lg font-bold text-white">Done</h2>
+                  <p className="text-sm text-white/50">Completed deliveries, kept for your records.</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-bold ${COMPLETED_GROUP.pill}`}>
-                  {grouped.completed.length} orders
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white">
+                  {done.length} {done.length === 1 ? 'delivery' : 'deliveries'}
                 </span>
               </div>
 
-              {grouped.completed.length === 0 ? (
+              {done.length === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/50">
                   No completed deliveries yet.
                 </div>
               ) : (
                 <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-                  {grouped.completed.map((request) => (
+                  {done.map((request) => (
                     <RequestCard
                       key={request.id}
                       request={request}
-                      tone={COMPLETED_GROUP.tone}
+                      tone="border-emerald-400/20 bg-white/[0.02]"
                       now={now}
                       onStatusUpdate={handleStatusUpdate}
                       updatingStatusKey={updatingStatusKey}
@@ -225,7 +229,7 @@ const MzigoDashboardPage = () => {
 
       <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/40">
         <CalendarClock size={14} className="mr-1 inline-block" />
-        Deliveries are organized against the 24 hour logistics window.
+        Every delivery has a 24 hour window.
       </footer>
     </main>
   );
