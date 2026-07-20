@@ -121,7 +121,7 @@ const MzigoDashboardPage = () => {
             {/* Live location sharing — lets buyers/sellers watch active deliveries. */}
             <button
               type="button"
-              onClick={() => setShareLocation((v) => !v)}
+              onClick={() => { setShareLocation((v) => !v); }}
               aria-pressed={shareLocation}
               className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                 shareLocation
