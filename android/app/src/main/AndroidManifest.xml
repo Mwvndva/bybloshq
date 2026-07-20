@@ -41,6 +41,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Live delivery tracking: couriers share their location via the WebView's
+         navigator.geolocation. Capacitor's BridgeWebChromeClient handles the
+         runtime prompt automatically once these are declared. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <!-- Android 11+ package visibility so we can resolve the Instagram Story
          intent and the image share chooser (WhatsApp Status). -->
     <queries>
