@@ -11,7 +11,7 @@ export interface StatsCardProps {
   trend: number | null;
 }
 
-const COLORS = ['#facc15', '#111111', '#737373', '#d4d4d4', '#f59e0b', '#a3a3a3'];
+const COLORS = ['#facc15', '#e5e5e5', '#737373', '#d4d4d4', '#f59e0b', '#a3a3a3'];
 
 const hasChartData = (data: Record<string, unknown>[] = []) => data.some(item =>
   Object.values(item || {}).some(value => typeof value === 'number' && value > 0)
@@ -19,18 +19,18 @@ const hasChartData = (data: Record<string, unknown>[] = []) => data.some(item =>
 
 export const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
   <div className="relative group">
-    <Card className="relative bg-white border border-stone-200 shadow-[0_18px_45px_rgba(17,17,17,0.08)] rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-yellow-300">
+    <Card className="relative bg-[#0A0A0A]/70 border border-white/10 shadow-xl rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-yellow-500/30">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
-        <CardTitle className="text-sm font-semibold text-stone-600 tracking-wide">
+        <CardTitle className="text-sm font-semibold text-gray-400 tracking-wide">
           {title}
         </CardTitle>
-        <div className="h-12 w-12 rounded-2xl bg-yellow-100 border border-yellow-200 flex items-center justify-center text-yellow-600 transition-all duration-500">
+        <div className="h-12 w-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 transition-all duration-500">
           {icon}
         </div>
       </CardHeader>
 
       <CardContent className="relative z-10 pt-0">
-        <div className="text-3xl font-semibold text-stone-950 tracking-tight tabular-nums">
+        <div className="text-3xl font-semibold text-white tracking-tight tabular-nums">
           {value}
         </div>
         <div className="mt-3 flex items-center gap-2">
@@ -40,7 +40,7 @@ export const StatsCard = ({ title, value, icon, description, trend }: StatsCardP
               {Math.abs(trend)}%
             </div>
           )}
-          <span className="text-xs text-stone-500 font-medium truncate">{description}</span>
+          <span className="text-xs text-gray-500 font-medium truncate">{description}</span>
         </div>
       </CardContent>
     </Card>
@@ -48,10 +48,10 @@ export const StatsCard = ({ title, value, icon, description, trend }: StatsCardP
 );
 
 export const ChartContainer = ({ title, description, children, className = '' }: { title: string, description: string, children: ReactNode, className?: string }) => (
-  <Card className={`${className} bg-white border border-stone-200 shadow-[0_18px_45px_rgba(17,17,17,0.08)] rounded-2xl overflow-hidden group hover:border-yellow-300 transition-all duration-300`}>
+  <Card className={`${className} bg-[#0A0A0A]/70 border border-white/10 shadow-xl rounded-2xl overflow-hidden group hover:border-yellow-500/30 transition-all duration-300`}>
     <CardHeader className="relative z-10 pb-2">
-      <CardTitle className="text-xl font-semibold text-stone-950 transition-colors">{title}</CardTitle>
-      <CardDescription className="text-stone-600 font-medium">{description}</CardDescription>
+      <CardTitle className="text-xl font-semibold text-white transition-colors">{title}</CardTitle>
+      <CardDescription className="text-gray-400 font-medium">{description}</CardDescription>
     </CardHeader>
     <CardContent className="relative z-10 h-[350px] w-full pt-4">
       {children}
@@ -73,12 +73,12 @@ export const UserGrowthChart = ({ data }: { data: Record<string, unknown>[] }) =
             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
         <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <Tooltip
-          contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '1rem', color: '#111111' }}
-          itemStyle={{ color: '#111111', fontSize: '12px' }}
+          contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', color: '#f5f5f5' }}
+          itemStyle={{ color: '#f5f5f5', fontSize: '12px' }}
         />
         <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
         <Line type="monotone" dataKey="buyers" stroke="#06b6d4" strokeWidth={4} dot={{ r: 4, fill: '#06b6d4', strokeWidth: 2, stroke: '#0A0A0A' }} activeDot={{ r: 6, strokeWidth: 0 }} name="Buyers" />
@@ -98,13 +98,13 @@ export const RevenueChart = ({ data }: { data: Record<string, unknown>[] }) => (
             <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.4} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
         <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <Tooltip
           cursor={{ fill: 'rgba(250, 204, 21, 0.08)' }}
-          contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '1rem' }}
-          itemStyle={{ color: '#111111' }}
+          contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem' }}
+          itemStyle={{ color: '#f5f5f5' }}
         />
         <Bar dataKey="revenue" fill="url(#colorRevenue)" radius={[8, 8, 0, 0]} name="Revenue (KSh)" barSize={40} />
       </BarChart>
@@ -122,13 +122,13 @@ export const SalesChart = ({ data }: { data: Record<string, unknown>[] }) => (
             <stop offset="100%" stopColor="#10b981" stopOpacity={0.4} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
         <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
         <Tooltip
           cursor={{ fill: 'rgba(250, 204, 21, 0.08)' }}
-          contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '1rem' }}
-          itemStyle={{ color: '#111111' }}
+          contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem' }}
+          itemStyle={{ color: '#f5f5f5' }}
         />
         <Bar dataKey="sales" fill="url(#colorSales)" radius={[8, 8, 0, 0]} name="Sales (KSh)" barSize={40} />
       </BarChart>
@@ -155,7 +155,7 @@ export const ProductStatusChart = ({ data }: { data: Record<string, unknown>[] }
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '0.75rem', color: '#111111' }}
+            contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem', color: '#f5f5f5' }}
           />
           <Legend />
         </PieChart>
@@ -173,12 +173,12 @@ export const GeoDistributionChart = ({ data }: { data: Record<string, unknown>[]
     {hasChartData(data) ? (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ left: 24, right: 12 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e7e5df" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#262626" horizontal={false} />
           <XAxis type="number" stroke="#6b7280" axisLine={false} tickLine={false} fontSize={12} />
           <YAxis type="category" dataKey="name" width={96} stroke="#9ca3af" axisLine={false} tickLine={false} fontSize={12} />
           <Tooltip
             cursor={{ fill: 'rgba(250, 204, 21, 0.08)' }}
-            contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e7e5df', borderRadius: '0.75rem', color: '#111111' }}
+            contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem', color: '#f5f5f5' }}
           />
           <Legend />
           <Bar dataKey="gmv" fill="#f59e0b" radius={[0, 8, 8, 0]} name="GMV" />

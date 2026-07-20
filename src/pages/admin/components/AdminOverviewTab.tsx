@@ -92,7 +92,7 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
               </div>
               <div className="text-right">
                 <p className="text-3xl font-black text-white tracking-tighter tabular-nums group-hover/shop:text-yellow-500 transition-colors">{String(shop.clientCount ?? '')}</p>
-                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest opacity-50">Pulse</p>
+                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest opacity-50">Clients</p>
               </div>
             </div>
           )) : (
@@ -104,11 +104,11 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
       <Card className="lg:col-span-4 bg-[#0A0A0A]/70 border border-white/10 rounded-2xl overflow-hidden shadow-xl">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 md:p-8 border-b border-white/5 bg-white/[0.01] gap-4">
           <div>
-            <CardTitle className="text-xl md:text-2xl font-black text-white tracking-tighter">Velocity Stream</CardTitle>
-            <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Recently authenticated merchants</CardDescription>
+            <CardTitle className="text-xl md:text-2xl font-black text-white tracking-tighter">Recent sellers</CardTitle>
+            <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Newest sellers to join</CardDescription>
           </div>
           <Button variant="outline" className="border-white/10 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-xl font-black uppercase tracking-widest h-12 px-8 transition-all" onClick={onShowSellers}>
-            Archive
+            View all
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -116,9 +116,9 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
             <table className="w-full text-left">
               <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
                 <tr>
-                  <th className="px-5 md:px-10 py-4 md:py-6">Operator</th>
-                  <th className="px-5 md:px-10 py-4 md:py-6 text-center hidden sm:table-cell">Protocol Status</th>
-                  <th className="px-5 md:px-10 py-4 md:py-6 text-right">Timestamp</th>
+                  <th className="px-5 md:px-10 py-4 md:py-6">Seller</th>
+                  <th className="px-5 md:px-10 py-4 md:py-6 text-center hidden sm:table-cell">Status</th>
+                  <th className="px-5 md:px-10 py-4 md:py-6 text-right">Joined</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">

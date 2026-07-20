@@ -12,20 +12,20 @@ import { SectionTitle } from './components/SectionTitle'
 import { LoadingSpinner } from './components/LoadingSpinner'
 
 // Chart colour palette — matches Byblos brand (yellow, white, greys + accent colours)
-const COLORS = ['#F5C842', '#111111', '#737373', '#D4D4D4', '#F59E0B', '#A3A3A3', '#E7E5DF', '#525252']
+const COLORS = ['#F5C842', '#E5E5E5', '#737373', '#D4D4D4', '#F59E0B', '#A3A3A3', '#E7E5DF', '#525252']
 
 const CHART_THEME = {
-    grid: '#E7E5DF',
-    axis: '#78716C',
-    tooltip: { bg: '#FFFFFF', border: '#E7E5DF', text: '#111111' }
+    grid: '#262626',
+    axis: '#9CA3AF',
+    tooltip: { bg: '#0A0A0A', border: 'rgba(255,255,255,0.1)', text: '#F5F5F5' }
 }
 
 // Custom tooltip for all charts
 const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }) => {
     if (!active || !payload?.length) return null
     return (
-        <div className="bg-white border border-stone-200 rounded-lg p-3 text-xs shadow-xl">
-            <p className="text-stone-500 mb-2 font-medium">{label}</p>
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-3 text-xs shadow-xl">
+            <p className="text-gray-400 mb-2 font-medium">{label}</p>
             {payload.map((entry) => (
                 <p key={entry.name} style={{ color: entry.color }} className="mb-0.5">
                     {entry.name}: <span className="font-bold">{prefix}{Number(entry.value).toLocaleString()}{suffix}</span>
@@ -98,43 +98,43 @@ export default function MarketingDashboard() {
     }, [fetchAll, navigate])
 
     if (loading) return (
-        <div className="marketing-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2]">
+        <div className="flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#050505]">
             <LoadingSpinner />
         </div>
     )
 
     if (error) return (
-        <div className="marketing-light-dashboard flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#f8f7f2] p-4">
-            <div className="text-red-600 text-center rounded-3xl border border-stone-200 bg-white p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
+        <div className="flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#050505] p-4">
+            <div className="text-red-400 text-center rounded-3xl border border-white/10 bg-[#0A0A0A]/70 p-8 shadow-xl">
                 <p>{error}</p>
-                <button onClick={fetchAll} className="mt-4 text-yellow-600 underline text-sm">Try again</button>
+                <button onClick={fetchAll} className="mt-4 text-yellow-500 underline text-sm">Try again</button>
             </div>
         </div>
     )
 
     return (
-        <div className="marketing-light-dashboard min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] p-3 text-stone-950 selection:bg-yellow-500/30 sm:p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12">
+        <div className="min-h-[100svh] overflow-x-hidden bg-[#050505] p-3 text-white selection:bg-yellow-500/30 sm:p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12">
             {/* Header */}
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white border border-stone-200 rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-[0_18px_45px_rgba(17,17,17,0.08)] relative overflow-hidden group">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[#0A0A0A]/70 border border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-xl relative overflow-hidden group">
                 <div className="relative z-10 flex items-center gap-5 md:gap-8">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-yellow-400 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm">
                         <span className="text-black font-semibold text-2xl md:text-3xl">B</span>
                     </div>
                     <div>
-                        <h1 className="text-2xl md:text-4xl font-semibold tracking-tight">Marketing Dashboard<span className="text-yellow-500">.</span></h1>
-                        <p className="text-stone-500 text-xs md:text-sm font-medium mt-1">Platform growth and acquisition intelligence.</p>
+                        <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-white">Marketing Dashboard<span className="text-yellow-500">.</span></h1>
+                        <p className="text-gray-400 text-xs md:text-sm font-medium mt-1">Platform growth and acquisition.</p>
                     </div>
                 </div>
 
-                <div className="relative z-10 flex items-center justify-between md:justify-end gap-3 md:gap-6 bg-stone-50 p-3 rounded-xl border border-stone-200">
+                <div className="relative z-10 flex items-center justify-between md:justify-end gap-3 md:gap-6 bg-white/5 p-3 rounded-xl border border-white/10">
                     <div className="text-left md:text-right">
-                        <p className="text-[10px] font-semibold text-stone-500 leading-none mb-1">Signed in as</p>
-                        <p className="text-xs md:text-sm font-semibold text-stone-950 tracking-tight truncate max-w-[150px] md:max-w-none">{user?.email}</p>
+                        <p className="text-[10px] font-semibold text-gray-500 leading-none mb-1">Signed in as</p>
+                        <p className="text-xs md:text-sm font-semibold text-white tracking-tight truncate max-w-[150px] md:max-w-none">{user?.email}</p>
                     </div>
                     <button
                         onClick={logout}
-                        className="bg-white hover:bg-red-50 border border-stone-200 hover:border-red-200
-                       text-stone-700 hover:text-red-600 px-4 md:px-6 py-2 md:py-3 rounded-xl
+                        className="bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30
+                       text-gray-300 hover:text-red-400 px-4 md:px-6 py-2 md:py-3 rounded-xl
                        text-xs font-semibold transition-all"
                     >
                         Sign Out
@@ -155,20 +155,20 @@ export default function MarketingDashboard() {
 
             <main className="max-w-[1600px] mx-auto space-y-8 md:space-y-12">
                 {/* Dashboard Subheader */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-stone-200">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-white/10">
                     <div>
-                        <p className="text-stone-500 text-xs md:text-sm font-medium mb-1">Platform performance overview</p>
-                        <h2 className="text-2xl md:text-4xl font-semibold text-stone-950 tracking-tight">Growth Dashboard</h2>
+                        <p className="text-gray-400 text-xs md:text-sm font-medium mb-1">Platform performance overview</p>
+                        <h2 className="text-2xl md:text-4xl font-semibold text-white tracking-tight">Growth Dashboard</h2>
                     </div>
 
-                    <div className="flex p-1 bg-white rounded-xl border border-stone-200 shadow-sm">
+                    <div className="flex p-1 bg-[#0A0A0A]/70 rounded-xl border border-white/10 shadow-sm">
                         {[3, 6, 12].map(m => (
                             <button
                                 key={m}
                                 onClick={() => setPeriod(m)}
                                 className={`px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${period === m
                                     ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20'
-                                    : 'text-stone-600 hover:text-black hover:bg-stone-100'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 {m}M
@@ -179,7 +179,7 @@ export default function MarketingDashboard() {
 
                 {overview && (
                     <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <SectionTitle subtitle="This calendar month">Monthly Pulse</SectionTitle>
+                        <SectionTitle subtitle="Current calendar month">This month</SectionTitle>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                             <StatCard title="GMV This Month" value={overview.gmvThisMonth} prefix="KSh " color="yellow" />
                             <StatCard title="New Sellers" value={overview.newSellersThisMonth} color="purple" />
@@ -192,8 +192,8 @@ export default function MarketingDashboard() {
                 {/* ── SECTION 2: GMV & REVENUE TREND LINE CHART ── */}
                 <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
                     <ChartCard
-                        title="Performance Trajectory"
-                        subtitle={`Aggregated monthly conversion velocity — Last ${period} months`}
+                        title="GMV & revenue"
+                        subtitle={`Monthly totals — last ${period} months`}
                     >
                         <div className="h-[300px] md:h-[400px]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -224,7 +224,7 @@ export default function MarketingDashboard() {
 
                 {/* ── SECTION 3: USER GROWTH + ORDER VOLUME — side by side ── */}
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-                    <ChartCard title="User Acquisition" subtitle="New platform operators per month">
+                    <ChartCard title="User growth" subtitle="New sellers and buyers per month">
                         <div className="h-[250px] md:h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={userGrowth} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
@@ -240,7 +240,7 @@ export default function MarketingDashboard() {
                         </div>
                     </ChartCard>
 
-                    <ChartCard title="Order Velocity" subtitle="Completed transactional volume">
+                    <ChartCard title="Orders" subtitle="Monthly order volume">
                         <div className="h-[250px] md:h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={gmvTrend} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
@@ -259,7 +259,7 @@ export default function MarketingDashboard() {
                 {/* ── SECTION 4: PRODUCT MIX PIE CHARTS — side by side ── */}
                 {productMix && (
                     <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                        <ChartCard title="Product Architecture" subtitle="Physical vs Digital distribution">
+                        <ChartCard title="Product types" subtitle="Physical vs digital">
                             <div className="h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -284,7 +284,7 @@ export default function MarketingDashboard() {
                             </div>
                         </ChartCard>
 
-                        <ChartCard title="Aesthetic Profiling" subtitle="Inventory across curated categories">
+                        <ChartCard title="Aesthetics" subtitle="Products by category">
                             <div className="h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -314,7 +314,7 @@ export default function MarketingDashboard() {
                 {/* ── SECTION 5: TOP PERFORMERS TABLES ── */}
                 {topPerfs && (
                     <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400">
-                        <ChartCard title="Elite Merchants" subtitle="Top-tier shop performance by GMV">
+                        <ChartCard title="Top sellers" subtitle="By revenue">
                             <div className="overflow-x-auto no-scrollbar">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
@@ -344,14 +344,14 @@ export default function MarketingDashboard() {
                             </div>
                         </ChartCard>
 
-                        <ChartCard title="Power Products" subtitle="Highest yielding inventory assets">
+                        <ChartCard title="Top products" subtitle="By revenue">
                             <div className="overflow-x-auto no-scrollbar">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
-                                            <th className="pb-4 pr-4">Product Asset</th>
+                                            <th className="pb-4 pr-4">Product</th>
                                             <th className="pb-4 pr-4 hidden sm:table-cell">Type</th>
-                                            <th className="pb-4 text-right">Yield</th>
+                                            <th className="pb-4 text-right">Revenue</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
@@ -380,7 +380,7 @@ export default function MarketingDashboard() {
 
                 {/* ── SECTION 6: LIVE ACTIVITY FEED ── */}
                 <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
-                    <ChartCard title="Real-time Protocol Feed" subtitle="Latest platform transactions and registrations">
+                    <ChartCard title="Live activity" subtitle="Latest orders and sign-ups">
                         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                             {Array.isArray(activity) && activity.length > 0 ? (
                                 activity.map((item) => {
@@ -414,15 +414,15 @@ export default function MarketingDashboard() {
                                             {item.value && (
                                                 <div className="text-right">
                                                     <p className="text-sm font-black text-white tabular-nums">KSh {Number(item.value).toLocaleString()}</p>
-                                                    <p className="text-[9px] font-black text-gray-700 uppercase tracking-widest">Protocol Value</p>
+                                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Amount</p>
                                                 </div>
                                             )}
                                         </div>
                                     )
                                 })
                             ) : (
-                                <div className="py-12 text-center text-gray-600 font-bold uppercase tracking-widest text-xs italic">
-                                    No recent activity reported by protocol.
+                                <div className="py-12 text-center text-gray-500 font-bold uppercase tracking-widest text-xs italic">
+                                    No recent activity yet.
                                 </div>
                             )}
                         </div>
@@ -432,8 +432,8 @@ export default function MarketingDashboard() {
 
             {/* ── FOOTER ── */}
             <footer className="border-t border-white/5 pt-12 pb-16 text-center animate-in fade-in duration-1000 delay-700">
-                <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.4em] opacity-40">
-                    Byblos Marketing Intelligence • Secure Read-only Environment • {new Date().getFullYear()}
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.4em] opacity-40">
+                    Byblos Marketing • Read-only • {new Date().getFullYear()}
                 </p>
             </footer>
         </div>

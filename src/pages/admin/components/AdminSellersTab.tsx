@@ -23,15 +23,15 @@ export const AdminSellersTab = ({ sellers, searchQuery, onSearchChange, onView, 
     <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
       <CardHeader className="p-5 md:p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div>
-          <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Marketplace Merchants</CardTitle>
-          <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Full directory of active and pending operators</CardDescription>
+          <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Sellers</CardTitle>
+          <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">All sellers on the marketplace</CardDescription>
         </div>
         <div className="relative group w-full md:w-auto">
           <div className="absolute -inset-0.5 bg-yellow-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-yellow-500 transition-colors" />
           <Input
             type="text"
-            placeholder="Filter merchants..."
+            placeholder="Search sellers..."
             className="pl-12 w-full md:w-[320px] lg:w-[400px] h-11 md:h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-medium text-sm"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -43,10 +43,10 @@ export const AdminSellersTab = ({ sellers, searchQuery, onSearchChange, onView, 
           <table className="w-full text-left border-collapse">
             <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
               <tr>
-                <th className="px-5 md:px-8 py-4 md:py-6">Merchant Identity</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Communications</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 hidden xl:table-cell">Geographic Hub</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Protocol Status</th>
+                <th className="px-5 md:px-8 py-4 md:py-6">Seller</th>
+                <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Contact</th>
+                <th className="px-5 md:px-8 py-4 md:py-6 hidden xl:table-cell">Location</th>
+                <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Status</th>
                 <th className="px-5 md:px-8 py-4 md:py-6 text-right">Actions</th>
               </tr>
             </thead>
@@ -67,7 +67,7 @@ export const AdminSellersTab = ({ sellers, searchQuery, onSearchChange, onView, 
                   <td className="px-8 py-6 hidden lg:table-cell">
                     <div className="space-y-1">
                       <p className="text-sm font-bold text-gray-300">{seller.email}</p>
-                      <p className="text-xs text-gray-500 font-medium tabular-nums">{seller.phone || 'NO SECURE LINE'}</p>
+                      <p className="text-xs text-gray-500 font-medium tabular-nums">{seller.phone || '—'}</p>
                     </div>
                   </td>
                   <td className="px-8 py-6 hidden xl:table-cell">
@@ -75,7 +75,7 @@ export const AdminSellersTab = ({ sellers, searchQuery, onSearchChange, onView, 
                       <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
                         <MapPin className="h-4 w-4 text-gray-400" />
                       </div>
-                      <span className="text-sm font-bold text-gray-300 tracking-tight">{seller.city || 'Global Hub'}</span>
+                      <span className="text-sm font-bold text-gray-300 tracking-tight">{seller.city || '—'}</span>
                     </div>
                   </td>
                   <td className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">
@@ -92,7 +92,7 @@ export const AdminSellersTab = ({ sellers, searchQuery, onSearchChange, onView, 
                         onClick={() => onView(seller.id)}
                       >
                         <Eye className="h-3 md:h-3.5 w-3 md:w-3.5" />
-                        <span className="hidden sm:inline ml-2">Inspect</span>
+                        <span className="hidden sm:inline ml-2">View</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -111,14 +111,10 @@ export const AdminSellersTab = ({ sellers, searchQuery, onSearchChange, onView, 
           </table>
         </div>
       </CardContent>
-      <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+      <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01]">
         <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
-          Active Operators: <span className="text-white ml-2 tabular-nums">{sellers?.length || 0}</span>
+          Total sellers: <span className="text-white ml-2 tabular-nums">{sellers?.length || 0}</span>
         </p>
-        <div className="flex gap-2">
-          <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Prev</Button>
-          <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Next</Button>
-        </div>
       </CardFooter>
     </Card>
   );
