@@ -47,6 +47,13 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- Location hardware is OPTIONAL: live tracking is an opt-in extra, so these
+         must not become implicit Play Store device requirements. Without these,
+         ACCESS_FINE_LOCATION implies required GPS and filters out non-GPS devices. -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
+
     <!-- Android 11+ package visibility so we can resolve the Instagram Story
          intent and the image share chooser (WhatsApp Status). -->
     <queries>
