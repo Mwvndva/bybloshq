@@ -198,6 +198,11 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
+    # The worker runs job crons (node src/worker.js), not the HTTP API, so the
+    # image's HTTP HEALTHCHECK can never pass and shows a misleading "unhealthy".
+    # Disable it — the worker's real health is visible in its logs.
+    healthcheck:
+      disable: true
 
   # Frontend
   frontend:
