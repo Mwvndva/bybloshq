@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 
-// The Byblos founder card is a *literal* card — landscape, credit-card
-// proportions (close to ISO ID-1, ~1.586:1) rendered at a fixed 1080x680 canvas.
-// For sharing it is centred on a 9:16 story frame (see <StoryShareFrame>) so an
-// Instagram Story / WhatsApp Status still fills the screen. Never resize this
-// markup directly; wrap it in <ScaledFounderCard> for on-screen preview.
-const CARD_WIDTH = 1080;
-const CARD_HEIGHT = 680;
+// LOCKED DESIGN — mirrors byblos_card_locked_spec.html. The Byblos founder card
+// is a literal card at a FIXED 900x566 (real card proportions, ~1.59:1). It must
+// never stretch: the root carries explicit width/height + flexShrink 0, and any
+// resizing is done by scaling the whole card via CSS transform (see
+// <ScaledFounderCard>), never by changing its internal width/height or letting a
+// parent flex/grid stretch it. Do not alter colors, spacing, font sizes, or
+// proportions here without an explicit request.
+const CARD_WIDTH = 900;
+const CARD_HEIGHT = 566;
 
 // The 9:16 canvas the card is composited onto for a Story / Status share.
 const STORY_WIDTH = 1080;
@@ -37,47 +39,35 @@ export function FounderCard({
   return (
     <div
       style={{
+        // LOCKED: exact card proportions. Never stretch / never use %.
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
+        flexShrink: 0,
+        boxSizing: 'border-box',
         position: 'relative',
-        background:
-          'linear-gradient(135deg, #1c1a15 0%, #0f0e0b 52%, #050504 100%)',
-        borderRadius: 48,
-        border: '1px solid rgba(245,197,24,0.38)',
-        boxShadow:
-          '0 1px 0 rgba(255,255,255,0.06) inset, 0 40px 90px rgba(0,0,0,0.6)',
-        padding: '64px 72px',
+        background: 'linear-gradient(155deg, #141310 0%, #0a0a09 55%, #000000 100%)',
+        borderRadius: 34,
+        border: '1px solid rgba(245,197,24,0.35)',
+        boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
+        padding: '48px 56px',
         overflow: 'hidden',
         fontFamily: "'Plus Jakarta Sans', 'DM Sans', Arial, sans-serif",
       }}
     >
-      {/* Faint oversized watermark bleeding off the right edge, like a real card. */}
       <img
         src={LOGO_SRC}
         alt=""
         aria-hidden="true"
         style={{
           position: 'absolute',
-          right: -120,
-          bottom: -140,
-          height: 620,
+          top: 24,
+          bottom: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          height: 'calc(100% - 48px)',
           width: 'auto',
           opacity: 0.05,
           filter: 'grayscale(1) brightness(3)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Warm sheen in the top-left corner. */}
-      <div
-        style={{
-          position: 'absolute',
-          top: -160,
-          left: -120,
-          width: 520,
-          height: 520,
-          borderRadius: '50%',
-          background:
-            'radial-gradient(circle, rgba(245,197,24,0.16) 0%, rgba(245,197,24,0) 68%)',
           pointerEvents: 'none',
         }}
       />
@@ -90,31 +80,19 @@ export function FounderCard({
           flexDirection: 'column',
           justifyContent: 'space-between',
           height: '100%',
+          boxSizing: 'border-box',
         }}
       >
-        {/* Header row: brand mark + member number, as on a bank card. */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <img src={LOGO_SRC} alt="Byblos" style={{ height: 54, width: 'auto', display: 'block' }} />
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <img src={LOGO_SRC} alt="Byblos" style={{ height: 44, width: 'auto', display: 'block' }} />
           <div style={{ textAlign: 'right' }}>
             <div
               style={{
-                fontSize: 12,
-                letterSpacing: '0.34em',
-                textTransform: 'uppercase',
-                color: 'rgba(245,197,24,0.7)',
-                fontWeight: 600,
-              }}
-            >
-              Member
-            </div>
-            <div
-              style={{
-                fontSize: 30,
-                letterSpacing: '0.1em',
+                fontSize: 22,
+                letterSpacing: '0.08em',
                 color: '#f5c518',
-                fontWeight: 700,
+                fontWeight: 600,
                 fontVariantNumeric: 'tabular-nums',
-                marginTop: 4,
               }}
             >
               No. {formattedNumber}
@@ -122,56 +100,67 @@ export function FounderCard({
           </div>
         </div>
 
-        {/* The line that carries the card. */}
-        <div style={{ maxWidth: 760 }}>
+        <div style={{ textAlign: 'center', marginTop: 14 }}>
           <span
             style={{
               display: 'inline-block',
               fontSize: 13,
-              letterSpacing: '0.34em',
+              letterSpacing: '0.32em',
               textTransform: 'uppercase',
               color: '#f5c518',
-              fontWeight: 700,
-              marginBottom: 18,
+              fontWeight: 600,
             }}
           >
-            Founder member
+            Founder Member
           </span>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 20px',
+            gap: 18,
+          }}
+        >
           <div
             style={{
+              textAlign: 'center',
               color: '#faf9f5',
-              fontSize: 44,
-              lineHeight: 1.22,
-              fontWeight: 600,
-              letterSpacing: '-0.015em',
+              fontSize: 40,
+              lineHeight: 1.28,
+              fontWeight: 500,
+              letterSpacing: '-0.01em',
+              whiteSpace: 'nowrap', // LOCKED: hero line must stay on one line
             }}
           >
             {quote}
           </div>
-        </div>
-
-        {/* Footer: reassurance line + handle. */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
           <div
             style={{
-              color: 'rgba(250,249,245,0.6)',
-              fontSize: 18,
+              textAlign: 'center',
+              color: 'rgba(250,249,245,0.58)',
+              fontSize: 16,
               lineHeight: 1.4,
               fontWeight: 400,
-              maxWidth: 560,
+              maxWidth: 480,
             }}
           >
             {caption}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.6 }}>
-              <rect x="2" y="2" width="20" height="20" rx="5" stroke="#faf9f5" strokeWidth="1.8" />
-              <circle cx="12" cy="12" r="4.8" stroke="#faf9f5" strokeWidth="1.8" />
-              <circle cx="17.2" cy="6.8" r="1.1" fill="#faf9f5" />
-            </svg>
-            <div style={{ fontSize: 16, letterSpacing: '0.04em', color: 'rgba(250,249,245,0.6)', fontWeight: 500 }}>
-              {instagramHandle}
-            </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.55 }}>
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="#faf9f5" strokeWidth="1.8" />
+            <circle cx="12" cy="12" r="4.8" stroke="#faf9f5" strokeWidth="1.8" />
+            <circle cx="17.2" cy="6.8" r="1.1" fill="#faf9f5" />
+          </svg>
+          <div style={{ fontSize: 14, letterSpacing: '0.04em', color: 'rgba(250,249,245,0.55)', fontWeight: 500 }}>
+            {instagramHandle}
           </div>
         </div>
       </div>
@@ -180,9 +169,10 @@ export function FounderCard({
 }
 
 /**
- * Composites the landscape card onto a 1080x1920 (9:16) story canvas so the
- * shared Instagram Story / WhatsApp Status fills the screen with the card
- * floating centre-stage. This is the node handed to exportCardAsPng().
+ * Composites the fixed-size landscape card onto a 1080x1920 (9:16) story canvas so
+ * the shared Instagram Story / WhatsApp Status fills the screen with the card
+ * centre-stage. The card keeps its exact 900x566 dimensions (no stretch). This is
+ * the node handed to exportCardAsPng().
  */
 export function StoryShareFrame(props: FounderCardProps) {
   return (
@@ -195,7 +185,7 @@ export function StoryShareFrame(props: FounderCardProps) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 64,
+        gap: 72,
         padding: '120px 64px',
         background:
           'radial-gradient(120% 80% at 50% 18%, #16150f 0%, #0a0908 55%, #000000 100%)',
@@ -205,23 +195,12 @@ export function StoryShareFrame(props: FounderCardProps) {
     >
       <div style={{ textAlign: 'center' }}>
         <img src={LOGO_SRC} alt="Byblos" style={{ height: 52, width: 'auto', display: 'block', margin: '0 auto', opacity: 0.9 }} />
-        <div
-          style={{
-            marginTop: 22,
-            fontSize: 30,
-            fontWeight: 700,
-            color: '#faf9f5',
-            letterSpacing: '-0.01em',
-          }}
-        >
+        <div style={{ marginTop: 22, fontSize: 30, fontWeight: 700, color: '#faf9f5', letterSpacing: '-0.01em' }}>
           I just joined Byblos
         </div>
       </div>
 
-      {/* The card, tilted a touch so it reads as an object, not a banner. */}
-      <div style={{ transform: 'rotate(-2.5deg)', filter: 'drop-shadow(0 50px 90px rgba(0,0,0,0.55))' }}>
-        <FounderCard {...props} />
-      </div>
+      <FounderCard {...props} />
 
       <div
         style={{
@@ -241,14 +220,14 @@ export function StoryShareFrame(props: FounderCardProps) {
 }
 
 /**
- * Scales the fixed landscape card down to fit whatever container it is placed in,
- * without reflowing the card's internal layout. Render this on-screen (the
- * share-preview modal); rasterize the hidden full-scale <StoryShareFrame> for the
- * actual file.
+ * Scales the fixed 900x566 card down to fit whatever container it is placed in,
+ * WITHOUT reflowing the card's internal layout (transform: scale only, ratio
+ * preserved). Render this on-screen; rasterize the hidden full-scale
+ * <StoryShareFrame> for the actual file.
  */
 export function ScaledFounderCard(props: FounderCardProps) {
   const outerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.25);
+  const [scale, setScale] = useState(0.333);
 
   useEffect(() => {
     const resize = () => {
