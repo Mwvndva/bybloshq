@@ -41,26 +41,19 @@ function BuyerDashboard() {
   const profileCloseNavigationTimerRef = useRef<number | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
+  const [filterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
   const {
     isEditingProfile, setIsEditingProfile,
-    fullName, setFullName,
-    city, setCity,
-    locationArea, setLocationArea,
     mobilePayment, setMobilePayment,
     whatsappNumber, setWhatsappNumber,
     isSavingProfile, handleSaveProfile,
-  } = useBuyerProfileForm((savedCity) => setFilterCity(savedCity));
+  } = useBuyerProfileForm();
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
   const [myShopsMobileTab, setMyShopsMobileTab] = useState<'online' | 'physical'>('online');
   const followedShops = useBuyerFollowedShops(shopsSearchQuery, activeSection === 'shops');
 
   const { hasUnreadOrders, markOrdersViewed } = useBuyerOrdersNotification(!!user);
-
-  const locationData: Record<string, string[]> = {
-    'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
-  };
 
   // Removed auto-filter by user location - now shows all products by default
   // Users can manually select their city/location if they want to filter
@@ -237,20 +230,13 @@ function BuyerDashboard() {
       </div>
 
       <BuyerProfileSheet
-        city={city}
-        fullName={fullName}
         isEditingProfile={isEditingProfile}
         isOpen={isProfileSidebarOpen}
         isSavingProfile={isSavingProfile}
-        locationArea={locationArea}
-        locationData={locationData}
         mobilePayment={mobilePayment}
         refundAmount={user?.refunds || 0}
         user={user}
         whatsappNumber={whatsappNumber}
-        onCityChange={setCity}
-        onFullNameChange={setFullName}
-        onLocationAreaChange={setLocationArea}
         onLogout={handleLogout}
         onMobilePaymentChange={setMobilePayment}
         onOpenChange={handleProfileSidebarOpenChange}

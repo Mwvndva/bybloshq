@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Instagram, Loader2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { FounderCard, ScaledFounderCard, exportCardAsPng } from './FounderCard';
+import { ScaledFounderCard, StoryShareFrame, exportCardAsPng } from './FounderCard';
 import { useMembership, useJoinMembership } from './useMembership';
 import { shareCardToInstagram, shareCardToWhatsApp } from '@/lib/socialShare';
 
@@ -157,7 +157,7 @@ export function MembershipGate({ enabled }: MembershipGateProps) {
             </DialogTitle>
             <p className="-mt-1 text-xs text-white/55">Share your card and show you shop protected.</p>
 
-            <div className="w-full max-w-[220px] overflow-hidden rounded-2xl">
+            <div className="w-full max-w-[320px] overflow-hidden rounded-2xl">
               <ScaledFounderCard memberNumber={displayNumber} />
             </div>
 
@@ -191,11 +191,11 @@ export function MembershipGate({ enabled }: MembershipGateProps) {
           </div>
         )}
 
-        {/* Off-screen full-resolution card used only for PNG export. */}
+        {/* Off-screen full-resolution 9:16 story frame used only for PNG export. */}
         {step === 'celebrate' && (
           <div aria-hidden="true" style={{ position: 'fixed', left: -99999, top: 0, pointerEvents: 'none' }}>
             <div ref={fullCardRef} style={{ width: 1080, height: 1920 }}>
-              <FounderCard memberNumber={displayNumber} />
+              <StoryShareFrame memberNumber={displayNumber} />
             </div>
           </div>
         )}
