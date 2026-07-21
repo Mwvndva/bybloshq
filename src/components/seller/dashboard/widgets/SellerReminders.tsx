@@ -130,8 +130,8 @@ export function SellerReminders({ sellerProfile, totalProducts, onSelectTab }: S
           title="Finish your business profile"
           description={`${missingLabel} A complete profile builds trust and gets you more followers.`}
           ctaLabel="Complete profile"
-          onCta={() => onSelectTab('settings')}
-          onDismiss={() => dismiss('profile')}
+          onCta={() => { onSelectTab('settings'); }}
+          onDismiss={() => { dismiss('profile'); }}
         />
       )}
       {showProducts && (
@@ -140,8 +140,8 @@ export function SellerReminders({ sellerProfile, totalProducts, onSelectTab }: S
           title="Add your first product"
           description="Your shop is live but empty — add a product so buyers have something to discover and click."
           ctaLabel="Add a product"
-          onCta={() => onSelectTab('products')}
-          onDismiss={() => dismiss('products')}
+          onCta={() => { onSelectTab('products'); }}
+          onDismiss={() => { dismiss('products'); }}
         />
       )}
     </div>
