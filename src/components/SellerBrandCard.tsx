@@ -213,7 +213,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                             {shopName}
                         </h3>
                         <span
-                            className="inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-[1px] text-[8px] font-black uppercase tracking-wide"
+                            className="inline-flex shrink-0 items-center gap-[1px] rounded-full border px-1 py-px text-[5px] font-black uppercase tracking-tight leading-none"
                             style={{
                                 borderColor: shopModeStyle.border,
                                 backgroundColor: shopModeStyle.background,
@@ -221,7 +221,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                             }}
                             title={isPhysicalShop ? 'Physical shop' : 'Online shop'}
                         >
-                            {isPhysicalShop ? <MapPin className="h-2 w-2" /> : <Wifi className="h-2 w-2" />}
+                            {isPhysicalShop ? <MapPin className="h-[5px] w-[5px]" /> : <Wifi className="h-[5px] w-[5px]" />}
                             {shopModeStyle.label}
                         </span>
                     </div>
