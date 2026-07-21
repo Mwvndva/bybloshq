@@ -129,6 +129,9 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
     const clientCount = getNumber(seller.clientCount, seller.client_count);
     const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as unknown as Record<string, unknown>).wishlist_count, (seller as unknown as Record<string, unknown>).total_wishlist_count);
     const hasAvatar = Boolean(avatarUrl && !avatarFailed);
+    // A shop with nothing to show yet reads as clutter when every stat is 0 —
+    // surface a single "New" badge instead of three empty counters.
+    const isNewShop = clientCount === 0 && wishlistCount === 0 && knockCount === 0;
 
     useEffect(() => {
         setKnockCount(getNumber(seller.knockCount, seller.knock_count));
@@ -210,16 +213,15 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                             {shopName}
                         </h3>
                         <span
-                            className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide"
+                            className="inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-[1px] text-[8px] font-black uppercase tracking-wide"
                             style={{
                                 borderColor: shopModeStyle.border,
                                 backgroundColor: shopModeStyle.background,
-                                boxShadow: `0 0 16px ${shopModeStyle.shadow}`,
                                 color: shopModeStyle.color
                             }}
                             title={isPhysicalShop ? 'Physical shop' : 'Online shop'}
                         >
-                            {isPhysicalShop ? <MapPin className="h-2.5 w-2.5" /> : <Wifi className="h-2.5 w-2.5" />}
+                            {isPhysicalShop ? <MapPin className="h-2 w-2" /> : <Wifi className="h-2 w-2" />}
                             {shopModeStyle.label}
                         </span>
                     </div>
@@ -233,29 +235,37 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-1.5">
-                <div className="px-2 py-1.5 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
-                        <Users className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Followers</span>
-                    </div>
-                    <p className="text-sm font-black tabular-nums text-white">{clientCount}</p>
+            {isNewShop ? (
+                <div className="mt-3 flex justify-center">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
+                        New
+                    </span>
                 </div>
-                <div className="px-2 py-1.5 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
-                        <Heart className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Saved</span>
+            ) : (
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                    <div className="px-2 py-1.5 text-center">
+                        <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
+                            <Users className="h-3 w-3" />
+                            <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Followers</span>
+                        </div>
+                        <p className="text-sm font-black tabular-nums text-white">{clientCount}</p>
                     </div>
-                    <p className="text-sm font-black tabular-nums text-white">{wishlistCount}</p>
-                </div>
-                <div className="px-2 py-1.5 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
-                        <MousePointerClick className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Clicks</span>
+                    <div className="px-2 py-1.5 text-center">
+                        <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
+                            <Heart className="h-3 w-3" />
+                            <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Saved</span>
+                        </div>
+                        <p className="text-sm font-black tabular-nums text-white">{wishlistCount}</p>
                     </div>
-                    <p className="text-sm font-black tabular-nums text-white">{knockCount}</p>
+                    <div className="px-2 py-1.5 text-center">
+                        <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
+                            <MousePointerClick className="h-3 w-3" />
+                            <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Clicks</span>
+                        </div>
+                        <p className="text-sm font-black tabular-nums text-white">{knockCount}</p>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {showUnfollow && onUnfollow && (
                 <div className="mt-3 flex justify-end">

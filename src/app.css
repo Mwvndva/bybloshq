@@ -644,3 +644,33 @@ body.dashboard-active .seller-service-charge-notice * {
     background-color: var(--byblos-surface) !important;
 }
 
+
+/* ------------------------------------------------------------------ *
+ * Seller dashboard — elevated card surfaces                          *
+ * The .dashboard-layout remaps every card bg to --byblos-surface     *
+ * (#0a0a0a) on a pure-black (#000) page, so cards blend in. Inside    *
+ * the .seller-surface scope we lift card-level containers (rounded-   *
+ * 2xl / 3xl panels) off the background with a lighter fill, a hair-   *
+ * line top highlight and a real drop shadow so they read as physical  *
+ * surfaces. Nested rows use rounded-xl and are intentionally skipped. *
+ * ------------------------------------------------------------------ */
+.seller-surface :is([class*="rounded-2xl"], [class*="rounded-3xl"]):is([class*="bg-white/["], [class*="bg-black"], [class*="bg-[#0a0a0a]"], [class*="bg-[#0A0A0A]"]) {
+    background-color: #161616 !important;
+    border-color: rgba(255, 255, 255, 0.09) !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                0 14px 30px -16px rgba(0, 0, 0, 0.95),
+                0 4px 10px -6px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* Balance hero — the single most important number, tinted with the shop
+   accent and given a stronger lift so it clearly outranks every other card. */
+.seller-surface .seller-balance-hero {
+    background: linear-gradient(135deg,
+        rgba(var(--theme-accent-rgb, 245, 158, 11), 0.22),
+        rgba(var(--theme-accent-rgb, 245, 158, 11), 0.05) 55%,
+        #141414 100%) !important;
+    border-color: rgba(var(--theme-accent-rgb, 245, 158, 11), 0.32) !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset,
+                0 24px 50px -20px rgba(0, 0, 0, 0.95),
+                0 0 42px -12px rgba(var(--theme-accent-rgb, 245, 158, 11), 0.38) !important;
+}
