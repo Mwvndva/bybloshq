@@ -17,7 +17,7 @@ interface OverviewTabProps {
 export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, onSelectTab }: OverviewTabProps) {
   const recentOrders = (analytics.recentOrders || []).slice(0, 5);
 
-  const balance = analytics.availableBalance ?? analytics.balance ?? 0;
+  const balance = analytics.availableBalance ?? analytics.balance;
   const revenue = analytics.totalRevenue || 0;
   const clicks = Number(analytics.clickCount || 0);
   const wishlist = Number(analytics.wishlistCount || 0);
@@ -52,7 +52,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
           <p className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">{formatCurrency(balance)}</p>
           <button
             type="button"
-            onClick={() => onSelectTab('withdrawals')}
+            onClick={() => { onSelectTab('withdrawals'); }}
             className="mt-4 inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-black shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-transform active:scale-95"
             style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
           >
@@ -138,7 +138,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={() => onSelectTab('products')}
+                onClick={() => { onSelectTab('products'); }}
                 className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-black shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-transform active:scale-95"
                 style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
               >
@@ -147,7 +147,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
               </button>
               <button
                 type="button"
-                onClick={() => setShowMetrics((v) => !v)}
+                onClick={() => { setShowMetrics((v) => !v); }}
                 className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-2.5 text-xs font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:text-sm"
               >
                 {showMetrics ? 'Hide metrics' : 'Show metrics'}
