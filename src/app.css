@@ -588,11 +588,11 @@ body.dashboard-active .seller-service-charge-notice * {
     color: #0f172a !important;
 }
 
-[data-theme="light"] [role="dialog"] [class*="text-white"] {
+[data-theme="light"] [role="dialog"] [class*="text-white"]:not([class*="dark:text-white"]) {
     color: #0f172a !important;
 }
 
-[data-theme="light"] [role="dialog"] [class*="text-white/"] {
+[data-theme="light"] [role="dialog"] [class*="text-white/"]:not([class*="dark:text-white"]) {
     color: #475569 !important;
 }
 
@@ -909,14 +909,14 @@ body.dashboard-active .seller-service-charge-notice * {
 }
 
 /* White/near-white text → dark text in light mode */
-[data-theme="light"] .dashboard-layout [class*="text-white"],
-[data-theme="light"] .dashboard-layout [class*="text-gray-"],
-[data-theme="light"] .dashboard-layout [class*="text-zinc-"] {
+[data-theme="light"] .dashboard-layout [class*="text-white"]:not([class*="dark:text-white"]),
+[data-theme="light"] .dashboard-layout [class*="text-gray-"]:not([class*="dark:text-white"]),
+[data-theme="light"] .dashboard-layout [class*="text-zinc-"]:not([class*="dark:text-white"]) {
     color: var(--byblos-text) !important;
 }
 
 /* Muted/subdued text */
-[data-theme="light"] .dashboard-layout [class*="text-white/"] {
+[data-theme="light"] .dashboard-layout [class*="text-white/"]:not([class*="dark:text-white"]) {
     color: var(--byblos-muted) !important;
 }
 
