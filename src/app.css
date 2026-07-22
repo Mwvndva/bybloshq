@@ -883,89 +883,52 @@ body.dashboard-active .seller-service-charge-notice * {
     color: #000000 !important;
 }
 
-/* ── Shop accent picker pill (top-right of shop page) ───────────────────── */
-.shop-accent-picker {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 50;
-}
-
-.shop-accent-picker__toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.4rem 0.75rem;
-    border-radius: 9999px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-    font-size: 0.7rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-}
-
-.shop-accent-picker__toggle:hover {
-    background: rgba(0, 0, 0, 0.62);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-}
-
-.shop-accent-picker__panel {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    background: rgba(10, 10, 10, 0.92);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 1rem;
-    padding: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 10rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    animation: accent-panel-in 0.15s ease;
-}
-
-@keyframes accent-panel-in {
+/* ── Shop page theme picker (top-right pill) ────────────────────────────── */
+@keyframes shop-theme-panel-in {
     from { opacity: 0; transform: scale(0.95) translateY(-4px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);    }
 }
 
-.shop-accent-picker__label {
-    font-size: 0.6rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.5);
-    padding: 0 0.25rem;
+/* ── Shop page light/dark scoping ───────────────────────────────────────── */
+/* Applied via data-shop-theme attribute on the shop page root div.          */
+
+.shop-page-root[data-shop-theme="dark"] {
+    --byblos-bg: #000000;
+    --byblos-surface: #0a0a0a;
+    --byblos-surface-soft: #141414;
+    --byblos-text: #f5f5f5;
+    --byblos-muted: #a3a3a3;
+    --byblos-border: #262626;
+    background: #000000;
+    color: #f5f5f5;
 }
 
-.shop-accent-picker__swatches {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.375rem;
+.shop-page-root[data-shop-theme="light"] {
+    --byblos-bg: #f5f4f0;
+    --byblos-surface: #ffffff;
+    --byblos-surface-soft: #ede9e3;
+    --byblos-text: #0f0f0e;
+    --byblos-muted: #6b675f;
+    --byblos-border: #d6d2c8;
+    background: #f5f4f0;
+    color: #0f0f0e;
 }
 
-.shop-accent-picker__swatch {
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
+/* Search input colours follow the shop page theme, not the app theme */
+.shop-page-root[data-shop-theme="light"] input[type="text"] {
+    background-color: rgba(255,255,255,0.88) !important;
+    color: #0f0f0e !important;
+    border-color: var(--byblos-border) !important;
 }
 
-.shop-accent-picker__swatch:hover {
-    transform: scale(1.15);
+.shop-page-root[data-shop-theme="light"] input[type="text"]::placeholder {
+    color: rgba(15,15,14,0.38) !important;
 }
 
-.shop-accent-picker__swatch--active {
-    border-color: #ffffff;
-    transform: scale(1.15);
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+/* Cards / product grid container in light mode */
+.shop-page-root[data-shop-theme="light"] .shop-products-card {
+    background: rgba(255,255,255,0.82) !important;
+    border-color: rgba(0,0,0,0.08) !important;
 }
+
 
