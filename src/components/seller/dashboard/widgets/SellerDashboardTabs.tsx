@@ -73,7 +73,7 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
   }
 
   return (
-    <div className="sticky top-14 z-40 -mx-4 mb-5 border-y border-stone-200 bg-[#f8f7f2]/95 px-4 py-2 backdrop-blur sm:top-16 sm:-mx-6 sm:mb-7 sm:px-6 lg:static lg:mx-auto lg:mb-8 lg:w-full lg:max-w-4xl lg:rounded-2xl lg:border lg:bg-white lg:p-1.5 lg:shadow-[0_12px_35px_rgba(17,17,17,0.08)]">
+    <div className="sticky top-14 z-40 -mx-4 mb-5 border-y border-slate-200/60 bg-[#f8f7f2]/95 px-4 py-2 backdrop-blur sm:top-16 sm:-mx-6 sm:mb-7 sm:px-6 lg:static lg:mx-auto lg:mb-8 lg:w-full lg:max-w-4xl lg:rounded-2xl lg:border lg:border-slate-200/60 lg:bg-white lg:p-1.5 lg:shadow-[0_12px_35px_rgba(17,17,17,0.08)]">
       <div className="flex items-center justify-start gap-2 overflow-x-auto pb-1 sm:gap-3 lg:justify-center lg:overflow-visible lg:pb-0">
         {tabs.map(({ id, label }) => {
           const Icon = tabIcons[id];
@@ -84,7 +84,7 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
               onClick={() => onSelectTab(id)}
               className={`relative flex min-h-10 flex-shrink-0 items-center justify-center space-x-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all duration-300 sm:space-x-2 sm:px-4 sm:text-sm lg:min-h-0 lg:px-5 lg:py-2.5 ${activeTab === id
                 ? 'bg-[var(--theme-button-bg,#facc15)] text-[var(--theme-button-text,#000000)] border-[var(--theme-accent,#facc15)] shadow-[0_8px_22px_rgba(0,0,0,0.18)]'
-                : 'text-stone-600 border-transparent hover:text-black hover:bg-stone-100'
+                : 'text-slate-600 border-transparent hover:text-slate-950 hover:bg-slate-100'
                 } ${activeTab === id ? 'seller-tab-selected' : ''}`}
             >
               <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />

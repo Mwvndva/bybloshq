@@ -749,53 +749,21 @@ body.dashboard-active .seller-service-charge-notice * {
     color: var(--byblos-text) !important;
 }
 
-/* ── Undo dark-surface remapping for light mode ─────────────────────────────
-   In dark mode, the remap rules force white/light-bg utilities to charcoal.
-   In light mode we must reverse this so white cards stay white, slate text
-   stays dark, etc.  We cannot simply remove the global rules (they apply on
-   dark mode too), so we override with explicit light values here.           */
-
-[data-theme="light"] :where(
-    .dashboard-layout,
-    .byblos-light-page,
-    .auth-page
-) :is([class*="text-slate-"], [class*="text-stone-"], [class*="text-neutral-"]) {
-    color: unset !important;
-}
+/* ── Light theme border & surface remapping ─────────────────────────────────
+   Eliminate thick black borders by mapping all Tailwind border classes to soft
+   hairline borders in light mode. Set explicit card elevation shadows.       */
 
 [data-theme="light"] :where(
     .dashboard-layout,
     .byblos-light-page,
     .auth-page
 ) :is(
-    [class*="text-slate-400"], [class*="text-slate-500"],
-    [class*="text-slate-600"], [class*="text-slate-700"],
-    [class*="text-stone-400"], [class*="text-stone-500"],
-    [class*="text-neutral-400"], [class*="text-neutral-500"]
+    [class*="border-slate-"], [class*="border-stone-"],
+    [class*="border-neutral-"], [class*="border-gray-"],
+    [class*="border-zinc-"], [class*="border-white"],
+    [class*="border-black"], [class*="border"]
 ) {
-    color: unset !important;
-}
-
-[data-theme="light"] :where(
-    .dashboard-layout,
-    .byblos-light-page,
-    .auth-page
-) :is(
-    [class*="bg-white"],
-    [class*="bg-slate-50"], [class*="bg-slate-100"],
-    [class*="bg-stone-50"], [class*="bg-stone-100"],
-    [class*="bg-gray-50"], [class*="bg-gray-100"],
-    [class*="bg-neutral-50"], [class*="bg-neutral-100"]
-) {
-    background-color: unset !important;
-}
-
-[data-theme="light"] :where(
-    .dashboard-layout,
-    .byblos-light-page,
-    .auth-page
-) :is([class*="border-slate-"], [class*="border-stone-"], [class*="border-neutral-"]) {
-    border-color: unset !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
 /* Dark bg utilities → light surface in light mode */
@@ -804,13 +772,13 @@ body.dashboard-active .seller-service-charge-notice * {
 [data-theme="light"] .dashboard-layout [class*="bg-gray-900"],
 [data-theme="light"] .dashboard-layout [class*="bg-zinc-"],
 [data-theme="light"] .dashboard-layout [class*="bg-white/["] {
-    background-color: var(--byblos-surface) !important;
+    background-color: #ffffff !important;
 }
 
 [data-theme="light"] .dashboard-layout [class*="border-white"],
 [data-theme="light"] .dashboard-layout [class*="border-gray-"],
 [data-theme="light"] .dashboard-layout [class*="border-zinc-"] {
-    border-color: var(--byblos-border) !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
 /* White/near-white text → dark text in light mode */
@@ -825,13 +793,14 @@ body.dashboard-active .seller-service-charge-notice * {
     color: var(--byblos-muted) !important;
 }
 
-/* Form controls */
+/* Form controls in light mode */
 [data-theme="light"] .dashboard-layout input,
 [data-theme="light"] .dashboard-layout textarea,
 [data-theme="light"] .dashboard-layout select {
     background-color: #ffffff !important;
-    border-color: var(--byblos-border) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
     color: var(--byblos-text) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
 [data-theme="light"] .dashboard-layout input::placeholder,
@@ -839,22 +808,40 @@ body.dashboard-active .seller-service-charge-notice * {
     color: var(--byblos-muted) !important;
 }
 
-/* ── Seller surface cards — light mode elevation ─────────────────────────── */
+/* ── Seller surface cards — light mode physical elevation ──────────────── */
 [data-theme="light"] .seller-surface :is(
+    [class*="rounded-xl"],
     [class*="rounded-2xl"],
-    [class*="rounded-3xl"]
-):is(
-    [class*="bg-white/["],
-    [class*="bg-black"],
-    [class*="bg-[#0a0a0a]"],
-    [class*="bg-[#0A0A0A]"]
+    [class*="rounded-3xl"],
+    section
 ) {
+    background-color: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.07) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 10px 28px -6px rgba(15, 23, 42, 0.07),
+        0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Dashboard navigation tabs bar in light mode */
+[data-theme="light"] .seller-surface div.sticky,
+[data-theme="light"] .seller-surface div.lg\:rounded-2xl {
     background-color: #ffffff !important;
     border-color: rgba(0, 0, 0, 0.08) !important;
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.9) inset,
-        0 4px 12px -4px rgba(0, 0, 0, 0.08),
-        0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 12px 32px -8px rgba(15, 23, 42, 0.09) !important;
+}
+
+/* Interactive unselected tabs in light mode */
+[data-theme="light"] .seller-surface button:not(.seller-tab-selected):not([style*="background-color"]) {
+    border-color: transparent !important;
+    color: #64748b !important;
+}
+
+[data-theme="light"] .seller-surface button:not(.seller-tab-selected):not([style*="background-color"]):hover {
+    background-color: rgba(0, 0, 0, 0.04) !important;
+    color: #0f0f0e !important;
 }
 
 /* Balance hero in light mode */
@@ -866,8 +853,36 @@ body.dashboard-active .seller-service-charge-notice * {
     border-color: rgba(var(--theme-accent-rgb, 198, 155, 25), 0.22) !important;
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.95) inset,
-        0 8px 24px -8px rgba(0, 0, 0, 0.10),
+        0 12px 28px -8px rgba(15, 23, 42, 0.10),
         0 0 28px -8px rgba(var(--theme-accent-rgb, 198, 155, 25), 0.20) !important;
+}
+
+/* Service Charge Notice in light mode */
+[data-theme="light"] .seller-service-charge-notice {
+    background-color: #fefce8 !important;
+    border-color: rgba(234, 179, 8, 0.3) !important;
+    color: #713f12 !important;
+    box-shadow: 0 4px 14px -2px rgba(234, 179, 8, 0.12) !important;
+}
+
+/* Tables in light mode */
+[data-theme="light"] .seller-surface table {
+    background-color: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+[data-theme="light"] .seller-surface table thead,
+[data-theme="light"] .seller-surface table tr.bg-slate-50 {
+    background-color: #f8fafc !important;
+    border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .seller-surface table tr {
+    border-bottom-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light"] .seller-surface table tr:hover {
+    background-color: #f8fafc !important;
 }
 
 /* Mobile nav bottom bar in light mode */
