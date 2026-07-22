@@ -60,7 +60,7 @@ export function useWishlist() {
       is_digital: item.is_digital,
       service_options: item.service_options,
       service_locations: item.service_locations,
-      images: item.images,
+      images: item.images || (item as unknown as Record<string, unknown>).image_urls as string[] || (item as unknown as Record<string, unknown>).imageUrls as string[],
     };
   }, []);
 

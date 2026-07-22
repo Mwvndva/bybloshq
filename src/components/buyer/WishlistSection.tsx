@@ -52,7 +52,7 @@ export default function WishlistSection() {
           placeholder="Search wishlist..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+          className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder-gray-500 rounded-xl pl-10 h-10 shadow-sm transition-colors"
         />
       </div>
 
