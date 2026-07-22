@@ -27,16 +27,16 @@ export function SellerForgotPasswordDialog({ open, onOpenChange, email, onEmailC
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="forgot-email" className="text-xs font-medium text-slate-700">Email Address</Label>
+              <Label htmlFor="forgot-email" className="text-xs font-semibold text-slate-700 dark:text-slate-200">Email Address</Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none z-10">
-                  <Mail className="h-4 w-4 text-slate-400" />
+                  <Mail className="h-4 w-4 text-slate-400 dark:text-white/40" />
                 </div>
                 <Input
                   id="forgot-email"
                   type="email"
                   placeholder="your@email.com"
-                  className="!pl-12 h-10 rounded-xl bg-white border-slate-300 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                  className="!pl-12 h-10 rounded-xl bg-white dark:bg-[#141414] border-slate-300 dark:border-white/10 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   value={email}
                   onChange={(e) => onEmailChange(e.target.value)}
                   required
