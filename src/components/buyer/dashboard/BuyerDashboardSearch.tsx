@@ -18,29 +18,18 @@ export function BuyerDashboardSearch({
   if (activeSection !== 'shop' && activeSection !== 'shops') return null;
 
   return (
-    <div style={{
-      padding: '6px 18px 20px',
-      flexShrink: 0,
-      display: 'flex',
-      justifyContent: 'center',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 14,
-        padding: '0 12px', height: 36,
-        width: '100%',
-        maxWidth: activeSection === 'shop' ? 760 : 560,
-        boxShadow: '0 8px 25px rgba(0,0,0,0.45)',
-      }}>
-        <Search size={14} color="rgba(255,255,255,0.5)" style={{ flexShrink: 0 }} />
+    <div className="w-full px-4 sm:px-6 pb-4 pt-1 flex shrink-0 justify-center">
+      <div
+        className={`flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] px-3.5 h-10 w-full shadow-sm dark:shadow-[0_8px_25px_rgba(0,0,0,0.45)] transition-colors duration-200 ${
+          activeSection === 'shop' ? 'max-w-[760px]' : 'max-w-[560px]'
+        }`}
+      >
+        <Search className="h-4 w-4 text-slate-400 dark:text-white/50 shrink-0" />
         <input
           value={activeSection === 'shop' ? productSearchQuery : shopsSearchQuery}
           onChange={event => activeSection === 'shop' ? onProductSearchChange(event.target.value) : onShopsSearchChange(event.target.value)}
           placeholder={activeSection === 'shop' ? 'Search products...' : 'Search my shops...'}
-          style={{
-            flex: 1, background: 'transparent', border: 'none', outline: 'none',
-            color: '#ffffff', fontSize: 13,
-          }}
+          className="flex-1 bg-transparent border-none outline-none text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 text-xs sm:text-sm font-medium"
         />
       </div>
     </div>

@@ -34,7 +34,7 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
   if (compact) {
     return (
       <>
-        <Card className="overflow-hidden rounded-2xl border border-stone-200 bg-white text-stone-950 shadow-none">
+        <Card className="overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
           <CardContent className="space-y-4 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -42,30 +42,30 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
                   <Wallet className="h-5 w-5 text-[#F5C518]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">Refund balance</p>
-                  <p className="mt-1 text-xl font-black leading-none text-stone-950">{formatCurrency(refundAmount)}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Refund balance</p>
+                  <p className="mt-1 text-xl font-black leading-none text-slate-950 dark:text-white">{formatCurrency(refundAmount)}</p>
                 </div>
               </div>
-              <Badge className="shrink-0 border-stone-200 bg-stone-100 text-[10px] font-semibold text-stone-700 hover:bg-stone-100">
+              <Badge className="shrink-0 border-slate-200 dark:border-white/10 bg-slate-200 dark:bg-zinc-800 text-[10px] font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800">
                 {isLoadingPending ? 'Checking' : hasPendingRequest ? 'Pending' : refundAmount > 0 ? 'Available' : 'Empty'}
               </Badge>
             </div>
 
             {!isLoadingPending && hasPendingRequest ? (
               <div className="space-y-2 rounded-xl border border-amber-400/25 bg-amber-500/10 p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-amber-100">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-300">
                   <Clock className="h-4 w-4" />
                   Awaiting Admin Approval
                 </div>
                 {pendingRequests.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between gap-3 text-xs text-amber-100/80">
+                  <div key={request.id} className="flex items-center justify-between gap-3 text-xs text-amber-700 dark:text-amber-200/90 font-medium">
                     <span>{formatCurrency(parseFloat(request.amount.toString()))}</span>
                     <span className="text-right">{format(new Date(request.requested_at), 'MMM d, yyyy')}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs leading-5 text-stone-500">
+              <p className="text-xs leading-5 text-slate-600 dark:text-slate-400 font-medium">
                 {refundAmount > 0 ? 'Available for withdrawal.' : 'No refunds available right now.'}
               </p>
             )}
@@ -73,18 +73,17 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
             <Button
               onClick={handleWithdrawClick}
               disabled={hasPendingRequest || isLoadingPending || refundAmount <= 0}
-              className="h-9 w-full bg-[#F5C518] text-xs font-bold text-black hover:bg-[#e4b70f] disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-10 w-full bg-[#F5C518] text-xs font-black text-black hover:bg-yellow-300 disabled:opacity-50"
             >
-              {hasPendingRequest ? (
+              {isLoadingPending ? (
                 <>
-                  <Clock className="mr-2 h-4 w-4" />
-                  Withdrawal Pending
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Checking status...
                 </>
+              ) : hasPendingRequest ? (
+                'Withdrawal Pending'
               ) : refundAmount > 0 ? (
-                <>
-                  <TrendingUp className="mr-2 h-4 w-4" />
-                  Request Withdrawal
-                </>
+                'Withdraw Refund'
               ) : (
                 'No Refunds Available'
               )}
@@ -92,7 +91,14 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
           </CardContent>
         </Card>
 
-        <RefundConfirmDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} refundAmount={refundAmount} onConfirm={handleConfirmWithdraw} isSubmitting={isSubmitting} formatCurrency={formatCurrency} />
+        <RefundConfirmDialog
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onConfirm={handleConfirmWithdraw}
+          refundAmount={refundAmount}
+          formatCurrency={formatCurrency}
+          isSubmitting={isSubmitting}
+        />
       </>
     );
   }
