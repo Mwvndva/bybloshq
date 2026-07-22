@@ -21,10 +21,12 @@ import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/sh
 import { isNativeApp } from '@/lib/mobileApp';
 import { useShopAccentOnly } from '@/hooks/useShopTheme';
 import { useSellerProfileQuery } from '@/hooks/seller/useSellerProfile';
+import { useAppTheme } from '@/hooks/useAppTheme';
 import type { Theme } from '@/types';
 import type { SellerDashboardProps, SellerTabId } from './dashboard/types';
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
+  useAppTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();

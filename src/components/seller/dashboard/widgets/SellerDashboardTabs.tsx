@@ -32,11 +32,11 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
   if (isNativeApp()) {
     return (
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/95 backdrop-blur"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--byblos-border,rgba(255,255,255,0.1))] bg-[var(--byblos-surface,#0a0a0a)]/95 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-label="Dashboard sections"
       >
-        <div className="flex items-stretch justify-around px-1.5 py-1">
+        <div className="flex items-center justify-around px-1 py-1.5">
           {tabs.map(({ id, label }) => {
             const Icon = tabIcons[id];
             const selected = activeTab === id;
@@ -47,23 +47,25 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
                 onClick={() => onSelectTab(id)}
                 aria-label={label}
                 aria-current={selected ? 'page' : undefined}
-                className={`relative flex flex-1 items-center justify-center rounded-xl py-2.5 transition-colors ${
+                className={`relative flex flex-1 flex-col items-center justify-center py-1.5 px-0.5 transition-all duration-200 ${
                   selected
-                    ? 'text-[var(--theme-accent,#facc15)]'
-                    : 'text-white/45 hover:text-white/80'
+                    ? 'text-[var(--theme-accent,#facc15)] font-bold'
+                    : 'text-[var(--byblos-muted,#999999)] hover:text-[var(--byblos-text,#ffffff)] font-medium'
                 }`}
               >
                 <span
-                  className={`flex items-center justify-center rounded-xl p-2 transition-colors ${
-                    selected ? 'bg-white/10' : ''
+                  className={`relative flex items-center justify-center rounded-full px-3 py-1 transition-all duration-200 ${
+                    selected ? 'bg-[var(--theme-accent,#facc15)]/15 scale-105' : ''
                   }`}
                 >
-                  <Icon className="h-6 w-6" />
+                  <Icon className="h-5 w-5" />
+                  {id === 'orders' && hasUnreadOrders && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--byblos-surface,#0a0a0a)] bg-red-500 animate-pulse" />
+                  )}
                 </span>
-
-                {id === 'orders' && hasUnreadOrders && (
-                  <span className="absolute right-1/2 top-1 h-2.5 w-2.5 translate-x-3.5 rounded-full border-2 border-black bg-red-500 animate-pulse" />
-                )}
+                <span className="mt-1 text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
+                  {label}
+                </span>
               </button>
             );
           })}
