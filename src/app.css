@@ -894,13 +894,31 @@ body.dashboard-active .seller-service-charge-notice * {
 
 .shop-page-root[data-shop-theme="dark"] {
     --byblos-bg: #000000;
-    --byblos-surface: #0a0a0a;
-    --byblos-surface-soft: #141414;
-    --byblos-text: #f5f5f5;
-    --byblos-muted: #a3a3a3;
-    --byblos-border: #262626;
-    background: #000000;
-    color: #f5f5f5;
+    --byblos-surface: #141414;
+    --byblos-surface-soft: #1a1a1a;
+    --byblos-text: #f8fafc;
+    --byblos-muted: #94a3b8;
+    --byblos-border: rgba(255, 255, 255, 0.12);
+    background: #000000 !important;
+    color: #f8fafc !important;
+}
+
+.shop-page-root[data-shop-theme="dark"] .shop-products-card {
+    background: #0d0d0d !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset,
+                0 24px 60px -16px rgba(0, 0, 0, 0.95),
+                0 4px 14px -4px rgba(0, 0, 0, 0.6) !important;
+}
+
+.shop-page-root[data-shop-theme="dark"] input[type="text"] {
+    background-color: #0e0e0e !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.shop-page-root[data-shop-theme="dark"] input[type="text"]::placeholder {
+    color: rgba(255, 255, 255, 0.45) !important;
 }
 
 .shop-page-root[data-shop-theme="light"] {
@@ -908,27 +926,28 @@ body.dashboard-active .seller-service-charge-notice * {
     --byblos-surface: #ffffff;
     --byblos-surface-soft: #ede9e3;
     --byblos-text: #0f0f0e;
-    --byblos-muted: #6b675f;
-    --byblos-border: #d6d2c8;
-    background: #f5f4f0;
-    color: #0f0f0e;
+    --byblos-muted: #64748b;
+    --byblos-border: #e2e0d8;
+    background: #f5f4f0 !important;
+    color: #0f0f0e !important;
 }
 
-/* Search input colours follow the shop page theme, not the app theme */
+.shop-page-root[data-shop-theme="light"] .shop-products-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset,
+                0 20px 48px -15px rgba(0, 0, 0, 0.08),
+                0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
 .shop-page-root[data-shop-theme="light"] input[type="text"] {
-    background-color: rgba(255,255,255,0.88) !important;
+    background-color: #ffffff !important;
     color: #0f0f0e !important;
-    border-color: var(--byblos-border) !important;
+    border-color: #e2e0d8 !important;
 }
 
 .shop-page-root[data-shop-theme="light"] input[type="text"]::placeholder {
-    color: rgba(15,15,14,0.38) !important;
-}
-
-/* Cards / product grid container in light mode */
-.shop-page-root[data-shop-theme="light"] .shop-products-card {
-    background: rgba(255,255,255,0.82) !important;
-    border-color: rgba(0,0,0,0.08) !important;
+    color: #94a3b8 !important;
 }
 
 

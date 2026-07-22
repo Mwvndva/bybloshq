@@ -6,14 +6,12 @@ import { useUpdateThemeMutation } from '@/hooks/seller/useSellerProfile';
 import { useToast } from '@/hooks/use-toast';
 
 const themeColors = [
-  { name: 'White', value: 'default', color: '#ffffff' },
-  { name: 'Black', value: 'black', color: '#020617' },
+  { name: 'Yellow', value: 'yellow', color: '#facc15' },
   { name: 'Pink', value: 'pink', color: '#ec4899' },
   { name: 'Brown', value: 'brown', color: '#92400e' },
   { name: 'Orange', value: 'orange', color: '#f97316' },
   { name: 'Green', value: 'green', color: '#10b981' },
   { name: 'Red', value: 'red', color: '#ef4444' },
-  { name: 'Yellow', value: 'yellow', color: '#facc15' },
 ];
 
 interface ThemeSelectorProps {
@@ -21,13 +19,15 @@ interface ThemeSelectorProps {
   onThemeChange?: (theme: Theme) => void;
 }
 
-export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: ThemeSelectorProps) => {
-  const [selectedTheme, setSelectedTheme] = useState<Theme>(currentTheme);
+export const ThemeSelector = ({ currentTheme = 'yellow', onThemeChange }: ThemeSelectorProps) => {
+  const initialTheme = (currentTheme === 'default' || currentTheme === 'black') ? 'yellow' : currentTheme;
+  const [selectedTheme, setSelectedTheme] = useState<Theme>(initialTheme);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    setSelectedTheme(currentTheme);
+    const validTheme = (currentTheme === 'default' || currentTheme === 'black') ? 'yellow' : currentTheme;
+    setSelectedTheme(validTheme);
   }, [currentTheme]);
 
   const handleThemeSelect = (theme: Theme) => {
