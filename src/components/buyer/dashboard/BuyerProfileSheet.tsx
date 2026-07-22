@@ -93,7 +93,7 @@ function ProfileDetail({
   const isInput = Boolean(editable && editing);
   return (
     <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100/70 dark:bg-white/[0.04] p-3 transition-colors">
-      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-white/50">
+      <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">
         <Icon className="h-3.5 w-3.5 text-[#F5C518]" />
         {label}
       </div>
@@ -140,16 +140,11 @@ export function BuyerProfileSheet({
         className="flex h-dvh w-full max-w-none transform-gpu flex-col overflow-hidden border-l border-slate-200 dark:border-white/10 bg-white dark:bg-black p-0 text-slate-950 dark:text-white shadow-2xl shadow-black/40 will-change-transform data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[430px]"
       >
         <SheetHeader className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] px-5 py-5 pr-14 text-left">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#F5C518]/35 bg-[#F5C518] text-base font-black text-black">
-              {profileInitial}
-            </div>
-            <div className="min-w-0">
-              <SheetTitle className="truncate text-lg font-bold text-slate-950 dark:text-white">Buyer Profile</SheetTitle>
-              <SheetDescription className="mt-1 text-xs text-slate-600 dark:text-white/50">
-                Profile details, refund balance, theme settings, and account actions.
-              </SheetDescription>
-            </div>
+          <div className="min-w-0">
+            <SheetTitle className="truncate text-lg font-bold text-slate-950 dark:text-white">Buyer Profile</SheetTitle>
+            <SheetDescription className="mt-1 text-xs text-slate-600 dark:text-white/60">
+              Profile details, refund balance, theme settings, and account actions.
+            </SheetDescription>
           </div>
         </SheetHeader>
 

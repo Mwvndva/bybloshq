@@ -110,6 +110,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         isOutOfStock={isOutOfStock}
         canOpenGallery={productImages.length > 0}
         imageCount={productImages.length}
+        images={productImages}
         onOpenGallery={() => setGalleryIndex(0)}
       />
 
