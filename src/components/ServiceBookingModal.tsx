@@ -55,14 +55,14 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="flex flex-col w-[95vw] max-w-[400px] max-h-[85dvh] gap-0 p-0 overflow-hidden rounded-[32px] border border-white/5 shadow-2xl bg-[#0a0a0a] text-white">
-                <DialogHeader className="p-6 pb-2 shrink-0 space-y-4 pt-8">
-                    <div className="mx-auto w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
-                        <CalendarIcon className="h-6 w-6 text-yellow-400" />
+            <DialogContent className="flex flex-col w-[95vw] max-w-[400px] max-h-[85dvh] gap-0 p-0 overflow-hidden rounded-[32px] border border-slate-200 dark:border-white/10 shadow-2xl bg-white dark:bg-[#0a0a0a] text-slate-950 dark:text-white transition-colors duration-200">
+                <DialogHeader className="p-6 pb-2 shrink-0 space-y-4 pt-8 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a]">
+                    <div className="mx-auto w-12 h-12 bg-yellow-50 dark:bg-white/5 rounded-2xl flex items-center justify-center border border-yellow-200 dark:border-white/10">
+                        <CalendarIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                     </div>
                     <div className="space-y-1 text-center">
-                        <DialogTitle className="text-xl font-bold bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">Book Service</DialogTitle>
-                        <DialogDescription className="text-sm font-medium text-[#666]">
+                        <DialogTitle className="text-xl font-bold text-slate-950 dark:text-white">Book Service</DialogTitle>
+                        <DialogDescription className="text-sm font-medium text-slate-600 dark:text-[#666]">
                             {product.name}
                         </DialogDescription>
                     </div>
@@ -77,17 +77,17 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                     selected={date}
                                     onSelect={setDate}
                                     disabled={isDateDisabled}
-                                    className="bg-transparent text-white p-0"
+                                    className="bg-transparent text-slate-950 dark:text-white p-0"
                                     classNames={{
-                                        nav_button: "border-0 hover:bg-white/5 hover:text-white text-[#666] h-8 w-8",
-                                        caption: "text-sm font-bold pt-1",
-                                        head_cell: "text-[#666] text-[0.8rem] font-medium pt-1 w-8 sm:w-9",
+                                        nav_button: "border-0 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-950 dark:hover:text-white text-slate-500 dark:text-[#666] h-8 w-8",
+                                        caption: "text-sm font-bold pt-1 text-slate-950 dark:text-white",
+                                        head_cell: "text-slate-500 dark:text-[#666] text-[0.8rem] font-medium pt-1 w-8 sm:w-9",
                                         cell: "h-8 w-8 sm:h-9 sm:w-9 text-center text-sm p-0 flex items-center justify-center",
-                                        day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-white/5 rounded-xl aria-selected:opacity-100 text-yellow-400",
+                                        day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl aria-selected:opacity-100 text-yellow-600 dark:text-yellow-400",
                                         day_selected: "!bg-yellow-400 !text-black hover:!bg-yellow-400 hover:!text-black focus:!bg-yellow-400 focus:!text-black font-bold",
-                                        day_today: "text-white bg-white/5 font-bold",
-                                        day_outside: "text-[#333] opacity-50",
-                                        day_disabled: "text-[#333] opacity-50 hover:bg-transparent",
+                                        day_today: "text-slate-950 dark:text-white bg-slate-100 dark:bg-white/5 font-bold",
+                                        day_outside: "text-slate-300 dark:text-[#333] opacity-50",
+                                        day_disabled: "text-slate-300 dark:text-[#333] opacity-50 hover:bg-transparent",
                                     }}
                                 />
                             </div>
@@ -95,9 +95,9 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">Time</Label>
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-[#666]">Time</Label>
                                 <Select value={time} onValueChange={setTime}>
-                                    <SelectTrigger className="w-full h-11 rounded-xl bg-white/5 border-0 text-base sm:text-sm font-medium focus:ring-1 focus:ring-yellow-400 transition-all text-white">
+                                    <SelectTrigger className="w-full h-11 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-transparent text-base sm:text-sm font-medium focus:ring-1 focus:ring-yellow-400 transition-all text-slate-950 dark:text-white">
                                         <div className="flex items-center gap-2">
                                             <Clock className="w-4 h-4 text-[#666]" />
                                             <SelectValue placeholder="Select time" />
