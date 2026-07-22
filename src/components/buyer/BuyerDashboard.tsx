@@ -77,8 +77,8 @@ function BuyerDashboard() {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
 
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: var(--byblos-bg, #000000); overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: var(--byblos-bg, #000000); overflow-x: hidden;';
 
     return () => {
       document.body.style.cssText = originalBodyStyle;
@@ -159,12 +159,11 @@ function BuyerDashboard() {
 
 
   return (
-    <div className="page-enter byblos-light-page min-w-0 overflow-x-hidden" style={{
+    <div className="page-enter dashboard-layout min-w-0 overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200" style={{
       display: 'flex', flexDirection: 'column',
       minHeight: '100svh',
       height: '100svh',
       overflow: 'hidden',
-      background: '#000000',
     }}>
       <BuyerDashboardHeader />
       <BuyerDashboardSearch
