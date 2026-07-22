@@ -535,6 +535,118 @@ body.dashboard-active .seller-service-charge-notice * {
     color: var(--byblos-text);
 }
 
+/* ── Radix Dialogs & Seller Modals Theme Parity Styling ───────────── */
+[data-theme="light"] [role="dialog"],
+[data-theme="light"] [data-radix-dialog-content],
+.light [role="dialog"],
+.light [data-radix-dialog-content] {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.18) !important;
+}
+
+[data-theme="light"] [role="dialog"] label,
+[data-theme="light"] [role="dialog"] h1,
+[data-theme="light"] [role="dialog"] h2,
+[data-theme="light"] [role="dialog"] h3,
+[data-theme="light"] [role="dialog"] [class*="DialogTitle"],
+.light [role="dialog"] label {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] [role="dialog"] p,
+[data-theme="light"] [role="dialog"] [class*="DialogDescription"] {
+    color: #475569 !important;
+}
+
+[data-theme="light"] [role="dialog"] input,
+[data-theme="light"] [role="dialog"] textarea,
+[data-theme="light"] [role="dialog"] select,
+.light [role="dialog"] input,
+.light [role="dialog"] textarea,
+.light [role="dialog"] select {
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] [role="dialog"] input::placeholder,
+[data-theme="light"] [role="dialog"] textarea::placeholder,
+.light [role="dialog"] input::placeholder,
+.light [role="dialog"] textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+[data-theme="light"] [role="dialog"] :is(
+    [class*="bg-black"],
+    [class*="bg-zinc-"],
+    [class*="bg-[#0"]
+):not(.btn-primary):not([class*="bg-yellow"]):not([class*="bg-amber"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+    background-color: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] [role="dialog"] [class*="text-white"] {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] [role="dialog"] [class*="text-white/"] {
+    color: #475569 !important;
+}
+
+/* Dark Mode Modal Parity */
+[data-theme="dark"] [role="dialog"],
+[data-theme="dark"] [data-radix-dialog-content],
+.dark [role="dialog"],
+.dark [data-radix-dialog-content] {
+    background-color: #0d0d0d !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] [role="dialog"] label,
+[data-theme="dark"] [role="dialog"] h1,
+[data-theme="dark"] [role="dialog"] h2,
+[data-theme="dark"] [role="dialog"] h3 {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] [role="dialog"] p,
+[data-theme="dark"] [role="dialog"] [class*="DialogDescription"] {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="dark"] [role="dialog"] input,
+[data-theme="dark"] [role="dialog"] textarea,
+[data-theme="dark"] [role="dialog"] select,
+.dark [role="dialog"] input,
+.dark [role="dialog"] textarea,
+.dark [role="dialog"] select {
+    background-color: #161616 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] [role="dialog"] input::placeholder,
+[data-theme="dark"] [role="dialog"] textarea::placeholder,
+.dark [role="dialog"] input::placeholder,
+.dark [role="dialog"] textarea::placeholder {
+    color: rgba(255, 255, 255, 0.45) !important;
+}
+
+[data-theme="dark"] [role="dialog"] :is(
+    [class*="bg-slate-50"],
+    [class*="bg-slate-100"],
+    [class*="bg-slate-200"],
+    [class*="bg-white/"]
+):not([class*="bg-yellow"]):not([class*="bg-amber"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
 .dashboard-layout [class*="bg-black"],
 .dashboard-layout [class*="bg-gray-800"],
 .dashboard-layout [class*="bg-gray-900"],
