@@ -16,7 +16,7 @@ const NativeAppHome = () => (
     </Link>
 
     <Link to="/creator/login" className="absolute right-5 top-5">
-      <Button className="h-10 rounded-full border border-white/15 bg-white/[0.06] px-5 text-xs font-black uppercase tracking-[0.14em] text-white shadow-[0_12px_30px_rgba(0,0,0,0.5)] hover:bg-white/10">
+      <Button className="h-7 rounded-full border border-white/15 bg-white/[0.06] px-3 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm hover:bg-white/10">
         Ambassador
       </Button>
     </Link>
