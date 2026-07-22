@@ -79,8 +79,12 @@ export default function CreatorRegister() {
     }
     setLoading(true);
     try {
-      const result = await registerMutation.mutateAsync({ token, ...form, referralCode } as unknown as Parameters<typeof registerMutation.mutateAsync>[0]) as Record<string, unknown>;
-      if ((result?.data as Record<string, unknown>)?.status === 'created') {
+      const result = await registerMutation.mutateAsync({ token, ...form, referralCode }) as Record<string, unknown>;
+      // The API returns response.data directly. Check status at both the top level
+      // (most backends) and one level deeper (some return { data: { status } }).
+      const status = (result as { status?: string })?.status
+        ?? (result as { data?: { status?: string } })?.data?.status;
+      if (status === 'created') {
         toast.success('Ambassador access added. You can now log in.');
         navigate('/creator/login');
         return;
@@ -94,6 +98,30 @@ export default function CreatorRegister() {
       setLoading(false);
     }
   };
+
+  // Guard: the registration form requires a valid invite token in the URL.
+  // Without it, the backend will always reject the submission. Show a clear
+  // error state instead of letting the user fill out the form and fail later.
+  if (!token) {
+    return (
+      <main className="auth-page min-h-screen bg-[#090909] text-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center space-y-4 shadow-2xl">
+          <div className="text-4xl">🔗</div>
+          <h1 className="text-xl font-black tracking-tight">Invalid invite link</h1>
+          <p className="text-sm text-white/55 leading-relaxed">
+            This ambassador invite link is missing or has expired. Please ask the seller to resend your invite, then open the link from the email.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/creator/login')}
+            className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-yellow-400 text-sm font-black text-black hover:bg-yellow-300 transition"
+          >
+            Go to ambassador login
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="auth-page byblos-light-page min-h-screen bg-[#090909] text-white">
