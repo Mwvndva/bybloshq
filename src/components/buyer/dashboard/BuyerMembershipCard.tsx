@@ -103,8 +103,22 @@ export function BuyerMembershipCard() {
             </button>
           </div>
 
-          {/* Off-screen full-resolution 9:16 story frame used only for PNG export. */}
-          <div aria-hidden="true" style={{ position: 'fixed', left: -99999, top: 0, pointerEvents: 'none' }}>
+          {/* Off-screen full-resolution 9:16 story frame — used only for PNG
+              export via html-to-image. Kept out of view with opacity:0 + z-index
+              rather than an extreme left offset, because some WebKit/Safari
+              builds fail to resolve computed styles for elements far outside the
+              viewport (producing a blank or logo-less exported PNG). */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              opacity: 0,
+              pointerEvents: 'none',
+              zIndex: -1,
+            }}
+          >
             <div ref={fullCardRef} style={{ width: 1080, height: 1920 }}>
               <StoryShareFrame memberNumber={displayNumber} />
             </div>
