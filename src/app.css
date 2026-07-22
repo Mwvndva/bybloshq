@@ -674,3 +674,298 @@ body.dashboard-active .seller-service-charge-notice * {
                 0 24px 50px -20px rgba(0, 0, 0, 0.95),
                 0 0 42px -12px rgba(var(--theme-accent-rgb, 245, 158, 11), 0.38) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT THEME
+   Applied when <html data-theme="light"> — overrides the dark-default vars,
+   re-lights Tailwind HSL tokens, and undoes the dark-surface remapping rules
+   that normally make white backgrounds charcoal.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="light"] {
+    /* Byblos palette — warm white base, light grey surfaces, rich black text */
+    --byblos-bg: #f5f4f0;
+    --byblos-surface: #ffffff;
+    --byblos-surface-soft: #ede9e3;
+    --byblos-text: #0f0f0e;
+    --byblos-muted: #6b675f;
+    --byblos-border: #d6d2c8;
+    --byblos-yellow: #c69b19;
+    --byblos-yellow-soft: #fef9e7;
+    --byblos-black: #0f0f0e;
+
+    /* Aliases */
+    --bg: var(--byblos-bg);
+    --surface: var(--byblos-surface);
+    --surface2: var(--byblos-surface-soft);
+    --border: var(--byblos-border);
+    --accent: var(--byblos-yellow);
+    --accent-dim: var(--byblos-yellow-soft);
+    --text: var(--byblos-text);
+    --text-muted: var(--byblos-muted);
+    --text-sub: #7a766e;
+
+    /* Tailwind HSL design tokens */
+    --background: 40 12% 96%;
+    --foreground: 30 4% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 4% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 4% 6%;
+    --primary: 42 85% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 36 10% 92%;
+    --secondary-foreground: 30 4% 12%;
+    --muted: 36 10% 92%;
+    --muted-foreground: 30 6% 42%;
+    --accent: 36 10% 90%;
+    --accent-foreground: 30 4% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 36 10% 84%;
+    --input: 36 10% 84%;
+    --ring: 42 85% 45%;
+    --sidebar-background: 36 12% 98%;
+    --sidebar-foreground: 30 4% 8%;
+    --sidebar-primary: 42 85% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 36 10% 92%;
+    --sidebar-accent-foreground: 30 4% 10%;
+    --sidebar-border: 36 10% 86%;
+    --sidebar-ring: 42 85% 45%;
+}
+
+/* html/body background in light mode */
+[data-theme="light"] html,
+[data-theme="light"] body,
+[data-theme="light"] #root {
+    background: var(--byblos-bg) !important;
+    color: var(--byblos-text);
+}
+
+/* Dashboard wrapper */
+[data-theme="light"] .dashboard-layout {
+    background: var(--byblos-bg) !important;
+    color: var(--byblos-text) !important;
+}
+
+/* ── Undo dark-surface remapping for light mode ─────────────────────────────
+   In dark mode, the remap rules force white/light-bg utilities to charcoal.
+   In light mode we must reverse this so white cards stay white, slate text
+   stays dark, etc.  We cannot simply remove the global rules (they apply on
+   dark mode too), so we override with explicit light values here.           */
+
+[data-theme="light"] :where(
+    .dashboard-layout,
+    .byblos-light-page,
+    .auth-page
+) :is([class*="text-slate-"], [class*="text-stone-"], [class*="text-neutral-"]) {
+    color: unset !important;
+}
+
+[data-theme="light"] :where(
+    .dashboard-layout,
+    .byblos-light-page,
+    .auth-page
+) :is(
+    [class*="text-slate-400"], [class*="text-slate-500"],
+    [class*="text-slate-600"], [class*="text-slate-700"],
+    [class*="text-stone-400"], [class*="text-stone-500"],
+    [class*="text-neutral-400"], [class*="text-neutral-500"]
+) {
+    color: unset !important;
+}
+
+[data-theme="light"] :where(
+    .dashboard-layout,
+    .byblos-light-page,
+    .auth-page
+) :is(
+    [class*="bg-white"],
+    [class*="bg-slate-50"], [class*="bg-slate-100"],
+    [class*="bg-stone-50"], [class*="bg-stone-100"],
+    [class*="bg-gray-50"], [class*="bg-gray-100"],
+    [class*="bg-neutral-50"], [class*="bg-neutral-100"]
+) {
+    background-color: unset !important;
+}
+
+[data-theme="light"] :where(
+    .dashboard-layout,
+    .byblos-light-page,
+    .auth-page
+) :is([class*="border-slate-"], [class*="border-stone-"], [class*="border-neutral-"]) {
+    border-color: unset !important;
+}
+
+/* Dark bg utilities → light surface in light mode */
+[data-theme="light"] .dashboard-layout [class*="bg-black"],
+[data-theme="light"] .dashboard-layout [class*="bg-gray-800"],
+[data-theme="light"] .dashboard-layout [class*="bg-gray-900"],
+[data-theme="light"] .dashboard-layout [class*="bg-zinc-"],
+[data-theme="light"] .dashboard-layout [class*="bg-white/["] {
+    background-color: var(--byblos-surface) !important;
+}
+
+[data-theme="light"] .dashboard-layout [class*="border-white"],
+[data-theme="light"] .dashboard-layout [class*="border-gray-"],
+[data-theme="light"] .dashboard-layout [class*="border-zinc-"] {
+    border-color: var(--byblos-border) !important;
+}
+
+/* White/near-white text → dark text in light mode */
+[data-theme="light"] .dashboard-layout [class*="text-white"],
+[data-theme="light"] .dashboard-layout [class*="text-gray-"],
+[data-theme="light"] .dashboard-layout [class*="text-zinc-"] {
+    color: var(--byblos-text) !important;
+}
+
+/* Muted/subdued text */
+[data-theme="light"] .dashboard-layout [class*="text-white/"] {
+    color: var(--byblos-muted) !important;
+}
+
+/* Form controls */
+[data-theme="light"] .dashboard-layout input,
+[data-theme="light"] .dashboard-layout textarea,
+[data-theme="light"] .dashboard-layout select {
+    background-color: #ffffff !important;
+    border-color: var(--byblos-border) !important;
+    color: var(--byblos-text) !important;
+}
+
+[data-theme="light"] .dashboard-layout input::placeholder,
+[data-theme="light"] .dashboard-layout textarea::placeholder {
+    color: var(--byblos-muted) !important;
+}
+
+/* ── Seller surface cards — light mode elevation ─────────────────────────── */
+[data-theme="light"] .seller-surface :is(
+    [class*="rounded-2xl"],
+    [class*="rounded-3xl"]
+):is(
+    [class*="bg-white/["],
+    [class*="bg-black"],
+    [class*="bg-[#0a0a0a]"],
+    [class*="bg-[#0A0A0A]"]
+) {
+    background-color: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9) inset,
+        0 4px 12px -4px rgba(0, 0, 0, 0.08),
+        0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Balance hero in light mode */
+[data-theme="light"] .seller-surface .seller-balance-hero {
+    background: linear-gradient(135deg,
+        rgba(var(--theme-accent-rgb, 198, 155, 25), 0.14),
+        rgba(var(--theme-accent-rgb, 198, 155, 25), 0.04) 55%,
+        #ffffff 100%) !important;
+    border-color: rgba(var(--theme-accent-rgb, 198, 155, 25), 0.22) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 8px 24px -8px rgba(0, 0, 0, 0.10),
+        0 0 28px -8px rgba(var(--theme-accent-rgb, 198, 155, 25), 0.20) !important;
+}
+
+/* Mobile nav bottom bar in light mode */
+[data-theme="light"] .dashboard-layout [class*="bg-black/95"],
+[data-theme="light"] .dashboard-layout [class*="bg-black/90"] {
+    background-color: rgba(255, 255, 255, 0.96) !important;
+    border-color: var(--byblos-border) !important;
+}
+
+/* Tab selected pill in light mode keeps black text on accent bg */
+[data-theme="light"] body.dashboard-active .seller-tab-selected,
+[data-theme="light"] body.dashboard-active .seller-tab-selected * {
+    color: #000000 !important;
+}
+
+/* ── Shop accent picker pill (top-right of shop page) ───────────────────── */
+.shop-accent-picker {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 50;
+}
+
+.shop-accent-picker__toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.shop-accent-picker__toggle:hover {
+    background: rgba(0, 0, 0, 0.62);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+.shop-accent-picker__panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 1rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 10rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    animation: accent-panel-in 0.15s ease;
+}
+
+@keyframes accent-panel-in {
+    from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.shop-accent-picker__label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    padding: 0 0.25rem;
+}
+
+.shop-accent-picker__swatches {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.375rem;
+}
+
+.shop-accent-picker__swatch {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+}
+
+.shop-accent-picker__swatch:hover {
+    transform: scale(1.15);
+}
+
+.shop-accent-picker__swatch--active {
+    border-color: #ffffff;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+}
+

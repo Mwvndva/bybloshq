@@ -8,11 +8,14 @@ import { type Theme } from '@/hooks/useShopTheme';
 import { isAesthetic } from './shopPage.shared';
 import { useShopPage } from './useShopPage';
 import { ShopHero } from './ShopHero';
+import { ShopAccentPicker } from './ShopAccentPicker';
 
 const ShopPage = () => {
   const {
     sellerInfo,
     themeClasses,
+    selectedAccent,
+    setSelectedAccent,
     products,
     filteredProducts,
     searchQuery,
@@ -67,7 +70,9 @@ const ShopPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
+    <div className="min-h-screen" style={{ background: 'var(--byblos-bg, #000)', color: 'var(--byblos-text, #f5f5f5)' }}>
+      {/* Accent colour picker — top-right, always visible */}
+      <ShopAccentPicker selectedAccent={selectedAccent} onAccentChange={setSelectedAccent} />
       <ShopHero
         sellerInfo={sellerInfo}
         bannerLoadFailed={bannerLoadFailed}

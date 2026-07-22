@@ -201,4 +201,33 @@ export function useShopTheme(themeName: Theme = 'default') {
     return config.classes;
 }
 
+// ─── Accent-only variant ─────────────────────────────────────────────────────
+// Use this in the seller dashboard so the shop accent colour only tints
+// interactive highlights (buttons, borders, glows) without overriding the
+// page background or text colour that are governed by the app theme.
+
+const ACCENT_KEYS = ['--theme-accent', '--theme-accent-rgb', '--theme-button-bg', '--theme-button-text'] as const;
+
+export function useShopAccentOnly(themeName: Theme = 'default') {
+    const config = useMemo(() => THEME_DEFINITIONS[themeName] || THEME_DEFINITIONS.default, [themeName]);
+
+    useEffect(() => {
+        const root = document.documentElement;
+        const vars = config.vars;
+
+        ACCENT_KEYS.forEach((key) => {
+            if (vars[key]) root.style.setProperty(key, vars[key]);
+        });
+
+        return () => {
+            ACCENT_KEYS.forEach((key) => root.style.removeProperty(key));
+        };
+    }, [config]);
+
+    return config.classes;
+}
+
+
+
+
 
