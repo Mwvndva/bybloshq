@@ -41,11 +41,17 @@ export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePicke
 
   const resolved = resolveShopTheme(theme);
   const ActiveIcon = OPTIONS.find((o) => o.value === theme)?.Icon ?? Monitor;
+  const activeLabel = theme === 'system' ? `System (${resolved === 'light' ? 'Light' : 'Dark'})` : (theme === 'light' ? 'Light' : 'Dark');
 
   return (
     <div
       ref={ref}
-      style={{ position: 'fixed', top: '0.85rem', right: '0.85rem', zIndex: 60 }}
+      style={{
+        position: 'fixed',
+        top: '1rem',
+        right: '1.25rem',
+        zIndex: 60,
+      }}
     >
       {/* Toggle pill */}
       <button
@@ -53,25 +59,26 @@ export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePicke
         aria-label="Toggle shop page theme"
         onClick={() => setOpen((v) => !v)}
         style={{
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
-          gap: '0.3rem',
-          padding: '0.35rem 0.65rem',
+          gap: '0.5rem',
+          padding: '0.45rem 0.9rem',
           borderRadius: '9999px',
-          background: 'rgba(0,0,0,0.42)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          border: '1px solid rgba(255,255,255,0.18)',
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.22)',
           color: '#ffffff',
           cursor: 'pointer',
-          fontSize: '0.68rem',
+          fontSize: '0.8125rem',
           fontWeight: 700,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.28)',
-          transition: 'background 0.18s',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
+          transition: 'all 0.2s ease',
         }}
       >
-        <ActiveIcon className="h-3 w-3" />
-        <span style={{ opacity: 0.85 }}>{resolved === 'light' ? 'Light' : 'Dark'}</span>
+        <ActiveIcon className="h-4 w-4 shrink-0 text-yellow-400" />
+        <span style={{ fontSize: '0.8125rem', letterSpacing: '0.01em' }}>{activeLabel}</span>
       </button>
 
       {/* Dropdown panel */}
@@ -81,20 +88,20 @@ export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePicke
           aria-label="Shop page theme"
           style={{
             position: 'absolute',
-            top: 'calc(100% + 0.4rem)',
+            top: 'calc(100% + 0.5rem)',
             right: 0,
-            background: 'rgba(8,8,8,0.94)',
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
-            border: '1px solid rgba(255,255,255,0.11)',
-            borderRadius: '0.9rem',
-            padding: '0.45rem',
+            background: 'rgba(12, 12, 12, 0.96)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.16)',
+            borderRadius: '1rem',
+            padding: '0.5rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.2rem',
-            minWidth: '7.5rem',
-            boxShadow: '0 8px 28px rgba(0,0,0,0.55)',
-            animation: 'shop-theme-panel-in 0.14s ease',
+            gap: '0.25rem',
+            minWidth: '9.5rem',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.65)',
+            animation: 'shop-theme-panel-in 0.15s ease',
           }}
         >
           {OPTIONS.map(({ value, Icon, label }) => {
@@ -109,21 +116,22 @@ export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePicke
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.55rem',
-                  padding: '0.45rem 0.6rem',
-                  borderRadius: '0.55rem',
+                  gap: '0.65rem',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '0.65rem',
                   border: 'none',
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  color: active ? '#ffffff' : 'rgba(255,255,255,0.6)',
-                  fontSize: '0.72rem',
+                  background: active ? 'rgba(255, 255, 255, 0.16)' : 'transparent',
+                  color: active ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.8125rem',
                   fontWeight: active ? 700 : 500,
                   cursor: 'pointer',
                   width: '100%',
                   textAlign: 'left',
+                  whiteSpace: 'nowrap',
                   transition: 'background 0.15s, color 0.15s',
                 }}
               >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-yellow-400' : ''}`} />
                 {label}
               </button>
             );
