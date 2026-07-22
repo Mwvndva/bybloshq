@@ -42,12 +42,12 @@ export const BuyerRegisterSteps = ({
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-0.5 sm:space-y-2">
-                        <Label htmlFor="firstName" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                        <Label htmlFor="firstName" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                           First Name
                         </Label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                            <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                            <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                           </div>
                           <Input
                             id="firstName"
@@ -57,19 +57,19 @@ export const BuyerRegisterSteps = ({
                             value={formData.firstName}
                             onChange={handleInputChange}
                             required
-                            className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.firstName ? 'border-red-500' : ''}`}
+                            className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.firstName ? 'border-red-500' : ''}`}
                           />
                         </div>
-                        {errors.firstName && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.firstName}</p>}
+                        {errors.firstName && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1 font-medium">{errors.firstName}</p>}
                       </div>
 
                       <div className="space-y-0.5 sm:space-y-2">
-                        <Label htmlFor="lastName" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                        <Label htmlFor="lastName" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                           Last Name
                         </Label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                            <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                            <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                           </div>
                           <Input
                             id="lastName"
@@ -79,20 +79,20 @@ export const BuyerRegisterSteps = ({
                             value={formData.lastName}
                             onChange={handleInputChange}
                             required
-                            className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.lastName ? 'border-red-500' : ''}`}
+                            className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.lastName ? 'border-red-500' : ''}`}
                           />
                         </div>
-                        {errors.lastName && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.lastName}</p>}
+                        {errors.lastName && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1 font-medium">{errors.lastName}</p>}
                       </div>
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="email" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="email" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         Email Address
                       </Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Mail className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                          <Mail className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                         </div>
                         <Input
                           id="email"
@@ -102,20 +102,20 @@ export const BuyerRegisterSteps = ({
                           value={formData.email}
                           onChange={handleInputChange}
                           required
-                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.email ? 'border-red-500' : ''}`}
+                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.email ? 'border-red-500' : ''}`}
                         />
                       </div>
-                      {errors.email && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.email}</p>}
+                      {errors.email && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1 font-medium">{errors.email}</p>}
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="mobilePayment" className="text-[10px] sm:text-sm font-medium text-gray-200 flex items-center justify-between">
+                      <Label htmlFor="mobilePayment" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
                         Mobile Payment (M-Pesa)
-                        <span className="text-[8px] sm:text-[10px] text-yellow-400 font-medium">For STK Push & Refunds</span>
+                        <span className="text-[8px] sm:text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold">For STK Push & Refunds</span>
                       </Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Phone className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                          <Phone className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                         </div>
                         <Input
                           id="mobilePayment"
@@ -125,20 +125,20 @@ export const BuyerRegisterSteps = ({
                           value={formData.mobilePayment}
                           onChange={handleInputChange}
                           required
-                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.mobilePayment ? 'border-red-500' : ''}`}
+                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.mobilePayment ? 'border-red-500' : ''}`}
                         />
                       </div>
-                      {errors.mobilePayment && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.mobilePayment}</p>}
+                      {errors.mobilePayment && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1 font-medium">{errors.mobilePayment}</p>}
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-medium text-gray-200 flex items-center justify-between">
+                      <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
                         WhatsApp Number
-                        <span className="text-[8px] sm:text-[10px] text-yellow-400 font-medium">For Order Updates</span>
+                        <span className="text-[8px] sm:text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold">For Order Updates</span>
                       </Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Phone className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                          <Phone className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                         </div>
                         <Input
                           id="whatsappNumber"
@@ -148,10 +148,10 @@ export const BuyerRegisterSteps = ({
                           value={formData.whatsappNumber}
                           onChange={handleInputChange}
                           required
-                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.whatsappNumber ? 'border-red-500' : ''}`}
+                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.whatsappNumber ? 'border-red-500' : ''}`}
                         />
                       </div>
-                      {errors.whatsappNumber && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.whatsappNumber}</p>}
+                      {errors.whatsappNumber && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1 font-medium">{errors.whatsappNumber}</p>}
                     </div>
                   </>
                 )}
@@ -160,12 +160,12 @@ export const BuyerRegisterSteps = ({
                 {currentStep === 2 && (
                   <>
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="city" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="city" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         City
                       </Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none z-10">
-                          <MapPin className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                          <MapPin className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                         </div>
                         <Select
                           value={formData.city}
@@ -177,11 +177,11 @@ export const BuyerRegisterSteps = ({
                             }));
                           }}
                         >
-                          <SelectTrigger className="!pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm">
+                          <SelectTrigger className="!pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm">
                             <SelectValue placeholder="Nairobi" />
                           </SelectTrigger>
-                          <SelectContent className="bg-white border-slate-200 text-slate-950">
-                            <SelectItem value="Nairobi" className="text-slate-950 hover:bg-slate-100 focus:bg-slate-100 text-xs">
+                          <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/20 text-slate-950 dark:text-white z-[110]">
+                            <SelectItem value="Nairobi" className="text-slate-900 dark:text-white focus:bg-yellow-400 focus:text-black text-xs">
                               Nairobi
                             </SelectItem>
                           </SelectContent>
@@ -190,12 +190,12 @@ export const BuyerRegisterSteps = ({
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="location" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="location" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         Area/Location
                       </Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none z-10">
-                          <MapPin className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                          <MapPin className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                         </div>
                         <Select
                           value={formData.location}
@@ -207,12 +207,12 @@ export const BuyerRegisterSteps = ({
                           }}
                           disabled={!formData.city}
                         >
-                          <SelectTrigger className="!pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-sm">
+                          <SelectTrigger className="!pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-sm">
                             <SelectValue placeholder={formData.city ? "Select your area" : "Select city first"} />
                           </SelectTrigger>
-                          <SelectContent className="bg-white border-slate-200 text-slate-950">
+                          <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/20 text-slate-950 dark:text-white z-[110]">
                             {formData.city && locationData[formData.city]?.map((area) => (
-                              <SelectItem key={area} value={area} className="text-slate-950 hover:bg-slate-100 focus:bg-slate-100 text-xs">
+                              <SelectItem key={area} value={area} className="text-slate-900 dark:text-white focus:bg-yellow-400 focus:text-black text-xs">
                                 {area}
                               </SelectItem>
                             ))}
@@ -227,12 +227,12 @@ export const BuyerRegisterSteps = ({
                 {currentStep === 3 && (
                   <>
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="password" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="password" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         Password
                       </Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Lock className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                          <Lock className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                         </div>
                         <Input
                           id="password"
@@ -242,11 +242,11 @@ export const BuyerRegisterSteps = ({
                           value={formData.password}
                           onChange={handleInputChange}
                           required
-                          className={`input-mobile !pl-8 sm:!pl-14 !pr-8 sm:!pr-12 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.password ? 'border-red-500' : ''}`}
+                          className={`input-mobile !pl-8 sm:!pl-14 !pr-8 sm:!pr-12 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.password ? 'border-red-500' : ''}`}
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-gray-300 hover:text-gray-300"
+                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
@@ -260,8 +260,8 @@ export const BuyerRegisterSteps = ({
 
                     {/* Password Strength Checklist */}
                     {formData.password && (
-                      <div className="p-3 bg-gray-900/50 rounded-xl border border-gray-800">
-                        <p className="text-xs font-semibold text-gray-300 mb-2">Password Requirements:</p>
+                      <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-2">Password Requirements:</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {[
                             { label: "At least 8 characters", met: checkPasswordStrength(formData.password).minLength },
@@ -271,15 +271,15 @@ export const BuyerRegisterSteps = ({
                           ].map((req, index) => (
                             <div key={index} className="flex items-center space-x-2">
                               {req.met ? (
-                                <div className="bg-green-100 p-0.5 rounded-full">
-                                  <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
+                                <div className="bg-green-500/20 p-0.5 rounded-full">
+                                  <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600 dark:text-green-400" />
                                 </div>
                               ) : (
-                                <div className="bg-gray-800 p-0.5 rounded-full">
-                                  <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-gray-300" />
+                                <div className="bg-slate-300 dark:bg-gray-700 p-0.5 rounded-full">
+                                  <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-slate-600 dark:text-gray-300" />
                                 </div>
                               )}
-                              <span className={`text-[10px] sm:text-xs ${req.met ? 'text-green-400 font-medium' : 'text-gray-300'}`}>
+                              <span className={`text-[10px] sm:text-xs ${req.met ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-slate-600 dark:text-gray-300'}`}>
                                 {req.label}
                               </span>
                             </div>
@@ -289,12 +289,12 @@ export const BuyerRegisterSteps = ({
                     )}
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="confirmPassword" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         Confirm Password
                       </Label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Lock className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                          <Lock className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-slate-400 dark:text-slate-500" />
                         </div>
                         <Input
                           id="confirmPassword"
@@ -304,11 +304,11 @@ export const BuyerRegisterSteps = ({
                           value={formData.confirmPassword}
                           onChange={handleInputChange}
                           required
-                          className={`input-mobile !pl-8 sm:!pl-14 !pr-8 sm:!pr-12 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                          className={`input-mobile !pl-8 sm:!pl-14 !pr-8 sm:!pr-12 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.confirmPassword ? 'border-red-500' : ''}`}
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-gray-300 hover:text-gray-300"
+                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? (
@@ -318,36 +318,32 @@ export const BuyerRegisterSteps = ({
                           )}
                         </button>
                       </div>
-                      {errors.confirmPassword && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.confirmPassword}</p>}
+                      {errors.confirmPassword && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1 font-medium">{errors.confirmPassword}</p>}
+                    </div>
+
+                    <div className="pt-2">
+                      <div className="flex items-start space-x-2 bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10">
+                        <input
+                          type="checkbox"
+                          id="termsAccepted"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                          className="mt-0.5 rounded accent-yellow-400 cursor-pointer"
+                        />
+                        <Label htmlFor="termsAccepted" className="text-[10px] sm:text-xs text-slate-600 dark:text-gray-300 font-medium cursor-pointer">
+                          I agree to the{' '}
+                          <button
+                            type="button"
+                            onClick={() => setIsTermsModalOpen(true)}
+                            className="text-yellow-600 dark:text-yellow-400 hover:underline font-semibold"
+                          >
+                            Terms & Conditions
+                          </button>
+                        </Label>
+                      </div>
                     </div>
                   </>
                 )}
-
-                {/* Terms & Conditions Checkbox - Step 3 only */}
-                {currentStep === 3 && (
-                  <div className="pt-2">
-                    <div className="flex items-start space-x-2 bg-gray-900/40 p-3 rounded-xl border border-gray-800">
-                      <input
-                        type="checkbox"
-                        id="termsAccepted"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-gray-700 bg-gray-800 text-yellow-500 focus:ring-yellow-500"
-                      />
-                      <Label htmlFor="termsAccepted" className="text-xs text-gray-400 leading-tight">
-                        I agree to the{' '}
-                        <button
-                          type="button"
-                          onClick={() => setIsTermsModalOpen(true)}
-                          className="text-yellow-400 hover:text-yellow-300 font-medium underline underline-offset-2"
-                        >
-                          Terms & Conditions
-                        </button>
-                        {' '}and have read the Privacy Policy.
-                      </Label>
-                    </div>
-                  </div>
-                )}
-    </>
+              </>
   );
 };

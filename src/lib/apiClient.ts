@@ -191,29 +191,41 @@ const handleUnauthorized = async (error: import('axios').AxiosError) => {
 /**
  * Map a request URL to the role whose token it uses, so we know which stored
  * refresh token to spend when that request comes back 401.
+ * Falls back to the persisted activeRole for generic endpoints (e.g. /orders,
+ * /products) that have no role segment in their path.
  */
-const roleFromRequestUrl = (url: string): 'buyer' | 'seller' | 'creator' | 'admin' | null => {
+const roleFromRequestUrl = async (url: string): Promise<'buyer' | 'seller' | 'creator' | 'admin' | null> => {
     if (url.includes('/sellers')) return 'seller';
     if (url.includes('/creators')) return 'creator';
     if (url.includes('/admin')) return 'admin';
     if (url.includes('/buyers')) return 'buyer';
+    // Generic URL — use whatever role is currently active
+    const active = await storage.get('activeRole');
+    if (active === 'buyer' || active === 'seller' || active === 'creator' || active === 'admin') {
+        return active;
+    }
     return null;
 };
 
 /**
- * Native-only silent session renewal. The access token lives 24h; when it
- * expires an authenticated request returns 401. Instead of forcing the user to
- * log in again, we exchange the long-lived rolling refresh token (stored in
- * Capacitor Preferences at login) for a fresh access token and replay the
- * original request once. This is what lets a user log in a single time and keep
- * reopening the app without re-entering their details.
+ * Silent session renewal for BOTH web and native.
  *
- * Returns the retried response on success, or null to fall through to the normal
- * 401 handling (which sends the user to the login screen).
+ * On native (Capacitor): access token is a Bearer token stored in Preferences,
+ * refresh token also stored in Preferences — both written at login.
+ *
+ * On web: access token is an HttpOnly cookie (handled by the browser), but the
+ * refresh token is written to localStorage at login so we can exchange it here
+ * without forcing the user to re-enter their password.
+ *
+ * When an authenticated request returns 401 we POST to /auth/refresh-token once,
+ * store the new tokens, patch the Authorization header, and replay the original
+ * request. If the refresh itself fails the refresh token is dropped and the user
+ * is sent to the login screen.
+ *
+ * Returns the retried response on success, or null to fall through to normal
+ * 401 handling.
  */
 const tryRefreshAndRetry = async (error: import('axios').AxiosError) => {
-    if (!isNativeApp()) return null;
-
     const config = error.config as (import('axios').InternalAxiosRequestConfig & { _refreshRetried?: boolean }) | undefined;
     if (!config) return null;
 
@@ -223,7 +235,7 @@ const tryRefreshAndRetry = async (error: import('axios').AxiosError) => {
     if (config._refreshRetried) return null;
     if (url.includes('/auth/refresh-token') || url.includes('/login') || url.includes('/logout')) return null;
 
-    const role = roleFromRequestUrl(url);
+    const role = await roleFromRequestUrl(url);
     if (!role) return null;
 
     const refreshToken = await storage.get(`${role}RefreshToken`);

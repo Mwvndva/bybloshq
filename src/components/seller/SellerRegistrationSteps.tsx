@@ -64,12 +64,12 @@ export const SellerRegistrationSteps = ({
                           value={formData.firstName}
                           onChange={handleInputChange}
                           required
-                          className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                          className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                         />
                       </div>
 
                       <div className="space-y-0.5 sm:space-y-2">
-                        <Label htmlFor="lastName" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                        <Label htmlFor="lastName" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                           Last Name
                         </Label>
                         <Input
@@ -80,16 +80,16 @@ export const SellerRegistrationSteps = ({
                           value={formData.lastName}
                           onChange={handleInputChange}
                           required
-                          className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                          className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="shopName" className="text-[10px] sm:text-sm font-medium text-gray-200 flex items-center justify-between">
+                      <Label htmlFor="shopName" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
                         Shop Name
                         {formData.shopName.length >= 3 && (
-                          <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-wider ${shopNameAvailable ? 'text-green-400' : 'text-red-400'}`}>
+                          <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-wider ${shopNameAvailable ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                             {isCheckingShopName ? 'Checking...' : shopNameAvailable ? 'Available' : 'Taken'}
                           </span>
                         )}
@@ -102,13 +102,13 @@ export const SellerRegistrationSteps = ({
                         value={formData.shopName}
                         onChange={handleInputChange}
                         required
-                        className={`input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base ${shopNameAvailable === false ? 'border-red-500' : ''}`}
+                        className={`input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base ${shopNameAvailable === false ? 'border-red-500' : ''}`}
                       />
-                      <p className="text-[8px] sm:text-[10px] text-gray-400">Byblos.space/{formData.shopName.toLowerCase() || 'yourshop'}</p>
+                      <p className="text-[8px] sm:text-[10px] text-slate-500 dark:text-slate-400">Byblos.space/{formData.shopName.toLowerCase() || 'yourshop'}</p>
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="email" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="email" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         Email Address
                       </Label>
                       <Input
@@ -119,12 +119,12 @@ export const SellerRegistrationSteps = ({
                         value={formData.email}
                         onChange={handleInputChange}
                         required
-                        className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                        className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                       />
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         WhatsApp Number
                       </Label>
                       <Input
@@ -135,7 +135,7 @@ export const SellerRegistrationSteps = ({
                         value={formData.whatsappNumber}
                         onChange={handleInputChange}
                         required
-                        className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                        className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                       />
                     </div>
                   </>
@@ -145,16 +145,16 @@ export const SellerRegistrationSteps = ({
                 {currentStep === 2 && (
                   <>
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label className="text-[10px] sm:text-sm font-medium text-gray-200">City</Label>
+                      <Label className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">City</Label>
                       <Select
                         value={formData.city}
                         onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, location: '' }))}
                       >
-                        <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
-                          <SelectValue placeholder="Nairobi" className="text-gray-300" />
+                        <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
+                          <SelectValue placeholder="Nairobi" className="text-slate-400 dark:text-slate-400" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200 text-slate-950">
-                          <SelectItem value="Nairobi" className="text-slate-950 hover:bg-slate-100 focus:bg-slate-100 text-xs">
+                        <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/20 text-slate-950 dark:text-white z-[110]">
+                          <SelectItem value="Nairobi" className="text-slate-900 dark:text-white focus:bg-yellow-400 focus:text-black text-xs">
                             Nairobi
                           </SelectItem>
                         </SelectContent>
@@ -162,18 +162,18 @@ export const SellerRegistrationSteps = ({
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label className="text-[10px] sm:text-sm font-medium text-gray-200">Area/Location</Label>
+                      <Label className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">Area/Location</Label>
                       <Select
                         value={formData.location}
                         onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
                         disabled={!formData.city}
                       >
-                        <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-base">
-                          <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} className="text-gray-300" />
+                        <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-base">
+                          <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} className="text-slate-400 dark:text-slate-400" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200 text-slate-950">
+                        <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/20 text-slate-950 dark:text-white z-[110]">
                           {formData.city && locationData[formData.city]?.sort((a, b) => a.localeCompare(b)).map((area) => (
-                            <SelectItem key={area} value={area} className="text-slate-950 hover:bg-slate-100 focus:bg-slate-100 text-xs">{area}</SelectItem>
+                            <SelectItem key={area} value={area} className="text-slate-900 dark:text-white focus:bg-yellow-400 focus:text-black text-xs">{area}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -187,8 +187,8 @@ export const SellerRegistrationSteps = ({
                     {hasPhysicalShop === null ? (
                       <div className="space-y-6 py-4">
                         <div className="text-center space-y-2">
-                          <h3 className="text-lg font-bold text-white">Do you have a physical shop?</h3>
-                          <p className="text-gray-400 text-xs font-medium">
+                          <h3 className="text-lg font-bold text-slate-950 dark:text-white">Do you have a physical shop?</h3>
+                          <p className="text-slate-600 dark:text-slate-400 text-xs font-medium">
                             Adding your shop location helps local customers find you easily.
                           </p>
                         </div>
@@ -201,23 +201,23 @@ export const SellerRegistrationSteps = ({
                               setCurrentStep(4); // Move directly to verification
                             }}
                             variant="ghost"
-                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-white/5 uppercase tracking-wider"
+                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 uppercase tracking-wider bg-slate-50 dark:bg-white/5"
                           >
                             <div className="flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <Globe className="h-12 w-12 text-zinc-400 group-hover:text-white" />
+                              <Globe className="h-12 w-12 text-slate-500 dark:text-zinc-400 group-hover:text-slate-950 dark:group-hover:text-white" />
                             </div>
-                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-white transition-colors">No, online only</span>
+                            <span className="font-bold text-[10px] text-slate-600 dark:text-gray-400 group-hover:text-slate-950 dark:group-hover:text-white transition-colors">No, online only</span>
                           </Button>
                           <Button
                             type="button"
                             onClick={() => setHasPhysicalShop(true)}
                             variant="ghost"
-                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-yellow-400/5 hover:text-yellow-400 uppercase tracking-wider"
+                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-slate-200 dark:border-white/10 hover:bg-yellow-400/10 hover:text-yellow-600 dark:hover:text-yellow-400 uppercase tracking-wider bg-slate-50 dark:bg-white/5"
                           >
                             <div className="flex items-center justify-center group-hover:scale-110 transition-transform">
                               <Store className="h-12 w-12 text-yellow-500" />
                             </div>
-                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-yellow-400 transition-colors">Yes, I have a physical shop</span>
+                            <span className="font-bold text-[10px] text-slate-600 dark:text-gray-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">Yes, I have a physical shop</span>
                           </Button>
                         </div>
                       </div>
@@ -225,17 +225,17 @@ export const SellerRegistrationSteps = ({
                       <div className="space-y-4 animate-in zoom-in-95 duration-300">
                         {hasPhysicalShop ? (
                           <>
-                            <div className="flex items-center justify-between mb-2 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/10">
+                            <div className="flex items-center justify-between mb-2 p-2 bg-yellow-400/10 rounded-lg border border-yellow-500/20">
                               <div className="flex items-center gap-2">
-                                <Store className="h-4 w-4 text-yellow-400" />
-                                <p className="text-[10px] sm:text-xs text-gray-300">Pin your shop's specific location.</p>
+                                <Store className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                <p className="text-[10px] sm:text-xs text-slate-800 dark:text-gray-300 font-medium">Pin your shop's specific location.</p>
                               </div>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setHasPhysicalShop(null)}
-                                className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white"
+                                className="h-6 px-2 text-[10px] text-slate-500 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-white"
                               >
                                 Change
                               </Button>
@@ -254,19 +254,19 @@ export const SellerRegistrationSteps = ({
                             />
                           </>
                         ) : (
-                          <div className="py-8 text-center space-y-4 bg-white/5 rounded-2xl border border-white/10 animate-in slide-in-from-top-4 duration-500">
+                          <div className="py-8 text-center space-y-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 animate-in slide-in-from-top-4 duration-500">
                             <div className="w-12 h-12 mx-auto bg-yellow-400/10 rounded-full flex items-center justify-center">
-                              <Check className="h-6 w-6 text-yellow-400" />
+                              <Check className="h-6 w-6 text-yellow-500" />
                             </div>
                             <div className="space-y-1">
-                              <p className="text-white font-bold">Online-only Shop</p>
-                              <p className="text-zinc-500 text-xs px-8">You've selected that your shop only operates online. You can add a physical address later from your settings.</p>
+                              <p className="text-slate-950 dark:text-white font-bold">Online-only Shop</p>
+                              <p className="text-slate-600 dark:text-zinc-400 text-xs px-8 font-medium">You've selected that your shop only operates online. You can add a physical address later from your settings.</p>
                             </div>
                             <Button
                               type="button"
                               variant="link"
                               onClick={() => setHasPhysicalShop(null)}
-                              className="text-yellow-400 text-xs"
+                              className="text-yellow-600 dark:text-yellow-400 text-xs font-semibold"
                             >
                               Wait, I actually have a physical shop
                             </Button>
@@ -281,7 +281,7 @@ export const SellerRegistrationSteps = ({
                 {currentStep === 4 && (
                   <>
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="password" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="password" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         Password
                       </Label>
                       <div className="relative">
@@ -293,11 +293,11 @@ export const SellerRegistrationSteps = ({
                           value={formData.password}
                           onChange={handleInputChange}
                           required
-                          className="input-mobile !pl-4 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                          className="input-mobile !pl-4 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-gray-300 hover:text-gray-300"
+                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
@@ -311,8 +311,8 @@ export const SellerRegistrationSteps = ({
 
                     {/* Password Strength Checklist */}
                     {formData.password && (
-                      <div className="mt-2 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                        <p className="text-xs font-semibold text-gray-300 mb-2">Password Requirements:</p>
+                      <div className="mt-2 p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-2">Password Requirements:</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {[
                             { label: "8+ chars", met: checkPasswordStrength(formData.password).minLength },
@@ -323,14 +323,14 @@ export const SellerRegistrationSteps = ({
                             <div key={index} className="flex items-center space-x-2">
                               {req.met ? (
                                 <div className="bg-green-500/20 p-0.5 rounded-full">
-                                  <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-400" />
+                                  <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600 dark:text-green-400" />
                                 </div>
                               ) : (
-                                <div className="bg-gray-700 p-0.5 rounded-full">
-                                  <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-gray-300" />
+                                <div className="bg-slate-300 dark:bg-gray-700 p-0.5 rounded-full">
+                                  <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-slate-600 dark:text-gray-300" />
                                 </div>
                               )}
-                              <span className={`text-[10px] sm:text-xs ${req.met ? 'text-green-400 font-medium' : 'text-gray-300'}`}>
+                              <span className={`text-[10px] sm:text-xs ${req.met ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-slate-600 dark:text-gray-300'}`}>
                                 {req.label}
                               </span>
                             </div>
@@ -340,7 +340,7 @@ export const SellerRegistrationSteps = ({
                     )}
 
                     <div className="space-y-0.5 sm:space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                      <Label htmlFor="confirmPassword" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                         Confirm Password
                       </Label>
                       <div className="relative">
@@ -352,11 +352,11 @@ export const SellerRegistrationSteps = ({
                           value={formData.confirmPassword}
                           onChange={handleInputChange}
                           required
-                          className="input-mobile !pl-4 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                          className="input-mobile !pl-4 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                         />
                         <button
                           type="button"
-                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-gray-300 hover:text-gray-300"
+                          className="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? (
@@ -367,7 +367,7 @@ export const SellerRegistrationSteps = ({
                         </button>
                       </div>
                       {passwordError && (
-                        <p className="text-[10px] sm:text-sm text-red-400 font-medium">{passwordError}</p>
+                        <p className="text-[10px] sm:text-sm text-red-500 dark:text-red-400 font-semibold">{passwordError}</p>
                       )}
                     </div>
 

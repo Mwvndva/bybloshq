@@ -16,14 +16,14 @@ interface OrderDetailsDialogProps {
 export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage, onConfirmReceiptClick }: OrderDetailsDialogProps) {
   return (
       <Dialog open={!!order} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-2xl bg-black border border-white/15 text-white">
+        <DialogContent className="w-[92vw] sm:max-w-xl bg-white dark:bg-[#0d0d0d] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white rounded-3xl p-5 sm:p-6 shadow-2xl transition-colors duration-200">
           {order && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-white">
-                  ApiOrder Details
+                <DialogTitle className="text-2xl font-bold text-slate-950 dark:text-white">
+                  Order Details
                 </DialogTitle>
-                <DialogDescription className="text-white/70">
+                <DialogDescription className="text-slate-500 dark:text-white/70">
                   {formatOrderDate(order)}
                 </DialogDescription>
               </DialogHeader>
@@ -32,7 +32,7 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
                 {order.items.map((item, idx) => (
                   <div key={idx} className="flex gap-4 items-start">
                     <div
-                      className="h-20 w-20 rounded-lg bg-white/5 overflow-hidden border border-white/15 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      className="h-20 w-20 rounded-xl bg-slate-100 dark:bg-white/5 overflow-hidden border border-slate-200 dark:border-white/15 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => item.imageUrl && onViewImage(getImageUrl(item.imageUrl))}
                     >
                       {item.imageUrl ? (
@@ -43,33 +43,33 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-8 w-8 text-white/60" />
+                          <Package className="h-8 w-8 text-slate-400 dark:text-white/60" />
                         </div>
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-bold text-white leading-tight mb-1">{item.name}</h4>
-                      <div className="flex items-center text-sm text-white/70 gap-3">
+                      <h4 className="text-base font-bold text-slate-950 dark:text-white leading-tight mb-1">{item.name}</h4>
+                      <div className="flex items-center text-sm text-slate-600 dark:text-white/70 gap-3">
                         <span>Qty: {item.quantity}</span>
-                        <span className="w-1 h-1 bg-white/40 rounded-full" />
-                        <span className="text-white font-medium">{formatOrderCurrency(item.price * item.quantity, order.currency)}</span>
+                        <span className="w-1 h-1 bg-slate-300 dark:bg-white/40 rounded-full" />
+                        <span className="text-slate-950 dark:text-white font-semibold">{formatOrderCurrency(item.price * item.quantity, order.currency)}</span>
                       </div>
                     </div>
                   </div>
                 ))}
 
-                <div className="border-t border-white/10 my-4" />
+                <div className="border-t border-slate-200 dark:border-white/10 my-4" />
 
-                <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-emerald-400" />
-                    <p className="text-xs text-white/60 uppercase tracking-wider font-semibold">Shop Details</p>
+                    <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <p className="text-xs text-slate-500 dark:text-white/60 uppercase tracking-wider font-semibold">Shop Details</p>
                   </div>
 
                   <div className="space-y-1">
                     {order.seller?.shopName && (
-                      <p className="font-bold text-white text-lg">
+                      <p className="font-bold text-slate-950 dark:text-white text-lg">
                         {order.seller.shopName}
                       </p>
                     )}
@@ -79,7 +79,7 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
                         href={order.seller.location.startsWith('http') ? order.seller.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.seller.location)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-start gap-2 text-sm text-white/80 hover:text-emerald-300 transition-colors group"
+                        className="flex items-start gap-2 text-sm text-slate-700 dark:text-white/80 hover:text-emerald-600 dark:hover:text-emerald-300 transition-colors group"
                       >
                         <span>
                           {order.seller.city ? `${order.seller.city} - ` : ''}
@@ -90,9 +90,9 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
                   </div>
 
                   {order.shippingAddress && (
-                    <div className="pt-2 border-t border-white/10 mt-2">
-                      <p className="text-xs text-white/60 mb-1">Shipping To:</p>
-                      <p className="text-sm text-white/80">
+                    <div className="pt-2 border-t border-slate-200 dark:border-white/10 mt-2">
+                      <p className="text-xs text-slate-500 dark:text-white/60 mb-1">Shipping To:</p>
+                      <p className="text-sm text-slate-800 dark:text-white/80">
                         {order.shippingAddress.address}
                         {order.shippingAddress.city && `, ${order.shippingAddress.city}`}
                       </p>
@@ -100,14 +100,14 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/15 border border-emerald-400/30">
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-400/30">
                   <div>
-                    <span className="text-lg font-semibold text-white">Total</span>
-                    <p className="mt-1 text-xs font-medium text-white/60">
+                    <span className="text-lg font-bold text-slate-950 dark:text-white">Total</span>
+                    <p className="mt-1 text-xs font-medium text-slate-600 dark:text-white/60">
                       Includes 2% Byblos service charge{serviceCharge > 0 ? ` (${formatOrderCurrency(serviceCharge, order.currency)})` : ''}
                     </p>
                   </div>
-                  <span className="text-2xl font-bold text-emerald-200 text-right">
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-200 text-right">
                     {formatOrderCurrency((order as unknown as Record<string, unknown>).total_amount as number || order.totalAmount, order.currency)}
                   </span>
                 </div>
@@ -121,7 +121,7 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
               <DialogFooter className="gap-2">
                 {canConfirmOrderReceipt(order) && (
                   <Button
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
                     onClick={() => {
                       onConfirmReceiptClick(order.id);
                       onClose();
@@ -132,7 +132,7 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
                 )}
                 <Button
                   variant="outline"
-                  className="border-white/20 hover:bg-white/10 text-white"
+                  className="border-slate-300 dark:border-white/20 bg-white dark:bg-transparent text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10"
                   onClick={() => onClose()}
                 >
                   Close

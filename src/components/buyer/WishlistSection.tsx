@@ -52,22 +52,23 @@ export default function WishlistSection() {
           placeholder="Search wishlist..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+          className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder-gray-500 rounded-xl pl-10 h-10 shadow-sm transition-colors"
         />
       </div>
 
       {filteredWishlist.length === 0 && searchQuery ? (
-        <div className="text-center py-12 px-4 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-gray-400">No items found matching "{searchQuery}"</p>
+        <div className="text-center py-12 px-4 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10">
+          <p className="text-slate-500 dark:text-slate-400">No items found matching "{searchQuery}"</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5">
           {filteredWishlist.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              forceWhiteText={true}
-            />
+            <div key={product.id} className="max-w-[260px] w-full mx-auto sm:mx-0">
+              <ProductCard
+                product={product}
+                forceWhiteText={true}
+              />
+            </div>
           ))}
         </div>
       )}
