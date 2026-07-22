@@ -20,12 +20,12 @@ export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNav
   return (
     <div style={{
       height: 56,
-      background: '#000000',
-      borderTop: '1px solid rgba(255,255,255,0.10)',
+      background: 'var(--byblos-card-bg, #000000)',
+      borderTop: '1px solid var(--byblos-border, rgba(255,255,255,0.10))',
       display: 'flex',
       alignItems: 'stretch',
       flexShrink: 0,
-      boxShadow: '0 -10px 30px rgba(0,0,0,0.55)',
+      boxShadow: '0 -10px 30px rgba(0,0,0,0.20)',
     }}>
       {navItems.map(item => (
         <button
@@ -43,11 +43,11 @@ export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNav
         >
           <item.Icon
             size={18}
-            color={activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.5)'}
+            color={activeNav === item.key ? '#F5C518' : 'var(--byblos-subtext, rgba(255,255,255,0.5))'}
           />
           <span style={{
-            fontSize: 9, fontWeight: 500,
-            color: activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.5)',
+            fontSize: 9, fontWeight: 600,
+            color: activeNav === item.key ? '#F5C518' : 'var(--byblos-subtext, rgba(255,255,255,0.5))',
           }}>
             {item.label}
           </span>
