@@ -826,9 +826,9 @@ body.dashboard-active .seller-service-charge-notice * {
 
 /* ── Seller surface cards — light mode physical elevation ──────────────── */
 [data-theme="light"] .seller-surface :is(
-    [class*="rounded-xl"],
-    [class*="rounded-2xl"],
-    [class*="rounded-3xl"],
+    [class*="rounded-xl"]:not(.theme-swatch),
+    [class*="rounded-2xl"]:not(.theme-swatch),
+    [class*="rounded-3xl"]:not(.theme-swatch),
     section
 ) {
     background-color: #ffffff !important;
@@ -837,6 +837,10 @@ body.dashboard-active .seller-service-charge-notice * {
         0 1px 0 rgba(255, 255, 255, 0.95) inset,
         0 10px 28px -6px rgba(15, 23, 42, 0.07),
         0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme="light"] .seller-surface .theme-swatch {
+    background-color: var(--theme-swatch-color) !important;
 }
 
 /* Dashboard navigation tabs bar in light mode */
