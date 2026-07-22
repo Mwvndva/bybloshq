@@ -101,7 +101,7 @@ export function useAuthActions({
         isAuthenticated: true
       });
 
-      if (isNativeApp() && response.token) {
+      if (response.token) {
         const { storage } = await import('@/lib/storage');
         await storage.set(`${role}Token`, response.token);
         const refreshToken = (response as { refreshToken?: string }).refreshToken;
@@ -193,7 +193,7 @@ export function useAuthActions({
           isAuthenticated: true
         });
 
-        if (isNativeApp() && response?.data?.token) {
+        if (response?.data?.token) {
           const { storage } = await import('@/lib/storage');
           await storage.set('adminToken', response.data.token);
           const adminRefreshToken = (response.data as { refreshToken?: string }).refreshToken;

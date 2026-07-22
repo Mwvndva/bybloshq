@@ -16,8 +16,17 @@ export function useCreatorResendVerificationMutation() {
 
 export function useCreatorRegisterMutation() {
   return useMutation({
-    mutationFn: (args: { token: string; fullName: string; email: string; phone: string; whatsappNumber: string; mpesaNumber: string; city: string; location: string; bio: string; password?: string; confirmPassword?: string; referralCode?: string }) =>
-      creatorApi.register(args as unknown as Parameters<typeof creatorApi.register>[0]),
+    mutationFn: (args: {
+      token: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      mpesaNumber: string;
+      whatsappNumber: string;
+      password: string;
+      confirmPassword: string;
+      referralCode?: string;
+    }) => creatorApi.register(args),
   });
 }
 
