@@ -9,7 +9,7 @@ interface SellerDashboardErrorStateProps {
 
 export function SellerDashboardLoadingState() {
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200">
       <div className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         {/* Hero */}
         <Skeleton className="mb-6 h-56 w-full rounded-3xl sm:h-64" />
@@ -40,18 +40,18 @@ export function SellerDashboardLoadingState() {
 
 export function SellerDashboardErrorState({ error, onRetry }: SellerDashboardErrorStateProps) {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[var(--byblos-bg,#000000)] flex items-center justify-center px-4 transition-colors duration-200">
       <div className="text-center space-y-6 p-8">
         <div className="w-24 h-24 mx-auto bg-red-500/10 border border-red-500/20 rounded-3xl flex items-center justify-center">
           <RefreshCw className="h-12 w-12 text-red-500" />
         </div>
-        <h3 className="text-2xl font-black text-white mb-3">Unable to load dashboard</h3>
-        <p className="text-white/60 text-base font-medium max-w-md mx-auto mb-6">
+        <h3 className="text-2xl font-black text-[var(--byblos-text,#ffffff)] mb-3">Unable to load dashboard</h3>
+        <p className="text-[var(--byblos-muted,#94a3b8)] text-base font-medium max-w-md mx-auto mb-6">
           {error || 'Something went wrong while loading your dashboard data. Please try again.'}
         </p>
         <Button
           onClick={onRetry}
-          className="px-8 py-3 rounded-xl font-black"
+          className="px-8 py-3 rounded-xl font-black shadow-md hover:shadow-lg transition-all"
           style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
         >
           <RefreshCw className="h-5 w-5 mr-2" />
