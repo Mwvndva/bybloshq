@@ -48,8 +48,8 @@ export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePicke
       ref={ref}
       style={{
         position: 'fixed',
-        top: '1rem',
-        right: '1.25rem',
+        top: '1.75rem',
+        right: '2.5rem',
         zIndex: 60,
       }}
     >
