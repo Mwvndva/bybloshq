@@ -25,90 +25,69 @@ export interface ProductCardThemeVars {
 }
 
 export const getProductCardThemeVars = (theme: Theme): ProductCardThemeVars => {
-  const themes: Record<Theme, ProductCardThemeVars> = {
-    black: {
-      '--product-card-bg': '#0a0a0a',
-      '--product-card-text': '#ffffff',
-      '--product-card-muted': 'rgba(255, 255, 255, 0.68)',
-      '--product-card-border': 'rgba(255, 255, 255, 0.14)',
-      '--product-card-accent': '#f59e0b',
-      '--product-card-button-bg': '#f59e0b',
-      '--product-card-button-text': '#111111',
-      '--product-card-soft': 'rgba(255, 255, 255, 0.08)'
-    },
+  const accentVars: Record<string, { accent: string; buttonBg: string; buttonText: string; soft: string }> = {
     pink: {
-      '--product-card-bg': '#fff7fb',
-      '--product-card-text': '#4a102a',
-      '--product-card-muted': '#7f5268',
-      '--product-card-border': '#f7cfe2',
-      '--product-card-accent': '#db2777',
-      '--product-card-button-bg': '#db2777',
-      '--product-card-button-text': '#ffffff',
-      '--product-card-soft': '#fce7f3'
+      accent: '#db2777',
+      buttonBg: '#db2777',
+      buttonText: '#ffffff',
+      soft: 'rgba(219, 39, 119, 0.12)'
     },
     orange: {
-      '--product-card-bg': '#fff7ed',
-      '--product-card-text': '#431407',
-      '--product-card-muted': '#8a4b2a',
-      '--product-card-border': '#fed7aa',
-      '--product-card-accent': '#ea580c',
-      '--product-card-button-bg': '#ea580c',
-      '--product-card-button-text': '#ffffff',
-      '--product-card-soft': '#ffedd5'
+      accent: '#ea580c',
+      buttonBg: '#ea580c',
+      buttonText: '#ffffff',
+      soft: 'rgba(234, 88, 12, 0.12)'
     },
     green: {
-      '--product-card-bg': '#f0fdf4',
-      '--product-card-text': '#052e16',
-      '--product-card-muted': '#326b45',
-      '--product-card-border': '#bbf7d0',
-      '--product-card-accent': '#16a34a',
-      '--product-card-button-bg': '#16a34a',
-      '--product-card-button-text': '#ffffff',
-      '--product-card-soft': '#dcfce7'
+      accent: '#16a34a',
+      buttonBg: '#16a34a',
+      buttonText: '#ffffff',
+      soft: 'rgba(22, 163, 74, 0.12)'
     },
     red: {
-      '--product-card-bg': '#fff5f5',
-      '--product-card-text': '#450a0a',
-      '--product-card-muted': '#8b4545',
-      '--product-card-border': '#fecaca',
-      '--product-card-accent': '#dc2626',
-      '--product-card-button-bg': '#dc2626',
-      '--product-card-button-text': '#ffffff',
-      '--product-card-soft': '#fee2e2'
+      accent: '#dc2626',
+      buttonBg: '#dc2626',
+      buttonText: '#ffffff',
+      soft: 'rgba(220, 38, 38, 0.12)'
     },
     yellow: {
-      '--product-card-bg': '#fefce8',
-      '--product-card-text': '#422006',
-      '--product-card-muted': '#7a5b16',
-      '--product-card-border': '#fde68a',
-      '--product-card-accent': '#ca8a04',
-      '--product-card-button-bg': '#ca8a04',
-      '--product-card-button-text': '#ffffff',
-      '--product-card-soft': '#fef3c7'
+      accent: '#ca8a04',
+      buttonBg: '#ca8a04',
+      buttonText: '#ffffff',
+      soft: 'rgba(202, 138, 4, 0.12)'
     },
     brown: {
-      '--product-card-bg': '#fff8ee',
-      '--product-card-text': '#451a03',
-      '--product-card-muted': '#7c4a24',
-      '--product-card-border': '#ead7c0',
-      '--product-card-accent': '#92400e',
-      '--product-card-button-bg': '#92400e',
-      '--product-card-button-text': '#ffffff',
-      '--product-card-soft': '#f7eadb'
+      accent: '#92400e',
+      buttonBg: '#92400e',
+      buttonText: '#ffffff',
+      soft: 'rgba(146, 64, 14, 0.12)'
     },
     default: {
-      '--product-card-bg': '#ffffff',
-      '--product-card-text': '#111827',
-      '--product-card-muted': '#64748b',
-      '--product-card-border': '#e5e7eb',
-      '--product-card-accent': '#f59e0b',
-      '--product-card-button-bg': '#f5c518',
-      '--product-card-button-text': '#111111',
-      '--product-card-soft': '#f8fafc'
+      accent: '#f59e0b',
+      buttonBg: '#f5c518',
+      buttonText: '#111111',
+      soft: 'rgba(245, 158, 11, 0.12)'
+    },
+    black: {
+      accent: '#f59e0b',
+      buttonBg: '#f5c518',
+      buttonText: '#111111',
+      soft: 'rgba(245, 158, 11, 0.12)'
     }
   };
 
-  return themes[theme] || themes.default;
+  const selected = accentVars[theme] || accentVars.default;
+
+  return {
+    '--product-card-bg': 'var(--byblos-surface, #ffffff)',
+    '--product-card-text': 'var(--byblos-text, #0f0f0e)',
+    '--product-card-muted': 'var(--byblos-muted, #64748b)',
+    '--product-card-border': 'var(--byblos-border, rgba(0, 0, 0, 0.1))',
+    '--product-card-accent': selected.accent,
+    '--product-card-button-bg': selected.buttonBg,
+    '--product-card-button-text': selected.buttonText,
+    '--product-card-soft': selected.soft,
+  };
 };
 
 export const createCheckoutAttemptToken = (productId: string | number): string => {

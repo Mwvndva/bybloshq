@@ -114,22 +114,17 @@ const ShopPage = () => {
         </div>
 
         {filteredProducts.length > 0 ? (
-          <div className={cn(
-            "shop-products-card backdrop-blur-md rounded-[2.5rem] p-5 sm:p-10 shadow-2xl border transition-all duration-500",
-            themeClasses.cardBg,
-            themeClasses.borderColor,
-            "shadow-[var(--theme-accent)]/5"
-          )}>
+          <div className="shop-products-card rounded-[2rem] p-5 sm:p-10 sm:rounded-[2.5rem] transition-all duration-300">
             <div className="flex justify-between items-center mb-6 sm:mb-8">
               <div className="min-w-0 flex-1">
-                <h2 className={`text-lg sm:text-2xl font-black ${themeClasses.textColor} truncate`}>
+                <h2 className="text-lg sm:text-2xl font-black text-[var(--byblos-text)] truncate">
                   Available Products
                 </h2>
-                <p className={`${themeClasses.textColor === 'text-white' ? 'text-white/80' : 'text-gray-600'} text-[10px] sm:text-sm font-medium mt-1 truncate`}>
+                <p className="text-[10px] sm:text-sm font-medium text-[var(--byblos-muted)] mt-1 truncate">
                   {products.length} {products.length === 1 ? 'item' : 'items'} available
                 </p>
               </div>
-              <div className={`${themeClasses.buttonGradient} text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg font-bold text-[10px] sm:text-xs shrink-0 ml-2`}>
+              <div className={`${themeClasses.buttonGradient} text-white px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl font-bold text-[10px] sm:text-xs shrink-0 ml-2 shadow-sm`}>
                 {products.length} Items
               </div>
             </div>

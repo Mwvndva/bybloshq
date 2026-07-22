@@ -70,7 +70,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
   return (
     <Card
       className={cn(
-        'group relative flex h-full min-h-[224px] flex-col overflow-hidden transition-all duration-300 rounded-xl sm:rounded-2xl sm:min-h-[294px]',
+        'product-card-item group relative flex h-full min-h-[224px] flex-col overflow-hidden transition-all duration-300 rounded-xl sm:rounded-2xl sm:min-h-[294px]',
         isSold ? 'opacity-60' : 'sm:hover:-translate-y-1',
         'cursor-pointer',
         themeClasses.card
