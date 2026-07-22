@@ -477,7 +477,6 @@ body.dashboard-active .seller-service-charge-notice * {
 .marketing-light-dashboard tbody {
     background: #0a0a0a !important;
 }
-
 .admin-light-dashboard input,
 .marketing-light-dashboard input {
     background: #0a0a0a !important;
@@ -488,62 +487,6 @@ body.dashboard-active .seller-service-charge-notice * {
 .admin-light-dashboard .recharts-cartesian-grid line,
 .marketing-light-dashboard .recharts-cartesian-grid line {
     stroke: #262626;
-}
-
-/* ── Dark-theme visibility layer ───────────────────────────────────────────
-   Components were authored dark-on-light. On the black theme, remap dark
-   neutral text utilities to light and light-surface utilities to charcoal so
-   nothing renders black-on-black. Accent hues (yellow/green/red/…) and
-   text-black (used on yellow buttons) are intentionally left untouched. */
-:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="text-slate-"], [class*="text-stone-"], [class*="text-neutral-"]) {
-    color: var(--byblos-text) !important;
-}
-
-:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="text-slate-400"], [class*="text-slate-500"], [class*="text-stone-400"], [class*="text-stone-500"], [class*="text-neutral-400"], [class*="text-neutral-500"]) {
-    color: var(--byblos-muted) !important;
-}
-
-:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="bg-white"], [class*="bg-slate-50"], [class*="bg-slate-100"], [class*="bg-stone-50"], [class*="bg-stone-100"], [class*="bg-stone-200"], [class*="bg-gray-50"], [class*="bg-gray-100"], [class*="bg-neutral-50"], [class*="bg-neutral-100"]) {
-    background-color: var(--byblos-surface) !important;
-}
-
-:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="border-slate-"], [class*="border-stone-"], [class*="border-neutral-"]) {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
-}
-
-.category-grid a {
-    display: block;
-    padding: 1rem;
-    background: #050505;
-    color: #FFFFFF;
-    text-decoration: none;
-    border-radius: 4px;
-    text-align: center;
-    transition: background 0.2s;
-}
-
-.category-grid a:hover {
-    background: #1a1a1a;
-    color: #FFFFFF;
-}
-
-.seo-fallback ul {
-    padding-left: 1.5rem;
-}
-
-.seo-fallback li {
-    margin-bottom: 0.5rem;
-}
-
-.seo-fallback footer {
-    margin-top: 3rem;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
-    text-align: center;
-    color: #666;
 }
 
 /* Dialog close button override for product image viewer */
