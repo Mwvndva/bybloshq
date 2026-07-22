@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 const themeColors = [
   { name: 'Yellow', value: 'yellow', color: '#facc15' },
   { name: 'Pink', value: 'pink', color: '#ec4899' },
+  { name: 'Purple', value: 'purple', color: '#a855f7' },
   { name: 'Brown', value: 'brown', color: '#92400e' },
   { name: 'Orange', value: 'orange', color: '#f97316' },
   { name: 'Green', value: 'green', color: '#10b981' },
@@ -86,7 +87,7 @@ export const ThemeSelector = ({ currentTheme = 'yellow', onThemeChange }: ThemeS
           >
             <div
               className="theme-swatch relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16"
-              style={{ '--theme-swatch-color': theme.color } as CSSProperties}
+              style={{ backgroundColor: theme.color, '--theme-swatch-color': theme.color } as CSSProperties}
             >
               {selectedTheme === theme.value && (
                 <div

@@ -32,6 +32,12 @@ export const getProductCardThemeVars = (theme: Theme): ProductCardThemeVars => {
       buttonText: '#ffffff',
       soft: 'rgba(219, 39, 119, 0.12)'
     },
+    purple: {
+      accent: '#a855f7',
+      buttonBg: '#a855f7',
+      buttonText: '#ffffff',
+      soft: 'rgba(168, 85, 247, 0.12)'
+    },
     orange: {
       accent: '#ea580c',
       buttonBg: '#ea580c',
