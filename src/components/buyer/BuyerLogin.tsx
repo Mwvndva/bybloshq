@@ -40,6 +40,48 @@ export function BuyerLogin() {
     }
   }, [location.state, toast]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (error) setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await login(
+        formData.email.trim().toLowerCase(),
+        formData.password
+      );
+    } catch (error: any) {
+      const apiError = error?.response?.data;
+      const errorMessage = apiError?.message || error?.message || 'Invalid email or password. Please check your credentials and try again.';
+
+      if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED') {
+        const email = apiError.email || formData.email;
+        setUnverifiedEmail(email);
+        setIsVerifyModalOpen(true);
+        return;
+      }
+
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="auth-page relative flex min-h-[100svh] w-full flex-col overflow-x-hidden bg-slate-50 dark:bg-[#080808] text-slate-950 dark:text-white transition-colors duration-200"
       style={{
