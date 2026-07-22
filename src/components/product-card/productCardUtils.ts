@@ -179,26 +179,51 @@ export const calculateBuyerPayableTotal = (productAmount: number, deliveryFee = 
   Math.ceil(Math.round((productAmount + deliveryFee + calculateProductServiceCharge(productAmount)) * 100) / 100);
 
 export const normalizeProductImages = (product: Product): string[] => {
-  const rawImages = product.images;
-  const extraImages = Array.isArray(rawImages)
-    ? rawImages
-    : typeof rawImages === 'string'
-      ? (() => {
-        try {
-          const parsed = JSON.parse(rawImages);
-          return Array.isArray(parsed) ? parsed : [rawImages];
-        } catch {
-          return [rawImages];
-        }
-      })()
-      : [];
+  if (!product) return [];
 
-  return [
+  const rawImageFields = [
+    product.images,
+    (product as { image_urls?: unknown }).image_urls,
+    (product as { imageUrls?: unknown }).imageUrls,
+    (product as { gallery?: unknown }).gallery,
+    (product as { product_images?: unknown }).product_images,
+  ];
+
+  const extracted: string[] = [
     product.image_url,
     (product as { imageUrl?: string }).imageUrl,
-    ...extraImages
-  ]
-    .filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
-    .map(image => image.trim())
-    .filter((image, index, allImages) => allImages.indexOf(image) === index);
+  ].filter((img): img is string => typeof img === 'string' && img.trim().length > 0);
+
+  const parseImageValue = (val: unknown): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) {
+      return val.flatMap(parseImageValue);
+    }
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (!trimmed) return [];
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) return parsed.flatMap(parseImageValue);
+        } catch {
+          // fallback to string splitting
+        }
+      }
+      if (trimmed.includes(',')) {
+        return trimmed.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      return [trimmed];
+    }
+    return [];
+  };
+
+  for (const field of rawImageFields) {
+    extracted.push(...parseImageValue(field));
+  }
+
+  return extracted
+    .filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+    .map(img => img.trim())
+    .filter((img, index, all) => all.indexOf(img) === index);
 };

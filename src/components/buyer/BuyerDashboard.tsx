@@ -212,9 +212,9 @@ function BuyerDashboard() {
 
         {activeSection === 'wishlist' && (
           <div className="space-y-4">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>Wishlist</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{wishlist.length} items</span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm font-bold text-slate-950 dark:text-white">Wishlist</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-white/50">{wishlist.length} items</span>
             </div>
             <WishlistSection />
           </div>
