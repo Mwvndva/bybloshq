@@ -82,7 +82,7 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, bannerUrl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border border-white/10 bg-[#0a0a0a] text-white">
+      <DialogContent className="w-[90vw] max-w-sm sm:max-w-[380px] border border-white/10 bg-[#0a0a0a] text-white">
         <DialogHeader>
           <DialogTitle className="text-white">Edit photo & banner</DialogTitle>
           <DialogDescription className="text-white/55">Update how your shop looks to buyers.</DialogDescription>

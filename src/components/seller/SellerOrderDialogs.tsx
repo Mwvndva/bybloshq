@@ -66,7 +66,7 @@ export function SellerOrderDialogs({
     <>
             {/* Seller Pickup Payment Dialog */}
             <Dialog open={!!pickupOrder} onOpenChange={(open) => !open && closeRequestPickupDialog()}>
-                <DialogContent className="flex max-h-[88dvh] flex-col overflow-hidden sm:max-w-2xl bg-black border border-white/15 text-white">
+                <DialogContent className="flex max-h-[82dvh] flex-col overflow-hidden w-[92vw] sm:max-w-md bg-black border border-white/15 text-white">
                     <DialogHeader className="shrink-0">
                         <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
                             <div className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center">
@@ -188,7 +188,7 @@ export function SellerOrderDialogs({
 
             {/* Ready for Pickup Confirmation Dialog */}
             < Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog} >
-                <DialogContent className="sm:max-w-md bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
+                <DialogContent className="w-[90vw] sm:max-w-sm bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center">
@@ -259,7 +259,7 @@ export function SellerOrderDialogs({
 
             {/* Cancel Order Confirmation Dialog */}
             < Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog} >
-                <DialogContent className="sm:max-w-[425px] bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
+                <DialogContent className="w-[90vw] sm:max-w-[350px] bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
                             <div className="w-8 h-8 bg-red-500/10 border border-red-400/20 rounded-full flex items-center justify-center">
