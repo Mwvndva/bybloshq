@@ -148,7 +148,7 @@ export function BuyerProfileSheet({
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-5 space-y-4">
+        <div className="flex-1 min-w-0 overflow-y-auto px-4 py-5 sm:px-5 space-y-4">
           {/* App Theme Picker Pill - Positioned Above Account Details */}
           <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
             <BuyerThemePillPicker />
