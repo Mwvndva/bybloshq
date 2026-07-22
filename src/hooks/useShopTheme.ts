@@ -58,6 +58,26 @@ const THEME_DEFINITIONS: Record<Theme, ThemeDefinition> = {
             '--theme-button-text': '#ffffff',
         }
     },
+    purple: {
+        classes: {
+            bgGradient: 'from-purple-50 to-white',
+            textColor: 'text-purple-900',
+            buttonGradient: 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700',
+            cardBg: 'bg-white/60',
+            accentColor: 'text-purple-600',
+            borderColor: 'border-purple-200'
+        },
+        vars: {
+            '--theme-bg-color': '#faf5ff',
+            '--theme-text': '#581c87',
+            '--theme-card-bg': 'rgba(255, 255, 255, 0.95)',
+            '--theme-accent': '#a855f7',
+            '--theme-accent-rgb': '168, 85, 247',
+            '--theme-border': 'rgba(233, 213, 255, 0.5)',
+            '--theme-button-bg': '#a855f7',
+            '--theme-button-text': '#ffffff',
+        }
+    },
     orange: {
         classes: {
             bgGradient: 'from-orange-50 to-white',

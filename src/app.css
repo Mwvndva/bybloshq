@@ -412,152 +412,220 @@ body.dashboard-active .seller-service-charge-notice * {
 .product-modal-light [class*="bg-gray-800"],
 .product-modal-light [class*="bg-gray-900"],
 .product-modal-light [class*="bg-zinc-"],
-.product-modal-light [class*="bg-white/["],
-.byblos-light-page [class*="bg-black"],
-.byblos-light-page [class*="bg-gray-800"],
-.byblos-light-page [class*="bg-gray-900"],
-.byblos-light-page [class*="bg-zinc-"],
-.byblos-light-page [class*="bg-white/["] {
-    background-color: var(--byblos-surface) !important;
-}
-
-.dashboard-layout [class*="border-white"],
-.dashboard-layout [class*="border-gray-"],
-.dashboard-layout [class*="border-zinc-"],
 .auth-page [class*="border-white"],
 .auth-page [class*="border-gray-"],
 .auth-page [class*="border-zinc-"],
-.product-modal-light [class*="border-white"],
-.product-modal-light [class*="border-gray-"],
-.product-modal-light [class*="border-zinc-"],
-.byblos-light-page [class*="border-white"],
-.byblos-light-page [class*="border-gray-"],
-.byblos-light-page [class*="border-zinc-"] {
-    border-color: var(--byblos-border) !important;
-}
-
-.dashboard-layout [class*="text-white"],
-.dashboard-layout [class*="text-gray-"],
-.dashboard-layout [class*="text-zinc-"],
 .auth-page [class*="text-white"],
 .auth-page [class*="text-gray-"],
 .auth-page [class*="text-zinc-"],
-.product-modal-light [class*="text-white"],
-.product-modal-light [class*="text-gray-"],
-.product-modal-light [class*="text-zinc-"],
-.byblos-light-page [class*="text-white"],
-.byblos-light-page [class*="text-gray-"],
-.byblos-light-page [class*="text-zinc-"] {
-    color: var(--byblos-text) !important;
-}
-
-.dashboard-layout input,
-.dashboard-layout textarea,
-.dashboard-layout select,
 .auth-page input,
 .auth-page textarea,
 .auth-page select,
-.product-modal-light input,
-.product-modal-light textarea,
-.product-modal-light select,
-.byblos-light-page input,
-.byblos-light-page textarea,
-.byblos-light-page select {
-    background-color: #0a0a0a !important;
-    border-color: var(--byblos-border) !important;
-    color: var(--byblos-text) !important;
-}
-
-.dashboard-layout input::placeholder,
-.dashboard-layout textarea::placeholder,
-.auth-page input::placeholder,
 .auth-page textarea::placeholder,
 .product-modal-light input::placeholder,
 .product-modal-light textarea::placeholder,
-.byblos-light-page input::placeholder,
-.byblos-light-page textarea::placeholder {
-    color: #9a9488 !important;
-}
-
-.auth-page header {
-    background: rgba(10, 10, 10, 0.96) !important;
-    border-color: var(--byblos-border) !important;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-}
-
-.auth-page .rounded-2xl,
-.byblos-light-page .rounded-2xl {
-    border-color: var(--byblos-border) !important;
-}
-
-.auth-page>div,
-.auth-page form,
-.auth-page section,
-.auth-page .rounded-2xl {
-    color: var(--byblos-text);
-}
-
-.auth-page .rounded-2xl[style] {
-    background: #0a0a0a !important;
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6) !important;
-}
-
-.theme-swatch {
-    background-color: var(--theme-swatch-color) !important;
-}
-
-.leaflet-container img.leaflet-tile,
-.leaflet-container .leaflet-marker-icon,
-.leaflet-container .leaflet-marker-shadow {
-    max-width: none !important;
-    background: transparent !important;
-}
-
-.auth-page p[class*="text-gray"],
-.auth-page span[class*="text-gray"],
-.auth-page .text-muted-foreground,
-.byblos-light-page p[class*="text-white/"],
-.byblos-light-page span[class*="text-white/"] {
-    color: var(--byblos-muted) !important;
-}
-
-.byblos-light-page [class*="border-white"],
-.byblos-light-page [class*="bg-white/"],
-.byblos-light-page [class*="bg-black"],
 .byblos-light-page [class*="bg-[#050505]"],
-.byblos-light-page [class*="bg-[#080808]"] {
-    background-color: var(--byblos-surface) !important;
-    border-color: var(--byblos-border) !important;
-}
-
-.admin-light-dashboard,
-.marketing-light-dashboard,
-.mzigo-light-dashboard {
-    background: var(--byblos-bg) !important;
-    color: var(--byblos-text) !important;
-}
-
-.admin-light-dashboard [class*="bg-[#050505]"],
-.admin-light-dashboard [class*="bg-[#0A0A0A]"],
-.admin-light-dashboard [class*="bg-gray-950"],
 .admin-light-dashboard [class*="bg-gray-900"],
 .admin-light-dashboard [class*="bg-gray-800"],
 .admin-light-dashboard [class*="bg-zinc-950"],
 .admin-light-dashboard [class*="bg-black"],
 .admin-light-dashboard [class*="bg-white/"],
 .marketing-light-dashboard [class*="bg-[#050505]"],
-.marketing-light-dashboard [class*="bg-gray-950"],
-.marketing-light-dashboard [class*="bg-gray-900"],
-.marketing-light-dashboard [class*="bg-black"],
-.marketing-light-dashboard [class*="bg-white/"],
-.mzigo-light-dashboard [class*="bg-black"],
-.mzigo-light-dashboard [class*="bg-white/"] {
+.marketing-light-dashboard [class*="border-white"],
+.marketing-light-dashboard [class*="border-gray-"],
+.marketing-light-dashboard [class*="border-zinc-"],
+.mzigo-light-dashboard [class*="border-white"],
+.mzigo-light-dashboard [class*="border-gray-"],
+.mzigo-light-dashboard [class*="border-zinc-"] {
+    border-color: var(--byblos-border) !important;
+}
+
+.admin-light-dashboard [class*="text-white"],
+.admin-light-dashboard [class*="text-gray-"],
+.admin-light-dashboard [class*="text-zinc-"],
+.marketing-light-dashboard [class*="text-white"],
+.marketing-light-dashboard [class*="text-gray-"],
+.marketing-light-dashboard [class*="text-zinc-"],
+.mzigo-light-dashboard [class*="text-white"],
+.mzigo-light-dashboard [class*="text-gray-"],
+.mzigo-light-dashboard [class*="text-zinc-"] {
+    color: var(--byblos-text) !important;
+}
+
+.admin-light-dashboard [class*="text-white/"],
+.admin-light-dashboard [class*="text-gray-400"],
+.admin-light-dashboard [class*="text-gray-500"],
+.admin-light-dashboard [class*="text-gray-600"],
+.marketing-light-dashboard [class*="text-gray-400"],
+.marketing-light-dashboard [class*="text-gray-500"],
+.marketing-light-dashboard [class*="text-gray-600"],
+.mzigo-light-dashboard [class*="text-white/"] {
+    color: var(--byblos-muted) !important;
+}
+
+.admin-light-dashboard table,
+.marketing-light-dashboard table {
+    color: var(--byblos-text);
+}
+
+.admin-light-dashboard thead,
+.marketing-light-dashboard thead {
+    background: #141414 !important;
+}
+
+.admin-light-dashboard tbody,
+.marketing-light-dashboard tbody {
+    background: #0a0a0a !important;
+}
+
+.admin-light-dashboard input,
+.marketing-light-dashboard input {
+    background: #0a0a0a !important;
+    border-color: var(--byblos-border) !important;
+    color: var(--byblos-text) !important;
+}
+
+.admin-light-dashboard .recharts-cartesian-grid line,
+.marketing-light-dashboard .recharts-cartesian-grid line {
+    stroke: #262626;
+}
+
+/* ── Dark-theme visibility layer ───────────────────────────────────────────
+   Components were authored dark-on-light. On the black theme, remap dark
+   neutral text utilities to light and light-surface utilities to charcoal so
+   nothing renders black-on-black. Accent hues (yellow/green/red/…) and
+   text-black (used on yellow buttons) are intentionally left untouched. */
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="text-slate-"], [class*="text-stone-"], [class*="text-neutral-"]) {
+    color: var(--byblos-text) !important;
+}
+
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="text-slate-400"], [class*="text-slate-500"], [class*="text-stone-400"], [class*="text-stone-500"], [class*="text-neutral-400"], [class*="text-neutral-500"]) {
+    color: var(--byblos-muted) !important;
+}
+
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="bg-white"], [class*="bg-slate-50"], [class*="bg-slate-100"], [class*="bg-stone-50"], [class*="bg-stone-100"], [class*="bg-stone-200"], [class*="bg-gray-50"], [class*="bg-gray-100"], [class*="bg-neutral-50"], [class*="bg-neutral-100"]) {
     background-color: var(--byblos-surface) !important;
 }
 
-.admin-light-dashboard [class*="border-white"],
-.admin-light-dashboard [class*="border-gray-"],
-.admin-light-dashboard [class*="border-zinc-"],
+:where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="border-slate-"], [class*="border-stone-"], [class*="border-neutral-"]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.category-grid a {
+    display: block;
+    padding: 1rem;
+    background: #050505;
+    color: #FFFFFF;
+    text-decoration: none;
+    border-radius: 4px;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.category-grid a:hover {
+    background: #1a1a1a;
+    color: #FFFFFF;
+}
+
+.seo-fallback ul {
+    padding-left: 1.5rem;
+}
+
+.seo-fallback li {
+    margin-bottom: 0.5rem;
+}
+
+.seo-fallback footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    text-align: center;
+    color: #666;
+}
+
+/* Dialog close button override for product image viewer */
+.product-image-dialog button.absolute.right-4.top-4 {
+    color: rgba(250, 204, 21, 1);
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px;
+    border-radius: 50%;
+}
+
+.product-image-dialog button.absolute.right-4.top-4:hover {
+    color: rgba(234, 179, 8, 1);
+    background-color: rgba(250, 204, 21, 0.2);
+}
+
+.dashboard-layout {
+    background: var(--byblos-bg) !important;
+    color: var(--byblos-text);
+}
+
+body.dashboard-active .seller-tab-selected,
+body.dashboard-active .seller-tab-selected * {
+    color: #000000 !important;
+}
+
+body.dashboard-active .withdrawal-minimum-note,
+body.dashboard-active .withdrawal-minimum-note * {
+    color: #000000 !important;
+}
+
+body.dashboard-active .withdrawal-fee-summary,
+body.dashboard-active .withdrawal-fee-summary * {
+    color: #111111 !important;
+}
+
+body.dashboard-active .seller-service-charge-notice,
+body.dashboard-active .seller-service-charge-notice * {
+    color: #111111 !important;
+}
+
+.product-modal-light,
+.auth-page,
+.app-dark-surface,
+.byblos-light-page {
+    background: var(--byblos-bg) !important;
+    color: var(--byblos-text);
+}
+
+.dashboard-layout [class*="bg-black"],
+.dashboard-layout [class*="bg-gray-800"],
+.dashboard-layout [class*="bg-gray-900"],
+.dashboard-layout [class*="bg-zinc-"],
+.dashboard-layout [class*="bg-white/["],
+.auth-page [class*="bg-black"],
+.auth-page [class*="bg-gray-800"],
+.auth-page [class*="bg-gray-900"],
+.auth-page [class*="bg-zinc-"],
+.auth-page [class*="bg-white/["],
+.product-modal-light [class*="bg-black"],
+.product-modal-light [class*="bg-gray-800"],
+.product-modal-light [class*="bg-gray-900"],
+.product-modal-light [class*="bg-zinc-"],
+.auth-page [class*="border-white"],
+.auth-page [class*="border-gray-"],
+.auth-page [class*="border-zinc-"],
+.auth-page [class*="text-white"],
+.auth-page [class*="text-gray-"],
+.auth-page [class*="text-zinc-"],
+.auth-page input,
+.auth-page textarea,
+.auth-page select,
+.auth-page textarea::placeholder,
+.product-modal-light input::placeholder,
+.product-modal-light textarea::placeholder,
+.byblos-light-page [class*="bg-[#050505]"],
+.admin-light-dashboard [class*="bg-gray-900"],
+.admin-light-dashboard [class*="bg-gray-800"],
+.admin-light-dashboard [class*="bg-zinc-950"],
+.admin-light-dashboard [class*="bg-black"],
+.admin-light-dashboard [class*="bg-white/"],
+.marketing-light-dashboard [class*="bg-[#050505]"],
 .marketing-light-dashboard [class*="border-white"],
 .marketing-light-dashboard [class*="border-gray-"],
 .marketing-light-dashboard [class*="border-zinc-"],
@@ -642,6 +710,11 @@ body.dashboard-active .seller-service-charge-notice * {
    Tailwind-class remaps miss, so no light panels survive on the black theme. */
 :where(.dashboard-layout, .byblos-light-page, .admin-light-dashboard, .marketing-light-dashboard, .mzigo-light-dashboard, .auth-page) :is([class*="bg-[#f8f7f2]"], [class*="bg-[#f9fafb]"], [class*="bg-[#fafafa]"], [class*="bg-[#fefce8]"], [class*="bg-[#fff"], [class*="bg-[#FFF"]) {
     background-color: var(--byblos-surface) !important;
+}
+
+.theme-swatch,
+[data-theme="light"] .theme-swatch {
+    background-color: var(--theme-swatch-color) !important;
 }
 
 

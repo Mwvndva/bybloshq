@@ -10,4 +10,5 @@ export type Theme =
   | 'green'
   | 'red'
   | 'yellow'
-  | 'brown';
+  | 'brown'
+  | 'purple';

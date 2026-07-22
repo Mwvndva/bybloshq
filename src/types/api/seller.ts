@@ -58,7 +58,7 @@ export interface ApiSeller {
   bio?: string;
   avatarUrl?: string;
   avatar_url?: string;
-  theme?: 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+  theme?: 'default' | 'black' | 'pink' | 'purple' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
   balance?: number;
   total_sales?: number;
   totalSales?: number;
