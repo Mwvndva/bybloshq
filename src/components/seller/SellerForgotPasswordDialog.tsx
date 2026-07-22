@@ -17,7 +17,7 @@ export function SellerForgotPasswordDialog({ open, onOpenChange, email, onEmailC
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="w-[90%] sm:w-[95%] sm:max-w-[425px] rounded-2xl border shadow-2xl mx-4 sm:mx-auto"
+          className="w-[90vw] sm:max-w-[340px] rounded-2xl border shadow-2xl mx-4 sm:mx-auto"
           style={{
             background: '#ffffff',
             backdropFilter: 'blur(10px)',

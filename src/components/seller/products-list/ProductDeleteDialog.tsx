@@ -13,7 +13,7 @@ interface ProductDeleteDialogProps {
 export function ProductDeleteDialog({ open, deletingId, onOpenChange, onCancel, onConfirm }: ProductDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-white border border-slate-200 text-slate-950">
+      <DialogContent className="w-[90vw] sm:max-w-[340px] bg-white border border-slate-200 text-slate-950">
         <DialogHeader>
           <DialogTitle className="text-slate-950">Delete Product</DialogTitle>
           <DialogDescription className="text-slate-700">

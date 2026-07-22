@@ -34,7 +34,7 @@ export function ProductInventoryDialog({
 }: ProductInventoryDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#000000] border border-white/10 text-white max-w-md">
+      <DialogContent className="bg-[#000000] border border-white/10 text-white w-[90vw] max-w-sm sm:max-w-[360px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
             <Package className="h-5 w-5 text-emerald-400" />
