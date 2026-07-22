@@ -169,16 +169,16 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-black sm:bg-transparent">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden text-slate-950 dark:text-white">
       {/* Header with Progress Bar */}
       <div className="shrink-0 space-y-3 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] sm:space-y-4 sm:px-6 sm:pt-6 sm:pb-4">
         <div className="flex justify-between items-center">
           <div>
-            <span className="text-[10px] font-black uppercase text-yellow-400 tracking-widest bg-yellow-400/10 px-2 py-1 rounded">Step {step} of 4</span>
+            <span className="text-[10px] font-black uppercase text-yellow-600 dark:text-yellow-400 tracking-widest bg-yellow-400/20 px-2 py-1 rounded">Step {step} of 4</span>
           </div>
           {onClose && (
-            <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-white/10">
-              <X className="h-5 w-5 text-white" />
+            <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-slate-200 dark:hover:bg-white/10">
+              <X className="h-5 w-5 text-slate-700 dark:text-white" />
             </button>
           )}
         </div>
@@ -186,7 +186,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           {[1, 2, 3, 4].map(s => (
             <div key={s} className={cn(
               "h-1.5 flex-1 rounded-full transition-all duration-500",
-              step >= s ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.3)]" : "bg-white/10"
+              step >= s ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.3)]" : "bg-slate-200 dark:bg-white/10"
             )} />
           ))}
         </div>
@@ -211,13 +211,13 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
       </div>
 
       {/* Footer Navigation */}
-      <div className="shrink-0 border-t border-white/10 bg-black/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:bg-black/40 sm:p-6">
+      <div className="shrink-0 border-t border-slate-200 dark:border-white/10 bg-white/95 dark:bg-black/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:p-6">
         <div className="flex items-center justify-between gap-3 sm:gap-4">
         {step > 1 ? (
           <Button
             variant="outline"
             onClick={prevStep}
-            className="h-11 flex-1 rounded-xl border-white/10 bg-transparent text-sm text-white hover:bg-white/5 sm:h-12"
+            className="h-11 flex-1 rounded-xl border-slate-300 dark:border-white/15 bg-slate-100 dark:bg-white/5 text-sm font-semibold text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 sm:h-12"
           >
             <ArrowLeft className="mr-1.5 h-4 w-4 sm:mr-2" />
             Back
@@ -229,7 +229,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         {step < 4 ? (
           <Button
             onClick={nextStep}
-            className="h-11 flex-[2] rounded-xl border border-white/15 bg-white/10 text-sm font-bold text-white hover:bg-white/15 sm:h-12"
+            className="h-11 flex-[2] rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black text-sm font-black shadow-md sm:h-12 transition-all duration-200"
           >
             Continue
             <ArrowRight className="ml-1.5 h-4 w-4 sm:ml-2" />
@@ -238,7 +238,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="h-11 flex-[2] rounded-xl border border-white/15 bg-white/10 text-sm font-bold text-white hover:bg-white/15 sm:h-12"
+            className="h-11 flex-[2] rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black text-sm font-black shadow-md sm:h-12 transition-all duration-200"
           >
             {isLoading ? "Launching..." : "Launch Product"}
             <Sparkles className="ml-1.5 h-4 w-4 fill-current sm:ml-2" />

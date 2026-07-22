@@ -52,7 +52,7 @@ export function ProductEditDialog({
 }: ProductEditDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#000000] border border-white/10 text-white w-[90vw] max-w-sm sm:max-w-[400px] max-h-[78dvh] overflow-y-auto p-3 sm:p-4 rounded-xl">
+      <DialogContent className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white w-[90vw] max-w-sm sm:max-w-[400px] max-h-[78dvh] overflow-y-auto p-3 sm:p-4 rounded-xl">
         <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-2">
           <Button
             variant="ghost"

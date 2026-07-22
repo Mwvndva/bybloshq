@@ -17,18 +17,11 @@ export function SellerForgotPasswordDialog({ open, onOpenChange, email, onEmailC
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="w-[90vw] sm:max-w-[340px] rounded-2xl border shadow-2xl mx-4 sm:mx-auto"
-          style={{
-            background: '#ffffff',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid #e7e2d6',
-            boxShadow: '0 18px 45px rgba(17, 17, 17, 0.08)'
-          }}
+          className="w-[90vw] sm:max-w-[340px] rounded-2xl border border-slate-200 dark:border-white/15 bg-white dark:bg-[#0a0a0a] text-slate-950 dark:text-white shadow-2xl mx-4 sm:mx-auto"
         >
           <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold text-slate-950 tracking-tight">Forgot Password</DialogTitle>
-            <DialogDescription className="text-slate-500 font-normal">
+            <DialogTitle className="text-2xl font-bold text-slate-950 dark:text-white tracking-tight">Forgot Password</DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-300 font-medium">
               Enter your email address and we'll send you a link to reset your password.
             </DialogDescription>
           </DialogHeader>

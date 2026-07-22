@@ -34,13 +34,13 @@ export function ProductInventoryDialog({
 }: ProductInventoryDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#000000] border border-white/10 text-white w-[90vw] max-w-sm sm:max-w-[360px]">
+      <DialogContent className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white w-[90vw] max-w-sm sm:max-w-[360px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-            <Package className="h-5 w-5 text-emerald-400" />
+          <DialogTitle className="text-xl font-bold text-slate-950 dark:text-white flex items-center gap-2">
+            <Package className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             Manage Inventory
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-slate-600 dark:text-zinc-400">
             Update stock levels for {selectedProduct?.name}
           </DialogDescription>
         </DialogHeader>
