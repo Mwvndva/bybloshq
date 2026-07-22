@@ -8,14 +8,15 @@ import { type Theme } from '@/hooks/useShopTheme';
 import { isAesthetic } from './shopPage.shared';
 import { useShopPage } from './useShopPage';
 import { ShopHero } from './ShopHero';
-import { ShopAccentPicker } from './ShopAccentPicker';
+import { ShopPageThemePicker } from './ShopPageThemePicker';
 
 const ShopPage = () => {
   const {
     sellerInfo,
     themeClasses,
-    selectedAccent,
-    setSelectedAccent,
+    shopPageTheme,
+    setShopPageTheme,
+    resolvedShopTheme,
     products,
     filteredProducts,
     searchQuery,
@@ -70,9 +71,12 @@ const ShopPage = () => {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--byblos-bg, #000)', color: 'var(--byblos-text, #f5f5f5)' }}>
-      {/* Accent colour picker — top-right, always visible */}
-      <ShopAccentPicker selectedAccent={selectedAccent} onAccentChange={setSelectedAccent} />
+    <div
+      className="shop-page-root min-h-screen transition-colors duration-300"
+      data-shop-theme={resolvedShopTheme}
+    >
+      {/* Light/Dark/System theme picker — top-right, small, no border touching */}
+      <ShopPageThemePicker theme={shopPageTheme} onThemeChange={setShopPageTheme} />
       <ShopHero
         sellerInfo={sellerInfo}
         bannerLoadFailed={bannerLoadFailed}
@@ -111,7 +115,7 @@ const ShopPage = () => {
 
         {filteredProducts.length > 0 ? (
           <div className={cn(
-            "backdrop-blur-md rounded-[2.5rem] p-5 sm:p-10 shadow-2xl border transition-all duration-500",
+            "shop-products-card backdrop-blur-md rounded-[2.5rem] p-5 sm:p-10 shadow-2xl border transition-all duration-500",
             themeClasses.cardBg,
             themeClasses.borderColor,
             "shadow-[var(--theme-accent)]/5"
