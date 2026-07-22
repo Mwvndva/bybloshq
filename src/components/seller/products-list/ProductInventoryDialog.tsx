@@ -46,21 +46,22 @@ export function ProductInventoryDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl">
             <div>
-              <label className="text-sm font-medium text-white">Track Inventory</label>
-              <p className="text-xs text-zinc-400 mt-1">Enable stock tracking for this product</p>
+              <label className="text-sm font-semibold text-slate-900 dark:text-white">Track Inventory</label>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 font-medium">Enable stock tracking for this product</p>
             </div>
             <button
+              type="button"
               onClick={() => onTrackInventoryChange(!trackInventory)}
               className={cn(
                 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                trackInventory ? 'bg-emerald-500' : 'bg-zinc-700'
+                trackInventory ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-zinc-700'
               )}
             >
               <span
                 className={cn(
-                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-md',
                   trackInventory ? 'translate-x-6' : 'translate-x-1'
                 )}
               />
@@ -70,25 +71,25 @@ export function ProductInventoryDialog({
           {trackInventory && (
             <>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Current Stock</label>
+                <label className="text-sm font-semibold text-slate-800 dark:text-white">Current Stock</label>
                 <div className="relative">
                   <input
                     type="number"
                     min="0"
                     value={stockQuantity}
                     onChange={(event) => onStockQuantityChange(Math.max(0, Number.parseInt(event.target.value, 10) || 0))}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-xl text-slate-950 dark:text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                     placeholder="0"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <Badge
                       className={cn(
-                        'font-semibold',
+                        'font-bold',
                         stockQuantity === 0
-                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/30'
                           : stockQuantity <= lowStockThreshold
-                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 border-amber-300 dark:border-amber-500/30'
+                            : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30'
                       )}
                     >
                       {stockQuantity === 0 ? 'OUT' : stockQuantity <= lowStockThreshold ? 'LOW' : 'OK'}
@@ -98,16 +99,16 @@ export function ProductInventoryDialog({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Low Stock Alert Threshold</label>
+                <label className="text-sm font-semibold text-slate-800 dark:text-white">Low Stock Alert Threshold</label>
                 <input
                   type="number"
                   min="1"
                   value={lowStockThreshold}
                   onChange={(event) => onLowStockThresholdChange(Math.max(1, Number.parseInt(event.target.value, 10) || 5))}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-xl text-slate-950 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
                   placeholder="5"
                 />
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
                   You'll receive an email alert when stock falls to or below this level
                 </p>
               </div>
@@ -117,16 +118,16 @@ export function ProductInventoryDialog({
 
         <DialogFooter className="gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border border-white/10 text-zinc-300 hover:bg-white/5"
+            className="border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-transparent text-slate-900 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-white/5 font-semibold"
           >
             Cancel
           </Button>
           <Button
             onClick={onSave}
             disabled={updatingStock}
-            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700"
+            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md"
           >
             {updatingStock ? (
               <>
