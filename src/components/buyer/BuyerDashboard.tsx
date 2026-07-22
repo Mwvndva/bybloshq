@@ -25,6 +25,8 @@ import { useBuyerProfileForm } from './dashboard/hooks/useBuyerProfileForm';
 import { useBuyerOrdersNotification } from './dashboard/hooks/useBuyerOrdersNotification';
 
 
+import { RouteFallback } from '@/components/common/RouteFallback';
+
 type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
 type BuyerSection = DashboardSection | 'profile';
 
@@ -220,7 +222,7 @@ function BuyerDashboard() {
 
         {activeSection === 'orders' && (
           <div className="space-y-4">
-            <Suspense fallback={<div style={{ color: '#ffffff' }}>Loading orders...</div>}>
+            <Suspense fallback={<RouteFallback message="Loading orders..." />}>
               <OrdersSection />
             </Suspense>
           </div>
