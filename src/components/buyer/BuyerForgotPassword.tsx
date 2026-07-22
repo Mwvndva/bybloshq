@@ -39,14 +39,13 @@ export function BuyerForgotPassword() {
     };
 
     return (
-        <div className="auth-page min-h-screen w-full bg-black flex flex-col relative"
+        <div className="auth-page min-h-screen w-full bg-slate-50 dark:bg-[#080808] text-slate-950 dark:text-white flex flex-col relative transition-colors duration-200"
             style={{
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                backgroundColor: '#000000',
             }}
         >
             {/* Header */}
-            <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30">
+            <header className="bg-white/90 dark:bg-[#0d0d0d]/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 sticky top-0 z-30">
                 <div className="w-full px-4 sm:px-6 lg:px-8">
                     <div className="relative flex items-center justify-between h-20">
                         {/* Left: Back Button */}
@@ -55,7 +54,7 @@ export function BuyerForgotPassword() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => navigate('/buyer/login')}
-                                className="text-white hover:text-black hover:bg-yellow-400 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
+                                className="text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
                             >
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 <span className="hidden sm:inline">Back</span>
@@ -65,10 +64,10 @@ export function BuyerForgotPassword() {
 
                         {/* Center: Title */}
                         <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%] flex items-center justify-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
                                 <ShoppingBag className="h-4 w-4 text-slate-950" />
                             </div>
-                            <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
+                            <h1 className="text-xl sm:text-2xl font-bold text-slate-950 dark:text-white tracking-tight truncate">
                                 Buyer Portal
                             </h1>
                         </div>
@@ -85,38 +84,31 @@ export function BuyerForgotPassword() {
                 <div className="w-full max-w-[400px]">
                     {/* Forgot Password Card */}
                     <div
-                        className="rounded-2xl border shadow-2xl p-5 sm:p-6"
-                        style={{
-                            background: 'rgba(8, 8, 8, 0.96)',
-                            backdropFilter: 'blur(10px)',
-                            WebkitBackdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255, 255, 255, 0.16)',
-                            boxShadow: '0 18px 45px rgba(0, 0, 0, 0.45)'
-                        }}
+                        className="rounded-2xl border border-slate-200 dark:border-white/12 shadow-2xl p-5 sm:p-6 bg-white dark:bg-[#0d0d0d] text-slate-950 dark:text-white transition-colors duration-200"
                     >
                         <div className="text-center mb-6">
                             <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
-                                <ShoppingBag className="h-6 w-6 text-white" />
+                                <ShoppingBag className="h-6 w-6 text-black" />
                             </div>
-                            <h1 className="text-xl font-semibold tracking-tight text-white mb-1">Forgot Password</h1>
-                            <p className="text-sm text-gray-300 font-normal">Enter your email to reset password</p>
+                            <h1 className="text-xl font-bold tracking-tight text-slate-950 dark:text-white mb-1">Forgot Password</h1>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Enter your email to reset password</p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-1.5">
-                                <Label htmlFor="email" className="text-xs font-medium text-gray-200">
+                                <Label htmlFor="email" className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                                     Email Address
                                 </Label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                                        <Mail className="h-4 w-4 text-gray-400" />
+                                        <Mail className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                                     </div>
                                     <Input
                                         id="email"
                                         name="email"
                                         type="email"
                                         placeholder="Enter your email"
-                                        className="!pl-12 h-10 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                                        className="!pl-12 h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
