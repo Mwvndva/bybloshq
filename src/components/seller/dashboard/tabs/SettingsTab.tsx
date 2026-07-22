@@ -17,6 +17,7 @@ import { SellerAmbassadorInvites } from './SellerAmbassadorInvites';
 import { SectionHeader, SocialInput } from './settingsTab.parts';
 import { SettingsBusinessProfileSection } from './SettingsBusinessProfileSection';
 import { SettingsLocationSection } from './SettingsLocationSection';
+import { AppThemeToggle } from './AppThemeToggle';
 import type { LocationCoordinates } from '@/lib/location';
 
 
@@ -116,6 +117,12 @@ export function SettingsTab({
         previewShopUrl={previewShopUrl}
       />
 
+      {/* App Theme */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+        <AppThemeToggle />
+      </section>
+
+      {/* Shop accent colour */}
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
         <ThemeSelector
           currentTheme={(sellerProfile?.theme as Theme) || 'default'}
