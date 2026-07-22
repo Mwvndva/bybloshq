@@ -19,7 +19,7 @@ import { SellerDashboardErrorState, SellerDashboardLoadingState } from './dashbo
 import { SellerDashboardTabs } from './dashboard/widgets/SellerDashboardTabs';
 import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/lib/shopLinks';
 import { isNativeApp } from '@/lib/mobileApp';
-import { useShopTheme } from '@/hooks/useShopTheme';
+import { useShopAccentOnly } from '@/hooks/useShopTheme';
 import { useSellerProfileQuery } from '@/hooks/seller/useSellerProfile';
 import type { Theme } from '@/types';
 import type { SellerDashboardProps, SellerTabId } from './dashboard/types';
@@ -36,7 +36,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // in Settings — which invalidates ['seller-profile'] — updates the accent
   // immediately instead of only after a full reload.
   const { data: liveSellerProfile } = useSellerProfileQuery(!!sellerProfile);
-  useShopTheme(((liveSellerProfile?.theme ?? sellerProfile?.theme) as Theme) || 'default');
+  useShopAccentOnly(((liveSellerProfile?.theme ?? sellerProfile?.theme) as Theme) || 'default');
 
   const [activeTab, setActiveTab] = useState<SellerTabId>('overview');
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);

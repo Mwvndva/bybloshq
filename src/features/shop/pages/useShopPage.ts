@@ -20,7 +20,8 @@ export function useShopPage() {
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
 
   const { isAuthenticated } = useBuyerAuth();
-  const themeClasses = useShopTheme((sellerInfo?.theme as Theme) || 'default');
+  const [selectedAccent, setSelectedAccent] = useState<Theme>('default');
+  const themeClasses = useShopTheme(selectedAccent);
 
   const trackCreatorLink = useTrackCreatorLinkMutation();
 
@@ -88,6 +89,10 @@ export function useShopPage() {
     setAvatarLoadFailed(false);
     setBannerLoadFailed(false);
 
+    // Initialise the accent picker from the seller's saved theme (only on
+    // first load — after that the visitor can override it locally).
+    setSelectedAccent((sellerData.theme as Theme) || 'default');
+
     if (sellerProducts) {
       const availableProducts = (sellerProducts as ApiSellerProduct[])
         .map(p => ({
@@ -136,6 +141,8 @@ export function useShopPage() {
   return {
     sellerInfo,
     themeClasses,
+    selectedAccent,
+    setSelectedAccent,
     products: visibleProducts,
     filteredProducts,
     searchQuery,
