@@ -15,6 +15,13 @@ function resolveTheme(pref: AppTheme): 'light' | 'dark' {
 
 function applyTheme(resolved: 'light' | 'dark') {
   document.documentElement.setAttribute('data-theme', resolved);
+  if (resolved === 'dark') {
+    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('light');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+  }
 }
 
 export function useAppTheme() {

@@ -44,7 +44,7 @@ const EMPTY_SELLERS: ApiPublicSeller[] = [];
 const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGridProps) => {
     const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_SELLERS);
     const deferredSearchQuery = useDeferredValue(searchQuery);
-    const sellersQuery = usePublicSellersQuery({ page: 1, limit: 48 });
+    const sellersQuery = usePublicSellersQuery({ page: 1, limit: 100 });
     const sellers = sellersQuery.data?.sellers || EMPTY_SELLERS;
     const loading = sellersQuery.isLoading;
 
@@ -82,25 +82,11 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
     }
 
     return (
-        <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {visibleSellers.map((seller) => (
-                    <SellerBrandCard key={seller.id} seller={seller} isBuyer={isBuyer} />
-                ))}
-            </div>
-
-            {visibleCount < filteredSellers.length && (
-                <div className="mt-4 flex justify-center">
-                    <button
-                        type="button"
-                        className="rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-50 active:scale-95"
-                        onClick={() => setVisibleCount(count => count + VISIBLE_SELLERS_STEP)}
-                    >
-                        Show more shops
-                    </button>
-                </div>
-            )}
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredSellers.map((seller) => (
+                <SellerBrandCard key={seller.id} seller={seller} isBuyer={isBuyer} />
+            ))}
+        </div>
     );
 };
 

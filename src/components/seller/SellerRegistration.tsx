@@ -53,14 +53,13 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   } = useSellerRegistration(onSuccess);
 
   return (
-    <div className="auth-page relative flex min-h-[100svh] w-full flex-col overflow-x-hidden"
+    <div className="auth-page relative flex min-h-[100svh] w-full flex-col overflow-x-hidden bg-slate-50 dark:bg-[#080808] text-slate-950 dark:text-white transition-colors duration-200"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        backgroundColor: '#f8f7f2',
       }}
     >
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-stone-200 sticky top-0 z-30">
+      <header className="bg-white/90 dark:bg-[#0d0d0d]/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 sticky top-0 z-30">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="relative flex h-16 items-center justify-between sm:h-20">
             {/* Left: Back Button */}
@@ -69,7 +68,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/')}
-                className="text-stone-700 hover:text-black hover:bg-yellow-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
+                className="text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Back</span>
@@ -79,10 +78,10 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
             {/* Center: Title */}
             <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[46%] flex items-center justify-center gap-2 sm:max-w-[50%]">
-              <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
                 <Store className="h-4 w-4 text-slate-950" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-slate-950 tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-950 dark:text-white tracking-tight truncate">
                 Seller Portal
               </h1>
             </div>
@@ -94,44 +93,42 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         </div>
       </header>
 
-
-
       {/* Main Content */}
       <div className="flex flex-1 items-start justify-center px-4 py-5 sm:items-center sm:px-6 sm:py-8 lg:px-8">
         <div className="w-full max-w-[420px]">
           {/* Register Card */}
           <div
-            className="rounded-2xl border border-stone-200 shadow-[0_18px_45px_rgba(17,17,17,0.08)] p-5 sm:p-6 bg-white backdrop-blur-md"
+            className="rounded-2xl border border-slate-200 dark:border-white/12 shadow-2xl p-5 sm:p-6 bg-white dark:bg-[#0d0d0d] text-slate-950 dark:text-white transition-colors duration-200"
           >
             <div className="text-center mb-6">
               <div className="mx-auto mb-4 flex items-center justify-center">
                 <Store className="h-12 w-12 text-yellow-500" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight text-stone-950 mb-1">Create Account</h1>
-              <p className="text-sm text-stone-500">Join our seller community</p>
+              <h1 className="text-xl font-bold tracking-tight text-slate-950 dark:text-white mb-1">Create Account</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Join our seller community</p>
 
               {/* Progress Indicator */}
               <div className="mt-4 flex items-center justify-center gap-2">
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 1 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 1 ? 'bg-yellow-400 text-black' : 'bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'}`}>
                     1
                   </div>
                 </div>
-                <div className={`w-6 h-0.5 ${currentStep >= 2 ? 'bg-yellow-400' : 'bg-stone-200'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 2 ? 'bg-yellow-400' : 'bg-slate-200 dark:bg-zinc-800'}`} />
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 2 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 2 ? 'bg-yellow-400 text-black' : 'bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'}`}>
                     2
                   </div>
                 </div>
-                <div className={`w-6 h-0.5 ${currentStep >= 3 ? 'bg-yellow-400' : 'bg-stone-200'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 3 ? 'bg-yellow-400' : 'bg-slate-200 dark:bg-zinc-800'}`} />
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 3 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 3 ? 'bg-yellow-400 text-black' : 'bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'}`}>
                     3
                   </div>
                 </div>
-                <div className={`w-6 h-0.5 ${currentStep >= 4 ? 'bg-yellow-400' : 'bg-stone-200'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 4 ? 'bg-yellow-400' : 'bg-slate-200 dark:bg-zinc-800'}`} />
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 4 ? 'bg-yellow-400 text-black' : 'bg-stone-200 text-stone-500'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 4 ? 'bg-yellow-400 text-black' : 'bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'}`}>
                     4
                   </div>
                 </div>

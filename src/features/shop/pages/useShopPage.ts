@@ -5,7 +5,8 @@ import { useTrackCreatorLinkMutation } from '@/hooks/creator/mutations/useTrackC
 import type { ApiSellerProduct } from '@/types/api/product';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import { isNativeApp } from '@/lib/mobileApp';
-import { useShopTheme, type Theme } from '@/hooks/useShopTheme';
+import { useShopTheme, useShopAccentOnly, type Theme } from '@/hooks/useShopTheme';
+import { useShopPageTheme, type ShopPageTheme } from './ShopPageThemePicker';
 import { isAesthetic, getSellerInitials, type ShopProduct, type ShopSeller } from './shopPage.shared';
 
 export function useShopPage() {
@@ -20,8 +21,13 @@ export function useShopPage() {
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
 
   const { isAuthenticated } = useBuyerAuth();
-  const [selectedAccent, setSelectedAccent] = useState<Theme>('default');
-  const themeClasses = useShopTheme(selectedAccent);
+
+  // Visitor-controlled page theme (light / dark / system)
+  const { theme: shopPageTheme, setTheme: setShopPageTheme, resolved: resolvedShopTheme } = useShopPageTheme();
+
+  // Seller's saved colour theme drives accent/button vars only (not bg/text)
+  const [sellerTheme, setSellerTheme] = useState<Theme>('default');
+  const themeClasses = useShopAccentOnly(sellerTheme);
 
   const trackCreatorLink = useTrackCreatorLinkMutation();
 
@@ -89,9 +95,8 @@ export function useShopPage() {
     setAvatarLoadFailed(false);
     setBannerLoadFailed(false);
 
-    // Initialise the accent picker from the seller's saved theme (only on
-    // first load — after that the visitor can override it locally).
-    setSelectedAccent((sellerData.theme as Theme) || 'default');
+    // Store seller's saved theme for accent/button colouring
+    setSellerTheme((sellerData.theme as Theme) || 'default');
 
     if (sellerProducts) {
       const availableProducts = (sellerProducts as ApiSellerProduct[])
@@ -141,8 +146,9 @@ export function useShopPage() {
   return {
     sellerInfo,
     themeClasses,
-    selectedAccent,
-    setSelectedAccent,
+    shopPageTheme,
+    setShopPageTheme,
+    resolvedShopTheme,
     products: visibleProducts,
     filteredProducts,
     searchQuery,

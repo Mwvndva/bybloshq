@@ -49,8 +49,8 @@ export function BuyerInfoForm({
               <User className="h-7 w-7 text-yellow-400" />
             </div>
             <div className="space-y-2">
-              <DialogTitle className="text-2xl font-black text-center text-white">PAYMENT DETAILS</DialogTitle>
-              <p className="text-[11px] text-center font-bold text-white uppercase tracking-wider opacity-80 leading-relaxed px-4">
+              <DialogTitle className="text-2xl font-black text-center text-slate-950 dark:text-white">PAYMENT DETAILS</DialogTitle>
+              <p className="text-[11px] text-center font-bold text-slate-600 dark:text-white uppercase tracking-wider opacity-80 leading-relaxed px-4">
                 Your payment details are safe and are only collected once
               </p>
             </div>
@@ -353,12 +353,12 @@ export function BuyerInfoForm({
                 onChange={(e) => setTermsAccepted(e.target.checked)}
                 className="mt-1 h-4 w-4 rounded border-slate-200 bg-slate-50 text-yellow-400 focus:ring-yellow-400 accent-yellow-400"
               />
-              <label htmlFor="termsAccepted" className="text-sm text-white cursor-pointer leading-relaxed">
+              <label htmlFor="termsAccepted" className={`text-sm cursor-pointer leading-relaxed ${themeClasses.label}`}>
                 I agree to the{' '}
                 <button
                   type="button"
                   onClick={() => setIsTermsModalOpen(true)}
-                  className="text-white underline font-medium hover:text-yellow-400 transition-colors"
+                  className="underline font-medium hover:text-yellow-500 transition-colors"
                 >
                   Terms and Conditions
                 </button>
@@ -370,12 +370,11 @@ export function BuyerInfoForm({
             )}
           </div>
 
-          <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-white/15 shrink-0 bg-white/5 backdrop-blur-sm">
+          <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-slate-200 dark:border-white/15 shrink-0 bg-slate-50 dark:bg-white/5 backdrop-blur-sm">
             <Button
               type="submit"
               disabled={isLoading || !termsAccepted}
-              variant="secondary-byblos"
-              className={`w-full h-12 rounded-xl font-black text-base shadow-lg transition-all active:scale-[0.98] ${!termsAccepted ? 'opacity-50 cursor-not-allowed' : ''
+              className={`w-full h-12 rounded-xl font-black text-base shadow-lg transition-all bg-yellow-400 hover:bg-yellow-500 text-black active:scale-[0.98] ${!termsAccepted ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
               {isLoading ? (
@@ -392,7 +391,7 @@ export function BuyerInfoForm({
               variant="ghost"
               onClick={handleClose}
               disabled={isLoading}
-              className="w-full h-10 text-sm font-bold text-white hover:text-white hover:bg-white/10"
+              className="w-full h-10 text-sm font-bold text-slate-700 dark:text-white hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/10"
             >
               Cancel
             </Button>

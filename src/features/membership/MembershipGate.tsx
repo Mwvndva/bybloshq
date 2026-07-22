@@ -157,7 +157,12 @@ export function MembershipGate({ enabled }: MembershipGateProps) {
             </DialogTitle>
             <p className="-mt-1 text-xs text-white/55">Share your card and show you shop protected.</p>
 
-            <div className="w-full max-w-[320px] overflow-hidden rounded-2xl">
+            {/* min-w-0 is mandatory here: this div is a direct grid-item of
+                DialogContent (display:grid). Without it the grid column's
+                min-width:auto expands to the card's natural 900px, making
+                ScaledFounderCard's ResizeObserver see the wrong offsetWidth
+                and scale = 1.0 (full bleed) instead of the intended ~0.355. */}
+            <div className="w-full min-w-0 max-w-[320px] overflow-hidden rounded-2xl">
               <ScaledFounderCard memberNumber={displayNumber} />
             </div>
 
@@ -191,9 +196,23 @@ export function MembershipGate({ enabled }: MembershipGateProps) {
           </div>
         )}
 
-        {/* Off-screen full-resolution 9:16 story frame used only for PNG export. */}
+        {/* Off-screen full-resolution 9:16 story frame — used only for PNG
+            export via html-to-image. Kept out of view with opacity:0 + z-index
+            rather than an extreme left offset, because some WebKit/Safari
+            builds fail to resolve computed styles for elements far outside the
+            viewport (producing a blank or logo-less exported PNG). */}
         {step === 'celebrate' && (
-          <div aria-hidden="true" style={{ position: 'fixed', left: -99999, top: 0, pointerEvents: 'none' }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              opacity: 0,
+              pointerEvents: 'none',
+              zIndex: -1,
+            }}
+          >
             <div ref={fullCardRef} style={{ width: 1080, height: 1920 }}>
               <StoryShareFrame memberNumber={displayNumber} />
             </div>

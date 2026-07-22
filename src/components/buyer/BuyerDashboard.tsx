@@ -25,6 +25,8 @@ import { useBuyerProfileForm } from './dashboard/hooks/useBuyerProfileForm';
 import { useBuyerOrdersNotification } from './dashboard/hooks/useBuyerOrdersNotification';
 
 
+import { RouteFallback } from '@/components/common/RouteFallback';
+
 type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
 type BuyerSection = DashboardSection | 'profile';
 
@@ -77,8 +79,8 @@ function BuyerDashboard() {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
 
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: var(--byblos-bg, #000000); overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: var(--byblos-bg, #000000); overflow-x: hidden;';
 
     return () => {
       document.body.style.cssText = originalBodyStyle;
@@ -159,12 +161,11 @@ function BuyerDashboard() {
 
 
   return (
-    <div className="page-enter byblos-light-page min-w-0 overflow-x-hidden" style={{
+    <div className="page-enter dashboard-layout min-w-0 overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200" style={{
       display: 'flex', flexDirection: 'column',
       minHeight: '100svh',
       height: '100svh',
       overflow: 'hidden',
-      background: '#000000',
     }}>
       <BuyerDashboardHeader />
       <BuyerDashboardSearch
@@ -211,9 +212,9 @@ function BuyerDashboard() {
 
         {activeSection === 'wishlist' && (
           <div className="space-y-4">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>Wishlist</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{wishlist.length} items</span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm font-bold text-slate-950 dark:text-white">Wishlist</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-white/50">{wishlist.length} items</span>
             </div>
             <WishlistSection />
           </div>
@@ -221,7 +222,7 @@ function BuyerDashboard() {
 
         {activeSection === 'orders' && (
           <div className="space-y-4">
-            <Suspense fallback={<div style={{ color: '#ffffff' }}>Loading orders...</div>}>
+            <Suspense fallback={<RouteFallback message="Loading orders..." />}>
               <OrdersSection />
             </Suspense>
           </div>

@@ -8,6 +8,10 @@ import { toPng } from 'html-to-image';
 // <ScaledFounderCard>), never by changing its internal width/height or letting a
 // parent flex/grid stretch it. Do not alter colors, spacing, font sizes, or
 // proportions here without an explicit request.
+//
+// MANDATORY INTEGRATION INSTRUCTIONS:
+// 1. Wrap with ScaledFounderCard, never FounderCard directly, in any container with unknown/fluid width.
+// 2. Any flex or grid ancestor wrapping the card needs min-width: 0 (Tailwind: min-w-0) on the item containing it — this is not optional. If a future integration point stretches again, check this first before touching the component itself.
 const CARD_WIDTH = 900;
 const CARD_HEIGHT = 566;
 
@@ -38,6 +42,7 @@ export function FounderCard({
 
   return (
     <div
+      className="byblos-card-root"
       style={{
         // LOCKED: exact card proportions. Never stretch / never use %.
         width: CARD_WIDTH,

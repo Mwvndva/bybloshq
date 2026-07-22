@@ -70,21 +70,21 @@ export function BuyerOrderDialogs({
   return (
     <>
       <Dialog open={showCancelDialog} onOpenChange={onCancelDialogChange}>
-        <DialogContent className="sm:max-w-[425px] bg-black border border-white/15 text-white shadow-xl shadow-black/60">
+        <DialogContent className="w-[92vw] sm:max-w-[420px] bg-white dark:bg-[#0d0d0d] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white rounded-3xl p-5 sm:p-6 shadow-2xl transition-colors duration-200">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-950 dark:text-white">
               <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
                 <XCircle className="h-4 w-4 text-white" />
               </div>
-              Cancel ApiOrder
+              Cancel Order
             </DialogTitle>
-            <DialogDescription className="text-sm text-white/70 leading-relaxed">
+            <DialogDescription className="text-sm text-slate-600 dark:text-white/70 leading-relaxed">
               Are you sure you want to cancel this order? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-red-500/15 border border-red-400/30 rounded-xl p-3 mb-4">
-            <p className="text-sm text-red-100 font-semibold">
+          <div className="bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-400/30 rounded-xl p-3 my-2">
+            <p className="text-sm text-red-800 dark:text-red-100 font-semibold">
               This action cannot be undone. You will receive a refund to your account balance.
             </p>
           </div>
@@ -94,14 +94,14 @@ export function BuyerOrderDialogs({
               variant="outline"
               onClick={() => onCancelDialogChange(false)}
               disabled={isConfirming === currentOrderId}
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-slate-300 dark:border-white/20 bg-white dark:bg-transparent text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10"
             >
-              No, Keep ApiOrder
+              No, Keep Order
             </Button>
             <Button
               onClick={onCancelOrder}
               disabled={isConfirming === currentOrderId}
-              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold shadow-sm hover:shadow-md transition-all duration-200"
             >
               {isConfirming === currentOrderId ? (
                 <>
@@ -109,7 +109,7 @@ export function BuyerOrderDialogs({
                   Cancelling...
                 </>
               ) : (
-                'Yes, Cancel ApiOrder'
+                'Yes, Cancel Order'
               )}
             </Button>
           </DialogFooter>
@@ -119,58 +119,48 @@ export function BuyerOrderDialogs({
       <OrderDetailsDialog order={selectedOrderForDetails} serviceCharge={selectedOrderServiceCharge} onClose={() => onSelectedOrderChange(null)} onViewImage={onViewingImageChange} onConfirmReceiptClick={onConfirmReceiptClick} />
 
       <Dialog open={showReceiptDialog} onOpenChange={onReceiptDialogChange}>
-        <DialogContent className="sm:max-w-[425px] bg-black border border-white/15 text-white shadow-xl shadow-black/60">
+        <DialogContent className="w-[92vw] sm:max-w-[420px] bg-white dark:bg-[#0d0d0d] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white rounded-3xl p-5 sm:p-6 shadow-2xl transition-colors duration-200">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-950 dark:text-white">
               <div className={`w-8 h-8 bg-gradient-to-r ${currentIsService ? 'from-purple-500 to-indigo-500' : 'from-green-500 to-emerald-500'} rounded-full flex items-center justify-center`}>
                 <CheckCircle className="h-4 w-4 text-white" />
               </div>
               {currentIsService ? 'Confirm Service Completion' : 'Confirm Package Receipt'}
             </DialogTitle>
-            <DialogDescription className="text-sm text-white/70 leading-relaxed">
+            <DialogDescription className="text-sm text-slate-600 dark:text-white/70 leading-relaxed">
               {confirmationContent}
             </DialogDescription>
           </DialogHeader>
 
           {showPhysicalReceiptLocation && (
-            <div className="bg-blue-500/15 border border-blue-400/30 rounded-xl p-4 my-4">
+            <div className="bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/30 rounded-xl p-4 my-3">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <Package className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-sm">
-                  <p className="font-semibold text-blue-100 mb-1">Pickup Location:</p>
-                  <p className="text-blue-100/85">
-                    <strong>Dynamic Mall</strong><br />
-                    Along Tomboya Street<br />
-                    Shop Number: <strong>SL 32</strong>
+                <div>
+                  <h5 className="text-sm font-bold text-blue-900 dark:text-blue-100">Delivery Confirmation</h5>
+                  <p className="text-xs text-blue-700 dark:text-blue-200/80 mt-1 leading-relaxed">
+                    By clicking confirm below, you verify that you have physically inspected your order and received it in good condition.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="bg-yellow-500/15 border border-yellow-400/30 rounded-xl p-3 mb-4">
-            <p className="text-sm text-yellow-100 font-semibold">
-              {currentIsService
-                ? 'Please confirm only after the service has been delivered satisfactorily.'
-                : 'Please confirm only after you have physically received and inspected your package.'}
-            </p>
-          </div>
-
           <DialogFooter className="mt-4 gap-2">
             <Button
               variant="outline"
               onClick={() => onReceiptDialogChange(false)}
               disabled={isConfirming === currentOrderId}
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-slate-300 dark:border-white/20 bg-white dark:bg-transparent text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10"
             >
-              Cancel
+              Not Yet
             </Button>
             <Button
               onClick={onConfirmReceipt}
               disabled={isConfirming === currentOrderId}
-              className={`bg-gradient-to-r ${currentIsService ? 'from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600' : 'from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'} text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200`}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold shadow-sm hover:shadow-md transition-all duration-200"
             >
               {isConfirming === currentOrderId ? (
                 <>
@@ -178,10 +168,7 @@ export function BuyerOrderDialogs({
                   Confirming...
                 </>
               ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  {getConfirmReceiptLabel(currentOrder)}
-                </>
+                'Yes, I Have Received It'
               )}
             </Button>
           </DialogFooter>

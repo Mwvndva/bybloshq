@@ -581,7 +581,6 @@ export function useProductCheckout(product: Product, seller: Seller | undefined,
     background: 'var(--product-card-bg)',
     borderColor: 'var(--product-card-border)',
     color: 'var(--product-card-text)',
-    boxShadow: '0 16px 38px -28px rgba(15, 23, 42, 0.35)'
   };
 
   const themeClasses = getThemeClasses(cardTheme);

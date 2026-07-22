@@ -148,11 +148,11 @@ export function useBuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false
   };
 
   const themeClasses = {
-    bg: 'bg-black border border-white/15',
-    text: 'text-white',
-    input: 'bg-white/5 border-white/15 text-white placeholder:text-white/60 focus-visible:ring-yellow-400',
-    label: 'text-white',
-    button: 'bg-yellow-400 hover:bg-yellow-500 text-white',
+    bg: 'bg-white dark:bg-black border border-slate-200 dark:border-white/15',
+    text: 'text-slate-950 dark:text-white',
+    input: 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/60 focus-visible:ring-yellow-400',
+    label: 'text-slate-800 dark:text-white',
+    button: 'bg-yellow-400 hover:bg-yellow-500 text-black font-bold',
     error: 'text-red-500'
   };
 

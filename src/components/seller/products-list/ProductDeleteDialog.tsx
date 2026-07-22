@@ -13,10 +13,10 @@ interface ProductDeleteDialogProps {
 export function ProductDeleteDialog({ open, deletingId, onOpenChange, onCancel, onConfirm }: ProductDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-white border border-slate-200 text-slate-950">
+      <DialogContent className="w-[90vw] sm:max-w-[340px] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/15 text-slate-950 dark:text-white">
         <DialogHeader>
-          <DialogTitle className="text-slate-950">Delete Product</DialogTitle>
-          <DialogDescription className="text-slate-700">
+          <DialogTitle className="text-slate-950 dark:text-white">Delete Product</DialogTitle>
+          <DialogDescription className="text-slate-700 dark:text-slate-300">
             Are you sure you want to delete this product? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>

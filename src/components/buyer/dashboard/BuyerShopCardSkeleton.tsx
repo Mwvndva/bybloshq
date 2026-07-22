@@ -1,22 +1,22 @@
 export function BuyerShopCardSkeleton() {
   return (
-    <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 16, padding: 12, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: '#232323' }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ height: 12, width: '62%', borderRadius: 999, background: '#232323', marginBottom: 8 }} />
-          <div style={{ height: 10, width: '86%', borderRadius: 999, background: '#232323', marginBottom: 6 }} />
-          <div style={{ height: 10, width: '54%', borderRadius: 999, background: '#232323' }} />
+    <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-3 overflow-hidden shadow-sm dark:shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-colors duration-200">
+      <div className="flex gap-3">
+        <div className="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-[#232323] animate-pulse shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="h-3 w-[62%] rounded-full bg-slate-200 dark:bg-[#232323] animate-pulse mb-2" />
+          <div className="h-2.5 w-[86%] rounded-full bg-slate-200 dark:bg-[#232323] animate-pulse mb-1.5" />
+          <div className="h-2.5 w-[54%] rounded-full bg-slate-200 dark:bg-[#232323] animate-pulse" />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 12 }}>
+      <div className="grid grid-cols-3 gap-1.5 mt-3">
         {[0, 1, 2].map(item => (
-          <div key={item} style={{ height: 46, borderRadius: 12, background: '#232323' }} />
+          <div key={item} className="h-11 rounded-xl bg-slate-200 dark:bg-[#232323] animate-pulse" />
         ))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 12 }}>
-        <div style={{ height: 40, borderRadius: 12, background: '#232323' }} />
-        <div style={{ width: 94, height: 40, borderRadius: 12, background: 'rgba(245,197,24,0.22)' }} />
+      <div className="grid grid-cols-[1fr_auto] gap-2 mt-3">
+        <div className="h-10 rounded-xl bg-slate-200 dark:bg-[#232323] animate-pulse" />
+        <div className="w-[94px] h-10 rounded-xl bg-yellow-400/20 dark:bg-[#F5C518]/22 animate-pulse" />
       </div>
     </div>
   );
