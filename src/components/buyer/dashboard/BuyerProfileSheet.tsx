@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards } from 'lucide-react';
+import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards, Monitor, Moon, Sun } from 'lucide-react';
 import RefundCard from '../RefundCard';
 import { BuyerMembershipCard } from './BuyerMembershipCard';
 import { DeleteAccountButton } from '@/components/account/DeleteAccountButton';
 import { deleteBuyerAccount } from '@/api/buyer/profile';
-import { AppThemeToggle } from '@/components/seller/dashboard/tabs/AppThemeToggle';
+import { useAppTheme, type AppTheme } from '@/hooks/useAppTheme';
 
 interface BuyerProfileSheetProps {
   isEditingProfile: boolean;
@@ -26,6 +26,46 @@ interface BuyerProfileSheetProps {
 
 function displayValue(value?: string | null) {
   return value?.trim() || 'Not set';
+}
+
+function BuyerThemePillPicker() {
+  const { theme, setTheme } = useAppTheme();
+
+  const OPTIONS: { value: AppTheme; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+    { value: 'system', label: 'System', Icon: Monitor },
+    { value: 'light',  label: 'Light',  Icon: Sun },
+    { value: 'dark',   label: 'Dark',   Icon: Moon },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white/60">
+        Theme
+      </span>
+      <div className="flex items-center rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-200/60 dark:bg-white/[0.06] p-1 gap-1">
+        {OPTIONS.map(({ value, label, Icon }) => {
+          const active = theme === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              id={`buyer-theme-${value}`}
+              onClick={() => setTheme(value)}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-bold transition-all duration-200 ${
+                active
+                  ? 'bg-yellow-400 text-black shadow-md font-extrabold'
+                  : 'text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300/40 dark:hover:bg-white/10'
+              }`}
+              aria-pressed={active}
+            >
+              <Icon className={`h-3.5 w-3.5 ${active ? 'text-black' : 'text-slate-500 dark:text-white/60'}`} />
+              <span>{label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -114,6 +154,12 @@ export function BuyerProfileSheet({
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-5 space-y-4">
+          {/* App Theme Picker Pill - Positioned Above Account Details */}
+          <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
+            <BuyerThemePillPicker />
+          </section>
+
+          {/* Account Details Section */}
           <section className="space-y-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -174,11 +220,6 @@ export function BuyerProfileSheet({
           </section>
 
           <BuyerMembershipCard />
-
-          {/* App Theme Picker */}
-          <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
-            <AppThemeToggle />
-          </section>
 
           <section className="space-y-3">
             <div className="flex items-center gap-2">
