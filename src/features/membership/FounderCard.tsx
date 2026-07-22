@@ -38,6 +38,7 @@ export function FounderCard({
 
   return (
     <div
+      className="byblos-card-root"
       style={{
         // LOCKED: exact card proportions. Never stretch / never use %.
         width: CARD_WIDTH,
