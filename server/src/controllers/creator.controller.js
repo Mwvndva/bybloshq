@@ -60,7 +60,14 @@ export const getInvite = async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    const message = error.message || 'Invalid or expired creator invite.';
+    if (message.includes('already been used')) {
+      return res.status(409).json({ status: 'fail', message });
+    }
+    if (message.includes('not found') || message.includes('expired')) {
+      return res.status(404).json({ status: 'fail', message });
+    }
+    return res.status(400).json({ status: 'fail', message });
   }
 };
 
@@ -77,6 +84,16 @@ export const register = async (req, res, next) => {
       data: result
     });
   } catch (error) {
+    const message = error.message || 'Could not register creator account.';
+    if (message.includes('already been used') || message.includes('already registered')) {
+      return res.status(409).json({ status: 'fail', message });
+    }
+    if (message.includes('not found') || message.includes('expired')) {
+      return res.status(404).json({ status: 'fail', message });
+    }
+    if (message.includes('required') || message.includes('do not match') || message.includes('email')) {
+      return res.status(400).json({ status: 'fail', message });
+    }
     next(error);
   }
 };
