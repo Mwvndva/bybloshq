@@ -207,7 +207,7 @@ export const sendEmail = async (options, retryCount = 0) => {
 
 export const sendVerificationEmail = async (email, token, userType = 'buyer') => {
   try {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+    const baseUrl = process.env.FRONTEND_URL.replace(/\/+$/, '');
     // Include email in URL so backend can look up the user without a session
     const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email)}&type=${userType}`
     const appName = process.env.APP_NAME || 'Byblos'
@@ -235,9 +235,10 @@ export const sendVerificationEmail = async (email, token, userType = 'buyer') =>
 
 export const sendPasswordResetEmail = async (email, token, userType = 'seller') => {
   try {
-    const baseUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000';
+    const baseUrl = process.env.FRONTEND_URL.replace(/\/+$/, '');
     const resetUrl = `${baseUrl}/${userType}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
     const appName = process.env.APP_NAME || 'Byblos';
+
 
     const html = await readTemplate('reset-password', {
       resetUrl,
