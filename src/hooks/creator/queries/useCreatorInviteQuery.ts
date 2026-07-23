@@ -9,6 +9,7 @@ export function useCreatorInviteQuery(token: string, enabled = true) {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     enabled: enabled && !!token,
+    retry: false,
   });
 }
 
