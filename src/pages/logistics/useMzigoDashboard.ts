@@ -109,10 +109,11 @@ export function useMzigoDashboard() {
     ...grouped.hubDropoff,
   ].filter((request) => request.isOverdue).length;
 
-  const handleLogout = () => {
-    clearLogisticsSession();
+  const handleLogout = async () => {
+    await clearLogisticsSession();
     navigate('/mzigo/login', { replace: true });
   };
+
 
   const handleStatusUpdate = (
     requestId: number,

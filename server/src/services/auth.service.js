@@ -228,13 +228,15 @@ class AuthService {
                 profile = creatorResult.rows[0] || null;
                 break;
             }
-            case 'marketing':
-                // Special check for marketing admin email if defined in env
-                const MARKETING_EMAIL = process.env.MARKETING_EMAIL || 'adminmarketing@bybloshq.space';
-                if (user.role === 'marketing' && user.email.toLowerCase() === MARKETING_EMAIL.toLowerCase()) {
+            case 'marketing': {
+                // Special check for marketing admin email
+                const MARKETING_EMAIL = process.env.MARKETING_EMAIL;
+                if (MARKETING_EMAIL && user.role === 'marketing' && user.email.toLowerCase() === MARKETING_EMAIL.toLowerCase()) {
                     profile = { id: user.id, email: user.email, role: 'marketing' };
                 }
                 break;
+            }
+
         }
 
         if (!profile && targetType !== 'admin') return null;

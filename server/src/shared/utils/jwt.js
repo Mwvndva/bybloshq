@@ -92,18 +92,14 @@ export const getTokenFromRequest = (req) => {
     return authHeader.split(' ')[1];
   }
 
-  // 2. 'jwt' cookie — used by seller and buyer login (check FIRST)
+  // 2. 'jwt' cookie — used by all authenticated web/mobile requests
   if (req.cookies?.jwt) {
     return req.cookies.jwt;
   }
 
-  // 3. 'token' cookie — used by admin login (check SECOND, legacy support)
-  if (req.cookies?.token) {
-    return req.cookies.token;
-  }
-
   return null;
 };
+
 
 /**
  * Middleware to check if the user has changed their password after the token was issued

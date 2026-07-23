@@ -164,11 +164,12 @@ export default async (app) => {
     // Enable JSON body parsing with raw body capture for HMAC verification.
     // Large binary uploads must use upload endpoints, not base64 JSON bodies.
     app.use(express.json({
-        limit: process.env.JSON_BODY_LIMIT || '10mb',
+        limit: process.env.JSON_BODY_LIMIT || '2mb',
         verify: (req, res, buf) => {
             req.rawBody = buf;
         }
     }));
+
     app.use(express.urlencoded({ extended: true, limit: process.env.FORM_BODY_LIMIT || '2mb' }));
     app.use(cookieParser());
     app.use(xss());

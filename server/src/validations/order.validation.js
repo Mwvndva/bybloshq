@@ -43,6 +43,23 @@ const trackOrderSchema = z.object({
   url: z.string().url().optional()
 });
 
+// Schema for buyer receipt confirmation
+const confirmReceiptSchema = z.object({
+  id: z.string().min(1, 'Order ID is required')
+});
+
+// Schema for buyer order cancellation
+const cancelOrderActionSchema = z.object({
+  id: z.string().min(1, 'Order ID is required'),
+  reason: z.string().optional().default('Buyer requested cancellation')
+});
+
+// Schema for seller order cancellation
+const sellerCancelOrderActionSchema = z.object({
+  id: z.string().min(1, 'Order ID is required'),
+  reason: z.string().optional().default('Seller requested cancellation')
+});
+
 export {
   updateOrderStatusSchema,
   orderQuerySchema,
@@ -50,5 +67,9 @@ export {
   orderStatusHistorySchema,
   cancelOrderSchema,
   refundOrderSchema,
-  trackOrderSchema
+  trackOrderSchema,
+  confirmReceiptSchema,
+  cancelOrderActionSchema,
+  sellerCancelOrderActionSchema
 };
+
