@@ -6,6 +6,15 @@ export const loginLogisticsPartner = async (req, res, next) => {
         const { email, password } = req.body || {};
         const result = await LogisticsDashboardService.login({ email, password });
 
+        res.cookie('jwt', result.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000,
+            path: '/',
+            domain: process.env.COOKIE_DOMAIN || undefined
+        });
+
         res.status(200).json({
             status: 'success',
             data: result
@@ -14,6 +23,26 @@ export const loginLogisticsPartner = async (req, res, next) => {
         next(error);
     }
 };
+
+export const logoutLogisticsPartner = async (req, res, next) => {
+    try {
+        res.clearCookie('jwt', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/',
+            domain: process.env.COOKIE_DOMAIN || undefined
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 export const getLogisticsMe = async (req, res, next) => {
     try {
