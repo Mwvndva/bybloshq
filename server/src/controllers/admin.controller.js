@@ -229,13 +229,206 @@ const getProductStatus = (stock) => {
   if (stock > 0) return 'Low Stock';
   return 'Out of Stock';
 };
+      return next(new AppError('Invalid email or password', 401));
+    }
+
+    const { user, token } = authResult;
+
+    // Set JWT cookie (standardized)
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN || undefined
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMe = async (req, res, next) => {
+  try {
+    // req.user is set by the protect middleware
+    const user = await userRepository.findByIdMinimal(req.user.id);
+
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          createdAt: user.created_at
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAnalytics = async (req, res, next) => {
+  try {
+    const analytics = await AdminService.getAnalytics();
+    res.status(200).json({ status: 'success', data: analytics });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+const getDashboardStats = async (req, res, next) => {
+  try {
+    const stats = await AdminService.getDashboardStats();
+    res.status(200).json({ status: 'success', data: stats });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAllSellers = async (req, res, next) => {
+  try {
+    const sellers = await AdminService.getAllSellers();
+    res.status(200).json({ status: 'success', results: sellers.length, data: sellers });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAllCreators = async (req, res, next) => {
+  try {
+    const creators = await AdminService.getAllCreators();
+    res.status(200).json({ status: 'success', results: creators.length, data: creators });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteCreator = async (req, res, next) => {
+  try {
+    const result = await AdminService.deleteCreator(req.params.id);
+    res.status(200).json({
+      status: 'success',
+      message: 'Creator account deleted. Earnings and sales history were preserved for audit.',
+      data: result
+    });
+  } catch (error) {
+    next(new AppError(error.message || 'Failed to delete creator account', error.statusCode || 500));
+  }
+};
+
+const getSellerById = async (req, res, next) => {
+  try {
+    const seller = await AdminService.getSellerById(req.params.id);
+    if (!seller) return next(new AppError('Seller not found', 404));
+    res.status(200).json({ status: 'success', data: seller });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateSellerStatus = async (req, res, next) => {
+  try {
+    const updated = await AdminService.updateSellerStatus(req.params.id, req.body.status);
+    if (!updated) return next(new AppError('Seller not found', 404));
+    res.status(200).json({ status: 'success', data: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+// Products management
+const getAllProducts = async (req, res, next) => {
+  try {
+    const availableColumns = await adminProductRepository.findProductColumnNames();
+    const hasStock = availableColumns.includes('stock');
+    const hasStatus = availableColumns.includes('status');
+
+    const rows = await adminProductRepository.findAllWithSeller({ hasStock, hasStatus });
+
+    res.status(200).json({
+      status: 'success',
+      results: rows.length,
+      data: rows.map(product => ({
+        ...product,
+        stock: hasStock ? (product.stock || 0) : 0,
+        status: hasStatus ? (product.status || 'available') : 'available',
+        createdAt: product.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting products:', error);
+    // Return empty array if there's an error
+    res.status(200).json({
+      status: 'success',
+      results: 0,
+      data: []
+    });
+  }
+};
+
+const getSellerProducts = async (req, res, next) => {
+  try {
+    const { sellerId } = req.params;
+
+    const availableColumns = await adminProductRepository.findProductColumnNames();
+    const hasStock = availableColumns.includes('stock');
+    const hasStatus = availableColumns.includes('status');
+
+    const rows = await adminProductRepository.findBySellerWithSeller({ sellerId, hasStock, hasStatus });
+
+    res.status(200).json({
+      status: 'success',
+      results: rows.length,
+      data: rows.map(product => ({
+        ...product,
+        stock: hasStock ? (product.stock || 0) : 0,
+        status: hasStatus ? (product.status || 'available') : 'available',
+        createdAt: product.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting seller products:', error);
+    // Return empty array if there's an error
+    res.status(200).json({
+      status: 'success',
+      results: 0,
+      data: []
+    });
+  }
+};
+
+// Helper function to determine product status
+const getProductStatus = (stock) => {
+  if (stock > 10) return 'In Stock';
+  if (stock > 0) return 'Low Stock';
+  return 'Out of Stock';
+};
 
 
 // Get monthly metrics for sellers, products, and products sold
 const getMonthlyMetrics = async (req, res, next) => {
   try {
-    console.log('Fetching monthly metrics...');
-
     const rows = await adminMetricsRepository.findMonthlyEntityCounts();
 
     const monthlyMetrics = rows.map(row => ({
@@ -487,7 +680,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
 
       if (!lockedRequest) throw new Error('Withdrawal request not found');
       if (['completed', 'failed'].includes(lockedRequest.status)) {
-        throw new AppError(`Already finalized as "${lockedRequest.status}" — cannot override`, 400);
+        throw new AppError(`Already finalized as "${lockedRequest.status}" — cannot override`, 400));
       }
 
       if (lockedRequest.seller_id) {
@@ -538,97 +731,6 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
           );
         }
       }
-
-      const updatedEvent = await eventBus.enqueueInTransaction(client, AppEvents.WITHDRAWAL.UPDATED, {
-        eventId: `withdrawal.updated:${request.id}:admin:${status}`,
-        withdrawal: {
-          ...request,
-          id: request.id,
-          status
-        },
-        seller: {
-          whatsapp_number: request.entity_phone
-        },
-        reason: reason || (status === 'failed' ? 'Rejected by admin' : null),
-        newBalance
-      });
-      updatedEventId = updatedEvent.eventId;
-
-      await client.query('COMMIT');
-
-      eventBus.dispatchAfterCommit(updatedEventId, 'AdminController.updateWithdrawalRequestStatus');
-
-      res.status(200).json({
-        status: 'success',
-        message: `Withdrawal manually set to "${status}"`,
-        data: { id: Number.parseInt(id), status, processedBy: `admin:${req.user.id}`, newBalance }
-      });
-
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
-
-  } catch (error) {
-    logger.error('updateWithdrawalRequestStatus error:', error);
-    next(error);
-  }
-};
-
-// @desc    Mark event as paid (withdrawal processed)
-// @route   PATCH /api/admin/events/:eventId/mark-paid
-// @access  Private (Admin)
-
-
-// Get financial metrics (sales, commission, refunds)
-const getFinancialMetrics = async (req, res, next) => {
-  try {
-    console.log('Fetching financial metrics...');
-
-    const [salesRow, commissionRow, refundsRow, pendingRefundsRow] = await Promise.all([
-      adminMetricsRepository.findTotalSales(),
-      adminMetricsRepository.findTotalCommission(),
-      adminMetricsRepository.findCompletedRefundsTotal(),
-      adminMetricsRepository.findPendingRefundsTotal()
-    ]);
-
-    const totalSales = parseFloat(salesRow.total_sales) || 0;
-    const totalOrders = Number.parseInt(salesRow.total_orders) || 0;
-    const totalCommission = parseFloat(commissionRow.total_commission) || 0;
-    const totalRefunds = parseFloat(refundsRow.total_refunds) || 0;
-    const totalRefundRequests = Number.parseInt(refundsRow.total_refund_requests) || 0;
-    const pendingRefunds = parseFloat(pendingRefundsRow.pending_refunds) || 0;
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        totalSales,
-        totalOrders,
-        totalCommission,
-        totalRefunds,
-        totalRefundRequests,
-        pendingRefunds,
-        netRevenue: totalCommission - totalRefunds
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching financial metrics:', error);
-    next(new AppError(`Failed to fetch financial metrics: ${error.message}`, 500));
-  }
-};
-
-// Get monthly financial data (sales, commission, refunds)
-const getMonthlyFinancialData = async (req, res, next) => {
-  try {
-    console.log('Fetching monthly financial data...');
-
-    const rows = await adminMetricsRepository.findMonthlyFinancials();
-
-    const monthlyData = rows.map(row => ({
-      month: row.month,
-      sales: parseFloat(row.sales) || 0,
       commission: parseFloat(row.commission) || 0,
       refunds: parseFloat(row.refunds) || 0
     }));
