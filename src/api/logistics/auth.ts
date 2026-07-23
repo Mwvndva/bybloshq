@@ -1,8 +1,8 @@
 import apiClient from '@/lib/apiClient';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 
-const LOGISTICS_TOKEN_KEY = 'mzigoLogisticsToken';
 const LOGISTICS_PARTNER_KEY = 'mzigoLogisticsPartner';
+const LOGISTICS_ACTIVE_KEY = 'mzigoLogisticsActive';
 
 export interface LogisticsPartner {
   id: number;
@@ -13,12 +13,17 @@ export interface LogisticsPartner {
   whatsappNumber?: string;
 }
 
-export function getLogisticsToken() {
-  return localStorage.getItem(LOGISTICS_TOKEN_KEY);
+export function isLogisticsSessionActive(): boolean {
+  return sessionStorage.getItem(LOGISTICS_ACTIVE_KEY) === 'true';
+}
+
+// Deprecated token getter maintained for backwards compatibility
+export function getLogisticsToken(): string | null {
+  return isLogisticsSessionActive() ? 'cookie-session' : null;
 }
 
 export function getStoredLogisticsPartner(): LogisticsPartner | null {
-  const raw = localStorage.getItem(LOGISTICS_PARTNER_KEY);
+  const raw = sessionStorage.getItem(LOGISTICS_PARTNER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as LogisticsPartner;
@@ -28,31 +33,41 @@ export function getStoredLogisticsPartner(): LogisticsPartner | null {
 }
 
 export function logisticsHeaders() {
-  const token = getLogisticsToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {};
 }
 
-export function clearLogisticsSession() {
+export async function clearLogisticsSession() {
   void unregisterNativePushNotifications('logistics', { headers: logisticsHeaders() }).catch(() => undefined);
-  localStorage.removeItem(LOGISTICS_TOKEN_KEY);
-  localStorage.removeItem(LOGISTICS_PARTNER_KEY);
+  sessionStorage.removeItem(LOGISTICS_ACTIVE_KEY);
+  sessionStorage.removeItem(LOGISTICS_PARTNER_KEY);
+  localStorage.removeItem('mzigoLogisticsToken');
+  localStorage.removeItem('mzigoLogisticsPartner');
+  try {
+    await apiClient.post('/logistics/logout');
+  } catch {
+    /* ignore network errors on logout */
+  }
 }
 
-function setLogisticsSession(token: string, partner: LogisticsPartner) {
-  localStorage.setItem(LOGISTICS_TOKEN_KEY, token);
-  localStorage.setItem(LOGISTICS_PARTNER_KEY, JSON.stringify(partner));
+function setLogisticsSession(partner: LogisticsPartner) {
+  sessionStorage.setItem(LOGISTICS_ACTIVE_KEY, 'true');
+  sessionStorage.setItem(LOGISTICS_PARTNER_KEY, JSON.stringify(partner));
+  // Clean up legacy plaintext localStorage entries if present
+  localStorage.removeItem('mzigoLogisticsToken');
+  localStorage.removeItem('mzigoLogisticsPartner');
 }
 
 export async function loginLogisticsPartner(email: string, password: string) {
   const response = await apiClient.post('/logistics/login', { email, password });
   const data = response.data?.data;
-  if (!data?.token || !data?.partner) {
+  if (!data?.partner) {
     throw new Error('Logistics login response was incomplete');
   }
 
-  setLogisticsSession(data.token, data.partner);
+  setLogisticsSession(data.partner);
   void registerNativePushNotifications('logistics', { headers: logisticsHeaders() });
-  return data as { token: string; partner: LogisticsPartner };
+  return data as { token?: string; partner: LogisticsPartner };
 }
+
 
 
