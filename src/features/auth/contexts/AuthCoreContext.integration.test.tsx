@@ -89,9 +89,14 @@ vi.mock('@/lib/authState', () => ({
   authStateManager: mocks.mockAuthStateManager,
 }));
 
-vi.mock('@/lib/authCleanup', () => ({
-  clearAllAuthData: vi.fn(),
-}));
+vi.mock('@/features/auth/services/authSession', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/features/auth/services/authSession')>();
+  return {
+    ...mod,
+    clearRoleSessionMarkers: vi.fn(),
+  };
+});
+
 
 vi.mock('@/components/LoadingScreen', () => ({
   LoadingScreen: ({ message }: { message: string }) => <div data-testid="loading">{message}</div>,
