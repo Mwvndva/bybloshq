@@ -45,21 +45,6 @@ bower_components
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
-
-# WhatsApp session data
-server/whatsapp-sessions/
-
-# Python virtual environment
-Lib/
-Include/
-Scripts/pip.exe
-Scripts/pip3.exe
-Scripts/pip3.13.exe
-Scripts/playwright.exe
-pyvenv.cfg
-
 # Cache and local files
 .cache/
 .temp/
