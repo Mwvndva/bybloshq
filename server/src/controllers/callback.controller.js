@@ -13,7 +13,16 @@ export const handlePaystackTransferCallback = async (req, res) => {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        logger.error('[PAYOUT-CALLBACK] Invalid payload structure; expected JSON object', {
+            ip: req.ip,
+            path: req.path
+        });
+        return res.status(400).json({ error: 'Invalid payload structure' });
+    }
+
     const data = paystackTransferClient.normalizePaystackTransferPayload(req.body);
+
     logger.info('[PAYOUT-CALLBACK] Authenticated Paystack transfer callback received', {
         transaction_reference: data.transaction_reference,
         client_reference: data.client_reference,
