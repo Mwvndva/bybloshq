@@ -134,7 +134,7 @@ class CreatorService {
   }
 
   static async sendCreatorInviteEmail(invite, seller) {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = process.env.FRONTEND_URL.replace(/\/+$/, '');
     const inviteUrl = `${baseUrl}/creator/register?token=${invite.invite_token}`;
     const shopName = seller?.shop_name || 'a Byblos seller';
 
@@ -154,8 +154,9 @@ class CreatorService {
   }
 
   static async sendExistingCreatorShopRequestEmail(invite, seller, creator) {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = process.env.FRONTEND_URL.replace(/\/+$/, '');
     const dashboardUrl = `${baseUrl}/creator/dashboard`;
+
     const shopName = seller?.shop_name || 'a Byblos seller';
 
     await sendEmail({
