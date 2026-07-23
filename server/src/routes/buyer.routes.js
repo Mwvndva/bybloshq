@@ -12,7 +12,7 @@ import { withdrawalRateLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
-console.log('Buyer routes loaded');
+
 
 // Public routes
 router.post('/register', authLimiter, validateRegistration, buyerController.register);
