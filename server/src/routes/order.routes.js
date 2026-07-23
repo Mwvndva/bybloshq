@@ -15,7 +15,12 @@ import {
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { updateOrderStatusSchema } from '../validations/order.validation.js';
+import {
+  updateOrderStatusSchema,
+  confirmReceiptSchema,
+  cancelOrderActionSchema,
+  sellerCancelOrderActionSchema
+} from '../validations/order.validation.js';
 
 const router = express.Router();
 
@@ -93,6 +98,7 @@ router.patch(
  */
 router.patch(
   '/:id/confirm-receipt',
+  validate(confirmReceiptSchema),
   confirmReceipt
 );
 
@@ -104,6 +110,7 @@ router.patch(
  */
 router.patch(
   '/:id/cancel',
+  validate(cancelOrderActionSchema),
   cancelOrder
 );
 
@@ -115,8 +122,10 @@ router.patch(
  */
 router.patch(
   '/:id/seller-cancel',
+  validate(sellerCancelOrderActionSchema),
   sellerCancelOrder
 );
+
 
 /**
  * @swagger
