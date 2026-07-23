@@ -123,6 +123,33 @@ export default function CreatorRegister() {
     );
   }
 
+  if (inviteError) {
+    const errorMsg = getErrorMessage(inviteError, 'Ambassador invite not found or has expired.');
+    const isAlreadyUsed = errorMsg.toLowerCase().includes('already been used') || errorMsg.toLowerCase().includes('already used');
+    return (
+      <main className="auth-page min-h-screen bg-[#090909] text-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center space-y-4 shadow-2xl">
+          <div className="text-4xl">{isAlreadyUsed ? '✅' : '⚠️'}</div>
+          <h1 className="text-xl font-black tracking-tight">
+            {isAlreadyUsed ? 'Invite Already Used' : 'Invite Link Error'}
+          </h1>
+          <p className="text-sm text-white/55 leading-relaxed">
+            {isAlreadyUsed
+              ? 'This ambassador invite has already been redeemed. If you have already created your account, please log in.'
+              : errorMsg}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/creator/login')}
+            className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-yellow-400 text-sm font-black text-black hover:bg-yellow-300 transition"
+          >
+            Go to ambassador login
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="auth-page byblos-light-page min-h-screen bg-[#090909] text-white">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md">
