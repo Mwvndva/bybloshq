@@ -185,6 +185,13 @@ class AuthService {
                 }
             }
 
+            // CASE 4: An admin user accessing the MARKETING portal
+            if (type === 'marketing' && user.role === 'admin') {
+                const token = signToken(user.id, 'admin');
+                return { user, profile: { id: user.id, email: user.email, role: 'admin' }, token, crossRole: true };
+            }
+
+
             // No cross-role profile found — typed 401 so controller can give clear message
             const err = new Error(`Wrong portal. This account is registered as a ${user.role}.`);
             err.statusCode = 401;
