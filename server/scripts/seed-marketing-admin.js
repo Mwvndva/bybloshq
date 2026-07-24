@@ -4,11 +4,12 @@
  * Run: node scripts/seed-marketing-admin.js
  */
 import bcrypt from 'bcrypt'
-import { pool } from '../src/config/database.js'
+import { pool } from '../src/shared/db/database.js'
 import dotenv from 'dotenv'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import logger from '../src/utils/logger.js'
+import logger from '../src/shared/utils/logger.js'
+
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

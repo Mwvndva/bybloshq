@@ -1,5 +1,6 @@
-import bcrypt from 'bcryptjs';
-import { pool } from '../src/config/database.js';
+import bcrypt from 'bcrypt';
+import { pool } from '../src/shared/db/database.js';
+
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';

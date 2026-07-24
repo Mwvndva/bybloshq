@@ -13,7 +13,8 @@
  */
 
 import bcrypt from 'bcrypt';
-import { pool } from '../src/config/database.js';
+import { pool } from '../src/shared/db/database.js';
+
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
