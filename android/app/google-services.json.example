@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "86278666664",
-    "project_id": "byblos-6a390",
-    "storage_bucket": "byblos-6a390.firebasestorage.app"
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_PROJECT_ID",
+    "storage_bucket": "YOUR_STORAGE_BUCKET"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:86278666664:android:8f8d2046f409c89cd3459d",
+        "mobilesdk_app_id": "YOUR_MOBILE_SDK_APP_ID",
         "android_client_info": {
           "package_name": "space.bybloshq.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDtuhRd-aW6bD2--aMyqMZNC8nbZvNsqmE"
+          "current_key": "YOUR_GOOGLE_API_KEY"
         }
       ],
       "services": {
