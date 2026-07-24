@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import logger from '../shared/utils/logger.js';
 import { OrderStatus, OrderType } from '../shared/constants/enums.js';
 import Order from '../models/order.model.js';
-import BookingService from '../modules/bookings/booking.service.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import InventoryReservationService from './inventoryReservation.service.js';
 import escrowManager from './EscrowManager.js';
@@ -62,7 +61,6 @@ class OrderFulfillmentTransitionService {
 
     static async completeServiceOrder(client, order) {
         assertValidTransition(order.status, OrderStatus.AWAITING_SELLER_ACTION, order.id);
-        await BookingService.finalizeSlot(client, order.id);
         await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.AWAITING_SELLER_ACTION, 'completed');
     }
 
