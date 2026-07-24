@@ -116,22 +116,6 @@ public/sitemap.xml
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
-.yarn/install-state.gz
-.pnp.*
-
-# Local development files
-*.local
-
-# Vercel
-.vercel
-
-# Byblos Specific
-outputs/
-tmp/
-scripts/dev/
-baileys_auth_info/
-uploads/
-tsc_errors.txt
 remove_console_logs.ps1
 frontend.nginx.conf
 nginx.conf
@@ -140,3 +124,6 @@ debug_log.txt
 .audit-baseline.md
 vite.config.ts.timestamp-*.mjs
 /bybloshq
+android/app/google-services.json
+google-services.json
+
