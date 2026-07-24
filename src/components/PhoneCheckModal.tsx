@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Phone, Loader2, MapPin, Truck } from 'lucide-react';
+import { Phone, Loader2, MapPin, Truck, ShieldCheck } from 'lucide-react';
+
 import { formatCurrency } from '@/lib/utils';
 import LocationPicker from '@/components/common/LocationPicker';
 import { createOptionalBuyerLocation, type BuyerLocationPayload } from '@/lib/location';
@@ -245,12 +246,17 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:gap-3 p-4 sm:p-5 pt-3 mt-auto border-t border-slate-200 dark:border-white/10 shrink-0 bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-sm">
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-yellow-400/20 bg-yellow-400/10 px-3 py-2 text-[11px] font-bold text-yellow-800 dark:text-yellow-300">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+              <span>100% Escrow Protected — Payment held safe until delivery</span>
+            </div>
             <Button
               type="submit"
               disabled={isLoading}
               variant="secondary-byblos"
               className="w-full h-10 sm:h-11 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-[0.98]"
             >
+
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-5 w-5 animate-spin" />
