@@ -3,11 +3,8 @@ import type { NavigateFunction } from 'react-router-dom';
 import { toast } from 'sonner';
 import apiClient from '@/lib/apiClient';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearAllAuthData } from '@/lib/authCleanup';
-import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
-import { isNativeApp } from '@/lib/mobileApp';
-import { getDashboardPath, getLoginPath } from '../utils/authRouting';
 import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
+
 import { switchAccountRequest, type SwitchableRole } from '@/api/account';
 import type {
   BuyerRegistrationData,
@@ -227,7 +224,7 @@ export function useAuthActions({
     queryClient.clear();
 
     if (!user) {
-      try { await clearAllAuthData(); } catch { /* ignore */ }
+      try { await clearRoleSessionMarkers(); } catch { /* ignore */ }
       return;
     }
 
@@ -245,10 +242,11 @@ export function useAuthActions({
       // Fail silently
     } finally {
       try {
-        await clearAllAuthData();
+        await clearRoleSessionMarkers();
       } catch (error) {
         // Fail silently, always clear user state.
       }
+
       setUser(null);
       toast('Logged out', { description: 'You have been successfully logged out.' });
       navigate('/', { replace: true });
