@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import apiClient from '@/lib/apiClient';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
+import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
+
 
 import { switchAccountRequest, type SwitchableRole } from '@/api/account';
 import type {
