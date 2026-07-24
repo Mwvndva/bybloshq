@@ -52,7 +52,8 @@ const MzigoDashboardPage = () => {
   return (
     <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-black/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-black/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] backdrop-blur">
+
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="flex justify-start">
             {!isNativeApp() && (

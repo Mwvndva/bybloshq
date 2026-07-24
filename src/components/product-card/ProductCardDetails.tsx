@@ -228,7 +228,7 @@ export function ProductCardDetails({
           isSold ? 'bg-slate-200 text-slate-500 hover:bg-slate-200' : themeClasses.button
         )}
         onClick={onBuyClick}
-        disabled={isSold || isLocked}
+        disabled={isSold || isLocked || product.isOutOfStock || product.stock === 0}
         aria-busy={isLocked}
       >
         {isLocked ? (
@@ -245,10 +245,19 @@ export function ProductCardDetails({
             ) : (
               <ShoppingCart className="h-3.5 w-3.5" />
             )}
-            <span>{isSold ? 'Sold out' : isService ? 'Book securely' : isDigital ? 'Download securely' : 'Buy safely'}</span>
+            <span>
+              {isSold || product.isOutOfStock || product.stock === 0
+                ? 'Out of stock'
+                : isService
+                  ? 'Book securely'
+                  : isDigital
+                    ? 'Download securely'
+                    : 'Buy safely'}
+            </span>
           </>
         )}
       </Button>
+
     </CardContent>
   );
 }

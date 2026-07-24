@@ -20,12 +20,18 @@ const NativeAppHome = () => (
         Ambassador
       </Button>
     </Link>
-    <main className="flex w-full max-w-sm flex-col items-center gap-8 text-center">
-      <img
-        src="/byblos-icon.png"
-        alt="Byblos logo"
-        className="h-auto w-[min(68vw,260px)]"
-      />
+    <main className="flex w-full max-w-sm flex-col items-center gap-8 text-center pt-[env(safe-area-inset-top,0px)]">
+      <div className="flex flex-col items-center gap-3">
+        <img
+          src="/byblos-icon.png"
+          alt="Byblos logo"
+          className="h-auto w-[min(68vw,260px)]"
+        />
+        <p className="text-xs font-medium tracking-wide text-white/70 sm:text-sm">
+          The safer way to buy from businesses on social media
+        </p>
+      </div>
+
 
       <div className="flex w-full flex-col gap-3">
         <Link to="/buyer/login" className="w-full">
