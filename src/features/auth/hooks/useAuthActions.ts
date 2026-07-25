@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 import { getDashboardPath } from '../utils/authRouting';
+import { isNativeApp } from '@/lib/mobileApp';
+
 
 
 

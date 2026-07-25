@@ -46,12 +46,7 @@ export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePicke
   return (
     <div
       ref={ref}
-      style={{
-        position: 'fixed',
-        top: '1.75rem',
-        right: '2.5rem',
-        zIndex: 60,
-      }}
+      className="fixed top-3 right-3 sm:top-6 sm:right-6 z-30"
     >
       {/* Toggle pill */}
       <button
@@ -61,24 +56,24 @@ export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePicke
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.45rem 0.9rem',
+          gap: '0.35rem',
+          padding: '0.35rem 0.65rem',
           borderRadius: '9999px',
-          background: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.22)',
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
           color: '#ffffff',
           cursor: 'pointer',
-          fontSize: '0.8125rem',
-          fontWeight: 700,
+          fontSize: '0.7rem',
+          fontWeight: 600,
           whiteSpace: 'nowrap',
-          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
           transition: 'all 0.2s ease',
         }}
       >
-        <ActiveIcon className="h-4 w-4 shrink-0 text-yellow-400" />
-        <span style={{ fontSize: '0.8125rem', letterSpacing: '0.01em' }}>{activeLabel}</span>
+        <ActiveIcon className="h-3 w-3 shrink-0 text-yellow-400" />
+        <span style={{ fontSize: '0.7rem', letterSpacing: '0.01em' }}>{activeLabel}</span>
       </button>
 
       {/* Dropdown panel */}
