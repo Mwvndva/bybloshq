@@ -92,7 +92,7 @@ export function SellerProductsTable({
                       {product.quantity ?? 0}
                     </Badge>
                   ) : (
-                    <span className="text-xs text-white/40 italic">Not tracked</span>
+                    <span className="text-xs text-white/60 italic">Not tracked</span>
                   )}
                   <Button
                     variant="ghost"
