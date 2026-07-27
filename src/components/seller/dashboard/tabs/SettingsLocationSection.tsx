@@ -21,7 +21,7 @@ interface SettingsLocationSectionProps {
 
 export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, handleDeleteLocation, isDeletingLocation, formData, handleCityChange, cities, handleLocationChange, getLocations, handleShopLocationChange, isSaving }: SettingsLocationSectionProps) {
   return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="seller-card p-4 sm:p-5 lg:p-6">
           <div className="space-y-3 sm:space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <SectionHeader title="Location Settings" description="Set where buyers collect orders from your physical shop." />
@@ -29,7 +29,7 @@ export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, 
                 <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-auto">
                   <button
                     onClick={toggleEdit}
-                    className="text-xs sm:text-sm text-yellow-700 hover:text-yellow-800 font-medium flex items-center justify-center gap-1"
+                    className="text-xs sm:text-sm text-[var(--theme-accent,#f5c518)] hover:opacity-80 font-medium flex items-center justify-center gap-1"
                   >
                     <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     Edit Location
@@ -54,14 +54,14 @@ export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, 
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">City</p>
+              <div className="seller-card-soft p-4">
+                <p className="seller-label mb-2">City</p>
                 {isEditing ? (
                   <select
                     name="city"
                     value={formData.city}
                     onChange={handleCityChange}
-                    className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 bg-white text-slate-950"
+                    className="seller-field w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base rounded-lg sm:rounded-xl focus:ring-2"
                   >
                     <option value="">Select a city</option>
                     {Object.keys(cities).map(city => (
@@ -69,20 +69,20 @@ export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, 
                     ))}
                   </select>
                 ) : (
-                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-950">
+                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
                     {sellerProfile?.city || 'Not set'}
                   </p>
                 )}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Location/Area</p>
+              <div className="seller-card-soft p-4">
+                <p className="seller-label mb-2">Location/Area</p>
                 {isEditing ? (
                   <select
                     name="location"
                     value={formData.location}
                     onChange={handleLocationChange}
-                    className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 bg-white text-slate-950"
+                    className="seller-field w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base rounded-lg sm:rounded-xl focus:ring-2"
                     disabled={!formData.city}
                   >
                     <option value="">Select a location</option>
@@ -91,15 +91,15 @@ export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, 
                     ))}
                   </select>
                 ) : (
-                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-950">
+                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
                     {sellerProfile?.location || 'Not set'}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Physical Shop Address</p>
+            <div className="seller-card-soft p-4">
+              <p className="seller-label mb-2">Physical Shop Address</p>
               {isEditing ? (
                 <div className="mt-2 space-y-3">
                   <ShopLocationPicker
@@ -127,17 +127,17 @@ export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, 
                 <div className="space-y-2">
                   {sellerProfile?.physicalAddress ? (
                     <>
-                      <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-950">
+                      <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
                         {sellerProfile.physicalAddress}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-white/40">
                         {sellerProfile.latitude && sellerProfile.longitude
                           ? `Coordinates: ${Number(sellerProfile.latitude).toFixed(6)}, ${Number(sellerProfile.longitude).toFixed(6)}`
                           : 'No map location pinned'}
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs sm:text-sm lg:text-base font-semibold text-slate-500 italic">
+                    <p className="text-xs sm:text-sm lg:text-base font-semibold text-white/40 italic">
                       No physical address set
                     </p>
                   )}

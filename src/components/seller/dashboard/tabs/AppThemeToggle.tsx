@@ -13,12 +13,12 @@ export function AppThemeToggle() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-2">
-          <Sun className="h-5 w-5 text-yellow-700" />
+        <div className="rounded-xl border border-[var(--theme-accent,#f5c518)]/30 bg-[var(--theme-accent,#f5c518)]/15 p-2">
+          <Sun className="h-5 w-5 text-[var(--theme-accent,#f5c518)]" />
         </div>
         <div>
-          <h3 className="text-base font-black tracking-tight text-slate-950 sm:text-lg">App Theme</h3>
-          <p className="mt-0.5 text-xs font-medium text-slate-600 sm:text-sm">
+          <h3 className="text-base font-black tracking-tight text-white sm:text-lg">App Theme</h3>
+          <p className="mt-0.5 seller-subtext">
             Choose how the dashboard looks. Light follows your OS when set to System.
           </p>
         </div>
@@ -36,16 +36,16 @@ export function AppThemeToggle() {
               className={[
                 'flex flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 transition-all duration-200 sm:py-5',
                 active
-                  ? 'border-yellow-400 bg-yellow-50 ring-2 ring-yellow-300/30 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm',
+                  ? 'border-[var(--theme-accent,#f5c518)] bg-[var(--theme-accent,#f5c518)]/15 ring-2 ring-[var(--theme-accent,#f5c518)]/30'
+                  : 'border-white/10 bg-white/[0.04] hover:border-white/20',
               ].join(' ')}
               aria-pressed={active}
             >
               <Icon
-                className={`h-5 w-5 sm:h-6 sm:w-6 ${active ? 'text-yellow-600' : 'text-slate-400'}`}
+                className={`h-5 w-5 sm:h-6 sm:w-6 ${active ? 'text-[var(--theme-accent,#f5c518)]' : 'text-white/40'}`}
               />
               <span
-                className={`text-xs font-bold sm:text-sm ${active ? 'text-yellow-700' : 'text-slate-600'}`}
+                className={`text-xs font-bold sm:text-sm ${active ? 'text-white' : 'text-white/60'}`}
               >
                 {label}
               </span>
