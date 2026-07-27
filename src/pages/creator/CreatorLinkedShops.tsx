@@ -11,11 +11,11 @@ interface CreatorLinkedShopsProps {
 export function CreatorLinkedShops({ shops, onCopy }: CreatorLinkedShopsProps) {
   return (
     <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
-      <h2 className="text-xl font-black text-slate-950 dark:text-white">Linked shops</h2>
+      <h2 className="text-xl font-black text-slate-950 dark:text-white">Your links</h2>
       <div className="mt-4 grid gap-3">
         {shops.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 p-4 text-sm font-medium text-slate-500 dark:text-white/45">
-            No linked shops yet.
+            Accept a shop request to get your first shareable link.
           </div>
         ) : shops.map((shop) => {
           const link = getCreatorShopUrl(shop.shop_name, shop.code);

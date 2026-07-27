@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Loader2, LogOut, MousePointerClick, Trophy, Wallet } from 'lucide-react';
+import { Loader2, LogOut, Trophy, Wallet } from 'lucide-react';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
 import { toast } from 'sonner';
@@ -16,7 +16,7 @@ import { copyLinkedTextToClipboard } from '@/lib/shopLinks';
 import { money, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS, getWithdrawalFee, getErrorMessage,
   type AnalysisPeriod, type ApiError, type CreatorProfile, type ShopRequest, type LinkedShop,
   type AnalysisRow, type WithdrawalRow, type LeaderboardRow, type DashboardData, type ReferralData } from './creatorDashboardUtils';
-import { Metric } from './CreatorMetric';
+import { CreatorEarningsHero } from './CreatorEarningsHero';
 import { CreatorAnalysisCharts } from './CreatorAnalysisCharts';
 import { CreatorLinkedShops } from './CreatorLinkedShops';
 
@@ -29,6 +29,7 @@ export default function CreatorDashboard() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
+  const withdrawRef = useRef<HTMLDivElement>(null);
 
   const dashboardQuery = useCreatorDashboardQuery(analysisPeriod);
   const referralQuery = useCreatorReferralDashboardQuery();
@@ -131,35 +132,43 @@ export default function CreatorDashboard() {
   const totalDeduction = requestedAmount >= MIN_WITHDRAWAL_AMOUNT ? requestedAmount + withdrawalFee : 0;
   const hasEnoughBalance = Number(creator.balance || 0) >= totalDeduction;
 
+  // This-period momentum for the hero — the latest analysis row.
+  const latestPeriod = chartData.length ? chartData[chartData.length - 1] : undefined;
+  const monthEarnings = Number(latestPeriod?.earnings || 0);
+  const monthSales = Number(latestPeriod?.sales || 0);
+  const monthClicks = Number(latestPeriod?.clicks || 0);
+
+  const goToWithdraw = () => {
+    withdrawRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   return (
     <main className="dashboard-layout min-h-screen bg-[var(--byblos-bg,#000000)] px-4 py-6 text-slate-950 dark:text-white transition-colors duration-200">
       <div className="space-y-5">
-        <header className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <NotificationBell triggerClassName="text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10" />
-            <div className="flex items-center gap-2">
-              <AppThemeDropdown />
-              <AccountSwitcher />
-            </div>
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500 dark:text-yellow-300">Ambassador dashboard</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Welcome, {creator.firstName}</h1>
-            <p className="mt-1 text-sm font-medium text-slate-600 dark:text-white/50">Track clicks, sales, earnings, referrals, and withdrawals.</p>
+        <header className="flex items-center justify-between gap-3">
+          <NotificationBell triggerClassName="text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10" />
+          <div className="flex items-center gap-2">
+            <AppThemeDropdown />
+            <AccountSwitcher />
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="Balance" value={money(creator.balance)} />
-          <Metric label="Completed sales" value={creator.totalSales || 0} />
-          <Metric label="Ambassador earnings" value={money(creator.totalEarnings)} />
-          <Metric label="Link clicks" value={dashboard?.linkClicks || 0} icon={<MousePointerClick className="h-5 w-5 text-yellow-500 dark:text-yellow-300" />} />
-        </section>
+        <CreatorEarningsHero
+          firstName={creator.firstName}
+          totalEarnings={Number(creator.totalEarnings || 0)}
+          balance={Number(creator.balance || 0)}
+          monthEarnings={monthEarnings}
+          monthSales={monthSales}
+          monthClicks={monthClicks}
+          referralLink={referralLink}
+          onCopyLink={() => copy(referralLink)}
+          onGoToWithdraw={goToWithdraw}
+        />
 
         {(dashboard?.shopRequests || []).length > 0 && (
           <section className="rounded-3xl border border-yellow-400/30 bg-yellow-400/10 p-4">
             <h2 className="text-xl font-black text-slate-950 dark:text-white">Shop requests</h2>
-            <p className="mt-1 text-sm font-medium text-yellow-700 dark:text-yellow-100/70">Accept a seller request to generate your ambassador link for that shop.</p>
+            <p className="mt-1 text-sm font-medium text-yellow-700 dark:text-yellow-100/70">Accept a seller request to start earning on that shop.</p>
             <div className="mt-4 grid gap-3">
               {(dashboard?.shopRequests || []).map((request) => (
                 <div key={request.id} className="rounded-2xl border border-yellow-400/30 bg-white dark:bg-black/30 p-4 text-slate-950 dark:text-white">
@@ -201,10 +210,10 @@ export default function CreatorDashboard() {
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <CreatorAnalysisCharts chartData={chartData} analysisPeriod={analysisPeriod} setAnalysisPeriod={setAnalysisPeriod} />
 
-          <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
+          <div ref={withdrawRef} className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
             <div className="flex items-center gap-2">
               <Wallet className="h-5 w-5 text-yellow-500 dark:text-yellow-300" />
-              <h2 className="text-xl font-black text-slate-950 dark:text-white">Withdraw</h2>
+              <h2 className="text-base font-black text-slate-950 dark:text-white">Get paid</h2>
             </div>
             <p className="mt-2 text-sm font-medium text-slate-600 dark:text-white/50">Paid to {creator.mpesaNumber || 'your M-Pesa number'}.</p>
             <div className="mt-4 space-y-3">
@@ -250,34 +259,21 @@ export default function CreatorDashboard() {
           </div>
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500 dark:text-yellow-300" />
-              <h2 className="text-xl font-black text-slate-950 dark:text-white">Top ambassadors</h2>
-            </div>
-            <div className="mt-4 divide-y divide-slate-200 dark:divide-white/10 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
-              {(dashboard?.leaderboard || []).map((item, index: number) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 bg-white dark:bg-black/25 p-3 text-slate-950 dark:text-white">
-                  <div>
-                    <p className="font-black">#{index + 1} {item.first_name} {item.last_name}</p>
-                    <p className="text-xs font-semibold text-slate-500 dark:text-white/40">{item.total_sales || 0} sales</p>
-                  </div>
-                  <p className="font-black text-yellow-600 dark:text-yellow-200">{money(item.total_income)}</p>
-                </div>
-              ))}
-            </div>
+        <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500 dark:text-yellow-300" />
+            <h2 className="text-base font-black text-slate-950 dark:text-white">How you rank</h2>
           </div>
-
-          <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
-            <h2 className="text-xl font-black text-slate-950 dark:text-white">Seller referral</h2>
-            <p className="mt-1 text-sm font-medium text-slate-600 dark:text-white/50">Invite sellers and earn KSh 3 for every product they sell. No time limit.</p>
-            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="break-all text-sm font-bold text-yellow-700 dark:text-yellow-100">{referralLink}</p>
-              <Button onClick={() => copy(referralLink)} className="bg-yellow-400 font-black text-black hover:bg-yellow-300">
-                Copy seller link
-              </Button>
-            </div>
+          <div className="mt-4 divide-y divide-slate-200 dark:divide-white/10 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
+            {(dashboard?.leaderboard || []).map((item, index: number) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 bg-white dark:bg-black/25 p-3 text-slate-950 dark:text-white">
+                <div>
+                  <p className="font-black">#{index + 1} {item.first_name} {item.last_name}</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-white/40">{item.total_sales || 0} sales</p>
+                </div>
+                <p className="font-black text-yellow-600 dark:text-yellow-200">{money(item.total_income)}</p>
+              </div>
+            ))}
           </div>
         </section>
 
