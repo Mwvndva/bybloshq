@@ -35,18 +35,18 @@ export function SellerProductCards({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
       {products.map((product) => (
-        <Card key={product.id} className="relative group bg-white border border-slate-200 rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
+        <Card key={product.id} className="relative group bg-[#0a0a0a] border border-white/10 rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
           <div className="absolute right-2 top-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 hover:bg-slate-100 hover:text-slate-950">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:bg-white/10 hover:text-white">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border border-slate-200 text-slate-950">
+              <DropdownMenuContent align="end" className="bg-[#0a0a0a] border border-white/10 text-white">
                 <DropdownMenuItem
                   onClick={() => onEdit(product.id)}
-                  className="flex items-center gap-2 cursor-pointer text-slate-950 hover:bg-slate-50"
+                  className="flex items-center gap-2 cursor-pointer text-white hover:bg-white/10"
                 >
                   <Edit className="h-4 w-4 text-emerald-400" />
                   <span>Edit</span>
@@ -64,10 +64,10 @@ export function SellerProductCards({
           <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
             <div className="flex items-start justify-between pr-8">
               <div className="flex-1">
-                <CardTitle className="text-xs sm:text-sm font-medium text-slate-950 mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
-                <p className="text-[9px] text-slate-600 capitalize mb-1">{product.aesthetic}</p>
+                <CardTitle className="text-xs sm:text-sm font-medium text-white mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
+                <p className="text-[9px] text-white/60 capitalize mb-1">{product.aesthetic}</p>
                 {product.description && (
-                  <p className="text-[10px] text-slate-600 line-clamp-2 h-6 leading-tight mb-2">
+                  <p className="text-[10px] text-white/60 line-clamp-2 h-6 leading-tight mb-2">
                     {product.description}
                   </p>
                 )}
@@ -96,7 +96,7 @@ export function SellerProductCards({
             </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 space-y-2">
-            <div className="h-24 w-full bg-slate-100 border border-slate-200 rounded-xl overflow-hidden mb-3">
+            <div className="h-24 w-full rounded-xl seller-card-soft overflow-hidden mb-3">
               {product.image_url ? (
                 <img
                   src={product.image_url}
@@ -111,7 +111,7 @@ export function SellerProductCards({
             </div>
 
             <div className="flex items-center justify-between py-1">
-              <span className="text-[10px] text-slate-600">Stock:</span>
+              <span className="text-[10px] text-white/60">Stock:</span>
               <div className="flex items-center gap-2">
                 {product.track_inventory ? (
                   <Badge
@@ -128,13 +128,13 @@ export function SellerProductCards({
                     {product.quantity ?? 0}
                   </Badge>
                 ) : (
-                  <span className="text-[10px] text-slate-500 italic">Not tracked</span>
+                  <span className="text-[10px] text-white/40 italic">Not tracked</span>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onInventoryEdit(product)}
-                  className="h-5 px-1.5 text-[10px] text-slate-600 hover:text-emerald-700 hover:bg-emerald-50"
+                  className="h-5 px-1.5 text-[10px] text-white/60 hover:text-emerald-300 hover:bg-emerald-500/10"
                 >
                   Edit
                 </Button>
@@ -142,7 +142,7 @@ export function SellerProductCards({
             </div>
 
             <div className="flex justify-between items-center pt-1">
-              <span className="font-medium text-slate-950 text-sm sm:text-base">{formatCurrency(product.price)}</span>
+              <span className="font-medium text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
             </div>
 
             {onStatusUpdate && (
