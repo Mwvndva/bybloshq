@@ -2,6 +2,7 @@ import { PushNotifications, type Token } from '@capacitor/push-notifications';
 import type { AxiosRequestConfig } from 'axios';
 import apiClient from '@/lib/apiClient';
 import { getNativePlatform, getStableDeviceId, isNativeApp } from '@/lib/mobileApp';
+import { appNavigate } from '@/lib/navigationService';
 import type { UserRole } from '@/features/auth/types/authTypes';
 
 type AppNotificationRole = UserRole | 'logistics';
@@ -76,7 +77,11 @@ function ensurePushListeners() {
   PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
     const targetPath = event.notification.data?.path || event.notification.data?.url;
     if (typeof targetPath === 'string' && targetPath.startsWith('/')) {
-      window.location.assign(targetPath);
+      // Prefer client-side navigation (no WebView reload). Falls back to a hard
+      // navigation only on cold start, where it correctly boots the app at path.
+      if (!appNavigate(targetPath)) {
+        window.location.assign(targetPath);
+      }
     }
   });
 }
