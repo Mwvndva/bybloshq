@@ -52,19 +52,19 @@ export function ProductEditDialog({
 }: ProductEditDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white w-[90vw] max-w-sm sm:max-w-[400px] max-h-[78dvh] overflow-y-auto p-3 sm:p-4 rounded-xl shadow-2xl">
+      <DialogContent className="bg-[#0a0a0a] border border-white/10 text-white w-[90vw] max-w-sm sm:max-w-[400px] max-h-[78dvh] overflow-y-auto p-3 sm:p-4 rounded-xl shadow-2xl">
         <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
-            className="h-7 w-7 -ml-1 text-slate-600 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 rounded-full"
+            className="h-7 w-7 -ml-1 text-white/60 hover:text-white hover:bg-white/10 rounded-full"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <DialogTitle className="text-base sm:text-lg font-bold text-slate-950 dark:text-white">Edit Product</DialogTitle>
-            <DialogDescription className="text-slate-600 dark:text-slate-300 text-[10px] sm:text-xs font-medium">
+            <DialogTitle className="text-base sm:text-lg font-bold text-white">Edit Product</DialogTitle>
+            <DialogDescription className="text-white/60 text-[10px] sm:text-xs font-medium">
               Update product information
             </DialogDescription>
           </div>
@@ -78,52 +78,52 @@ export function ProductEditDialog({
           <div className="space-y-3 py-2">
             <div className="space-y-3">
               <div>
-                <Label htmlFor="edit-name" className="text-slate-800 dark:text-slate-200 text-xs font-semibold">Product Name</Label>
+                <Label htmlFor="edit-name" className="seller-label font-semibold">Product Name</Label>
                 <Input
                   id="edit-name"
                   value={formData.name}
                   onChange={(event) => onFormDataChange({ ...formData, name: event.target.value })}
-                  className="bg-slate-50 dark:bg-zinc-900 border-slate-300 dark:border-white/20 text-slate-950 dark:text-white h-9 text-sm rounded-lg placeholder:text-slate-400"
+                  className="seller-field h-9 text-sm rounded-lg"
                   placeholder="Enter product name"
                 />
               </div>
 
               <div>
-                <Label htmlFor="edit-price" className="text-slate-800 dark:text-slate-200 text-xs font-semibold">Price (KES)</Label>
+                <Label htmlFor="edit-price" className="seller-label font-semibold">Price (KES)</Label>
                 <Input
                   id="edit-price"
                   type="number"
                   min={50}
                   value={formData.price}
                   onChange={(event) => onFormDataChange({ ...formData, price: event.target.value })}
-                  className="bg-slate-50 dark:bg-zinc-900 border-slate-300 dark:border-white/20 text-slate-950 dark:text-white h-9 text-sm rounded-lg placeholder:text-slate-400"
+                  className="seller-field h-9 text-sm rounded-lg"
                   placeholder="0"
                 />
               </div>
 
               <div>
-                <Label htmlFor="edit-description" className="text-slate-800 dark:text-slate-200 text-xs font-semibold">Description</Label>
+                <Label htmlFor="edit-description" className="seller-label font-semibold">Description</Label>
                 <Textarea
                   id="edit-description"
                   value={formData.description}
                   onChange={(event) => onFormDataChange({ ...formData, description: event.target.value })}
-                  className="bg-slate-50 dark:bg-zinc-900 border-slate-300 dark:border-white/20 text-slate-950 dark:text-white min-h-[60px] text-sm rounded-lg placeholder:text-slate-400"
+                  className="seller-field min-h-[60px] text-sm rounded-lg"
                   placeholder="Enter product description"
                 />
               </div>
 
               <div>
-                <Label htmlFor="edit-aesthetic" className="text-slate-800 dark:text-slate-200 text-xs font-semibold">Category</Label>
+                <Label htmlFor="edit-aesthetic" className="seller-label font-semibold">Category</Label>
                 <Select
                   value={formData.aesthetic}
                   onValueChange={(value) => onFormDataChange({ ...formData, aesthetic: value })}
                 >
-                  <SelectTrigger className="bg-slate-50 dark:bg-zinc-900 border-slate-300 dark:border-white/20 text-slate-950 dark:text-white h-9 rounded-lg">
+                  <SelectTrigger className="seller-field h-9 rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/20 text-slate-950 dark:text-white z-[110]">
+                  <SelectContent className="bg-[#0a0a0a] border-white/10 text-white z-[110]">
                     {aestheticCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id} className="text-slate-900 dark:text-white focus:bg-yellow-400 focus:text-black">
+                      <SelectItem key={category.id} value={category.id} className="text-white focus:bg-[var(--theme-button-bg,#f5c518)] focus:text-[var(--theme-button-text,#000000)]">
                         {category.title}
                       </SelectItem>
                     ))}
@@ -137,8 +137,8 @@ export function ProductEditDialog({
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Label className="text-slate-800 dark:text-slate-200 text-xs font-semibold">Product Photos</Label>
-                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  <Label className="seller-label font-semibold">Product Photos</Label>
+                  <span className="text-[10px] font-semibold text-white/60">
                     {[formData.imagePreview, ...formData.extraPreviews].filter(Boolean).length} / 3 photos
                   </span>
                 </div>
@@ -157,7 +157,7 @@ export function ProductEditDialog({
                             <img
                               src={preview}
                               alt={`Photo ${slot + 1}`}
-                              className="w-full h-full object-cover rounded-lg border border-slate-200 dark:border-white/10"
+                              className="w-full h-full object-cover rounded-lg border border-white/10"
                             />
                             {isFirst && (
                               <span className="absolute bottom-1 left-1 text-[8px] font-bold bg-emerald-600 text-white px-1 rounded-sm">Main</span>
@@ -173,12 +173,12 @@ export function ProductEditDialog({
                         ) : (
                           <label
                             className={`w-full h-full flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors duration-200 ${isDisabled
-                              ? 'border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-white/[0.02] cursor-not-allowed opacity-40'
-                              : 'border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-white/5 hover:border-emerald-500 hover:bg-slate-100 dark:hover:bg-emerald-400/5 cursor-pointer'
+                              ? 'border-white/5 bg-white/[0.02] cursor-not-allowed opacity-40'
+                              : 'border-white/20 bg-white/5 hover:border-emerald-500 hover:bg-emerald-400/5 cursor-pointer'
                               }`}
                           >
-                            <ImagePlus className={`h-4 w-4 mb-1 ${isDisabled ? 'text-slate-400 dark:text-white/40' : 'text-slate-700 dark:text-white'}`} />
-                            <span className={`text-[8px] font-bold ${isDisabled ? 'text-slate-400 dark:text-white/40' : 'text-slate-700 dark:text-white'}`}>
+                            <ImagePlus className={`h-4 w-4 mb-1 ${isDisabled ? 'text-white/40' : 'text-white'}`} />
+                            <span className={`text-[8px] font-bold ${isDisabled ? 'text-white/40' : 'text-white'}`}>
                               {isFirst ? 'Main photo' : `Photo ${slot + 1}`}
                             </span>
                             {!isDisabled && (
@@ -195,7 +195,7 @@ export function ProductEditDialog({
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-medium">PNG, JPG up to 5MB.</p>
+                <p className="text-[10px] text-white/60 mt-2 font-medium">PNG, JPG up to 5MB.</p>
               </div>
             </div>
           </div>
@@ -205,7 +205,7 @@ export function ProductEditDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-transparent text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 font-semibold"
+            className="border-white/20 bg-transparent text-white hover:bg-white/10 font-semibold"
             disabled={isSaving}
           >
             Cancel
@@ -213,7 +213,7 @@ export function ProductEditDialog({
           <Button
             onClick={onSave}
             disabled={isSaving || isLoading}
-            className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-bold shadow-md"
+            className="bg-[var(--theme-button-bg,#f5c518)] text-[var(--theme-button-text,#000000)] hover:opacity-90 font-bold shadow-md"
           >
             {isSaving ? (
               <>
