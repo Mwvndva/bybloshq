@@ -35,6 +35,26 @@ export const logout = async () => {
   return response.data;
 };
 
+export const forgotPassword = async (email: string): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>('/creators/forgot-password', {
+    email: email.trim().toLowerCase(),
+  });
+  return response.data ?? { message: 'Password reset email sent.' };
+};
+
+export const resetPassword = async (
+  token: string,
+  newPassword: string,
+  email: string,
+): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>('/creators/reset-password', {
+    token,
+    newPassword,
+    email,
+  });
+  return response.data ?? { message: 'Password has been reset.' };
+};
+
 export const verifyEmail = async (token: string, email: string) => {
   const response = await apiClient.get('/creators/verify-email', {
     params: { token, email }

@@ -18,6 +18,8 @@ const MzigoDashboard = safeLazy(() => import('@/pages/logistics/MzigoDashboardPa
 const TrackingPage = safeLazy(() => import('@/pages/TrackingPage'));
 const CreatorLogin = safeLazy(() => import('@/features/auth/pages/CreatorLogin'));
 const CreatorRegister = safeLazy(() => import('@/features/auth/pages/CreatorRegister'));
+const CreatorForgotPassword = safeLazy(() => import('@/features/auth/pages/CreatorForgotPassword'));
+const CreatorResetPassword = safeLazy(() => import('@/features/auth/pages/CreatorResetPassword'));
 const CreatorDashboard = safeLazy(() => import('@/pages/creator/CreatorDashboard'));
 const LegalPage = safeLazy(() => import('@/pages/LegalPage'));
 const DeleteAccountPage = safeLazy(() => import('@/pages/DeleteAccountPage'));
@@ -78,6 +80,22 @@ export const routes = [
     element: (
       <Suspense fallback={<RouteFallback />}>
         <CreatorRegister />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/creator/forgot-password',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <CreatorForgotPassword />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/creator/reset-password',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <CreatorResetPassword />
       </Suspense>
     ),
   },

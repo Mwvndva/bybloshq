@@ -11,7 +11,12 @@ const n = z.coerce.number().optional();
 const anyId = z.union([z.string(), z.number()]).optional();
 
 export const forgotPassword = z.object({ email: s }).passthrough();
-export const resetPassword = z.object({ token: s, newPassword: s, email: s }).passthrough();
+// Enforce a real server-side password floor (the client strength meter is bypassable).
+export const resetPassword = z.object({
+  token: s,
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  email: s,
+}).passthrough();
 export const resendVerification = z.object({ email: s }).passthrough();
 export const checkPhone = z.object({ phone: s }).passthrough();
 export const saveInfo = z.object({ email: s, phone: s, fullName: s }).passthrough();

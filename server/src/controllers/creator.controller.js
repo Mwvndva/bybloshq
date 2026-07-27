@@ -1,4 +1,5 @@
 import CreatorService from '../services/creator.service.js';
+import AuthService from '../services/auth.service.js';
 import WithdrawalService from '../services/withdrawal.service.js';
 import { sanitizeWithdrawalRequest } from '../shared/utils/sanitize.js';
 import { setAuthCookie } from '../shared/utils/cookie.utils.js';
@@ -170,6 +171,58 @@ export const resendVerification = async (req, res, next) => {
     res.status(200).json({ status: 'success', message: 'Verification email sent.' });
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * @desc    Forgot password — emails an ambassador a reset link
+ * @route   POST /api/creators/forgot-password
+ * @access  Public
+ * Ambassadors authenticate via the unified `users` table, so the role-agnostic
+ * AuthService drives this exactly like buyer/seller. Responds uniformly to avoid
+ * account enumeration.
+ */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ status: 'error', message: 'Please provide an email address' });
+    }
+
+    await AuthService.forgotPassword(email, 'creator');
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email, you will receive a password reset link.'
+    });
+  } catch (error) {
+    logger.error('Creator forgot password error:', error.message);
+    return res.status(500).json({ status: 'error', message: 'An error occurred while processing your request' });
+  }
+};
+
+/**
+ * @desc    Reset password using the emailed token
+ * @route   POST /api/creators/reset-password
+ * @access  Public
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+    if (!token || !newPassword || !email) {
+      return res.status(400).json({ status: 'error', message: 'Token, email, and new password are required' });
+    }
+
+    try {
+      await AuthService.resetPassword(email, token, newPassword);
+    } catch (err) {
+      return res.status(400).json({ status: 'error', message: err.message || 'Invalid or expired token' });
+    }
+
+    return res.status(200).json({ status: 'success', message: 'Password has been reset successfully.' });
+  } catch (error) {
+    logger.error('Creator reset password error:', error.message);
+    return res.status(500).json({ status: 'error', message: 'An error occurred while resetting your password.' });
   }
 };
 
