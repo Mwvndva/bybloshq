@@ -140,22 +140,24 @@ export function RequestCard({
         </div>
       )}
 
-      {/* Quick contacts + one combined route link. */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <CallButton name="seller" phone={request.seller.phone} />
-        <CallButton name="buyer" phone={request.buyer.phone} />
-        {route && (
-          <a
-            href={route.href}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1.5 text-xs font-semibold text-yellow-200 transition hover:bg-yellow-400/20"
-          >
-            <Navigation size={13} />
-            {route.label}
-          </a>
-        )}
-      </div>
+      {/* Quick contacts + one combined route link — active orders only. */}
+      {!isCompleted && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <CallButton name="seller" phone={request.seller.phone} />
+          <CallButton name="buyer" phone={request.buyer.phone} />
+          {route && (
+            <a
+              href={route.href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1.5 text-xs font-semibold text-yellow-200 transition hover:bg-yellow-400/20"
+            >
+              <Navigation size={13} />
+              {route.label}
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Details — collapsed by default so the queue scans fast. */}
       <button

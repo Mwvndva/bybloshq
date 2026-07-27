@@ -83,48 +83,46 @@ const MzigoDashboardPage = () => {
       <section className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <MzigoActivityPanel />
 
-        {/* ── Overview stats ───────────────────────────────────── */}
-        <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardStat
-            label="To do"
-            value={activeCount}
-            icon={<Truck size={18} />}
-            tone="border-yellow-400/25 bg-yellow-400/[0.08]"
-          />
-          <DashboardStat
-            label="Running late"
-            value={overdueCount}
-            icon={<CalendarClock size={18} />}
-            tone={overdueCount > 0 ? 'border-red-400/30 bg-red-400/10' : 'border-white/10 bg-white/[0.03]'}
-          />
-          <DashboardStat
-            label="Done"
-            value={done.length}
-            icon={<CheckCircle2 size={18} />}
-            tone="border-emerald-400/25 bg-emerald-400/[0.08]"
-          />
-          <DashboardStat
-            label="All visible"
-            value={dashboard?.count || 0}
-            icon={<PackageCheck size={18} />}
-          />
+        {/* ── Overview stats flex strip ────────────────────────── */}
+        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+          <div className="flex items-center gap-2 rounded-xl border border-yellow-400/25 bg-yellow-400/[0.08] px-3 py-1.5 text-xs">
+            <Truck size={14} className="text-yellow-400" />
+            <span className="font-medium text-white/70">To do:</span>
+            <span className="font-black text-yellow-300">{activeCount}</span>
+          </div>
+
+          <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${
+            overdueCount > 0 ? 'border-red-400/30 bg-red-400/10' : 'border-white/10 bg-white/[0.02]'
+          }`}>
+            <CalendarClock size={14} className={overdueCount > 0 ? 'text-red-400' : 'text-white/40'} />
+            <span className="font-medium text-white/70">Late:</span>
+            <span className={`font-black ${overdueCount > 0 ? 'text-red-300' : 'text-white'}`}>{overdueCount}</span>
+          </div>
+
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.08] px-3 py-1.5 text-xs">
+            <CheckCircle2 size={14} className="text-emerald-400" />
+            <span className="font-medium text-white/70">Done:</span>
+            <span className="font-black text-emerald-300">{done.length}</span>
+          </div>
+
+          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs">
+            <PackageCheck size={14} className="text-white/40" />
+            <span className="font-medium text-white/70">All:</span>
+            <span className="font-black text-white">{dashboard?.count || 0}</span>
+          </div>
         </div>
 
-        {/* ── Sort controls ────────────────────────────────────── */}
+        {/* ── Sort & Live Location controls ───────────────────── */}
         <div className="mb-6 flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center">
           <div>
-            <p className="flex items-center gap-2 text-sm font-bold text-white">
-              <Truck size={16} className="text-yellow-400" />
-              {activeCount} {activeCount === 1 ? 'delivery' : 'deliveries'} to do
-            </p>
-            <p className="mt-1 text-xs text-white/50">Finished deliveries move to Done below.</p>
+            <p className="text-xs text-white/60">Finished deliveries move to Done below.</p>
 
             {/* Live location sharing — lets buyers/sellers watch active deliveries. */}
             <button
               type="button"
               onClick={() => { setShareLocation((v) => !v); }}
               aria-pressed={shareLocation}
-              className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              className={`mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                 shareLocation
                   ? 'border border-yellow-400/40 bg-yellow-400/15 text-yellow-200'
                   : 'border border-white/15 bg-white/[0.05] text-white/80 hover:bg-white/10'
