@@ -1,9 +1,15 @@
-import { useMemo, useState, ReactNode } from 'react';
+import { useEffect, useMemo, useState, ReactNode } from 'react';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthActions } from '../hooks/useAuthActions';
 import { useAuthRevalidation } from '../hooks/useAuthRevalidation';
 import { GlobalAuthContext } from './authContextObjects';
+import {
+    clearAppNavigator,
+    registerAppNavigator,
+    SESSION_EXPIRED_EVENT,
+    type SessionExpiredDetail,
+} from '@/lib/navigationService';
 
 export { GlobalAuthContext } from './authContextObjects';
 
@@ -41,6 +47,31 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
         setInitializing,
         navigate,
     });
+
+    // Bridge non-React modules (axios 401 handler, native push deep-links) to the
+    // client-side router so they navigate WITHOUT a full page reload. A hard
+    // `location.href` reload wipes this in-memory auth state and, on native,
+    // cold-reboots the WebView — which is what bounced users back to login.
+    useEffect(() => {
+        const navigateFn = (path: string, options?: { replace?: boolean }) =>
+            navigate(path, options);
+        registerAppNavigator(navigateFn);
+
+        const handleSessionExpired = (event: Event) => {
+            const detail = (event as CustomEvent<SessionExpiredDetail>).detail;
+            const redirectPath = detail?.redirectPath ?? '/buyer/login';
+            // Drop the session so protected routes gate correctly, then route to
+            // login client-side (no reload).
+            setUser(null);
+            navigate(redirectPath, { replace: true });
+        };
+        window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+
+        return () => {
+            clearAppNavigator(navigateFn);
+            window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+        };
+    }, [navigate]);
 
     const {
         login,

@@ -4,6 +4,7 @@ import { authStateManager } from './authState';
 import { buildApiBaseUrl } from './apiBaseUrl';
 import { storage } from './storage';
 import { isNativeApp } from './mobileApp';
+import { emitSessionExpired } from './navigationService';
 
 const baseURL = buildApiBaseUrl();
 
@@ -181,9 +182,19 @@ const handleUnauthorized = async (error: import('axios').AxiosError) => {
         }
 
         if (!currentPath.includes('/login')) {
-            setTimeout(() => {
-                globalThis.location.href = redirectPath;
-            }, 1000);
+            // Route to login through the client-side router (React Router) so we
+            // do NOT trigger a full page/WebView reload. A hard `location.href`
+            // navigation reloads the SPA, wiping the in-memory auth session, and
+            // on native cold-reboots the WebView — which bounced users straight
+            // back to the login screen the moment any authenticated call 401'd.
+            // The auth provider clears the session and navigates in response.
+            const handledByRouter = emitSessionExpired(redirectPath);
+            if (!handledByRouter) {
+                // Router not mounted yet (very early boot) — a hard nav is safe.
+                setTimeout(() => {
+                    globalThis.location.href = redirectPath;
+                }, 1000);
+            }
         }
     }
 };
