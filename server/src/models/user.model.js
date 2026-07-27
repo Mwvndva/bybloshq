@@ -103,9 +103,9 @@ class User {
      */
     static async setPasswordResetToken(email, token, expires) {
         const query = `
-      UPDATE users 
+      UPDATE users
       SET reset_password_token = $1, reset_password_expires = $2, updated_at = NOW()
-      WHERE email = $3
+      WHERE LOWER(email) = $3
       RETURNING id, email, role
     `;
         const result = await pool.query(query, [token, expires, email.toLowerCase()]);
@@ -120,9 +120,9 @@ class User {
      */
     static async verifyPasswordResetToken(email, token) {
         const query = `
-      SELECT * FROM users 
-      WHERE email = $1 
-      AND reset_password_token = $2 
+      SELECT * FROM users
+      WHERE LOWER(email) = $1
+      AND reset_password_token = $2
       AND reset_password_expires > NOW()
     `;
         const result = await pool.query(query, [email.toLowerCase(), token]);
@@ -215,12 +215,12 @@ class User {
 
         const query = `
       UPDATE users 
-      SET password_hash = $1, 
-          reset_password_token = NULL, 
+      SET password_hash = $1,
+          reset_password_token = NULL,
           reset_password_expires = NULL,
           password_changed_at = NOW(),
           updated_at = NOW()
-      WHERE email = $2
+      WHERE LOWER(email) = $2
       RETURNING id, email, role
     `;
 

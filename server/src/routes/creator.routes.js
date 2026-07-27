@@ -1,5 +1,6 @@
 import { validate } from '../middleware/validate.js';
 import * as V from '../validations/creator.validation.js';
+import * as AuthV from '../validations/auth.validation.js';
 import express from 'express';
 import { protect } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
@@ -22,6 +23,8 @@ router.post('/register', authLimiter, validate(V.register), creatorController.re
 router.post('/login', authLimiter, validate(V.login), creatorController.login);
 router.get('/verify-email', creatorController.verifyEmail);
 router.post('/resend-verification', authLimiter, validate(V.resendVerification), creatorController.resendVerification);
+router.post('/forgot-password', authLimiter, validate(AuthV.forgotPassword), creatorController.forgotPassword);
+router.post('/reset-password', authLimiter, validate(AuthV.resetPassword), creatorController.resetPassword);
 
 router.use(protect);
 router.use(requireCreatorProfile);

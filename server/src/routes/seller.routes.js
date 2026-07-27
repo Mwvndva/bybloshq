@@ -18,6 +18,7 @@ import { uploadRateLimiter, withdrawalRateLimiter } from '../middleware/rateLimi
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
 import digitalUpload from '../middleware/digitalUpload.js';
 import { validate } from '../middleware/validate.js';
+import * as AuthV from '../validations/auth.validation.js';
 
 const router = express.Router();
 
@@ -62,8 +63,8 @@ const sellerPickupRequestSchema = z.object({
 // Public routes
 router.post('/register', authLimiter, validateSellerRegistration, sellerController.register);
 router.post('/login', authLimiter, validateSellerLogin, sellerController.login);
-router.post('/forgot-password', authLimiter, sellerController.forgotPassword);
-router.post('/reset-password', authLimiter, sellerController.resetPassword);
+router.post('/forgot-password', authLimiter, validate(AuthV.forgotPassword), sellerController.forgotPassword);
+router.post('/reset-password', authLimiter, validate(AuthV.resetPassword), sellerController.resetPassword);
 router.get('/verify-email', sellerController.verifyEmail);
 router.post('/resend-verification', authLimiter, sellerController.resendVerification);
 router.get('/check-shop-name', sellerController.checkShopNameAvailability);

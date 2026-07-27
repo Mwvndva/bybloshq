@@ -75,6 +75,11 @@ export default function CreatorLogin() {
           <Button disabled={loading} className="h-12 w-full rounded-2xl bg-yellow-400 font-black text-black hover:bg-yellow-300">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Log in'}
           </Button>
+          <p className="text-center">
+            <Link to="/creator/forgot-password" className="text-sm font-bold text-white/60 hover:text-yellow-300">
+              Forgot password?
+            </Link>
+          </p>
           <p className="text-center text-sm font-medium text-white/50">
             New ambassador?{' '}
             <Link to="/creator/register" className="font-black text-yellow-300 hover:text-yellow-200">
