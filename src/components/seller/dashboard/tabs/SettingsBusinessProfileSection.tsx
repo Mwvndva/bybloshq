@@ -17,11 +17,11 @@ interface SettingsBusinessProfileSectionProps {
 
 export function SettingsBusinessProfileSection({ sellerProfile, isEditing, formData, setFormData, shopNameAvailable, isCheckingShopName, previewShopUsername, previewShopUrl }: SettingsBusinessProfileSectionProps) {
   return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="seller-card p-4 sm:p-5 lg:p-6">
         <SectionHeader title="Business Profile" description="The core identity buyers see on your shop page. Update your photo and banner from the business card above." />
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Shop Name</p>
+            <div className="seller-card-soft p-4">
+              <p className="seller-label mb-1">Shop Name</p>
               {isEditing ? (
                 <div className="space-y-1">
                   <div className="relative">
@@ -33,7 +33,7 @@ export function SettingsBusinessProfileSection({ sellerProfile, isEditing, formD
                         setFormData(prev => ({ ...prev, shopName: val }));
                       }}
                       placeholder="Shop Name"
-                      className={`h-10 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400 pr-10 ${formData.shopName !== sellerProfile?.shopName && shopNameAvailable === false ? 'border-red-500 focus:border-red-500' :
+                      className={`seller-field text-xs sm:text-sm pr-10 ${formData.shopName !== sellerProfile?.shopName && shopNameAvailable === false ? 'border-red-500 focus:border-red-500' :
                         formData.shopName !== sellerProfile?.shopName && shopNameAvailable === true ? 'border-green-500 focus:border-green-500' : ''
                         }`}
                     />
@@ -54,7 +54,7 @@ export function SettingsBusinessProfileSection({ sellerProfile, isEditing, formD
                       href={previewShopUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="block truncate text-[10px] font-bold text-slate-600 underline decoration-yellow-400 underline-offset-2"
+                      className="block truncate text-[10px] font-bold text-white/60 underline decoration-yellow-400 underline-offset-2"
                       title={previewShopUrl}
                     >
                       {previewShopUsername}
@@ -62,25 +62,25 @@ export function SettingsBusinessProfileSection({ sellerProfile, isEditing, formD
                   )}
                 </div>
               ) : (
-                <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.shopName || 'Not set'}>
+                <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.shopName || 'Not set'}>
                   {sellerProfile?.shopName || 'Not set'}
                 </p>
               )}
             </div>
 
             {/* Full name is fixed to the registered account holder and is not editable here. */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Full Name</p>
-              <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.fullName || 'Not set'}>
+            <div className="seller-card-soft p-4">
+              <p className="seller-label mb-1">Full Name</p>
+              <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.fullName || 'Not set'}>
                 {sellerProfile?.fullName || 'Not set'}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+            <div className="seller-card-soft p-4 sm:col-span-2">
               <div className="flex items-center justify-between gap-3 mb-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-600">Shop Bio</p>
+                <p className="seller-label">Shop Bio</p>
                 {isEditing && (
-                  <span className="text-[10px] text-slate-500">{formData.bio.length}/500</span>
+                  <span className="text-[10px] text-white/40">{formData.bio.length}/500</span>
                 )}
               </div>
               {isEditing ? (
@@ -89,10 +89,10 @@ export function SettingsBusinessProfileSection({ sellerProfile, isEditing, formD
                   value={formData.bio}
                   onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value.slice(0, 500) }))}
                   placeholder="Tell buyers what your shop offers."
-                  className="min-h-[92px] text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400 resize-none"
+                  className="seller-field min-h-[92px] text-xs sm:text-sm resize-none"
                 />
               ) : (
-                <p className="text-sm sm:text-base font-semibold text-slate-950 whitespace-pre-line break-words">
+                <p className="text-sm sm:text-base font-semibold text-white whitespace-pre-line break-words">
                   {sellerProfile?.bio || 'Not set'}
                 </p>
               )}

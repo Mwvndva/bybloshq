@@ -65,12 +65,12 @@ export const ThemeSelector = ({ currentTheme = 'yellow', onThemeChange }: ThemeS
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center gap-3">
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-2">
-          <Palette className="h-5 w-5 text-yellow-700" />
+        <div className="rounded-xl border border-[var(--theme-accent,#f5c518)]/30 bg-[var(--theme-accent,#f5c518)]/15 p-2">
+          <Palette className="h-5 w-5 text-[var(--theme-accent,#f5c518)]" />
         </div>
         <div>
-          <h3 className="text-base font-black tracking-tight text-slate-950 sm:text-lg">Shop Theme</h3>
-          <p className="mt-1 text-xs font-medium text-slate-600 sm:text-sm">Choose a color theme for your shop page</p>
+          <h3 className="text-base font-black tracking-tight text-white sm:text-lg">Shop Theme</h3>
+          <p className="mt-1 seller-subtext">Choose a color theme for your shop page</p>
         </div>
       </div>
 
@@ -80,13 +80,13 @@ export const ThemeSelector = ({ currentTheme = 'yellow', onThemeChange }: ThemeS
             key={theme.value}
             type="button"
             onClick={() => handleThemeSelect(theme.value as Theme)}
-            className={`relative group h-24 rounded-2xl border bg-white p-2 transition-all duration-200 sm:h-28 ${selectedTheme === theme.value
-              ? 'border-yellow-400 ring-2 ring-yellow-300/30 shadow-sm'
-              : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+            className={`relative group h-24 rounded-2xl border p-2 transition-all duration-200 sm:h-28 ${selectedTheme === theme.value
+              ? 'border-[var(--theme-accent,#f5c518)] bg-[var(--theme-accent,#f5c518)]/15 ring-2 ring-[var(--theme-accent,#f5c518)]/30'
+              : 'border-white/10 bg-white/[0.04] hover:border-white/20'
               }`}
           >
             <div
-              className="theme-swatch relative h-14 w-full overflow-hidden rounded-xl border border-slate-200 shadow-inner sm:h-16"
+              className="theme-swatch relative h-14 w-full overflow-hidden rounded-xl border border-white/10 shadow-inner sm:h-16"
               style={{ backgroundColor: theme.color, '--theme-swatch-color': theme.color } as CSSProperties}
             >
               {selectedTheme === theme.value && (
@@ -97,9 +97,9 @@ export const ThemeSelector = ({ currentTheme = 'yellow', onThemeChange }: ThemeS
                   <Check className="h-4 w-4 text-green-600" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-transparent transition-colors duration-200 group-hover:bg-slate-950/5" />
+              <div className="absolute inset-0 bg-transparent transition-colors duration-200 group-hover:bg-black/10" />
             </div>
-            <span className="mt-2 block text-center text-xs font-bold text-slate-700 sm:text-sm">
+            <span className="mt-2 block text-center text-xs font-bold text-white/60 sm:text-sm">
               {theme.name}
             </span>
           </button>
@@ -110,7 +110,7 @@ export const ThemeSelector = ({ currentTheme = 'yellow', onThemeChange }: ThemeS
         <Button
           onClick={saveTheme}
           disabled={isSaving || selectedTheme === currentTheme}
-          className="h-10 w-full bg-yellow-400 px-6 text-sm font-black text-black hover:bg-yellow-300 sm:w-auto"
+          className="h-10 w-full bg-[var(--theme-button-bg,#f5c518)] px-6 text-sm font-black text-[var(--theme-button-text,#000000)] hover:opacity-90 sm:w-auto"
         >
           {isSaving ? (
             <>

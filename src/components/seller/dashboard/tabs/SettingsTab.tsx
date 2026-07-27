@@ -69,9 +69,9 @@ export function SettingsTab({
     <div className="w-full space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-yellow-600">Settings</p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Shop controls</h2>
-          <p className="mt-1 max-w-2xl text-xs font-medium text-slate-700 sm:text-sm">
+          <p className="seller-eyebrow">Settings</p>
+          <h2 className="mt-1 seller-heading sm:text-3xl">Shop controls</h2>
+          <p className="mt-1 max-w-2xl seller-subtext">
             Keep your public shop details, appearance, contacts, and pickup location current.
           </p>
         </div>
@@ -82,14 +82,14 @@ export function SettingsTab({
                 variant="outline"
                 onClick={toggleEdit}
                 disabled={isSaving}
-                className="h-10 w-full border-slate-200 bg-white text-slate-700 hover:bg-slate-50 sm:w-auto"
+                className="h-10 w-full border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] sm:w-auto"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSaveProfile}
                 disabled={isSaving}
-                className="h-10 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:w-auto"
+                className="h-10 w-full bg-[var(--theme-button-bg,#f5c518)] font-black text-[var(--theme-button-text,#000000)] hover:opacity-90 sm:w-auto"
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
@@ -97,7 +97,7 @@ export function SettingsTab({
           ) : (
             <Button
               onClick={toggleEdit}
-              className="h-10 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 sm:w-auto"
+              className="h-10 w-full bg-[var(--theme-button-bg,#f5c518)] font-black text-[var(--theme-button-text,#000000)] hover:opacity-90 sm:w-auto"
             >
               <Edit className="mr-2 h-4 w-4" />
               Edit Profile
@@ -118,40 +118,40 @@ export function SettingsTab({
       />
 
       {/* App Theme */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="seller-card p-4 sm:p-5 lg:p-6">
         <AppThemeToggle />
       </section>
 
       {/* Shop accent colour */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="seller-card p-4 sm:p-5 lg:p-6">
         <ThemeSelector
           currentTheme={(sellerProfile?.theme as Theme) || 'default'}
           onThemeChange={() => undefined}
         />
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="seller-card p-4 sm:p-5 lg:p-6">
         <SectionHeader title="Contact & Socials" description="Where buyers can identify and reach your business." />
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Email</p>
-              <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950 truncate" title={sellerProfile?.email || 'Not set'}>
+            <div className="seller-card-soft p-4">
+              <p className="seller-label mb-1">Email</p>
+              <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.email || 'Not set'}>
                 {sellerProfile?.email || 'Not set'}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-[10px] sm:text-xs font-medium text-slate-600 mb-1">WhatsApp Number</p>
+            <div className="seller-card-soft p-4">
+              <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-1">WhatsApp Number</p>
               {isEditing ? (
                 <Input
                   name="whatsappNumber"
                   value={formData.whatsappNumber}
                   onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
                   placeholder="e.g. 0712345678"
-                  className="h-10 text-xs bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-yellow-400 focus:ring-yellow-400"
+                  className="seller-field text-xs"
                 />
               ) : (
-                <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-950">
+                <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
                   {sellerProfile?.whatsappNumber || sellerProfile?.phone || 'Not set'}
                 </p>
               )}
