@@ -19,7 +19,7 @@ import { BuyerProfileSheet } from './dashboard/BuyerProfileSheet';
 import { MyShopsSection } from './dashboard/MyShopsSection';
 import { MembershipGate } from '@/features/membership/MembershipGate';
 import { useBuyerFollowedShops } from './dashboard/hooks/useBuyerFollowedShops';
-import { useBuyerSwipeNav } from './dashboard/hooks/useBuyerSwipeNav';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { useBuyerActiveSection } from './dashboard/hooks/useBuyerActiveSection';
 import { useBuyerProfileForm } from './dashboard/hooks/useBuyerProfileForm';
 import { useBuyerOrdersNotification } from './dashboard/hooks/useBuyerOrdersNotification';
@@ -31,6 +31,7 @@ type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
 type BuyerSection = DashboardSection | 'profile';
 
 const PROFILE_CLOSE_NAV_DELAY_MS = 180;
+const SWIPE_SECTIONS = ['shop', 'shops', 'wishlist', 'orders'] as const;
 
 // Main dashboard component
 function BuyerDashboard() {
@@ -157,7 +158,16 @@ function BuyerDashboard() {
     }
   };
 
-  const { onTouchStart: handleDashboardTouchStart, onTouchEnd: handleDashboardTouchEnd } = useBuyerSwipeNav(activeSection, isProfileSidebarOpen, setActiveTab);
+  const {
+    onTouchStart: handleDashboardTouchStart,
+    onTouchEnd: handleDashboardTouchEnd,
+    onTouchCancel: handleDashboardTouchCancel,
+  } = useSwipeTabs({
+    tabs: SWIPE_SECTIONS,
+    activeTab: activeSection,
+    onChange: setActiveTab,
+    disabled: isProfileSidebarOpen,
+  });
 
 
   return (
@@ -188,6 +198,7 @@ function BuyerDashboard() {
       }}
         onTouchStart={handleDashboardTouchStart}
         onTouchEnd={handleDashboardTouchEnd}
+        onTouchCancel={handleDashboardTouchCancel}
       >
         {activeSection === 'shop' && (
           <>
