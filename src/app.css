@@ -803,20 +803,21 @@ body.dashboard-active .seller-service-charge-notice * {
 }
 
 @layer components {
-  /* Seller dashboard dark surface vocabulary — one source of truth so surfaces
-     cannot re-diverge into ad-hoc light/dark hex. Values mirror the hero/Overview. */
-  .seller-card       { @apply rounded-2xl border border-white/10 bg-[#0a0a0a] shadow-sm; }
-  .seller-card-soft  { @apply rounded-2xl border border-white/10 bg-white/[0.03]; }
-  .seller-field      { @apply h-10 rounded-xl border border-white/10 bg-white/[0.04]
-                               text-white placeholder:text-white/40
-                               focus:border-[var(--theme-accent,#f5c518)]
-                               focus:ring-[var(--theme-accent,#f5c518)]; }
+  /* Seller dashboard surface vocabulary — one source of truth, THEME-AWARE.
+     Light base + dark: override so these classes flip with the seller theme
+     (System/Light/Dark) instead of being locked dark. The accent stays
+     theme-agnostic (driven by --theme-accent regardless of light/dark). */
+  .seller-card       { @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0a0a0a]; }
+  .seller-card-soft  { @apply rounded-2xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.03]; }
+  .seller-field      { @apply h-10 rounded-xl border border-slate-200 bg-white text-slate-950 placeholder:text-slate-400
+                               focus:border-[var(--theme-accent,#f5c518)] focus:ring-[var(--theme-accent,#f5c518)]
+                               dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/40; }
   .seller-eyebrow    { @apply text-[10px] font-black uppercase tracking-[0.28em]
                                text-[var(--theme-accent,#f5c518)]; }
-  .seller-heading    { @apply text-2xl font-black tracking-tight text-white; }
-  .seller-subtext    { @apply text-xs font-medium text-white/60 sm:text-sm; }
-  .seller-label      { @apply text-xs font-medium text-white/50; }
-  .seller-value      { @apply text-sm font-semibold text-white; }
+  .seller-heading    { @apply text-2xl font-black tracking-tight text-slate-950 dark:text-white; }
+  .seller-subtext    { @apply text-xs font-medium text-slate-600 dark:text-white/60 sm:text-sm; }
+  .seller-label      { @apply text-xs font-medium text-slate-500 dark:text-white/50; }
+  .seller-value      { @apply text-sm font-semibold text-slate-950 dark:text-white; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
