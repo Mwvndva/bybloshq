@@ -21,7 +21,8 @@ import { CreatorAnalysisCharts } from './CreatorAnalysisCharts';
 import { CreatorLinkedShops } from './CreatorLinkedShops';
 
 
-import { AppThemeDropdown } from '@/components/common/AppThemeDropdown';
+import { ThemeSegmentedPill } from '@/components/common/ThemeSegmentedPill';
+import { useThemeScope } from '@/hooks/useAppTheme';
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export default function CreatorDashboard() {
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
   const withdrawRef = useRef<HTMLDivElement>(null);
+  const { theme, setTheme } = useThemeScope('ambassador');
 
   const dashboardQuery = useCreatorDashboardQuery(analysisPeriod);
   const referralQuery = useCreatorReferralDashboardQuery();
@@ -148,7 +150,7 @@ export default function CreatorDashboard() {
         <header className="flex items-center justify-between gap-3">
           <NotificationBell triggerClassName="text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10" />
           <div className="flex items-center gap-2">
-            <AppThemeDropdown />
+            <ThemeSegmentedPill value={theme} onChange={setTheme} showLabels={false} />
             <AccountSwitcher />
           </div>
         </header>
