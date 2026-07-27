@@ -34,14 +34,14 @@ const ShopPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+      <div className={cn('min-h-screen flex items-center justify-center', resolvedShopTheme === 'dark' ? 'dark bg-[#0a0a0a]' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100')}>
         <div className="text-center space-y-6 p-8">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
             <Loader2 className="h-12 w-12 text-yellow-600 animate-spin" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-black mb-3">Loading Shop</h3>
-            <p className="text-gray-600 text-lg font-medium">Please wait while we fetch the shop details...</p>
+            <h3 className="text-2xl font-black text-black dark:text-white mb-3">Loading Shop</h3>
+            <p className="text-gray-600 dark:text-white/60 text-lg font-medium">Please wait while we fetch the shop details...</p>
           </div>
         </div>
       </div>
@@ -50,14 +50,14 @@ const ShopPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
+      <div className={cn('min-h-screen flex items-center justify-center p-4', resolvedShopTheme === 'dark' ? 'dark bg-[#0a0a0a]' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100')}>
         <div className="text-center space-y-6 p-8">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
             <Store className="h-12 w-12 text-red-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-black mb-3">Error Loading Shop</h2>
-            <p className="text-gray-600 text-lg font-medium mb-6">{error}</p>
+            <h2 className="text-2xl font-black text-black dark:text-white mb-3">Error Loading Shop</h2>
+            <p className="text-gray-600 dark:text-white/60 text-lg font-medium mb-6">{error}</p>
             <Button
               asChild
               className="bg-yellow-300 hover:bg-yellow-400 text-black shadow-lg px-8 py-3 rounded-xl font-semibold transition-colors duration-200"
