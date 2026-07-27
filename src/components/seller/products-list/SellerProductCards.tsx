@@ -35,7 +35,7 @@ export function SellerProductCards({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
       {products.map((product) => (
-        <Card key={product.id} className="relative group bg-[#0a0a0a] border border-white/10 rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
+        <Card key={product.id} className="relative group bg-[#0a0a0a] border border-white/10 text-white rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
           <div className="absolute right-2 top-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -128,7 +128,7 @@ export function SellerProductCards({
                     {product.quantity ?? 0}
                   </Badge>
                 ) : (
-                  <span className="text-[10px] text-white/40 italic">Not tracked</span>
+                  <span className="text-[10px] text-white/60 italic">Not tracked</span>
                 )}
                 <Button
                   variant="ghost"
