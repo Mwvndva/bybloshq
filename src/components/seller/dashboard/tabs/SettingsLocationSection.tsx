@@ -112,7 +112,7 @@ export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, 
                       type="button"
                       onClick={handleDeleteLocation}
                       disabled={isDeletingLocation || isSaving}
-                      className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/15 text-red-300 text-xs font-semibold hover:bg-red-500/25 transition disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {isDeletingLocation ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
