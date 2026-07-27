@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet } from "react-router-dom";
 
 import { AppProviders } from "@/app/providers/AppProviders";
+import { ThemeManager } from "@/app/ThemeManager";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { RootErrorElement } from "@/components/common/ErrorBoundary";
 import NotFound from "@/pages/NotFound";
@@ -11,6 +12,7 @@ export const router = createBrowserRouter([
   {
     element: (
       <AppProviders>
+        <ThemeManager />
         <Outlet />
       </AppProviders>
     ),
