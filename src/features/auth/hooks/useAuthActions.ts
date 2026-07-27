@@ -7,6 +7,8 @@ import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
 import { getDashboardPath } from '../utils/authRouting';
 import { isNativeApp } from '@/lib/mobileApp';
+import { storage } from '@/lib/storage';
+
 
 
 
@@ -105,7 +107,6 @@ export function useAuthActions({
       });
 
       if (response.token) {
-        const { storage } = await import('@/lib/storage');
         await storage.set(`${role}Token`, response.token);
         const refreshToken = (response as { refreshToken?: string }).refreshToken;
         if (refreshToken) await storage.set(`${role}RefreshToken`, refreshToken);
@@ -197,7 +198,6 @@ export function useAuthActions({
         });
 
         if (response?.data?.token) {
-          const { storage } = await import('@/lib/storage');
           await storage.set('adminToken', response.data.token);
           const adminRefreshToken = (response.data as { refreshToken?: string }).refreshToken;
           if (adminRefreshToken) await storage.set('adminRefreshToken', adminRefreshToken);
@@ -269,7 +269,6 @@ export function useAuthActions({
       queryClient.clear();
       await enforceSingleActiveRole(role);
       if (isNativeApp() && token) {
-        const { storage } = await import('@/lib/storage');
         await storage.set(`${role}Token`, token);
         if (refreshToken) await storage.set(`${role}RefreshToken`, refreshToken);
       }
