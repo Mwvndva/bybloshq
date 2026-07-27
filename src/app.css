@@ -802,6 +802,23 @@ body.dashboard-active .seller-service-charge-notice * {
                 0 0 42px -12px rgba(var(--theme-accent-rgb, 245, 158, 11), 0.38) !important;
 }
 
+@layer components {
+  /* Seller dashboard dark surface vocabulary — one source of truth so surfaces
+     cannot re-diverge into ad-hoc light/dark hex. Values mirror the hero/Overview. */
+  .seller-card       { @apply rounded-2xl border border-white/10 bg-[#0a0a0a] shadow-sm; }
+  .seller-card-soft  { @apply rounded-2xl border border-white/10 bg-white/[0.03]; }
+  .seller-field      { @apply h-10 rounded-xl border border-white/10 bg-white/[0.04]
+                               text-white placeholder:text-white/40
+                               focus:border-[var(--theme-accent,#f5c518)]
+                               focus:ring-[var(--theme-accent,#f5c518)]; }
+  .seller-eyebrow    { @apply text-[10px] font-black uppercase tracking-[0.28em]
+                               text-[var(--theme-accent,#f5c518)]; }
+  .seller-heading    { @apply text-2xl font-black tracking-tight text-white; }
+  .seller-subtext    { @apply text-xs font-medium text-white/60 sm:text-sm; }
+  .seller-label      { @apply text-xs font-medium text-white/50; }
+  .seller-value      { @apply text-sm font-semibold text-white; }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    LIGHT THEME
    Applied when <html data-theme="light"> — overrides the dark-default vars,
