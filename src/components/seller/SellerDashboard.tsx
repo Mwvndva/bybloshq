@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDeleteProductMutation, useUpdateProductMutation } from '@/hooks/seller/useSellerProducts';
 import { useToast } from '@/hooks/use-toast';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { useSellerAuth } from '@/features/auth/contexts';
 import { SellerProfileHero } from './SellerProfileHero';
 import { pendingOverviewStatuses } from './dashboard/dashboardUtils';
@@ -24,6 +25,14 @@ import { useSellerProfileQuery } from '@/hooks/seller/useSellerProfile';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import type { Theme } from '@/types';
 import type { SellerDashboardProps, SellerTabId } from './dashboard/types';
+
+const SELLER_TABS_ORDER: readonly SellerTabId[] = [
+  'overview',
+  'products',
+  'orders',
+  'withdrawals',
+  'settings',
+];
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
   useAppTheme();
@@ -121,6 +130,16 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     }
   }, []);
 
+  const {
+    onTouchStart: handleTouchStart,
+    onTouchEnd: handleTouchEnd,
+    onTouchCancel: handleTouchCancel,
+  } = useSwipeTabs({
+    tabs: SELLER_TABS_ORDER,
+    activeTab,
+    onChange: handleSelectTab,
+  });
+
   const deleteProductMutation = useDeleteProductMutation();
   const updateProductMutation = useUpdateProductMutation();
 
@@ -185,33 +204,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     return <SellerDashboardErrorState error={error} onRetry={fetchData} />;
   }
 
-  // Touch swipe gesture handlers to swipe left / right through seller dashboard tabs
-  const TABS_ORDER: SellerTabId[] = ['overview', 'products', 'orders', 'withdrawals', 'settings'];
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchStartX - touchEndX;
-    setTouchStartX(null);
-
-    // Swipe threshold: 50px
-    if (Math.abs(diff) > 50) {
-      const currentIndex = TABS_ORDER.indexOf(activeTab);
-      if (diff > 0 && currentIndex < TABS_ORDER.length - 1) {
-        // Swiped left -> move to next tab
-        handleSelectTab(TABS_ORDER[currentIndex + 1]);
-      } else if (diff < 0 && currentIndex > 0) {
-        // Swiped right -> move to previous tab
-        handleSelectTab(TABS_ORDER[currentIndex - 1]);
-      }
-    }
-  };
-
   return (
     <>
       <SellerDashboardHeader sellerFirstName={sellerFirstName} />
@@ -219,6 +211,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         className="seller-surface mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6"
         style={isNativeApp() ? { paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' } : undefined}
       >
