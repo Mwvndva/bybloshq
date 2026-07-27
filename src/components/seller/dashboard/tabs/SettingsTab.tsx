@@ -17,7 +17,8 @@ import { SellerAmbassadorInvites } from './SellerAmbassadorInvites';
 import { SectionHeader, SocialInput } from './settingsTab.parts';
 import { SettingsBusinessProfileSection } from './SettingsBusinessProfileSection';
 import { SettingsLocationSection } from './SettingsLocationSection';
-import { AppThemeToggle } from './AppThemeToggle';
+import { ThemeSegmentedPill } from '@/components/common/ThemeSegmentedPill';
+import { useThemeScope } from '@/hooks/useAppTheme';
 import type { LocationCoordinates } from '@/lib/location';
 
 
@@ -64,6 +65,7 @@ export function SettingsTab({
 }: SettingsTabProps) {
   const previewShopUsername = getShopUsername(formData.shopName);
   const previewShopUrl = getShopUrl(formData.shopName);
+  const { theme, setTheme } = useThemeScope('seller');
 
   return (
     <div className="w-full space-y-5 sm:space-y-6">
@@ -117,9 +119,15 @@ export function SettingsTab({
         previewShopUrl={previewShopUrl}
       />
 
-      {/* App Theme */}
+      {/* Dashboard theme (light / dark / system) — seller-scoped */}
       <section className="seller-card p-4 sm:p-5 lg:p-6">
-        <AppThemeToggle />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-base font-black tracking-tight text-slate-950 dark:text-white sm:text-lg">Theme</h3>
+            <p className="mt-0.5 seller-subtext">Choose how your dashboard looks. System follows your device.</p>
+          </div>
+          <ThemeSegmentedPill value={theme} onChange={setTheme} />
+        </div>
       </section>
 
       {/* Shop accent colour */}

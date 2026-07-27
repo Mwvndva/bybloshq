@@ -18,7 +18,7 @@ const SCOPE_READY: Record<ThemeScope, boolean> = {
   default: true,
   buyer: true,
   ambassador: true,
-  seller: false,
+  seller: true,
   shop: false,
 };
 
