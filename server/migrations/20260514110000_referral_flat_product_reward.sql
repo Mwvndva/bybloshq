@@ -7,7 +7,7 @@ ALTER TABLE referral_earnings_log
 WITH first_referred_sales AS (
     SELECT
         seller_id,
-        MIN(COALESCE(paid_at, created_at)) AS first_paid_at
+        MIN(COALESCE(updated_at, created_at)) AS first_paid_at
     FROM product_orders
     WHERE payment_status = 'completed'
       AND seller_id IS NOT NULL
