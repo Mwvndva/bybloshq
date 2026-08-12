@@ -20,8 +20,13 @@ CREATE INDEX IF NOT EXISTS idx_orders_buyer_created
 CREATE INDEX IF NOT EXISTS idx_orders_seller_status
     ON product_orders (seller_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_pending_reg_email_expiry
-    ON pending_registrations (email, expires_at);
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pending_registrations') THEN
+        CREATE INDEX IF NOT EXISTS idx_pending_reg_email_expiry
+            ON pending_registrations (email, expires_at);
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_users_email_lower
     ON users (LOWER(email));

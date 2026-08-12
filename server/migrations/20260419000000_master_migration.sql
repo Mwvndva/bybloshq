@@ -79,6 +79,23 @@ CREATE TABLE IF NOT EXISTS user_roles (
     UNIQUE(user_id, role_id)
 );
 
+CREATE TABLE IF NOT EXISTS pending_registrations (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50),
+    registration_data JSONB,
+    physical_address TEXT,
+    latitude NUMERIC(10, 8),
+    longitude NUMERIC(11, 8),
+    verification_token VARCHAR(255),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    terms_accepted BOOLEAN DEFAULT FALSE,
+    terms_accepted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Sellers & Buyers
 CREATE TABLE IF NOT EXISTS sellers (
     id SERIAL PRIMARY KEY,
