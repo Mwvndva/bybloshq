@@ -204,6 +204,10 @@ CREATE TABLE IF NOT EXISTS product_orders (
     location_lng NUMERIC(11, 8),
     service_title TEXT,
     notification_sent BOOLEAN DEFAULT FALSE,
+    -- SLA / cancellation tracking
+    auto_cancelled_reason TEXT,
+    pre_handoff_sla JSONB,
+    client_checkout_token VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
