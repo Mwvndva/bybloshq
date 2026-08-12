@@ -274,7 +274,7 @@ export const sendProductOrderConfirmationEmail = async (email, orderData) => {
   try {
     const templateData = {
       appName: process.env.APP_NAME || 'Byblos Atelier',
-      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
+      websiteUrl: process.env.FRONTEND_URL || 'https://byblosafrica.site',
       buyerName: orderData.buyer_name || 'Customer',
       orderNumber: orderData.order_number,
       orderDate: new Date(orderData.created_at).toLocaleDateString(),
@@ -312,7 +312,7 @@ export const sendNewOrderNotificationEmail = async (email, orderData) => {
   try {
     const templateData = {
       appName: process.env.APP_NAME || 'Byblos Atelier',
-      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
+      websiteUrl: process.env.FRONTEND_URL || 'https://byblosafrica.site',
       sellerName: orderData.seller_name || 'Seller',
       orderNumber: orderData.order_number,
       orderDate: new Date(orderData.created_at).toLocaleDateString(),
@@ -356,7 +356,7 @@ export const sendPaymentReceiptEmail = async (email, orderData, isSeller = false
 
     const templateData = {
       appName: process.env.APP_NAME || 'Byblos Atelier',
-      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
+      websiteUrl: process.env.FRONTEND_URL || 'https://byblosafrica.site',
       buyerName: orderData.buyer_name || 'Customer',
       buyerEmail: orderData.buyer_email || 'Not specified',
       orderNumber: orderData.order_number,

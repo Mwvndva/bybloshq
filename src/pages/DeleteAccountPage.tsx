@@ -32,7 +32,7 @@ export default function DeleteAccountPage() {
         <p className="mt-2 text-sm leading-6 text-white/70">
           This page explains how to request deletion of your <strong className="text-white">Byblos</strong> account
           (operated by Byblos / ByblosHQ) and the personal data associated with it. It applies to buyer and seller
-          accounts on the Byblos app and website (bybloshq.space).
+          accounts on the Byblos app and website (byblosafrica.site).
         </p>
 
         {/* Steps */}

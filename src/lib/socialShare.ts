@@ -31,7 +31,7 @@ export async function shareCardToInstagram(dataUrl: string): Promise<void> {
 
 export async function shareCardToWhatsApp(dataUrl: string): Promise<void> {
   const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
-  const shareText = 'I just joined Byblos as a founder member. Every purchase is held safe until it shows up. Check it out at https://bybloshq.space';
+  const shareText = 'I just joined Byblos as a founder member. Every purchase is held safe until it shows up. Check it out at https://byblosafrica.site';
 
   if (isNativeApp()) {
     await SocialShare.shareToWhatsApp({ imageBase64: base64, text: shareText });
