@@ -51,5 +51,5 @@ USER node
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=20s \
     CMD wget -qO- http://localhost:${PORT:-3002}/api/health || exit 1
 
-# Start the application
-CMD ["npm", "start"]
+# Start the application (run migrations automatically on boot)
+CMD ["sh", "-c", "npm run migrate && npm start"]
