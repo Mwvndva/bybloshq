@@ -33,6 +33,9 @@ CREATE INDEX IF NOT EXISTS idx_product_orders_custom_production_reminder
     WHERE custom_production_deadline_at IS NOT NULL
       AND custom_production_reminder_sent_at IS NULL;
 
+ALTER TABLE product_orders
+    ADD COLUMN IF NOT EXISTS auto_cancelled_reason TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_product_orders_custom_production_grace
     ON product_orders(custom_production_grace_deadline_at)
     WHERE custom_production_grace_deadline_at IS NOT NULL
