@@ -5,7 +5,7 @@ const DEFAULT_MAP_CENTER = {
   lng: 36.8219,
 };
 
-const USER_AGENT = 'ByblosHQ/1.0 (location-search; https://www.bybloshq.space)';
+const USER_AGENT = 'ByblosHQ/1.0 (location-search; https://www.byblosafrica.site)';
 
 function buildSearchQueries(query) {
   const trimmedQuery = String(query || '').trim();

@@ -10,7 +10,7 @@ export const getShopUsername = (shopName?: string | null) => {
 // must fall back to the canonical public site.
 export const PUBLIC_WEB_ORIGIN =
   ((import.meta.env.VITE_PUBLIC_WEB_URL as string | undefined) || '').replace(/\/$/, '') ||
-  'https://bybloshq.space';
+  'https://byblosafrica.site';
 
 const isShareableOrigin = (origin: string) =>
   /^https?:\/\//i.test(origin) && !/localhost|127\.0\.0\.1|\[::1\]/i.test(origin);

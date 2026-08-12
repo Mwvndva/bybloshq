@@ -218,7 +218,7 @@ export function StoryShareFrame(props: FounderCardProps) {
         }}
       >
         Shop protected — your money is held safe until your order shows up.
-        <div style={{ marginTop: 10, color: '#f5c518', fontWeight: 700 }}>bybloshq.space</div>
+        <div style={{ marginTop: 10, color: '#f5c518', fontWeight: 700 }}>byblosafrica.site</div>
       </div>
     </div>
   );

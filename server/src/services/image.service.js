@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 class ImageService {
     constructor() {
         this.uploadDir = path.join(process.cwd(), 'uploads', 'images');
-        this.baseUrl = process.env.BACKEND_URL || 'https://bybloshq.space';
+        this.baseUrl = process.env.BACKEND_URL || 'https://byblosafrica.site';
         const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
         const apiKey = process.env.CLOUDINARY_API_KEY;
         this.useCloudinary = !!(cloudName && apiKey &&

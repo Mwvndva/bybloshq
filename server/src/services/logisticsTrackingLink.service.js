@@ -47,7 +47,7 @@ function parseToken(rawToken) {
 }
 
 function frontendBaseUrl() {
-    return (process.env.FRONTEND_URL || 'https://bybloshq.space').replace(/\/+$/, '');
+    return (process.env.FRONTEND_URL || 'https://byblosafrica.site').replace(/\/+$/, '');
 }
 
 function mapSafeLeg(row, prefix, audience) {
