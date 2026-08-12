@@ -14,7 +14,7 @@ ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'COMPENSATION_REQUIRED';
 CREATE TABLE IF NOT EXISTS payouts (
     id SERIAL PRIMARY KEY,
     seller_id INTEGER REFERENCES sellers(id) ON DELETE SET NULL,
-    order_id INTEGER REFERENCES product_orders(id) ON DELETE CASCADE,
+    order_id INTEGER UNIQUE REFERENCES product_orders(id) ON DELETE CASCADE,
     payment_id INTEGER REFERENCES payments(id) ON DELETE SET NULL,
     amount NUMERIC(15, 2) NOT NULL CHECK (amount >= 0),
     platform_fee NUMERIC(15, 2) NOT NULL DEFAULT 0 CHECK (platform_fee >= 0),
@@ -77,9 +77,8 @@ WHERE idempotency_key IS NULL;
 ALTER TABLE withdrawal_requests
     ALTER COLUMN idempotency_key SET NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS payouts_order_id_unique
-    ON payouts(order_id)
-    WHERE order_id IS NOT NULL;
+ALTER TABLE payouts DROP CONSTRAINT IF EXISTS payouts_order_id_key;
+ALTER TABLE payouts ADD CONSTRAINT payouts_order_id_key UNIQUE (order_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS fulfillment_jobs_order_id_unique
     ON fulfillment_jobs(order_id);
