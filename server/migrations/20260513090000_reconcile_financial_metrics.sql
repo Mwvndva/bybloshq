@@ -33,6 +33,17 @@ FROM computed
 WHERE po.id = computed.id
   AND ABS(COALESCE(po.platform_fee_amount, 0) - computed.platform_retained_amount) > 0.009;
 
+-- Ensure order_id has a non-partial UNIQUE constraint for ON CONFLICT (order_id)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'payouts_order_id_key' OR conname = 'payouts_order_id_unique'
+    ) THEN
+        ALTER TABLE payouts DROP CONSTRAINT IF EXISTS payouts_order_id_key;
+        ALTER TABLE payouts ADD CONSTRAINT payouts_order_id_key UNIQUE (order_id);
+    END IF;
+END $$;
+
 WITH eligible_orders AS (
     SELECT
         o.id,
