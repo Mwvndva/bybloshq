@@ -208,6 +208,15 @@ CREATE TABLE IF NOT EXISTS product_orders (
     auto_cancelled_reason TEXT,
     pre_handoff_sla JSONB,
     client_checkout_token VARCHAR(255),
+    cancelled_at TIMESTAMP WITH TIME ZONE,
+    -- Seller/buyer deadline tracking (orderDeadline.service.js)
+    seller_dropoff_deadline TIMESTAMP WITH TIME ZONE,
+    buyer_pickup_deadline TIMESTAMP WITH TIME ZONE,
+    ready_for_pickup_at TIMESTAMP WITH TIME ZONE,
+    -- Custom production SLA (20260602180000_custom_physical_product_sla.sql)
+    custom_production_deadline_at TIMESTAMP WITH TIME ZONE,
+    custom_production_grace_deadline_at TIMESTAMP WITH TIME ZONE,
+    custom_production_reminder_sent_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
