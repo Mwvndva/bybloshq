@@ -200,6 +200,27 @@ CREATE TABLE IF NOT EXISTS withdrawal_requests (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS refund_requests (
+    id SERIAL PRIMARY KEY,
+    buyer_id INTEGER REFERENCES buyers(id) ON DELETE CASCADE,
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
+    payment_method VARCHAR(50),
+    payment_details JSONB DEFAULT '{}'::jsonb,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    admin_notes TEXT,
+    processed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    processed_at TIMESTAMP WITH TIME ZONE,
+    requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_refund_requests_buyer_id
+    ON public.refund_requests(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_refund_requests_status
+    ON public.refund_requests(status);
+CREATE INDEX IF NOT EXISTS idx_refund_requests_requested_at
+    ON public.refund_requests(requested_at DESC);
+
 -- Logistics runtime tables
 ALTER TABLE public.logistics_partners
     ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
