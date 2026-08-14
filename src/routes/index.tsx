@@ -151,7 +151,23 @@ export const routes = [
     ),
   },
   {
+    path: '/legal',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <LegalPage />
+      </Suspense>
+    ),
+  },
+  {
     path: '/privacy',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <LegalPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/privacy-policy',
     element: (
       <Suspense fallback={<RouteFallback />}>
         <LegalPage />
