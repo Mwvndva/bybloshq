@@ -20,9 +20,7 @@ marketingClient.interceptors.request.use(async (config) => {
     const token = sessionStorage.getItem('marketing_token')
     if (token) config.headers.Authorization = `Bearer ${token}`
 
-    // 2. Attach CSRF token to non-GET requests (excluding authentication login)
-    const isLogin = config.url && (config.url === '/admin/marketing/login' || config.url.endsWith('/login'));
-    if (!isLogin && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+    if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
         let csrfToken = getCachedCsrfToken();
         if (!csrfToken) {
             csrfToken = await getFreshCsrfToken();
