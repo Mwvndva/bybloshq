@@ -335,20 +335,27 @@ export const verifyRequiredIndexes = async () => {
         const bcrypt = (await import('bcrypt')).default;
         const passwordHash = await bcrypt.hash(adminPassword, 12);
 
-        await pool.query(`
-            INSERT INTO users (email, password_hash, role, is_verified, is_active, created_at, updated_at)
-            VALUES ($1, $2, 'admin', true, true, NOW(), NOW())
-            ON CONFLICT (email)
-            DO UPDATE SET
-              password_hash = EXCLUDED.password_hash,
-              role          = 'admin',
-              is_verified   = true,
-              is_active     = true,
-              updated_at    = NOW()
-        `, [adminEmail, passwordHash]);
-        logger.info(`[SCHEMA-CHECK] Admin user verified/seeded for ${adminEmail}`);
+        const checkRes = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1', [adminEmail]);
+        if (checkRes.rows.length > 0) {
+            await pool.query(`
+                UPDATE users
+                SET password_hash = $1,
+                    role = 'admin',
+                    is_verified = true,
+                    is_active = true,
+                    updated_at = NOW()
+                WHERE LOWER(email) = $2
+            `, [passwordHash, adminEmail]);
+            logger.info(`[SCHEMA-CHECK] Existing admin user updated for ${adminEmail}`);
+        } else {
+            await pool.query(`
+                INSERT INTO users (email, password_hash, role, is_verified, is_active, created_at, updated_at)
+                VALUES ($1, $2, 'admin', true, true, NOW(), NOW())
+            `, [adminEmail, passwordHash]);
+            logger.info(`[SCHEMA-CHECK] New admin user created for ${adminEmail}`);
+        }
     } catch (err) {
-        logger.warn('[SCHEMA-CHECK] Admin auto-seed warning:', err.message);
+        logger.error('[SCHEMA-CHECK] Admin auto-seed ERROR:', err);
     }
 
     const failures = [];
