@@ -72,7 +72,9 @@ export function setCsrfTokenCache(val: string | null) {
 // Request Interceptor for CSRF
 api.interceptors.request.use(
   async (config: import('axios').InternalAxiosRequestConfig) => {
-    if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+    const url = config.url || '';
+    const isLogin = url === '/admin/login' || url.endsWith('/login');
+    if (!isLogin && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
       if (!csrfTokenCache) {
         csrfTokenCache = await getFreshCsrfToken();
       }

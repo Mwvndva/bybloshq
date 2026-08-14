@@ -21,11 +21,13 @@ const NativeAppHome = () => (
       </Button>
     </Link>
     <main className="flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)]">
-      <img
-        src="/byblos-icon.png"
-        alt="Byblos logo"
-        className="h-auto w-[min(68vw,260px)]"
-      />
+      <div className="rounded-full border border-white/20 p-2 bg-black/40 backdrop-blur-md shadow-2xl overflow-hidden">
+        <img
+          src="/byblos-icon.png"
+          alt="Byblos logo"
+          className="h-auto w-[min(68vw,260px)] rounded-full object-cover"
+        />
+      </div>
 
       <p className="text-xs font-semibold tracking-wide text-white/80 max-w-[280px] leading-relaxed">
         The safer way to buy from businesses on social media

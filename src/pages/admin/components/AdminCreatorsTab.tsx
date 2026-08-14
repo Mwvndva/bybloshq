@@ -2,6 +2,7 @@ import { Search, UserPlus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import type { AdminCreator } from '../adminDashboardTypes';
 
 interface AdminCreatorsTabProps {
@@ -100,16 +101,15 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
                     <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">Balance KSh {creator.balance.toLocaleString()}</p>
                   </td>
                   <td className="px-5 md:px-8 py-4 md:py-6 text-right">
-                    <Button
+                    <IconButton
                       type="button"
                       variant="ghost"
-                      size="icon"
                       onClick={() => onDelete(creator.id, creator.name)}
-                      className="h-10 w-10 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-100"
+                      className="h-11 w-11 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-100"
                       aria-label={`Delete ${creator.name || 'creator'} account`}
                     >
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </IconButton>
                   </td>
                 </tr>
               ))}

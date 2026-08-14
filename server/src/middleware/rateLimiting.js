@@ -12,101 +12,6 @@ import logger from '../shared/utils/logger.js';
  */
 
 // ========================================
-// 1. Authentication Endpoints (STRICT)
-// ========================================
-export const authRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per window
-    message: {
-        status: 'error',
-        message: 'Too many authentication attempts. Please try again in 15 minutes.',
-        retryAfter: '15 minutes'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    // Use IP + email combination for more accurate tracking
-    keyGenerator: (req) => {
-        const email = req.body?.email || req.body?.username || '';
-        return `${req.ip}:${email}`;
-    },
-    handler: (req, res) => {
-        logger.warn('[RATE-LIMIT] Authentication rate limit exceeded', {
-            ip: req.ip,
-            email: req.body?.email,
-            path: req.path
-        });
-
-        res.status(429).json({
-            status: 'error',
-            message: 'Too many login attempts. Please try again in 15 minutes.',
-            retryAfter: 900 // seconds
-        });
-    },
-    skip: (req) => {
-        // Skip rate limiting in development for easier testing
-        return process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH_RATE_LIMIT === 'true';
-    }
-});
-
-// ========================================
-// 2. Password Reset (VERY STRICT)
-// ========================================
-export const passwordResetRateLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // Only 3 reset attempts per hour
-    message: {
-        status: 'error',
-        message: 'Too many password reset requests. Please try again in 1 hour.',
-        retryAfter: '1 hour'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req) => {
-        const email = req.body?.email || '';
-        return `${req.ip}:${email}`;
-    },
-    handler: (req, res) => {
-        logger.warn('[RATE-LIMIT] Password reset rate limit exceeded', {
-            ip: req.ip,
-            email: req.body?.email
-        });
-
-        res.status(429).json({
-            status: 'error',
-            message: 'Too many password reset requests. Please try again later.',
-            retryAfter: 3600
-        });
-    }
-});
-
-// ========================================
-// 3. Registration (MODERATE)
-// ========================================
-export const registrationRateLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // 10 registrations per hour per IP
-    message: {
-        status: 'error',
-        message: 'Too many registration attempts. Please try again later.',
-        retryAfter: '1 hour'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (req, res) => {
-        logger.warn('[RATE-LIMIT] Registration rate limit exceeded', {
-            ip: req.ip,
-            path: req.path
-        });
-
-        res.status(429).json({
-            status: 'error',
-            message: 'Too many registration attempts from this IP. Please try again later.',
-            retryAfter: 3600
-        });
-    }
-});
-
-// ========================================
 // 4. Payment Initiation (MODERATE)
 // ========================================
 export const paymentRateLimiter = rateLimit({
@@ -231,25 +136,6 @@ export const uploadRateLimiter = rateLimit({
 });
 
 // ========================================
-// 8. Admin Operations (GENEROUS)
-// ========================================
-export const adminRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // 200 requests per 15 minutes for admins
-    message: {
-        status: 'error',
-        message: 'Rate limit exceeded. Please contact support if you need higher limits.',
-        retryAfter: '15 minutes'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => {
-        // Skip for super admins in development
-        return process.env.NODE_ENV === 'development' && req.user?.userType === 'admin';
-    }
-});
-
-// ========================================
 // Helper: Create Custom Rate Limiter
 // ========================================
 export const createRateLimiter = (options) => {
@@ -275,14 +161,10 @@ export const createRateLimiter = (options) => {
 };
 
 export default {
-    auth: authRateLimiter,
-    passwordReset: passwordResetRateLimiter,
-    registration: registrationRateLimiter,
     payment: paymentRateLimiter,
     withdrawal: withdrawalRateLimiter,
     publicApi: publicApiRateLimiter,
     upload: uploadRateLimiter,
-    admin: adminRateLimiter,
     create: createRateLimiter
 };
 

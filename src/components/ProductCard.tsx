@@ -83,8 +83,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme, forc
         <button
           onClick={toggleWishlist}
           className={cn(
-            'absolute top-2 right-2 z-10 p-1.5 sm:p-2 rounded-full bg-white/95 hover:bg-white border border-slate-200 shadow-sm backdrop-blur-sm transition-all duration-300',
-            'h-7 w-7 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center',
+            'absolute top-2 right-2 z-10 p-2 rounded-full bg-white/95 hover:bg-white border border-slate-200 shadow-sm backdrop-blur-sm transition-all duration-300',
+            'h-11 w-11 flex items-center justify-center',
             wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110',
             isWishlisted ? 'text-red-500' : 'text-slate-500'
           )}

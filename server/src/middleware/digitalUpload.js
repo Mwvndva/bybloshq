@@ -1,62 +1,98 @@
 import multer from 'multer';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
 import fs from 'node:fs';
-import { promisify } from 'util';
+import { writeFile, unlink } from 'node:fs/promises';
+import os from 'node:os';
+import { uploadToCloudinary } from '../shared/utils/cloudinary.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Allowed extensions for digital products
+const ALLOWED_EXTENSIONS = ['.pdf', '.zip', '.rar', '.epub', '.mobi'];
 
-// Ensure digital uploads directory exists
-const digitalUploadsDir = path.join(process.cwd(), 'uploads', 'digital_products');
-const mkdir = promisify(fs.mkdir);
-
-const ensureDigitalDirExists = async () => {
-    try {
-        await mkdir(digitalUploadsDir, { recursive: true });
-        console.log(`Digital uploads directory ready at: ${digitalUploadsDir}`);
-    } catch (error) {
-        console.error('Error creating digital uploads directory:', error);
-    }
-};
-
-ensureDigitalDirExists();
-
-// Configure disk storage for digital files
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, digitalUploadsDir);
-    },
-    filename: (req, file, cb) => {
-        // Generate unique filename: timestamp-random-originalName
-        // Using crypto.randomBytes for secure randomness (SonarQube compliance)
-        const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-// File filter for digital products
+// File filter — validates extension before multer stores anything
 const fileFilter = (req, file, cb) => {
-    // Allowed extensions
-    const allowedExtensions = ['.pdf', '.zip', '.rar', '.epub', '.mobi'];
     const ext = path.extname(file.originalname).toLowerCase();
-
-    if (allowedExtensions.includes(ext)) {
+    if (ALLOWED_EXTENSIONS.includes(ext)) {
         cb(null, true);
     } else {
-        cb(new Error(`Allowed file types: ${allowedExtensions.join(', ')}`), false);
+        cb(new Error(`Allowed file types: ${ALLOWED_EXTENSIONS.join(', ')}`), false);
     }
 };
 
-// Initialize upload middleware
-const digitalUpload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
+// Memory storage — no local disk writes; buffer goes straight to Cloudinary
+const multerInstance = multer({
+    storage: multer.memoryStorage(),
+    fileFilter,
     limits: {
-        fileSize: 500 * 1024 * 1024, // 500MB limit to provide headroom
+        fileSize: 500 * 1024 * 1024, // 500 MB
     },
 });
 
-export default digitalUpload;
+/**
+ * Express middleware that:
+ * 1. Accepts a single 'digital_file' multipart field (memory storage).
+ * 2. Writes the buffer to a temp file in os.tmpdir().
+ * 3. Uploads the temp file to Cloudinary as resource_type 'raw'.
+ * 4. Attaches the Cloudinary result to req.cloudinaryFile.
+ * 5. Cleans up the temp file regardless of success or failure.
+ *
+ * On success, req.cloudinaryFile will contain:
+ *   - public_id          {string}  Cloudinary asset ID — stored in products.digital_file_path
+ *   - secure_url         {string}  Permanent HTTPS URL (for debug only; never exposed to clients)
+ *   - original_filename  {string}  Original uploaded filename
+ *   - bytes              {number}  File size in bytes
+ */
+export const cloudinaryDigitalUpload = (req, res, next) => {
+    multerInstance.single('digital_file')(req, res, async (multerErr) => {
+        if (multerErr) {
+            return res.status(400).json({
+                status: 'error',
+                message: multerErr.message || 'File upload error',
+            });
+        }
+
+        if (!req.file) {
+            // No file attached — let the controller handle the missing-file response
+            return next();
+        }
+
+        const ext = path.extname(req.file.originalname).toLowerCase();
+        const tempFileName = `digital-${crypto.randomBytes(8).toString('hex')}${ext}`;
+        const tempFilePath = path.join(os.tmpdir(), tempFileName);
+
+        try {
+            await writeFile(tempFilePath, req.file.buffer);
+
+            // uploadToCloudinary deletes the temp file on completion (success or error)
+            const cloudinaryResult = await uploadToCloudinary(
+                tempFilePath,
+                'digital_products',
+                'raw'
+            );
+
+            req.cloudinaryFile = {
+                public_id: cloudinaryResult.public_id,
+                secure_url: cloudinaryResult.secure_url,
+                original_filename: req.file.originalname,
+                bytes: req.file.size,
+            };
+
+            return next();
+        } catch (uploadErr) {
+            // Clean up temp file if uploadToCloudinary did not already remove it
+            try {
+                if (fs.existsSync(tempFilePath)) {
+                    await unlink(tempFilePath);
+                }
+            } catch (_) { /* ignore cleanup errors */ }
+
+            console.error('[digitalUpload] Cloudinary upload failed:', uploadErr.message);
+            return res.status(500).json({
+                status: 'error',
+                message: 'Failed to upload file to storage. Please try again.',
+            });
+        }
+    });
+};
+
+

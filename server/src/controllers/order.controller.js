@@ -14,10 +14,11 @@ import Order from '../models/order.model.js';
 import logger from '../shared/utils/logger.js';
 import * as digitalDownloadRepository from '../repositories/digitalDownload.repository.js';
 import path from 'path';
-import fs from 'fs/promises';
 import { sanitizeOrder } from '../shared/utils/sanitize.js';
 import paymentService from '../services/payment.service.js';
 import OrderHubDropoffService from '../services/orderHubDropoff.service.js';
+import { generateSignedDownloadUrl } from '../shared/utils/cloudinary.js';
+
 import { getLiveLocationForOrder } from '../services/logisticsLiveLocation.service.js';
 
 const OrderService = CoreOrderService;
@@ -412,67 +413,11 @@ export const downloadDigitalProduct = async (req, res) => {
             });
         }
 
-        // Security: Robust path resolution and traversal prevention
-        const fileNameOnly = path.basename(digitalFilePath);
+        logger.info(`[DOWNLOAD] Generating signed Cloudinary URL for public_id: ${digitalFilePath} (Order: ${orderId})`);
 
-        logger.info(`[DOWNLOAD] Processing request for file: ${fileNameOnly} (Order: ${orderId})`);
+        const signedUrl = generateSignedDownloadUrl(digitalFilePath, 300);
+        return res.redirect(302, signedUrl);
 
-        // Check multiple possible paths based on common execution environments
-        const possiblePaths = [
-            path.join(process.cwd(), 'server', 'uploads', 'digital_products'),
-            path.join(process.cwd(), 'uploads', 'digital_products'),
-            path.join(process.cwd(), '..', 'uploads', 'digital_products'),
-            path.join(process.cwd(), '..', 'server', 'uploads', 'digital_products'),
-            '/var/www/bybloshq/server/uploads/digital_products',
-            '/var/www/bybloshq/uploads/digital_products'
-        ];
-
-        let absolutePath = null;
-        let baseDir = null;
-
-        for (const p of possiblePaths) {
-            const testPath = path.resolve(p, fileNameOnly);
-            try {
-                // Use synchronous check for speed in the loop, or stick to async for consistency
-                await fs.access(testPath);
-                absolutePath = testPath;
-                baseDir = p;
-                logger.info(`[DOWNLOAD] ✅ File found successfully at: ${absolutePath}`);
-                break;
-            } catch (err) {
-                // Log failed path only in debug or if no match found at the end
-            }
-        }
-
-        if (!absolutePath) {
-            logger.error(`[DOWNLOAD] ❌ File not found in any expected location for: ${fileNameOnly}`);
-            logger.error(`[DOWNLOAD] Checked locations: ${JSON.stringify(possiblePaths)}`);
-            return res.status(404).json({
-                status: 'error',
-                message: 'Digital file not found on server storage. Please ensure the file was uploaded correctly.',
-                debug: process.env.NODE_ENV !== 'production' ? { checkedLocations: possiblePaths, fileName: fileNameOnly } : undefined
-            });
-        }
-
-        // Extra guard: Ensure it's still inside a digital_products directory
-        if (!absolutePath.includes('digital_products')) {
-            logger.warn(`[DOWNLOAD-SECURITY] ⚠️ Traversal attempt blocked: ${absolutePath}`);
-            return res.status(403).json({ status: 'error', message: 'Access denied: Invalid file path' });
-        }
-
-        const ext = path.extname(absolutePath).toLowerCase();
-        const fileName = data.digital_file_name || `download${ext}`;
-
-        logger.info(`[DOWNLOAD] 🚀 Initiating file stream: ${fileName}`);
-
-        return res.download(absolutePath, fileName, (err) => {
-            if (err) {
-                logger.error(`[DOWNLOAD] 💥 Stream interrupted for ${fileName}: ${err.message}`);
-                if (!res.headersSent) {
-                    res.status(500).json({ status: 'error', message: 'Failed to complete download stream' });
-                }
-            }
-        });
 
     } catch (error) {
         logger.error('Error in downloadDigitalProduct:', error);

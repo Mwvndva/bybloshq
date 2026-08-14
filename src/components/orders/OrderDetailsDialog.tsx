@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Package, Users } from 'lucide-react';
 import type { ApiOrder } from '@/types/api/order';
 import { getImageUrl } from '@/lib/utils';
-import { canConfirmOrderReceipt, formatOrderCurrency, formatOrderDate, getConfirmReceiptLabel, getPaymentStatusBadge, getStatusBadge } from './ordersSectionUtils';
+import { canConfirmOrderReceipt, formatOrderCurrency, formatOrderDate, getConfirmReceiptLabel, getPaymentStatusBadge } from './ordersSectionUtils';
+import { OrderStatusBadge } from './OrderStatusBadge';
 
 interface OrderDetailsDialogProps {
   order: ApiOrder | null;
@@ -113,7 +114,7 @@ export function OrderDetailsDialog({ order, serviceCharge, onClose, onViewImage,
                 </div>
 
                 <div className="flex gap-2">
-                  {getStatusBadge(order.status)}
+                  <OrderStatusBadge status={order.status} viewerRole="buyer" />
                   {getPaymentStatusBadge(order.paymentStatus)}
                 </div>
               </div>

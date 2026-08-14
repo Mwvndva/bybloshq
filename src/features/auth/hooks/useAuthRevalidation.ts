@@ -3,6 +3,7 @@ import type { NavigateFunction } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStateManager } from '@/lib/authState';
 import { storage } from '@/lib/storage';
+import { isNativeApp } from '@/lib/mobileApp';
 import {
   AUTH_REVALIDATION_TTL_MS,
   getDashboardPath,
@@ -17,6 +18,14 @@ import {
   adminProfileQueryOptions,
   creatorProfileQueryOptions,
 } from '@/hooks/auth/useAuthQueries';
+
+const LAST_NATIVE_PATH_KEY = 'byblos_last_native_path';
+const EXCLUDED_RESTORE_PATHS = ['/reset-password', '/forgot-password', '/payment', '/checkout', '/verify-email', '/login', '/register'];
+
+const isExcludedFromRestoration = (path: string): boolean => {
+  if (!path || path === '/') return true;
+  return EXCLUDED_RESTORE_PATHS.some((p) => path.includes(p));
+};
 
 interface UseAuthRevalidationOptions {
   pathname: string;
@@ -44,6 +53,14 @@ export function useAuthRevalidation({
   const markAuthChecked = useCallback(() => {
     lastCheckRef.current = Date.now();
   }, []);
+
+  // Track valid sub-page navigation on native app to allow cold-start restoration
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    if (!pathname || isPublicRoute(pathname) || isExcludedFromRestoration(pathname)) return;
+
+    storage.set(LAST_NATIVE_PATH_KEY, pathname);
+  }, [pathname]);
 
   const checkAuth = useCallback(async (force = false) => {
     if (authCheckInProgress.current && !force) return;
@@ -152,7 +169,7 @@ export function useAuthRevalidation({
   // route), so the route-based checkAuth never re-fetches the profile and a
   // still-valid persisted token looks logged-out. If a role's session marker
   // survived, restore that session from its stored token and land on its
-  // dashboard so the user is not forced to log in again.
+  // last active sub-page (or dashboard default) so the user is not forced to log in again.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -200,7 +217,20 @@ export function useAuthRevalidation({
         });
         await markRoleSessionActive(activeRole);
         markAuthChecked();
-        if (bootPath === '/') navigate(getDashboardPath(activeRole), { replace: true });
+
+        if (bootPath === '/') {
+          let destinationPath = getDashboardPath(activeRole);
+          if (isNativeApp()) {
+            const savedPath = await storage.get(LAST_NATIVE_PATH_KEY);
+            if (savedPath && !isPublicRoute(savedPath) && !isExcludedFromRestoration(savedPath)) {
+              const savedRole = getRoleFromRoute(savedPath);
+              if (!savedRole || savedRole === activeRole) {
+                destinationPath = savedPath;
+              }
+            }
+          }
+          navigate(destinationPath, { replace: true });
+        }
       } catch {
         // Token invalid/expired — drop the marker and leave the user on the landing page.
         if (!cancelled) await clearRoleSession(activeRole);

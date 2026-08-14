@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -39,9 +40,9 @@ export function SellerProductCards({
           <div className="absolute right-2 top-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:bg-white/10 hover:text-white">
+                <IconButton variant="ghost" aria-label="Product options" className="h-11 w-11 text-white/60 hover:bg-white/10 hover:text-white">
                   <MoreVertical className="h-4 w-4" />
-                </Button>
+                </IconButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-[#0a0a0a] border border-white/10 text-white">
                 <DropdownMenuItem
@@ -146,16 +147,16 @@ export function SellerProductCards({
             </div>
 
             {onStatusUpdate && (
-              <div className="pt-1">
+              <div className="pt-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onStatusUpdate(product.id, product.status === 'sold' ? 'available' : 'sold')}
                   disabled={updatingId === product.id}
-                  className={`w-full ${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'} h-5 px-2 text-[10px]`}
+                  className={`w-full ${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30'} h-11 px-3 text-xs font-semibold rounded-xl`}
                 >
                   {updatingId === product.id ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <span>{product.status === 'sold' ? 'Mark Available' : 'Mark as Sold Out'}</span>
                   )}

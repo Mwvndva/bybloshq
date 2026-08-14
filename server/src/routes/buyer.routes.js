@@ -8,7 +8,7 @@ import { AppError } from '../shared/utils/errorHandler.js';
 import wishlistRoutes from './wishlist.routes.js';
 import { validateRegistration, validateLogin } from '../middleware/authValidation.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
-import { withdrawalRateLimiter } from '../middleware/rateLimiting.js';
+import { withdrawalRateLimiter, publicApiRateLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -21,9 +21,9 @@ router.post('/forgot-password', authLimiter, validate(V.forgotPassword), buyerCo
 router.post('/reset-password', authLimiter, validate(V.resetPassword), buyerController.resetPassword);
 router.get('/verify-email', buyerController.verifyEmail);
 router.post('/resend-verification', authLimiter, validate(V.resendVerification), buyerController.resendVerification);
-router.post('/check-phone', validate(V.checkPhone), buyerController.checkBuyerByPhone);
+router.post('/check-phone', publicApiRateLimiter, validate(V.checkPhone), buyerController.checkBuyerByPhone);
 router.post('/save-info', authLimiter, validate(V.saveInfo), buyerController.saveBuyerInfo);
-router.post('/auto-login', validate(V.autoLogin), buyerController.autoLogin);
+router.post('/auto-login', publicApiRateLimiter, validate(V.autoLogin), buyerController.autoLogin);
 router.post('/logout', buyerController.logout);
 
 // Protected routes - require buyer authentication

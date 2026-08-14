@@ -217,7 +217,9 @@ export function useAuthActions({
       }
     } catch (error) {
       const err = error as AuthRequestError;
-      const message = err.response?.data?.message || 'Invalid email or password. Please try again.';
+      const message = !err.response
+        ? 'Connection error. Please check your network connection and try again.'
+        : err.response?.data?.message || err.message || 'Invalid email or password. Please try again.';
       toast.error('Login Failed', { description: message });
       throw error;
     } finally {

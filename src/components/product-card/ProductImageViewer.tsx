@@ -2,6 +2,7 @@ import { useEffect, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { getImageUrl } from '@/lib/utils';
 
 interface ProductImageViewerProps {
@@ -66,11 +67,10 @@ export function ProductImageViewer({
       onClick={onClose}
     >
       <div className="relative flex h-full w-full max-w-6xl items-center justify-center">
-        <Button
+        <IconButton
           type="button"
           variant="ghost"
-          size="icon"
-          className="absolute right-2 top-2 z-20 h-10 w-10 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:right-4 sm:top-4 sm:h-11 sm:w-11"
+          className="absolute right-2 top-2 z-20 h-11 w-11 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:right-4 sm:top-4 sm:h-12 sm:w-12"
           onClick={(event) => {
             event.stopPropagation();
             onClose();
@@ -78,19 +78,18 @@ export function ProductImageViewer({
           aria-label="Close image viewer"
         >
           <X className="h-5 w-5" />
-        </Button>
+        </IconButton>
 
         {hasMultipleImages && (
-          <Button
+          <IconButton
             type="button"
             variant="ghost"
-            size="icon"
             className="absolute left-2 top-1/2 z-20 h-11 w-11 -translate-y-1/2 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:left-4 sm:h-12 sm:w-12"
             onClick={goToPrevious}
             aria-label="Previous product image"
           >
             <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
-          </Button>
+          </IconButton>
         )}
 
         <img
@@ -101,16 +100,15 @@ export function ProductImageViewer({
         />
 
         {hasMultipleImages && (
-          <Button
+          <IconButton
             type="button"
             variant="ghost"
-            size="icon"
             className="absolute right-2 top-1/2 z-20 h-11 w-11 -translate-y-1/2 rounded-full bg-black/55 text-white shadow-lg hover:bg-black/75 hover:text-white sm:right-4 sm:h-12 sm:w-12"
             onClick={goToNext}
             aria-label="Next product image"
           >
             <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
-          </Button>
+          </IconButton>
         )}
         {hasMultipleImages && (
           <div className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white shadow-lg sm:bottom-4">

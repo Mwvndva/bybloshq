@@ -645,14 +645,7 @@ export const saveBuyerInfo = async (req, res, next) => {
     const token = BuyerService.signToken(buyerProfile);
 
     // 5. Set auth cookie
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/'
-    };
-    res.cookie('jwt', token, cookieOptions);
+    setAuthCookie(res, token);
 
     return res.status(200).json({
       status: 'success',

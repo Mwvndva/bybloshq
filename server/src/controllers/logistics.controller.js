@@ -1,19 +1,13 @@
 import LogisticsDashboardService from '../services/logisticsDashboard.service.js';
 import { setCourierLocation } from '../services/logisticsLiveLocation.service.js';
+import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 
 export const loginLogisticsPartner = async (req, res, next) => {
     try {
         const { email, password } = req.body || {};
         const result = await LogisticsDashboardService.login({ email, password });
 
-        res.cookie('jwt', result.token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 24 * 60 * 60 * 1000,
-            path: '/',
-            domain: process.env.COOKIE_DOMAIN || undefined
-        });
+        setAuthCookie(res, result.token);
 
         res.status(200).json({
             status: 'success',

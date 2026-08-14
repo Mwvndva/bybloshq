@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Define your website URL
-const siteUrl = 'https://bybloshq.space';
+const siteUrl = 'https://www.byblosafrica.site';
 
 // Define your routes
 const routes = [

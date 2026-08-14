@@ -154,6 +154,7 @@ export function BuyerLogin() {
                     id="email"
                     name="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleChange}
@@ -176,6 +177,7 @@ export function BuyerLogin() {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={handleChange}
@@ -200,7 +202,8 @@ export function BuyerLogin() {
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold tracking-tight transition-all duration-200 text-sm mt-2"
+                variant="gradient"
+                className="w-full h-11 mt-2"
                 disabled={isLoading}
               >
                 {isLoading ? (

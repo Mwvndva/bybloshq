@@ -126,4 +126,6 @@ vite.config.ts.timestamp-*.mjs
 /bybloshq
 android/app/google-services.json
 google-services.json
+*.docx
+~$*
 

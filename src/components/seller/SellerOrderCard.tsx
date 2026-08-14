@@ -8,7 +8,7 @@ import type { ApiOrder } from '@/types/api/order';
 import { SellerOrderActions } from './SellerOrderActions';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 import { OrderLogisticsTracking } from '../orders/OrderLogisticsTracking';
-import { OrderStatusBadge } from './OrderStatusBadge';
+import { OrderStatusBadge } from '../orders/OrderStatusBadge';
 import { OrderMetaPills } from '../orders/ordersSectionUtils';
 import { formatCurrency, formatDate, getEffectiveFulfillmentType, HUB_DROPOFF_LOCATION } from './sellerOrders.utils';
 
@@ -125,7 +125,7 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
                                                     </div>
                                                     {/* Status Badge - positioned for mobile */}
                                                     <div className="flex-none">
-                                                        <OrderStatusBadge status={order.status} />
+                                                        <OrderStatusBadge status={order.status} viewerRole="seller" />
                                                     </div>
                                                 </div>
 
@@ -172,9 +172,9 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
                                                         {order.items && order.items.length > 0 ? (
                                                             order.items.map((item) => (
                                                                 <li key={item.id} className={itemClasses}>
-                                                                    <div className="flex items-center justify-between gap-3">
-                                                                        <span className="font-semibold">{item.name}</span>
-                                                                        <span className="text-white/70">Qty {item.quantity}</span>
+                                                                    <div className="flex items-center justify-between gap-3 min-w-0">
+                                                                        <span className="font-semibold truncate min-w-0 flex-1">{item.name}</span>
+                                                                        <span className="shrink-0 text-white/70">Qty {item.quantity}</span>
                                                                     </div>
                                                                 </li>
                                                             ))

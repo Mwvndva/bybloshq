@@ -190,7 +190,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
                     </div>
                     <div className="shrink-0 sm:text-right">
                       <p className="text-sm font-black text-white">{formatCurrency(order.totalAmount)}</p>
-                      <p className="text-[11px] text-white/40">
+                      <p className="text-[11px] text-white/70">
                         {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </p>
                     </div>
@@ -199,7 +199,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
               ))
             ) : (
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-center">
-                <p className="text-sm text-white/50">No paid orders need action right now.</p>
+                <p className="text-sm text-white/70">No paid orders need action right now.</p>
               </div>
             )}
           </div>
