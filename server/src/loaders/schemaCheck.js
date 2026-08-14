@@ -388,7 +388,34 @@ export const verifyRequiredIndexes = async () => {
                 ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP WITH TIME ZONE;
         `);
 
-        // 7. Product Orders columns
+        // 7. Withdrawal Requests table & columns
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS withdrawal_requests (
+                id SERIAL PRIMARY KEY,
+                seller_id INTEGER REFERENCES sellers(id) ON DELETE CASCADE,
+                creator_id INTEGER REFERENCES creators(id) ON DELETE CASCADE,
+                buyer_id INTEGER REFERENCES buyers(id) ON DELETE CASCADE,
+                amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
+                mpesa_number VARCHAR(50) NOT NULL,
+                mpesa_name VARCHAR(255) NOT NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'processing',
+                provider_reference VARCHAR(255),
+                mpesa_receipt VARCHAR(80),
+                raw_response JSONB DEFAULT '{}'::jsonb,
+                metadata JSONB DEFAULT '{}'::jsonb,
+                api_call_pending BOOLEAN DEFAULT FALSE,
+                idempotency_key VARCHAR(120),
+                processed_at TIMESTAMP WITH TIME ZONE,
+                processed_by VARCHAR(120),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            ALTER TABLE withdrawal_requests ALTER COLUMN seller_id DROP NOT NULL;
+            ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS creator_id INTEGER REFERENCES creators(id) ON DELETE CASCADE;
+            ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS buyer_id INTEGER REFERENCES buyers(id) ON DELETE CASCADE;
+        `);
+
+        // 8. Product Orders columns
         await pool.query(`
             ALTER TABLE product_orders
                 ADD COLUMN IF NOT EXISTS seller_dropoff_deadline TIMESTAMP WITH TIME ZONE,
