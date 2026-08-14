@@ -35,6 +35,7 @@ import { AdminSellersTab } from './components/AdminSellersTab';
 import { AdminCreatorsTab } from './components/AdminCreatorsTab';
 import { AdminBuyersTab } from './components/AdminBuyersTab';
 import { AdminWithdrawalsTab } from './components/AdminWithdrawalsTab';
+import { AdminClientsTab } from './components/AdminClientsTab';
 import {
   StatsCard,
   type StatsCardProps
@@ -140,6 +141,7 @@ export function useAdminDashboard() {
       financialsQuery.refetch(),
       monthlyFinancialDataQuery.refetch(),
       dashboardStatsQuery.refetch(),
+      clientsQuery.refetch(),
       balancesQuery.refetch()
     ]);
     setIsLoading(false);
@@ -153,6 +155,7 @@ export function useAdminDashboard() {
     financialsQuery,
     monthlyFinancialDataQuery,
     dashboardStatsQuery,
+    clientsQuery,
     balancesQuery
   ]);
 

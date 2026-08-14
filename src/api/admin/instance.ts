@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { getFreshCsrfToken } from '@/lib/apiClient';
 import { buildApiBaseUrl } from '@/lib/apiBaseUrl';
-import { storage } from '@/lib/storage';
 
 // Type for axios instance
 type AxiosInstance = import('axios').AxiosInstance;
@@ -73,14 +72,9 @@ export function setCsrfTokenCache(val: string | null) {
 // Request Interceptor for CSRF
 api.interceptors.request.use(
   async (config: import('axios').InternalAxiosRequestConfig) => {
-    if (!config.headers.Authorization) {
-      const token = await storage.get('adminToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-
-    if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+    const url = config.url || '';
+    const isLogin = url === '/admin/login' || url.endsWith('/login');
+    if (!isLogin && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
       if (!csrfTokenCache) {
         csrfTokenCache = await getFreshCsrfToken();
       }
