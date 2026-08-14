@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2, Shield, Lock, Mail } from 'lucide-react';
 
 export const AdminLoginPage = () => {
-  console.log('Rendering AdminLoginPage');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
@@ -44,7 +43,6 @@ export const AdminLoginPage = () => {
     try {
       await login(email, password);
     } catch (err: unknown) {
-      console.error('Login failed', err);
       const reqErr = err as { response?: unknown; message?: string };
       if (!reqErr?.response) {
         setLocalError('Connection error. Please check your network connection and try again.');

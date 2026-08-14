@@ -3,13 +3,11 @@ import { api, ApiError, setCsrfTokenCache } from './instance';
 
 export async function login(credentials: { email?: string; password?: string; pin?: string }) {
   try {
-    console.log('Starting admin login...');
     const payload = credentials.email && credentials.password
       ? { email: credentials.email, password: credentials.password }
       : { pin: credentials.pin };
 
     const response = await api.post('/admin/login', payload);
-    console.log('Login response:', response.data);
 
     if (response.data?.status === 'success') {
       localStorage.setItem('admin_authenticated', 'true');
@@ -33,7 +31,6 @@ export async function getMe() {
     const { data } = await api.get('/admin/me');
     return data.data?.user;
   } catch (error) {
-    console.error('Error fetching admin profile:', error);
     throw error;
   }
 }

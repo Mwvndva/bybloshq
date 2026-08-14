@@ -185,10 +185,10 @@ class AuthService {
                 }
             }
 
-            // CASE 4: An admin user accessing the MARKETING portal
-            if (type === 'marketing' && user.role === 'admin') {
-                const token = signToken(user.id, 'admin');
-                return { user, profile: { id: user.id, email: user.email, role: 'admin' }, token, crossRole: true };
+            // CASE 4: A marketing admin accessing the MARKETING portal
+            if (type === 'marketing' && user.role === 'marketing') {
+                const token = signToken(user.id, 'marketing');
+                return { user, profile: { id: user.id, email: user.email, role: 'marketing' }, token, crossRole: true };
             }
 
 
@@ -235,14 +235,11 @@ class AuthService {
                 profile = creatorResult.rows[0] || null;
                 break;
             }
-            case 'marketing': {
-                // Special check for marketing admin email
-                const MARKETING_EMAIL = process.env.MARKETING_EMAIL;
-                if (MARKETING_EMAIL && user.role === 'marketing' && user.email.toLowerCase() === MARKETING_EMAIL.toLowerCase()) {
+            case 'marketing':
+                if (user.role === 'marketing') {
                     profile = { id: user.id, email: user.email, role: 'marketing' };
                 }
                 break;
-            }
 
         }
 
@@ -517,10 +514,9 @@ class AuthService {
                 );
 
                 if (linkResult.rowCount > 0) {
-                    console.log(`[AUTH] Linked ${linkResult.rowCount} previous guest orders for new buyer: ${pending.email}`);
-                    logger.info(`[AUTH] Linked ${linkResult.rowCount} previous guest orders for new buyer: ${pending.email}`, {
+                    logger.info('[AUTH] Linked previous guest orders for new buyer', {
                         buyerId: profile.id,
-                        email: pending.email
+                        linkedOrders: linkResult.rowCount
                     });
                 }
             }

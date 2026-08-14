@@ -3,7 +3,6 @@ import { transformProduct, ApiProduct } from './productTransforms';
 
 export async function getProductsPage(filters: { city?: string; location?: string; aesthetic?: string; page?: number; limit?: number } = {}): Promise<ProductListResponse> {
   try {
-    console.log('Starting getProducts with filters:', filters);
     const response = await publicApi.get('public/products', { params: filters });
     const responseData = response.data as Record<string, unknown>;
     let productsData: unknown[] = [];
@@ -29,7 +28,6 @@ export async function getProductsPage(filters: { city?: string; location?: strin
             hasMore: false
           };
 
-    console.log(`Fetched ${productsData.length} products from aggregated backend endpoint`);
     return {
       products: productsData.map(transformProduct),
       pagination: {
@@ -41,15 +39,6 @@ export async function getProductsPage(filters: { city?: string; location?: strin
     };
   } catch (error) {
     const err = error as { message?: string; response?: { status?: number; statusText?: string; data?: unknown }; stack?: string };
-    console.error('Error fetching products:', {
-      message: err.message,
-      response: err.response ? {
-        status: err.response.status,
-        statusText: err.response.statusText,
-        data: err.response.data
-      } : 'No response',
-      stack: err.stack
-    });
     return {
       products: [],
       pagination: {
@@ -74,7 +63,6 @@ export async function getProduct(id: string): Promise<ApiProduct | null> {
     const productData = responseData.product || responseData;
     return productData ? transformProduct(productData) : null;
   } catch (error) {
-    console.error('Error fetching product:', error);
     return null;
   }
 }
@@ -97,7 +85,6 @@ export async function getFeaturedProducts(limit: number = 8): Promise<ApiProduct
 
     return productsData.map(transformProduct);
   } catch (error) {
-    console.error('Error fetching featured products:', error);
     return [];
   }
 }
@@ -123,7 +110,6 @@ export async function getProductsByLocation(location: string): Promise<ApiProduc
 
     return productsData.map(transformProduct);
   } catch (error) {
-    console.error('Error fetching products by location:', error);
     return [];
   }
 }

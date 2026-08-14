@@ -9,7 +9,7 @@
  *   node scripts/reset-admin-password.js
  *
  * Optional — override email/password via env:
- *   ADMIN_EMAIL=admin@bybloshq.space ADMIN_PASSWORD=14253553805 node scripts/reset-admin-password.js
+ *   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=your_secure_password node scripts/reset-admin-password.js
  */
 
 import bcrypt from 'bcrypt';
