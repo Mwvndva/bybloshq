@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useGetOrderStatusMutation } from '@/hooks/buyer/queries/useOrderStatusQuery';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import { formatCurrency } from '@/lib/utils';
-import { isNativeApp, APP_DOWNLOAD_URL } from '@/lib/mobileApp';
+import { isNativeApp, APP_DOWNLOAD_URL, isAndroidDevice, openInAndroidApp } from '@/lib/mobileApp';
 
 type ModalState = 'POLLING' | 'SUCCESS' | 'FAILED' | 'TIMEOUT';
 
@@ -205,48 +205,65 @@ export const PaymentStatusModal = ({
 
           {state === 'SUCCESS' && (
             <>
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-green-500/20 bg-green-500/20">
-                <span className="text-sm font-bold text-green-700 dark:text-green-400">OK</span>
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-green-500/20 bg-green-500/20">
+                <span className="text-sm font-bold text-green-700 dark:text-green-400">✓</span>
               </div>
-              <h2 className="mb-2 text-lg font-bold text-slate-950 dark:text-white">Payment Confirmed</h2>
+              <h2 className="mb-1 text-lg font-bold text-slate-950 dark:text-white">Payment Confirmed!</h2>
               {orderNumber && (
                 <p className="mb-3 text-xs leading-relaxed text-slate-600 dark:text-white/60">
-                  Order <span className="font-mono font-bold text-yellow-600 dark:text-yellow-400">#{orderNumber}</span> has been successfully placed.
+                  Order <span className="font-mono font-bold text-yellow-600 dark:text-yellow-400">#{orderNumber}</span> has been placed successfully.
                 </p>
               )}
+
+              {/* Account Confirmation for New Buyers */}
+              {isGuest && (
+                <div className="mb-3 w-full rounded-xl border border-blue-200 dark:border-blue-400/20 bg-blue-50 dark:bg-blue-400/10 p-3 text-left">
+                  <p className="text-xs font-bold text-blue-950 dark:text-blue-200">Account Created & Logged In</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-blue-900 dark:text-blue-100">
+                    A confirmation receipt was sent to{email ? <span className="font-bold"> {email}</span> : ' your email'}. You can track your order anytime on Web or in the Byblos App.
+                  </p>
+                </div>
+              )}
+
+              {/* Native Android Deep Link Action (If on Android browser) */}
+              {isAndroidDevice() && !isNativeApp() && (
+                <div className="mb-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => openInAndroidApp(`orders/${orderNumber || ''}`, `${window.location.origin}/buyer/orders`)}
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 dark:bg-white text-xs font-bold text-white dark:text-slate-950 transition-all hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.98] shadow-md"
+                  >
+                    <span>Open Order in Byblos App</span>
+                  </button>
+                </div>
+              )}
+
               <div className="mb-3 w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] p-2.5">
                 <p className="text-[11px] leading-relaxed text-slate-600 dark:text-white/60">{serviceChargeText}</p>
               </div>
-              {isGuest && !isNativeApp() && (
-                <div className="mb-3 w-full rounded-xl border border-yellow-200 dark:border-yellow-400/20 bg-yellow-50 dark:bg-yellow-400/10 p-3 text-left">
-                  <p className="text-xs font-bold text-slate-950 dark:text-white">Your Byblos account is ready</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
-                    Log in anytime with{email ? <> <span className="font-semibold text-slate-900 dark:text-white">{email}</span></> : ' your email'} and the password you set to track this order.
-                  </p>
-                  <p className="mt-2 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
-                    Get the app for delivery updates and instant notifications.
-                  </p>
+
+              {/* Dual Tracking Actions */}
+              <div className="w-full space-y-2">
+                <a
+                  href="/buyer/orders"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-yellow-400 text-sm font-bold text-black transition-all hover:bg-yellow-300 active:scale-[0.98] shadow-sm"
+                >
+                  Track Order on Web
+                </a>
+                {!isNativeApp() && (
                   <a
                     href={APP_DOWNLOAD_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 dark:bg-white text-xs font-bold text-white dark:text-slate-950 transition-all hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.98]"
+                    className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-white/10 text-xs font-semibold text-slate-800 dark:text-white transition-all hover:bg-slate-200 dark:hover:bg-white/20"
                   >
-                    Get it on Google Play
+                    <span>Get Byblos App on Google Play</span>
                   </a>
-                </div>
-              )}
-              <div className="mt-2 w-full space-y-2">
-                <a
-                  href="/buyer/orders"
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-yellow-400 text-sm font-bold text-black transition-all hover:bg-yellow-300 active:scale-[0.98]"
-                >
-                  View My Orders
-                </a>
+                )}
                 <button
                   type="button"
                   onClick={onClose}
-                  className="h-10 w-full text-sm font-medium text-slate-600 dark:text-white/60 transition-colors hover:text-slate-950 dark:hover:text-white"
+                  className="h-9 w-full text-xs font-medium text-slate-500 dark:text-white/50 transition-colors hover:text-slate-950 dark:hover:text-white"
                 >
                   Return to Shop
                 </button>
