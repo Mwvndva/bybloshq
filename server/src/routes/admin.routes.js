@@ -68,8 +68,8 @@ router.get('/products/seller/:sellerId', adminController.getSellerProducts);
 
 // Metrics
 router.get('/metrics/monthly', adminController.getMonthlyMetrics);
-
-// Payment provider health
+router.get('/metrics/financial', adminController.getDashboardStats);
+router.get('/metrics/financial/monthly', adminController.getMonthlyMetrics);
 router.get('/payment-provider/balances', adminController.getPaymentProviderBalances);
 
 // Clients management
