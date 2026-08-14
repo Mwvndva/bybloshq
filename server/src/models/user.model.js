@@ -14,19 +14,19 @@ class User {
             const result = await pool.query(query, [email.toLowerCase()]);
             return result.rows[0] || null;
         } catch (err) {
-            const isColumnErr = err.code === '42703' ||
-                (err.message && (err.message.includes('is_active') || err.message.includes('column') || err.message.includes('does not exist')));
-            if (isColumnErr) {
-                logger.warn('[User.findByEmail] Column missing, using fallback query:', err.message);
-                const fallbackQuery = 'SELECT id, email, password_hash, role FROM users WHERE LOWER(email) = $1';
-                const result = await pool.query(fallbackQuery, [email.toLowerCase()]);
-                if (result.rows[0]) {
-                    result.rows[0].is_active = true;
-                    result.rows[0].is_verified = true;
-                }
-                return result.rows[0] || null;
-            }
-            throw err;
+            const fallbackQuery = `
+                SELECT
+                    id,
+                    email,
+                    password_hash,
+                    role,
+                    COALESCE((to_jsonb(users)->>'is_verified')::boolean, true) AS is_verified,
+                    COALESCE((to_jsonb(users)->>'is_active')::boolean, true) AS is_active
+                FROM users
+                WHERE LOWER(email) = $1
+            `;
+            const result = await pool.query(fallbackQuery, [email.toLowerCase()]);
+            return result.rows[0] || null;
         }
     }
 
@@ -42,19 +42,18 @@ class User {
             const result = await pool.query(query, [id]);
             return result.rows[0] || null;
         } catch (err) {
-            const isColumnErr = err.code === '42703' ||
-                (err.message && (err.message.includes('is_active') || err.message.includes('column') || err.message.includes('does not exist')));
-            if (isColumnErr) {
-                logger.warn('[User.findById] Column missing, using fallback query:', err.message);
-                const fallbackQuery = 'SELECT id, email, role FROM users WHERE id = $1';
-                const result = await pool.query(fallbackQuery, [id]);
-                if (result.rows[0]) {
-                    result.rows[0].is_active = true;
-                    result.rows[0].is_verified = true;
-                }
-                return result.rows[0] || null;
-            }
-            throw err;
+            const fallbackQuery = `
+                SELECT
+                    id,
+                    email,
+                    role,
+                    COALESCE((to_jsonb(users)->>'is_verified')::boolean, true) AS is_verified,
+                    COALESCE((to_jsonb(users)->>'is_active')::boolean, true) AS is_active
+                FROM users
+                WHERE id = $1
+            `;
+            const result = await pool.query(fallbackQuery, [id]);
+            return result.rows[0] || null;
         }
     }
 
