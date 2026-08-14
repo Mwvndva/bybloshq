@@ -35,7 +35,6 @@ import { AdminSellersTab } from './components/AdminSellersTab';
 import { AdminCreatorsTab } from './components/AdminCreatorsTab';
 import { AdminBuyersTab } from './components/AdminBuyersTab';
 import { AdminWithdrawalsTab } from './components/AdminWithdrawalsTab';
-import { AdminClientsTab } from './components/AdminClientsTab';
 import { useAdminDashboard } from './useAdminDashboard';
 import {
   StatsCard,
@@ -105,7 +104,7 @@ const NewAdminDashboard = () => {
         : null
     },
     {
-      title: 'Ambassadors',
+      title: 'Creators',
       value: dashboardState.analytics.totalCreators?.toLocaleString() || '0',
       icon: <UserPlus className="h-4 w-4 text-yellow-500" />,
       description: `${dashboardState.analytics.pendingCreatorRequests || 0} pending requests`,
@@ -156,7 +155,7 @@ const NewAdminDashboard = () => {
       title: 'Pending Payouts',
       value: dashboardState.analytics.pendingWithdrawals?.toLocaleString() || '0',
       icon: <Users className="h-4 w-4 text-blue-400" />,
-      description: `${dashboardState.analytics.totalClients?.toLocaleString() || '0'} paying clients`,
+      description: 'Needs payout monitoring',
       trend: null
     }
   ];
@@ -298,16 +297,6 @@ const NewAdminDashboard = () => {
               <div className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
                 <RefundRequestsPage />
               </div>
-            </TabsContent>
-
-            {/* Clients Tab */}
-            <TabsContent value="clients" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <AdminClientsTab
-                clients={dashboardState.clients}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                formatDate={safeFormatDate}
-              />
             </TabsContent>
           </Tabs>
         </div>

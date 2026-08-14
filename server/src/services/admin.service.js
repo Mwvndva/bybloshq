@@ -23,7 +23,11 @@ class AdminService {
       creatorEarnings: 'SELECT COALESCE(SUM(total_earnings + total_referral_earnings), 0) AS count FROM creators',
       clients: 'SELECT COUNT(DISTINCT buyer_id) FROM product_orders WHERE payment_status = \'completed\' AND buyer_id IS NOT NULL',
       orders: 'SELECT COUNT(*) FROM product_orders',
-      wishlists: 'SELECT COUNT(*) FROM wishlists',
+      wishlists: `
+        SELECT CASE WHEN EXISTS (
+          SELECT 1 FROM information_schema.tables WHERE table_name = 'wishlists'
+        ) THEN (SELECT COUNT(*) FROM wishlists) ELSE 0 END AS count
+      `,
       activeOrders: `
         SELECT COUNT(*)
         FROM product_orders

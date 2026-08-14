@@ -176,10 +176,10 @@ class LogisticsTrackingLinkService {
              LEFT JOIN logistics_legs pl ON pl.logistics_request_id = lr.id
                                       AND pl.leg_type = 'pickup'
              LEFT JOIN LATERAL (
-                SELECT json_agg(json_build_object(
-                    'name', oi.product_name,
-                    'quantity', oi.quantity
-                ) ORDER BY oi.id) AS items
+                 SELECT json_agg(json_build_object(
+                     'name', COALESCE(oi.product_name, oi.name, 'Item'),
+                     'quantity', oi.quantity
+                 ) ORDER BY oi.id) AS items
                 FROM order_items oi
                 WHERE oi.order_id = po.id
              ) items ON TRUE

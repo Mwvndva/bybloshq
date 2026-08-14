@@ -22,7 +22,7 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
     <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
       <CardHeader className="p-5 md:p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div>
-          <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Ambassadors</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter">Creators</CardTitle>
           <CardDescription className="text-xs md:text-sm text-gray-400 font-medium">Shop links, clicks, and earnings</CardDescription>
         </div>
         <div className="relative group w-full md:w-auto">
@@ -30,7 +30,7 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-yellow-500 transition-colors" />
           <Input
             type="text"
-            placeholder="Search ambassadors..."
+            placeholder="Search creators..."
             className="pl-12 w-full md:w-[320px] lg:w-[400px] h-11 md:h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-medium text-sm"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -39,11 +39,11 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
       </CardHeader>
       <div className="grid grid-cols-1 gap-3 border-b border-white/5 bg-white/[0.012] p-5 md:grid-cols-4 md:p-8">
         <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/[0.06] p-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/70">Ambassadors</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/70">Creators</p>
           <p className="mt-3 text-2xl font-black text-white tabular-nums">{creators.length.toLocaleString()}</p>
         </div>
         <div className="rounded-2xl border border-lime-500/20 bg-lime-500/[0.06] p-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-lime-200/70">Ambassador sales</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-lime-200/70">Creator sales</p>
           <p className="mt-3 text-2xl font-black text-white tabular-nums">{creators.reduce((sum, creator) => sum + (Number(creator.totalSales) || 0), 0).toLocaleString()}</p>
         </div>
         <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.06] p-4">

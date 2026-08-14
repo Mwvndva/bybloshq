@@ -900,8 +900,8 @@ class LogisticsDashboardService {
                 SELECT json_agg(json_build_object(
                     'id', oi.id,
                     'productId', oi.product_id,
-                    'name', oi.product_name,
-                    'price', oi.product_price,
+                    'name', COALESCE(oi.product_name, oi.name, p.name, 'Item'),
+                    'price', COALESCE(oi.product_price, oi.price, 0),
                     'quantity', oi.quantity,
                     'subtotal', oi.subtotal,
                     'imageUrl', p.image_url,
@@ -1094,8 +1094,8 @@ class LogisticsDashboardService {
                 SELECT json_agg(json_build_object(
                     'id', oi.id,
                     'productId', oi.product_id,
-                    'name', oi.product_name,
-                    'price', oi.product_price,
+                    'name', COALESCE(oi.product_name, oi.name, p.name, 'Item'),
+                    'price', COALESCE(oi.product_price, oi.price, 0),
                     'quantity', oi.quantity,
                     'subtotal', oi.subtotal,
                     'imageUrl', p.image_url,
