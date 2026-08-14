@@ -64,9 +64,18 @@ async function run() {
     });
 
     try {
-        // 3. Pre-Flight Connection
+        // 3. Pre-Flight Connection & Critical Column Check
         await pool.query('SELECT 1');
         console.log(`[${new Date().toISOString()}] [SUCCESS] Connection established.`);
+
+        console.log(`[${new Date().toISOString()}] [INFO] Ensuring critical columns exist on users table...`);
+        await pool.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
+            UPDATE users SET is_active = TRUE WHERE is_active IS NULL;
+            UPDATE users SET is_verified = TRUE WHERE is_verified IS NULL;
+        `);
+        console.log(`[${new Date().toISOString()}] [SUCCESS] Critical columns verified on users table.`);
 
         // 4. Migration Execution
         console.log(`[${new Date().toISOString()}] [INFO] Running Migrations...`);
