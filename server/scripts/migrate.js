@@ -68,14 +68,31 @@ async function run() {
         await pool.query('SELECT 1');
         console.log(`[${new Date().toISOString()}] [SUCCESS] Connection established.`);
 
-        console.log(`[${new Date().toISOString()}] [INFO] Ensuring critical columns exist on users table...`);
+        console.log(`[${new Date().toISOString()}] [INFO] Ensuring critical columns and tables exist on database...`);
         await pool.query(`
             ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
             UPDATE users SET is_active = TRUE WHERE is_active IS NULL;
             UPDATE users SET is_verified = TRUE WHERE is_verified IS NULL;
+
+            CREATE TABLE IF NOT EXISTS pending_registrations (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                role VARCHAR(50),
+                registration_data JSONB,
+                physical_address TEXT,
+                latitude NUMERIC(10, 8),
+                longitude NUMERIC(11, 8),
+                verification_token VARCHAR(255),
+                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                terms_accepted BOOLEAN DEFAULT FALSE,
+                terms_accepted_at TIMESTAMP WITH TIME ZONE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
         `);
-        console.log(`[${new Date().toISOString()}] [SUCCESS] Critical columns verified on users table.`);
+        console.log(`[${new Date().toISOString()}] [SUCCESS] Critical columns and tables verified on database.`);
 
         // 4. Migration Execution
         console.log(`[${new Date().toISOString()}] [INFO] Running Migrations...`);
