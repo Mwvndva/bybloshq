@@ -430,8 +430,27 @@ export const verifyRequiredIndexes = async () => {
                 ADD COLUMN IF NOT EXISTS custom_production_reminder_sent_at TIMESTAMP WITH TIME ZONE;
         `);
 
-        // 9. Drop unused legacy clients table
-        await pool.query('DROP TABLE IF EXISTS clients CASCADE;');
+        // 9. Order items columns, wishlists table auto-heal, drop clients
+        await pool.query(`
+            ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_name VARCHAR(255);
+            ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_price NUMERIC(15, 2);
+            ALTER TABLE order_items ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+            ALTER TABLE order_items ADD COLUMN IF NOT EXISTS price NUMERIC(15, 2);
+            UPDATE order_items SET product_name = name WHERE product_name IS NULL AND name IS NOT NULL;
+            UPDATE order_items SET product_price = price WHERE product_price IS NULL AND price IS NOT NULL;
+            UPDATE order_items SET name = product_name WHERE name IS NULL AND product_name IS NOT NULL;
+            UPDATE order_items SET price = product_price WHERE price IS NULL AND product_price IS NOT NULL;
+
+            CREATE TABLE IF NOT EXISTS wishlists (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                buyer_id INTEGER REFERENCES buyers(id) ON DELETE CASCADE,
+                product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+
+            DROP TABLE IF EXISTS clients CASCADE;
+        `);
 
         logger.info('[SCHEMA-CHECK] Comprehensive app schema auto-heal verified.');
     } catch (err) {
