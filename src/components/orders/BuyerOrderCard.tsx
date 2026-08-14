@@ -14,7 +14,6 @@ import {
   getConfirmReceiptLabel,
   getBuyerServiceCharge,
   getPaymentStatusBadge,
-  getStatusBadge,
   isDigitalOrder,
   isPaidOrder,
   isServiceOrder
@@ -114,7 +113,7 @@ export function BuyerOrderCard({
                   #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
                 </h3>
                 <div className="flex gap-1.5 sm:gap-2">
-                  {getStatusBadge(order.status)}
+                  <OrderStatusBadge status={order.status} viewerRole="buyer" />
                   {getPaymentStatusBadge(order.paymentStatus)}
                 </div>
               </div>

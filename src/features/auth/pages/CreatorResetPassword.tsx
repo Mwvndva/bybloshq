@@ -85,6 +85,9 @@ export default function CreatorResetPassword() {
 
           <div className="relative">
             <Input
+              id="password"
+              name="password"
+              autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               type={showPassword ? 'text' : 'password'}
@@ -103,6 +106,9 @@ export default function CreatorResetPassword() {
           </div>
 
           <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            autoComplete="new-password"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}
             type={showPassword ? 'text' : 'password'}

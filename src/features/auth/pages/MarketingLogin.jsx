@@ -28,7 +28,11 @@ export default function MarketingLogin() {
             sessionStorage.setItem('marketing_user', JSON.stringify(user))
             navigate('/admin/marketing')
         } catch (err) {
-            setError(err.response?.data?.message || 'Invalid email or password')
+            if (!err.response) {
+                setError('Connection error. Please check your network connection and try again.');
+            } else {
+                setError(err.response?.data?.message || 'Invalid email or password');
+            }
         } finally {
             setLoading(false)
         }
@@ -60,6 +64,7 @@ export default function MarketingLogin() {
                                 <input
                                     type="email"
                                     id="email"
+                                    name="email"
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
                                     placeholder="marketing@byblos.hq"
@@ -77,6 +82,7 @@ export default function MarketingLogin() {
                                 <input
                                     type="password"
                                     id="password"
+                                    name="password"
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     placeholder="Enter password"

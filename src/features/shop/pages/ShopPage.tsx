@@ -6,7 +6,7 @@ import { ProductCard } from '@/components/ProductCard';
 import type { Product, Seller } from '@/types';
 import { type Theme } from '@/hooks/useShopTheme';
 import { isAesthetic } from './shopPage.shared';
-import { useShopPage } from './useShopPage';
+import { SEOHead } from '@/components/shared/SEOHead';
 import { ShopHero } from './ShopHero';
 import { ShopPageThemePicker } from './ShopPageThemePicker';
 
@@ -75,6 +75,11 @@ const ShopPage = () => {
       className="shop-page-root min-h-screen transition-colors duration-300"
       data-shop-theme={resolvedShopTheme}
     >
+      <SEOHead
+        title={sellerInfo?.shop_name || sellerInfo?.business_name || 'Shop'}
+        description={sellerInfo?.bio || `Shop ${sellerInfo?.shop_name || 'products'} on Byblos. Browse quality items and order securely.`}
+        image={sellerInfo?.business_photo_url || sellerInfo?.banner_url}
+      />
       {/* Light/Dark/System theme picker — top-right, small, no border touching */}
       <ShopPageThemePicker theme={shopPageTheme} onThemeChange={setShopPageTheme} />
       <ShopHero

@@ -20,7 +20,9 @@ export default function DeleteAccountPage() {
             <ArrowLeft size={16} />
             Home
           </Link>
-          <img src="/byblos-icon.png" alt="Byblos" className="h-8 w-auto" />
+          <div className="inline-flex rounded-full border border-white/20 p-1 bg-black/40 shadow-md overflow-hidden">
+            <img src="/byblos-icon.png" alt="Byblos" className="h-7 w-7 rounded-full object-cover" />
+          </div>
         </div>
       </header>
 

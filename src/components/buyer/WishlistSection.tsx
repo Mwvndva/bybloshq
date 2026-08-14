@@ -49,6 +49,7 @@ export default function WishlistSection() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
         <Input
           type="text"
+          aria-label="Search wishlist"
           placeholder="Search wishlist..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}

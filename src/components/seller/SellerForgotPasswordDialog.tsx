@@ -46,7 +46,8 @@ export function SellerForgotPasswordDialog({ open, onOpenChange, email, onEmailC
             <Button
               type="submit"
               disabled={isSending}
-              className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold tracking-tight transition-all duration-200 text-sm"
+              variant="gradient"
+              className="w-full h-11"
             >
               {isSending ? (
                 <>

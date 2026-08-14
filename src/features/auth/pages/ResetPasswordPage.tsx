@@ -211,7 +211,9 @@ export function ResetPasswordPage() {
                 <div className="relative">
                   <Input
                     id="password"
+                    name="password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="New Password"
@@ -257,7 +259,9 @@ export function ResetPasswordPage() {
                 <div className="relative">
                   <Input
                     id="confirmPassword"
+                    name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
@@ -272,7 +276,7 @@ export function ResetPasswordPage() {
 
               {passwordError && <p className="text-[11px] text-red-500 font-medium px-1 leading-tight">{passwordError}</p>}
 
-              <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 rounded-xl font-bold mt-4 shadow-lg transition-all duration-200">
+              <Button type="submit" disabled={isLoading} variant="gradient" className="w-full h-11 mt-4">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

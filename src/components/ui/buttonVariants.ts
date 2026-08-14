@@ -16,6 +16,7 @@ export const buttonVariants = cva(
         link: "text-slate-950 underline-offset-4 hover:underline",
         byblos: "bg-yellow-400 text-black hover:bg-yellow-300 border border-yellow-400 shadow-sm",
         "secondary-byblos": "border border-slate-200 bg-white text-slate-900 hover:bg-yellow-50 hover:border-yellow-200",
+        gradient: "bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg font-bold tracking-tight border-none",
       },
       size: {
         default: "h-10 px-4 py-2",

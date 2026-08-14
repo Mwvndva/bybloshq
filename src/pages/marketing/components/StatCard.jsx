@@ -1,4 +1,4 @@
-export function StatCard({ title, value, subtitle, trend, color = 'yellow', prefix = '', suffix = '' }) {
+export function StatCard({ title, value, subtitle, trend, color = 'yellow', prefix = '', suffix = '', hero = false }) {
     const colors = {
         yellow: 'border-yellow-400/25 bg-yellow-400/10',
         green: 'border-emerald-400/25 bg-emerald-400/10',
@@ -15,9 +15,9 @@ export function StatCard({ title, value, subtitle, trend, color = 'yellow', pref
     }
 
     return (
-        <div className={`border rounded-2xl p-4 md:p-5 shadow-[0_18px_45px_rgba(0,0,0,0.45)] transition-all hover:border-yellow-300 ${colors[color]}`}>
-            <p className="text-white/60 text-xs font-semibold mb-1.5 md:mb-2">{title}</p>
-            <p className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatValue(value)}</p>
+        <div className={`border rounded-2xl ${hero ? 'p-5 md:p-6' : 'p-4 md:p-5'} shadow-[0_18px_45px_rgba(0,0,0,0.45)] transition-all hover:border-yellow-300 ${colors[color]}`}>
+            <p className={`text-white/60 ${hero ? 'text-xs md:text-sm font-bold uppercase tracking-wider' : 'text-xs font-semibold'} mb-1.5 md:mb-2`}>{title}</p>
+            <p className={`${hero ? 'text-2xl md:text-3xl font-black text-white' : 'text-xl md:text-2xl font-semibold text-white'} tracking-tight`}>{formatValue(value)}</p>
             {subtitle && <p className="text-white/50 text-[10px] md:text-xs mt-1 font-medium">{subtitle}</p>}
             {trend !== undefined && (
                 <div className="flex items-center gap-1.5 mt-2 md:mt-3">

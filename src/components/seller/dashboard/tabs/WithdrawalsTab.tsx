@@ -1,5 +1,6 @@
 import { Download, Info, Wallet, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { exportWithdrawalsToCSV } from '@/utils/exportUtils';
 import { getWithdrawalFee, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS } from '../dashboardUtils';
@@ -179,17 +180,17 @@ export function WithdrawalsTab({
               />
             </div>
             {(startDate || endDate) && (
-              <Button
+              <IconButton
                 onClick={() => {
                   setStartDate('');
                   setEndDate('');
                 }}
                 variant="outline"
-                size="icon"
-                className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10 h-10 w-full sm:w-10"
+                aria-label="Clear date filters"
+                className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10 h-11 w-full sm:w-11"
               >
                 <X className="h-4 w-4" />
-              </Button>
+              </IconButton>
             )}
           </div>
 

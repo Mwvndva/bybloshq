@@ -1,5 +1,6 @@
 import type { ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,14 +55,14 @@ export function ProductEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#0a0a0a] border border-white/10 text-white w-[90vw] max-w-sm sm:max-w-[400px] max-h-[78dvh] overflow-y-auto p-3 sm:p-4 rounded-xl shadow-2xl">
         <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-2">
-          <Button
+          <IconButton
             variant="ghost"
-            size="icon"
             onClick={() => onOpenChange(false)}
-            className="h-7 w-7 -ml-1 text-white/60 hover:text-white hover:bg-white/10 rounded-full"
+            aria-label="Back"
+            className="h-11 w-11 -ml-2 text-white/60 hover:text-white hover:bg-white/10 rounded-full shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
+          </IconButton>
           <div>
             <DialogTitle className="text-base sm:text-lg font-bold text-white">Edit Product</DialogTitle>
             <DialogDescription className="text-white/60 text-[10px] sm:text-xs font-medium">

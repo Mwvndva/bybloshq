@@ -118,7 +118,8 @@ export function BuyerForgotPassword() {
 
                             <Button
                                 type="submit"
-                                className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold tracking-tight transition-all duration-200 text-sm mt-2"
+                                variant="gradient"
+                                className="w-full h-11 mt-2"
                                 disabled={isLoading}
                             >
                                 {isLoading ? (

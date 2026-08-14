@@ -2,6 +2,7 @@ import express from 'express';
 import * as publicController from '../controllers/public.controller.js';
 import paymentController from '../controllers/payment.controller.js';
 import { getCsrfToken } from '../controllers/csrf.controller.js';
+import { publicApiRateLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.get('/products/:id', publicController.getProduct);
 
 // Public seller info
 router.get('/sellers/active', publicController.getSellers);
-router.post('/sellers/:id/knock', publicController.knockSeller);
+router.post('/sellers/:id/knock', publicApiRateLimiter, publicController.knockSeller);
 router.get('/sellers/:id/public', publicController.getSellerPublicInfo);
 router.get('/services/:productId/availability', publicController.getServiceAvailability);
 router.get('/orders/:id/status', publicController.getOrderStatus);
