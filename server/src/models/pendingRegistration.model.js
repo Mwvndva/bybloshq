@@ -72,9 +72,17 @@ class PendingRegistration {
      * @param {string} email 
      */
     static async findByEmail(email) {
-        const query = 'SELECT * FROM pending_registrations WHERE LOWER(email) = $1';
-        const result = await pool.query(query, [email.toLowerCase()]);
-        return result.rows[0] || null;
+        if (!email) return null;
+        try {
+            const query = 'SELECT * FROM pending_registrations WHERE LOWER(email) = $1';
+            const result = await pool.query(query, [email.toLowerCase()]);
+            return result.rows[0] || null;
+        } catch (err) {
+            if (err.code === '42P01' || (err.message && err.message.includes('pending_registrations'))) {
+                return null;
+            }
+            throw err;
+        }
     }
 
     /**
