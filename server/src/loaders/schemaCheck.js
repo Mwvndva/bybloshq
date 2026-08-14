@@ -317,6 +317,19 @@ async function verifyAdvisoryLocks() {
  */
 export const verifyRequiredIndexes = async () => {
     logger.info('[SCHEMA-CHECK] Verifying critical fintech schema structures...');
+
+    // Auto-heal missing users status columns on legacy production databases
+    try {
+        await pool.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
+        `);
+        await pool.query(`UPDATE users SET is_active = TRUE WHERE is_active IS NULL;`);
+        logger.info('[SCHEMA-CHECK] users table status columns verified (is_active, is_verified).');
+    } catch (err) {
+        logger.warn('[SCHEMA-CHECK] Auto-heal users columns warning:', err.message);
+    }
+
     const failures = [];
 
     for (const table of REQUIRED_TABLES) {
