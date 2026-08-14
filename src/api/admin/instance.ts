@@ -93,7 +93,6 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('admin_authenticated');
-      console.log('Admin 401 - global interceptor will handle redirect');
     }
     return Promise.reject(error);
   }

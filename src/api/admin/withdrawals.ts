@@ -2,9 +2,7 @@ import { api } from './instance';
 
 export async function getWithdrawalRequests() {
   try {
-    console.log('Fetching withdrawal requests from API...');
     const response = await api.get('/admin/withdrawal-requests');
-    console.log('Withdrawal requests API response:', response);
 
     let withdrawalRequests = [];
     if (response.data && Array.isArray(response.data.data)) {
@@ -12,7 +10,6 @@ export async function getWithdrawalRequests() {
     } else if (Array.isArray(response.data)) {
       withdrawalRequests = response.data;
     } else {
-      console.error('Unexpected API response format:', response);
       return [];
     }
 
@@ -31,10 +28,8 @@ export async function getWithdrawalRequests() {
       processedBy: request.processed_by || request.processedBy || null
     }));
 
-    console.log(`Fetched ${requests.length} withdrawal requests`);
     return requests;
   } catch (error) {
-    console.error('Error fetching withdrawal requests:', error);
     return [];
   }
 }

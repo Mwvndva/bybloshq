@@ -13,7 +13,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 async function seedAdmin() {
     const email = process.env.ADMIN_EMAIL;
-    const password = process.env.ADMIN_SEED_PASSWORD;
+    const password = process.env.ADMIN_PASSWORD;
 
     if (!email) {
         console.error('❌ ERROR: ADMIN_EMAIL environment variable is required');
@@ -21,8 +21,8 @@ async function seedAdmin() {
     }
 
     if (!password) {
-        console.error('❌ ERROR: ADMIN_SEED_PASSWORD environment variable is required');
-        console.log('Usage: ADMIN_SEED_PASSWORD=your_secure_password ADMIN_EMAIL=admin@example.com node server/scripts/seed-admin.js');
+        console.error('❌ ERROR: ADMIN_PASSWORD environment variable is required');
+        console.log('Usage: ADMIN_PASSWORD=your_secure_password ADMIN_EMAIL=admin@example.com node server/scripts/seed-admin.js');
         process.exit(1);
     }
 
