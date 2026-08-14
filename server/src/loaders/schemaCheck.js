@@ -318,14 +318,94 @@ async function verifyAdvisoryLocks() {
 export const verifyRequiredIndexes = async () => {
     logger.info('[SCHEMA-CHECK] Verifying critical fintech schema structures...');
 
-    // Auto-heal missing users status columns on legacy production databases
+    // Comprehensive schema auto-heal for legacy production databases
     try {
+        // 1. Roles & User Roles
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS roles (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(50) UNIQUE NOT NULL,
+                slug VARCHAR(50) UNIQUE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO roles (name, slug) VALUES ('Admin', 'admin'), ('Seller', 'seller'), ('Buyer', 'buyer'), ('Creator', 'creator'), ('Logistics', 'logistics'), ('Marketing', 'marketing')
+            ON CONFLICT (slug) DO NOTHING;
+        `);
+
+        // 2. Users status columns
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;');
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;');
         await pool.query('UPDATE users SET is_active = TRUE WHERE is_active IS NULL;');
-        logger.info('[SCHEMA-CHECK] users table status columns verified (is_active, is_verified).');
+
+        // 3. User Roles join table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS user_roles (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+                UNIQUE(user_id, role_id)
+            );
+        `);
+
+        // 4. Pending Registrations table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS pending_registrations (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                role VARCHAR(50),
+                registration_data JSONB,
+                physical_address TEXT,
+                latitude NUMERIC(10, 8),
+                longitude NUMERIC(11, 8),
+                verification_token VARCHAR(255),
+                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                terms_accepted BOOLEAN DEFAULT FALSE,
+                terms_accepted_at TIMESTAMP WITH TIME ZONE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // 5. Sellers columns
+        await pool.query(`
+            ALTER TABLE sellers
+                ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
+                ADD COLUMN IF NOT EXISTS creator_commission_pct NUMERIC(5, 2) DEFAULT 0.00,
+                ADD COLUMN IF NOT EXISTS total_referral_earnings NUMERIC(12, 2) DEFAULT 0.00,
+                ADD COLUMN IF NOT EXISTS terms_accepted BOOLEAN DEFAULT FALSE,
+                ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP WITH TIME ZONE;
+        `);
+
+        // 6. Buyers columns
+        await pool.query(`
+            ALTER TABLE buyers
+                ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                ADD COLUMN IF NOT EXISTS refund_balance NUMERIC(12, 2) DEFAULT 0.00,
+                ADD COLUMN IF NOT EXISTS membership_tier VARCHAR(50) DEFAULT 'bronze',
+                ADD COLUMN IF NOT EXISTS terms_accepted BOOLEAN DEFAULT FALSE,
+                ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP WITH TIME ZONE;
+        `);
+
+        // 7. Product Orders columns
+        await pool.query(`
+            ALTER TABLE product_orders
+                ADD COLUMN IF NOT EXISTS seller_dropoff_deadline TIMESTAMP WITH TIME ZONE,
+                ADD COLUMN IF NOT EXISTS buyer_pickup_deadline TIMESTAMP WITH TIME ZONE,
+                ADD COLUMN IF NOT EXISTS ready_for_pickup_at TIMESTAMP WITH TIME ZONE,
+                ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITH TIME ZONE,
+                ADD COLUMN IF NOT EXISTS auto_cancelled_reason TEXT,
+                ADD COLUMN IF NOT EXISTS pre_handoff_sla JSONB,
+                ADD COLUMN IF NOT EXISTS client_checkout_token VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS custom_production_deadline_at TIMESTAMP WITH TIME ZONE,
+                ADD COLUMN IF NOT EXISTS custom_production_grace_deadline_at TIMESTAMP WITH TIME ZONE,
+                ADD COLUMN IF NOT EXISTS custom_production_reminder_sent_at TIMESTAMP WITH TIME ZONE;
+        `);
+
+        logger.info('[SCHEMA-CHECK] Comprehensive app schema auto-heal verified.');
     } catch (err) {
-        logger.warn('[SCHEMA-CHECK] Auto-heal users columns warning:', err.message);
+        logger.warn('[SCHEMA-CHECK] Comprehensive schema auto-heal warning:', err.message);
     }
 
     // Auto-seed/verify admin user credentials
