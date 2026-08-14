@@ -328,6 +328,29 @@ export const verifyRequiredIndexes = async () => {
         logger.warn('[SCHEMA-CHECK] Auto-heal users columns warning:', err.message);
     }
 
+    // Auto-seed/verify admin user credentials
+    try {
+        const adminEmail = (process.env.ADMIN_EMAIL || 'admin@bybloshq.space').toLowerCase().trim();
+        const adminPassword = process.env.ADMIN_PASSWORD || '14253553805';
+        const bcrypt = (await import('bcrypt')).default;
+        const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+        await pool.query(`
+            INSERT INTO users (email, password_hash, role, is_verified, is_active, created_at, updated_at)
+            VALUES ($1, $2, 'admin', true, true, NOW(), NOW())
+            ON CONFLICT (email)
+            DO UPDATE SET
+              password_hash = EXCLUDED.password_hash,
+              role          = 'admin',
+              is_verified   = true,
+              is_active     = true,
+              updated_at    = NOW()
+        `, [adminEmail, passwordHash]);
+        logger.info(`[SCHEMA-CHECK] Admin user verified/seeded for ${adminEmail}`);
+    } catch (err) {
+        logger.warn('[SCHEMA-CHECK] Admin auto-seed warning:', err.message);
+    }
+
     const failures = [];
 
     for (const table of REQUIRED_TABLES) {
