@@ -241,7 +241,6 @@ export function useAdminDashboard() {
 
       } catch (err: unknown) {
         const error = err as Error;
-        console.error('Critical error fetching dashboard data:', error);
         setError(error.message || 'Failed to initialize dashboard');
         toast.error('Failed to load dashboard data');
       } finally {
@@ -346,7 +345,6 @@ export function useAdminDashboard() {
         toast.success(`Seller has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
       }
     } catch (error) {
-      console.error('Error updating seller status:', error);
       toast.error('Failed to update seller status');
     }
   };
@@ -358,7 +356,6 @@ export function useAdminDashboard() {
       const response = await getBuyerByIdMutation.mutateAsync(buyerId);
       setSelectedBuyer(response);
     } catch (error) {
-      console.error('Error fetching buyer details:', error);
       toast.error('Failed to load buyer details');
     } finally {
       setIsLoadingBuyer(false);
@@ -392,7 +389,6 @@ export function useAdminDashboard() {
         buyers: role === 'buyer' ? prev.buyers.filter(b => String(b.user_id) !== String(userId)) : prev.buyers
       }));
     } catch (error) {
-      console.error('Error deleting user:', error);
       toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete user account');
     }
   };
@@ -410,7 +406,6 @@ export function useAdminDashboard() {
         creators: prev.creators.filter(creator => String(creator.id) !== String(creatorId))
       }));
     } catch (error) {
-      console.error('Error deleting creator:', error);
       toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete ambassador account');
     }
   };
@@ -436,7 +431,6 @@ export function useAdminDashboard() {
         toast.success(`Buyer has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
       }
     } catch (error) {
-      console.error('Error updating buyer status:', error);
       toast.error('Failed to update buyer status');
     }
   };
@@ -466,7 +460,6 @@ export function useAdminDashboard() {
         toast.success(`Withdrawal request has been ${action}`);
       }
     } catch (error) {
-      console.error('Error updating withdrawal request status:', error);
       toast.error('Failed to update withdrawal request status');
     }
   };
