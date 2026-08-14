@@ -1,5 +1,6 @@
 import { getFreshCsrfToken } from '@/lib/apiClient';
 import { api, ApiError, setCsrfTokenCache } from './instance';
+import { storage } from '@/lib/storage';
 
 export async function login(credentials: { email?: string; password?: string; pin?: string }) {
   try {
@@ -16,8 +17,13 @@ export async function login(credentials: { email?: string; password?: string; pi
       if (response.data.data?.user) {
         localStorage.setItem('admin_user', JSON.stringify(response.data.data.user));
       }
-      const token = await getFreshCsrfToken();
-      setCsrfTokenCache(token);
+      const adminToken = response.data?.data?.token;
+      if (adminToken) {
+        await storage.set('adminToken', adminToken);
+        api.defaults.headers.common.Authorization = `Bearer ${adminToken}`;
+      }
+      const csrfToken = await getFreshCsrfToken();
+      setCsrfTokenCache(csrfToken);
     }
 
     return response.data;
@@ -45,6 +51,8 @@ export function isAuthenticated() {
 export function logout() {
   localStorage.removeItem('admin_authenticated');
   localStorage.removeItem('admin_user');
+  storage.remove('adminToken');
+  delete api.defaults.headers.common.Authorization;
 }
 
 

@@ -22,6 +22,7 @@ import {
   useAdminFinancialsQuery,
   useAdminMonthlyFinancialDataQuery,
   useAdminDashboardStatsQuery,
+  useAdminClientsQuery,
   useAdminBalancesQuery
 } from '@/hooks/admin/queries/useAdminQueries';
 import RefundRequestsPage from './RefundRequestsPage';
@@ -122,6 +123,7 @@ export function useAdminDashboard() {
   const financialsQuery = useAdminFinancialsQuery(isEnabled);
   const monthlyFinancialDataQuery = useAdminMonthlyFinancialDataQuery(isEnabled);
   const dashboardStatsQuery = useAdminDashboardStatsQuery(isEnabled);
+  const clientsQuery = useAdminClientsQuery(isEnabled);
   const balancesQuery = useAdminBalancesQuery(isEnabled);
 
   const queryClient = useQueryClient();

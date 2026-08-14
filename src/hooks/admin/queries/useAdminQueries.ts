@@ -92,13 +92,13 @@ export function useAdminDashboardStatsQuery(enabled = true) {
   });
 }
 
-export function useAdminClientsQuery() {
+export function useAdminClientsQuery(enabled = true) {
   return useQuery({
     queryKey: adminQueryKeys.clients(),
     queryFn: async () => [],
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
-    enabled: false,
+    enabled,
   });
 }
 
