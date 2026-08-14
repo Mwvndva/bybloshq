@@ -1,8 +1,6 @@
-/* eslint-disable camelcase */
+export const shorthands = undefined;
 
-exports.shorthands = undefined;
-
-exports.up = pgm => {
+export const up = (pgm) => {
   pgm.sql(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
@@ -11,7 +9,7 @@ exports.up = pgm => {
   `);
 };
 
-exports.down = pgm => {
+export const down = (pgm) => {
   pgm.sql(`
     ALTER TABLE users DROP COLUMN IF EXISTS is_active;
     ALTER TABLE users DROP COLUMN IF EXISTS is_verified;
