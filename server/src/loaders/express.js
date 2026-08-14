@@ -11,6 +11,8 @@ import { mkdir } from 'fs/promises';
 
 import logger from '../shared/utils/logger.js';
 import routes from '../routes/index.js';
+import seoRoutes from '../routes/seo.routes.js';
+import { handleSocialCrawlerSeo } from '../middleware/socialCrawlerSeo.js';
 import { globalErrorHandler, notFoundHandler } from '../shared/utils/errorHandler.js';
 import requestId from '../middleware/requestId.js';
 import fixApiPrefix from '../middleware/fixApiPrefix.js';
@@ -28,9 +30,6 @@ export default async (app) => {
     // 2. Static Files & Uploads Dir
     const uploadsDir = path.join(process.cwd(), 'uploads');
     await mkdir(uploadsDir, { recursive: true });
-    app.use('/uploads/digital_products', (req, res) => {
-        res.status(404).json({ status: 'error', message: 'Not found' });
-    });
     app.use('/uploads', express.static(uploadsDir, {
         setHeaders: (res, filePath) => {
             res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -214,6 +213,8 @@ export default async (app) => {
     });
 
     // 7. Routes
+    app.use(handleSocialCrawlerSeo);
+    app.use('/', seoRoutes);
     app.use(fixApiPrefix);
     app.use('/api', routes);
 

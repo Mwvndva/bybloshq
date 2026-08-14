@@ -117,7 +117,7 @@ export function SellerOrderDialogs({
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_220px]">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
                                 <div className="space-y-2">
                                     <Label htmlFor="pickup-phone" className="text-xs font-bold text-slate-800 dark:text-white">M-Pesa number for pickup fee</Label>
                                     <Input

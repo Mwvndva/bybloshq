@@ -199,6 +199,9 @@ export default function CreatorRegister() {
             readOnly={Boolean(token)}
             onChange={(e) => updateForm('email', e.target.value)}
             type="email"
+            id="email"
+            name="email"
+            autoComplete="email"
             placeholder="Email"
             className="h-12 rounded-2xl border-white/10 bg-black/45 text-white/70 sm:col-span-2"
             required
@@ -206,7 +209,7 @@ export default function CreatorRegister() {
           <Input value={form.mpesaNumber} onChange={(e) => updateForm('mpesaNumber', e.target.value)} placeholder="M-Pesa number" className="h-12 rounded-2xl border-white/10 bg-black/45 sm:col-span-2" required />
           <Input value={form.whatsappNumber} onChange={(e) => updateForm('whatsappNumber', e.target.value)} placeholder="WhatsApp number" className="h-12 rounded-2xl border-white/10 bg-black/45 sm:col-span-2" required />
           <div className="relative sm:col-span-2">
-            <Input value={form.password} onChange={(e) => updateForm('password', e.target.value)} type={showPassword ? 'text' : 'password'} placeholder="Password" className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12" required />
+            <Input value={form.password} onChange={(e) => updateForm('password', e.target.value)} type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="Password" className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12" required />
             <button
               type="button"
               onClick={() => setShowPassword((current) => !current)}
@@ -217,7 +220,7 @@ export default function CreatorRegister() {
             </button>
           </div>
           <div className="relative sm:col-span-2">
-            <Input value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)} type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm password" className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12" required />
+            <Input value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)} type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12" required />
             <button
               type="button"
               onClick={() => setShowConfirmPassword((current) => !current)}

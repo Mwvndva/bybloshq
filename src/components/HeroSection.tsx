@@ -28,11 +28,13 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
         <div className="mx-auto flex max-w-6xl flex-col items-center space-y-4 text-center sm:space-y-5 lg:space-y-6">
 
           <div className="space-y-3 sm:space-y-4">
-            <img
-              src="/byblos-icon.png"
-              alt="Byblos logo"
-              className="mx-auto h-auto w-[min(42vw,150px)] sm:w-[min(24vw,220px)] lg:w-[260px]"
-            />
+            <div className="mx-auto inline-block rounded-full border border-white/20 p-2 sm:p-3 bg-black/40 backdrop-blur-md shadow-2xl overflow-hidden">
+              <img
+                src="/byblos-icon.png"
+                alt="Byblos logo"
+                className="h-auto w-[min(42vw,150px)] sm:w-[min(24vw,220px)] lg:w-[260px] rounded-full object-cover"
+              />
+            </div>
 
             <p className="mx-auto max-w-4xl text-2xl font-extrabold leading-tight tracking-normal text-white sm:text-4xl md:text-5xl">
               Start and run your business in Nairobi.

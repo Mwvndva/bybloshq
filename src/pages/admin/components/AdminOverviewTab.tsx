@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatCard } from '@/components/ui/stat-card';
 import { AlertTriangle, Package, Store, WalletCards } from 'lucide-react';
 import {
   ChartContainer,
@@ -51,20 +52,26 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <div className="col-span-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        {operatingCards.map(card => (
-          <Card key={card.label} className="rounded-2xl border border-white/10 bg-[#0A0A0A]/70 shadow-xl">
-            <CardContent className="flex items-center justify-between p-5">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">{card.label}</p>
-                <p className="mt-2 text-3xl font-black tabular-nums text-white">{Number(card.value).toLocaleString()}</p>
-                <p className="mt-1 text-xs font-medium text-gray-500">{card.detail}</p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
-                {card.icon}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {operatingCards.map(card => {
+          const hasActionItems = Number(card.value) > 0;
+          return (
+            <StatCard
+              key={card.label}
+              title={card.label}
+              value={Number(card.value).toLocaleString()}
+              subtitle={card.detail}
+              icon={
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${hasActionItems ? 'border-amber-400/30 bg-amber-400/15' : 'border-white/10 bg-white/[0.04]'}`}>
+                  {card.icon}
+                </div>
+              }
+              className={`p-5 shadow-xl transition-colors duration-200 ${hasActionItems ? 'border border-amber-500/30 bg-amber-500/[0.08]' : 'border border-white/10 bg-[#0A0A0A]/70'}`}
+              titleClassName={hasActionItems ? 'text-amber-300/80 font-semibold' : 'text-gray-500'}
+              valueClassName={hasActionItems ? 'text-amber-300 font-black' : 'text-white'}
+              subtitleClassName={hasActionItems ? 'text-amber-200/80 font-medium' : 'text-gray-500'}
+            />
+          );
+        })}
       </div>
 
       <SalesChart data={asChartData(analytics.salesTrends)} />
@@ -131,7 +138,7 @@ export function AdminOverviewTab({ dashboardState, safeFormatDate, onShowSellers
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm md:text-base font-bold text-white tracking-tight truncate">{String(seller.name || '')}</p>
-                          <p className="text-[10px] md:text-xs text-gray-500 font-medium italic opacity-60 truncate">{String(seller.email || '')}</p>
+                          <p className="text-[10px] md:text-xs text-gray-400 font-medium italic truncate">{String(seller.email || '')}</p>
                         </div>
                       </div>
                     </td>

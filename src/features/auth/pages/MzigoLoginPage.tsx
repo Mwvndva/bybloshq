@@ -23,9 +23,12 @@ const MzigoLoginPage = () => {
     try {
       await loginLogisticsPartner(email, password);
       navigate('/mzigo/dashboard', { replace: true });
-    } catch (error) {
+    } catch (error: any) {
+      const message = !error?.response
+        ? 'Connection error. Please check your network connection and try again.'
+        : error?.response?.data?.message || error?.message || 'Check the Mzigo credentials and try again.';
       toast.error('Login failed', {
-        description: error?.response?.data?.message || error?.message || 'Check the Mzigo credentials and try again.',
+        description: message,
       });
     } finally {
       setIsSubmitting(false);
@@ -62,6 +65,8 @@ const MzigoLoginPage = () => {
               <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
               <input
                 type="email"
+                id="email"
+                name="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -78,6 +83,8 @@ const MzigoLoginPage = () => {
               <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
               <input
                 type="password"
+                id="password"
+                name="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required

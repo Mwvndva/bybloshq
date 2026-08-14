@@ -25,18 +25,27 @@ test('digital product uploads require seller authorization before multer writes 
   assert.match(source, /const requireSellerProfile = \(req, res, next\) =>/);
   assert.match(
     source,
-    /router\.post\('\/products\/upload-digital',\s*uploadRateLimiter,\s*requireSellerProfile,\s*hasPermission\('manage-products'\),\s*digitalUpload\.single\('digital_file'\),/s
+    /router\.post\('\/products\/upload-digital',\s*uploadRateLimiter,\s*requireSellerProfile,\s*hasPermission\('manage-products'\),\s*cloudinaryDigitalUpload,/s
   );
 });
 
-test('paid digital files are blocked from public static upload serving', () => {
+
+test('paid digital files are served via signed Cloudinary URLs and not local static storage', () => {
   const expressLoader = read('server/src/loaders/express.js');
   const nginxConfig = read('nginx/production.nginx.conf');
+  const orderController = read('server/src/controllers/order.controller.js');
+  const productController = read('server/src/controllers/product.controller.js');
 
-  assert.match(expressLoader, /app\.use\('\/uploads\/digital_products'/);
-  assert.match(expressLoader, /res\.status\(404\)\.json\(\{ status: 'error', message: 'Not found' \}\)/);
-  assert.match(nginxConfig, /location \^~ \/uploads\/digital_products\s*\{\s*return 404;/s);
+  assert.doesNotMatch(expressLoader, /app\.use\('\/uploads\/digital_products'/);
+  assert.doesNotMatch(nginxConfig, /location \^~ \/uploads\/digital_products/);
+
+  assert.match(orderController, /generateSignedDownloadUrl/);
+  assert.match(orderController, /res\.redirect\(302,\s*signedUrl\)/);
+  assert.doesNotMatch(orderController, /res\.download\(/);
+
+  assert.doesNotMatch(productController, /secure_url/);
 });
+
 
 test('public order status no longer accepts internal numeric order ids', () => {
   const source = read('server/src/repositories/publicOrderStatus.repository.js');
@@ -124,13 +133,14 @@ test('native app origins and production CSRF cookies support authenticated app r
 test('native app API clients share absolute production API base URL logic', () => {
   const apiBaseUrl = read('src/lib/apiBaseUrl.ts');
   const apiClient = read('src/lib/apiClient.ts');
-  const publicApi = read('src/api/publicApi.ts');
-  const adminApi = read('src/api/adminApi.ts');
-  const marketingApi = read('src/services/marketingApi.js');
+  const publicApi = read('src/api/public/instance.ts');
+  const adminApi = read('src/api/admin/instance.ts');
+  const marketingApi = read('src/api/marketingApi.js');
   const refundRequestsPage = read('src/pages/admin/RefundRequestsPage.tsx');
 
   assert.match(apiBaseUrl, /isNativeApp\(\)/);
-  assert.match(apiBaseUrl, /VITE_NATIVE_API_URL[\s\S]*'https:\/\/bybloshq\.space'/);
+  assert.match(apiBaseUrl, /VITE_NATIVE_API_URL[\s\S]*'https:\/\/byblosafrica\.site'/);
+
   assert.match(apiBaseUrl, /return '\/api'/);
   assert.match(apiClient, /const baseURL = buildApiBaseUrl\(\)/);
   assert.match(publicApi, /const baseURL = buildApiBaseUrl\(\)/);
@@ -143,25 +153,28 @@ test('native app API clients share absolute production API base URL logic', () =
 });
 
 test('native app auth persistence keeps provider tokens through API wrappers', () => {
-  const buyerApi = read('src/api/buyerApi.ts');
+  const buyerApi = read('src/api/buyer/auth.ts');
   const sellerProfileApi = read('src/api/seller/profileApi.ts');
-  const creatorApi = read('src/api/creatorApi.ts');
-  const useAuthActions = read('src/contexts/auth/useAuthActions.ts');
+  const creatorApi = read('src/api/creator/auth.ts');
+  const useAuthActions = read('src/features/auth/hooks/useAuthActions.ts');
   const storage = read('src/lib/storage.ts');
+
 
   assert.match(storage, /if \(!isNativeApp\(\)\)[\s\S]*localStorage\.getItem\(key\)/);
   assert.match(storage, /if \(!isNativeApp\(\)\)[\s\S]*localStorage\.setItem\(key, value\)/);
-  assert.match(buyerApi, /return \{ buyer: transformBuyer\(buyer\), token \}/);
-  assert.match(sellerProfileApi, /return \{ seller: transformSeller\(seller\), token \}/);
+  assert.match(buyerApi, /return \{ buyer: transformBuyer\(buyer\), token/);
+  assert.match(sellerProfileApi, /return \{ seller: transformSeller\(seller\), token/);
+
   assert.match(creatorApi, /token: response\.data\?\.data\?\.token/);
-  assert.match(useAuthActions, /isNativeApp\(\) && response\.token/);
+  assert.match(useAuthActions, /response\.token/);
   assert.match(useAuthActions, /await storage\.set\(`\$\{role\}Token`, response\.token\)/);
   assert.match(useAuthActions, /await clearRoleSessionMarkers\(\)/);
+
 });
 
 test('creator registration excludes unused creator social links and validates confirm password', () => {
-  const creatorRegister = read('src/pages/creator/CreatorRegister.tsx');
-  const creatorApi = read('src/api/creatorApi.ts');
+  const creatorRegister = read('src/features/auth/pages/CreatorRegister.tsx');
+  const creatorApi = read('src/api/creator/auth.ts');
   const creatorService = read('server/src/services/creator.service.js');
   const creatorController = read('server/src/controllers/creator.controller.js');
   const migration = read('server/migrations/20260610140000_remove_creator_social_links.sql');
@@ -177,6 +190,7 @@ test('creator registration excludes unused creator social links and validates co
   assert.match(migration, /DROP COLUMN IF EXISTS instagram_link/);
   assert.match(migration, /DROP COLUMN IF EXISTS tiktok_link/);
 });
+
 
 test('base64 image handling allowlists safe raster types and verifies magic bytes', () => {
   const source = read('server/src/services/image.service.js');

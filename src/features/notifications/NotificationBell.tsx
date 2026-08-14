@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { cn } from '@/lib/utils';
 import { useNotifications, type AppNotification, type NotificationVariant } from './useNotifications';
 
@@ -37,7 +38,7 @@ export function NotificationBell({ variant = 'default', triggerClassName }: Noti
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn('relative', triggerClassName)} aria-label="Notifications">
+        <IconButton variant="ghost" className={cn('relative', triggerClassName)} aria-label="Notifications">
           <Bell className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
           {unreadCount > 0 && (
             <span
@@ -47,7 +48,7 @@ export function NotificationBell({ variant = 'default', triggerClassName }: Noti
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
-        </Button>
+        </IconButton>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0 overflow-hidden bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white shadow-2xl rounded-2xl transition-colors duration-200">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10">

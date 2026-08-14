@@ -112,20 +112,20 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
               {/* 🛡️ ESCROW NOTICE: Buyer Protection */}
               {purchaseDetails && (
                 <div className="bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-white/50">Shop</span>
-                    <span className="text-xs sm:text-sm font-semibold text-slate-950 dark:text-white text-right truncate">{purchaseDetails.shopName}</span>
+                  <div className="flex items-center justify-between gap-3 min-w-0">
+                    <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/50">Shop</span>
+                    <span className="min-w-0 flex-1 text-xs sm:text-sm font-semibold text-slate-950 dark:text-white text-right truncate">{purchaseDetails.shopName}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-white/50">Product</span>
-                    <span className="text-xs sm:text-sm font-semibold text-slate-950 dark:text-white text-right truncate">{purchaseDetails.productName}</span>
+                  <div className="flex items-center justify-between gap-3 min-w-0">
+                    <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/50">Product</span>
+                    <span className="min-w-0 flex-1 text-xs sm:text-sm font-semibold text-slate-950 dark:text-white text-right truncate">{purchaseDetails.productName}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3 border-t border-slate-200 dark:border-white/10 pt-3">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-white/50">Price</span>
+                    <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/50">Price</span>
                     <span className="text-sm sm:text-base font-semibold text-slate-950 dark:text-white">{formatCurrency(purchaseDetails.productPrice)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-white/50">Byblos service charge (2%)</span>
+                    <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/50">Byblos service charge (2%)</span>
                     <span className="text-xs sm:text-sm font-semibold text-slate-950 dark:text-white">{formatCurrency(displayedServiceCharge)}</span>
                   </div>
                   <p className="rounded-xl border border-yellow-200 dark:border-yellow-400/20 bg-yellow-50 dark:bg-yellow-400/10 px-3 py-2 text-[11px] font-medium leading-relaxed text-slate-700 dark:text-yellow-100">

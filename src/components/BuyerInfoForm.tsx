@@ -120,7 +120,9 @@ export function BuyerInfoForm({
                 </div>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="Enter your email address"
                   value={buyerInfo.email}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
@@ -261,6 +263,8 @@ export function BuyerInfoForm({
                 </div>
                 <Input
                   id="password"
+                  name="password"
+                  autoComplete="new-password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Min 8 characters"
                   value={buyerInfo.password}
@@ -320,6 +324,8 @@ export function BuyerInfoForm({
                 </div>
                 <Input
                   id="confirmPassword"
+                  name="confirmPassword"
+                  autoComplete="new-password"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Repeat password"
                   value={buyerInfo.confirmPassword}

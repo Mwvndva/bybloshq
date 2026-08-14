@@ -43,8 +43,12 @@ export const AdminLoginPage = () => {
 
     try {
       await login(email, password);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Login failed', err);
+      const reqErr = err as { response?: unknown; message?: string };
+      if (!reqErr?.response) {
+        setLocalError('Connection error. Please check your network connection and try again.');
+      }
     }
   };
 
@@ -80,6 +84,7 @@ export const AdminLoginPage = () => {
                   <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -99,6 +104,7 @@ export const AdminLoginPage = () => {
                   <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

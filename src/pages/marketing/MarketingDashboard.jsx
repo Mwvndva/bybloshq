@@ -144,12 +144,18 @@ export default function MarketingDashboard() {
 
             {/* KPI Cards */}
             {overview && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-                    <StatCard title="Total GMV" value={overview.totalGmv} prefix="KSh " color="yellow" />
-                    <StatCard title="Platform Revenue" value={overview.totalRevenue} prefix="KSh " color="green" />
-                    <StatCard title="Total Orders" value={overview.totalOrders} color="blue" />
-                    <StatCard title="Total Sellers" value={overview.totalSellers} color="purple" />
-                    <StatCard title="Total Buyers" value={overview.totalBuyers} color="blue" />
+                <div className="space-y-4 md:space-y-6">
+                    {/* Primary Financial Hero KPIs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                        <StatCard title="Total GMV" value={overview.totalGmv} prefix="KSh " color="yellow" hero />
+                        <StatCard title="Platform Revenue" value={overview.totalRevenue} prefix="KSh " color="green" hero />
+                    </div>
+                    {/* Secondary Volume Counts */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+                        <StatCard title="Total Orders" value={overview.totalOrders} color="blue" />
+                        <StatCard title="Total Sellers" value={overview.totalSellers} color="purple" />
+                        <StatCard title="Total Buyers" value={overview.totalBuyers} color="blue" />
+                    </div>
                 </div>
             )}
 

@@ -78,7 +78,7 @@ export function BuyerMembershipCard() {
             You're member No. {String(displayNumber).padStart(6, '0')} — share your card anytime.
           </p>
 
-          <div className="mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl">
+          <div className="mx-auto w-full min-w-0 max-w-[320px] overflow-hidden rounded-2xl">
             <ScaledFounderCard memberNumber={displayNumber} />
           </div>
 

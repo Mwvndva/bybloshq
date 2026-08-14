@@ -16,7 +16,7 @@ import { softDeleteSeller } from '../models/seller.model.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
 import { uploadRateLimiter, withdrawalRateLimiter } from '../middleware/rateLimiting.js';
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
-import digitalUpload from '../middleware/digitalUpload.js';
+import { cloudinaryDigitalUpload } from '../middleware/digitalUpload.js';
 import { validate } from '../middleware/validate.js';
 import * as AuthV from '../validations/auth.validation.js';
 
@@ -132,7 +132,7 @@ router.post('/products/upload-digital',
   uploadRateLimiter,
   requireSellerProfile,
   hasPermission('manage-products'),
-  digitalUpload.single('digital_file'),
+  cloudinaryDigitalUpload,
   productController.uploadDigitalFile
 );
 

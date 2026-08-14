@@ -29,7 +29,7 @@ export const signToken = (id, role = 'buyer', email = null) => {
   return jwt.sign(
     payload,
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
 };
 
@@ -48,7 +48,7 @@ export const signAutoLoginToken = (id, role = 'buyer', purpose = 'payment_succes
   return jwt.sign(
     { id, role, purpose, autoLogin: true },
     process.env.JWT_SECRET,
-    { expiresIn: '5m' } // 5 minutes expiration for security
+    { algorithm: 'HS256', expiresIn: '5m' } // 5 minutes expiration for security
   );
 };
 

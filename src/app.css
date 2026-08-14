@@ -814,6 +814,7 @@ body.dashboard-active .seller-service-charge-notice * {
                                dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/40; }
   .seller-eyebrow    { @apply text-[10px] font-black uppercase tracking-[0.28em]
                                text-[var(--theme-accent,#f5c518)]; }
+  .text-eyebrow      { @apply text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-white/60; }
   .seller-heading    { @apply text-2xl font-black tracking-tight text-slate-950 dark:text-white; }
   .seller-subtext    { @apply text-xs font-medium text-slate-600 dark:text-white/60 sm:text-sm; }
   .seller-label      { @apply text-xs font-medium text-slate-500 dark:text-white/50; }

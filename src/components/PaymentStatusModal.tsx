@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useGetOrderStatusMutation } from '@/hooks/buyer/queries/useOrderStatusQuery';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import { formatCurrency } from '@/lib/utils';
@@ -140,8 +141,6 @@ export const PaymentStatusModal = ({
     };
   }, [isOpen, invoiceId, state, isGuest, onSuccess, handleAutoLogin]);
 
-  if (!isOpen) return null;
-
   const serviceChargeAmount = Number(paymentSummary?.serviceCharge || 0);
   const totalAmount = Number(paymentSummary?.totalAmount || 0);
   const serviceChargeText = serviceChargeAmount > 0
@@ -149,8 +148,35 @@ export const PaymentStatusModal = ({
     : 'Your total includes Byblos 2% service charge for protected checkout, receipts, and order tracking.';
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 dark:bg-black/85 p-4 text-center backdrop-blur-md transition-colors duration-200">
-      <div className="flex max-h-[85dvh] w-full max-w-[380px] flex-col justify-center overflow-y-auto rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d0d0d] p-5 sm:p-6 text-slate-950 dark:text-white shadow-2xl transition-colors duration-200">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && state !== 'POLLING') {
+          onClose();
+        }
+      }}
+    >
+      <DialogContent
+        onPointerDownOutside={(e) => {
+          if (state === 'POLLING') e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (state === 'POLLING') e.preventDefault();
+        }}
+        className="flex max-h-[85dvh] w-full max-w-[380px] flex-col justify-center overflow-y-auto rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d0d0d] p-5 sm:p-6 text-slate-950 dark:text-white shadow-2xl transition-colors duration-200 [&>button]:hidden"
+      >
+        <DialogHeader className="sr-only">
+          <DialogTitle>Payment Status</DialogTitle>
+          <DialogDescription>
+            {state === 'POLLING'
+              ? 'Confirming payment with M-Pesa prompt'
+              : state === 'SUCCESS'
+              ? 'Payment confirmed'
+              : state === 'FAILED'
+              ? 'Payment failed'
+              : 'Payment status timed out'}
+          </DialogDescription>
+        </DialogHeader>
         <div className="flex flex-col items-center justify-center">
           {state === 'POLLING' && (
             <>
@@ -275,8 +301,8 @@ export const PaymentStatusModal = ({
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

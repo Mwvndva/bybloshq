@@ -461,7 +461,7 @@ function signLogisticsToken(account) {
             email: account.email
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.LOGISTICS_JWT_EXPIRES_IN || '12h' }
+        { algorithm: 'HS256', expiresIn: process.env.LOGISTICS_JWT_EXPIRES_IN || '12h' }
     );
 }
 

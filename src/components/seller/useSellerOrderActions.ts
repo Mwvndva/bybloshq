@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { format, isValid, parseISO } from 'date-fns';
 import type { ApiOrder } from '@/types/api/order';
-import { OrderStatusBadge } from './OrderStatusBadge';
 import { SellerOrderCard } from './SellerOrderCard';
 
 import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download, MapPin, CreditCard } from 'lucide-react';

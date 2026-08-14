@@ -17,7 +17,7 @@ export const generateRefreshToken = (id, role = 'buyer') => {
   return jwt.sign(
     { id, role, type: 'refresh' },
     secret,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '90d' }
+    { algorithm: 'HS256', expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '90d' }
   );
 };
 
@@ -61,7 +61,7 @@ export const refreshAccessToken = (refreshToken) => {
   const accessToken = jwt.sign(
     { id: decoded.id, role: decoded.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
 
   // Rolling refresh: mint a brand-new refresh token on every refresh so a user
