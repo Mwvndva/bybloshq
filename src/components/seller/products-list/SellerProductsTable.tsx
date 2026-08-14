@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, EyeOff, Handshake, Loader2, Package, Trash2 } from 'lucide-react';
@@ -115,50 +116,51 @@ export function SellerProductsTable({
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
+                <div className="flex items-center justify-end gap-1.5">
                   {onStatusUpdate && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onStatusUpdate(product.id, product.status === 'sold' ? 'available' : 'sold')}
                       disabled={updatingId === product.id}
-                      className={`${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'} h-8 px-2 text-[10px]`}
+                      className={`${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30'} h-11 px-3 text-xs font-semibold rounded-xl`}
                     >
                       {updatingId === product.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
                       ) : (
                         <span>{product.status === 'sold' ? 'Mark Available' : 'Mark as Sold Out'}</span>
                       )}
                     </Button>
                   )}
-                  <Button
+                  <IconButton
                     variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+                    aria-label="Edit product"
+                    className="h-11 w-11 rounded-xl text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
                     onClick={(event) => {
                       event.stopPropagation();
                       onEdit(product.id);
                     }}
                     title="Edit product"
                   >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button
+                    <Edit className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
                     variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                    aria-label="Delete product"
+                    className="h-11 w-11 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                     onClick={(event) => {
                       event.stopPropagation();
                       onDelete(product.id);
                     }}
                     disabled={!!deletingId}
+                    title="Delete product"
                   >
                     {deletingId === product.id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin text-red-400" />
                     ) : (
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     )}
-                  </Button>
+                  </IconButton>
                 </div>
               </TableCell>
             </TableRow>

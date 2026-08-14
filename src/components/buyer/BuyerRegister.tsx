@@ -212,14 +212,16 @@ export function BuyerRegister() {
                         }
                         setCurrentStep(currentStep + 1);
                       }}
-                      className={`${currentStep === 1 ? 'flex-1' : 'flex-1'} bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold tracking-tight transition-all duration-200 h-11 text-sm`}
+                      variant="gradient"
+                      className="flex-1 h-11"
                     >
                       Next
                     </Button>
                   ) : (
                     <Button
                       type="submit"
-                      className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold tracking-tight transition-all duration-200 h-11 text-sm"
+                      variant="gradient"
+                      className="flex-1 h-11"
                       disabled={isLoading || !termsAccepted}
                     >
                       {isLoading ? (

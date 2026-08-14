@@ -15,6 +15,7 @@ import {
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { publicApiRateLimiter } from '../middleware/rateLimiting.js';
 import {
   updateOrderStatusSchema,
   confirmReceiptSchema,
@@ -30,7 +31,7 @@ const router = express.Router();
  *   get:
  *     summary: Get order by order number or payment reference (Public)
  */
-router.get('/reference/:reference', getByReference);
+router.get('/reference/:reference', publicApiRateLimiter, getByReference);
 
 // Apply protection to all other order routes
 router.use(protect);

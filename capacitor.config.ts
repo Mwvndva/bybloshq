@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'space.bybloshq.app',
+  appId: 'site.byblosafrica.app',
   appName: 'Byblos',
   webDir: 'dist',
   bundledWebRuntime: false,

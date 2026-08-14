@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { format, isValid, parseISO } from 'date-fns';
-import type { ApiOrder } from '@/types/api/order';
-import { OrderStatusBadge } from './OrderStatusBadge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { SellerOrderCard } from './SellerOrderCard';
 
 import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download, MapPin, CreditCard } from 'lucide-react';
@@ -133,13 +132,11 @@ export default function SellerOrdersSection() {
 
     if (orders.length === 0) {
         return (
-            <div className="text-center py-12 px-4">
-                <div className="mx-auto w-16 h-16 bg-yellow-400/15 border border-yellow-400/30 rounded-full flex items-center justify-center mb-4">
-                    <Package className="h-8 w-8 text-yellow-700" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-950 mb-2">No orders yet</h3>
-                <p className="text-slate-600 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
-            </div>
+            <EmptyState
+                icon={<Package className="h-7 w-7" />}
+                title="No orders yet"
+                description="Your orders will appear here when customers purchase your products."
+            />
         );
     }
 

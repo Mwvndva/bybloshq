@@ -375,16 +375,20 @@ class ProductService {
     }
 
     /**
-     * Sanitize digital file path to prevent directory traversal
+     * Validate a Cloudinary public_id for storage as digital_file_path.
+     * After migration to Cloudinary, digital_file_path stores a public_id
+     * (e.g. 'byblos/digital_products/abc123') rather than a local filesystem path.
+     * Cloudinary public_ids contain no traversal risk; validation is a basic sanity check.
      */
     static _sanitizeDigitalPath(filePath) {
         if (!filePath) return null;
 
-        // 1. Get only the basename to prevent directory traversal
-        const baseName = path.basename(filePath);
+        // Reject null bytes and clearly local paths — both indicate a mis-wired upload flow
+        if (filePath.includes('\0') || filePath.startsWith('uploads/')) {
+            throw new Error('Invalid digital file path: expected a Cloudinary public_id');
+        }
 
-        // 2. Restricted to designated directory
-        return `uploads/digital_products/${baseName}`;
+        return filePath;
     }
 }
 

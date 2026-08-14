@@ -22,17 +22,17 @@ const checkOrigin = (allowedList, currentOrigin) => {
 };
 
 const allowedOrigins = [
-    'https://bybloshq.space',
+    'https://byblosafrica.site',
     'http://localhost:3000'
 ];
 
 const tests = [
-    { origin: 'https://bybloshq.space', expected: true },
-    { origin: 'https://www.bybloshq.space', expected: true },
+    { origin: 'https://byblosafrica.site', expected: true },
+    { origin: 'https://www.byblosafrica.site', expected: true },
     { origin: 'http://localhost:3000', expected: true },
     { origin: 'http://www.localhost:3000', expected: true }, // Technically possible
     { origin: 'https://malicious.com', expected: false },
-    { origin: 'https://bybloshq.space.other.com', expected: false }
+    { origin: 'https://byblosafrica.site.other.com', expected: false }
 ];
 
 console.log('--- CORS Origin Logic Test ---');

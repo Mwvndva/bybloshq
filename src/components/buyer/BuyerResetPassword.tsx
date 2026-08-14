@@ -110,6 +110,7 @@ export function BuyerResetPassword() {
                                         id="password"
                                         name="password"
                                         type={showPassword ? 'text' : 'password'}
+                                        autoComplete="new-password"
                                         placeholder="••••••••"
                                         className="!pl-12 !pr-11 h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                                         value={formData.password}
@@ -168,6 +169,7 @@ export function BuyerResetPassword() {
                                         id="confirmPassword"
                                         name="confirmPassword"
                                         type={showConfirmPassword ? 'text' : 'password'}
+                                        autoComplete="new-password"
                                         placeholder="••••••••"
                                         className="!pl-12 !pr-11 h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                                         value={formData.confirmPassword}
@@ -193,7 +195,8 @@ export function BuyerResetPassword() {
 
                             <Button
                                 type="submit"
-                                className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-xl rounded-xl font-bold transition-all duration-200 mt-2"
+                                variant="gradient"
+                                className="w-full h-11 mt-2"
                                 disabled={isLoading}
                             >
                                 {isLoading ? (

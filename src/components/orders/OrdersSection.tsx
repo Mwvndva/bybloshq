@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useBuyerAuth } from '@/features/auth/contexts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import type { ApiOrder } from '@/types/api/order';
 import { BuyerOrderCard } from './BuyerOrderCard';
@@ -225,6 +226,7 @@ export default function OrdersSection() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
         <Input
           type="text"
+          aria-label="Search orders"
           placeholder="Search orders by item, shop, or order number..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -233,23 +235,23 @@ export default function OrdersSection() {
       </div>
 
       {filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Package className="mb-4 h-16 w-16 text-stone-300" />
-          <h3 className="mb-2 text-lg font-semibold text-stone-900">No orders found</h3>
-          <p className="mb-6 text-stone-500">
-            {searchQuery ? 'No orders match your search. Try different keywords.' : "You haven't placed any orders yet. Start shopping!"}
-          </p>
-          {!searchQuery && (
-            <Button
-              variant="outline"
-              className="border-stone-300 text-stone-600 hover:bg-stone-50"
-              onClick={() => window.location.href = '/'}
-            >
-              Browse Products
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          icon={<Package className="h-7 w-7" />}
+          title="No orders found"
+          description={searchQuery ? 'No orders match your search. Try different keywords.' : "You haven't placed any orders yet. Start shopping!"}
+          action={
+            !searchQuery ? (
+              <Button
+                variant="outline"
+                className="border-slate-300 dark:border-white/20 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/10"
+                onClick={() => window.location.href = '/'}
+              >
+                Browse Products
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="space-y-4">
           {filteredOrders.map(order => (

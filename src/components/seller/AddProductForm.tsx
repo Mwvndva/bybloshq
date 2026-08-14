@@ -229,7 +229,8 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         {step < 4 ? (
           <Button
             onClick={nextStep}
-            className="h-11 flex-[2] rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black text-sm font-black shadow-md sm:h-12 transition-all duration-200"
+            variant="gradient"
+            className="h-11 sm:h-12 flex-[2]"
           >
             Continue
             <ArrowRight className="ml-1.5 h-4 w-4 sm:ml-2" />
@@ -238,7 +239,8 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="h-11 flex-[2] rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black text-sm font-black shadow-md sm:h-12 transition-all duration-200"
+            variant="gradient"
+            className="h-11 sm:h-12 flex-[2]"
           >
             {isLoading ? "Launching..." : "Launch Product"}
             <Sparkles className="ml-1.5 h-4 w-4 fill-current sm:ml-2" />

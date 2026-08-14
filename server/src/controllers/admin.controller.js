@@ -16,6 +16,7 @@ import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
 import LogisticsDashboardService from '../services/logisticsDashboard.service.js';
 import { getWithdrawalReservedAmount } from '../shared/utils/withdrawalUtils.js';
+import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 
 const paymentService = new PaymentService();
 
@@ -39,15 +40,7 @@ const adminLogin = async (req, res, next) => {
 
     const { user, token } = authResult;
 
-    // Set JWT cookie (standardized)
-    res.cookie('jwt', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-      domain: process.env.COOKIE_DOMAIN || undefined
-    });
+    setAuthCookie(res, token);
 
     res.status(200).json({
       status: 'success',

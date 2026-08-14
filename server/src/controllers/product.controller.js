@@ -3,19 +3,19 @@ import logger from '../shared/utils/logger.js';
 import ImageService from '../services/image.service.js';
 import { sanitizeProduct } from '../shared/utils/sanitize.js';
 
-// Upload digital file handler
+// Upload digital file handler — file is already uploaded to Cloudinary by cloudinaryDigitalUpload middleware
 export const uploadDigitalFile = async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.cloudinaryFile) {
       return res.status(400).json({ status: 'error', message: 'No file uploaded' });
     }
-    const filePath = `uploads/digital_products/${req.file.filename}`;
     res.status(200).json({
       status: 'success',
       data: {
-        filePath,
-        fileName: req.file.originalname,
-        size: req.file.size
+        // public_id is stored in products.digital_file_path and used to generate signed download URLs
+        filePath: req.cloudinaryFile.public_id,
+        fileName: req.cloudinaryFile.original_filename,
+        size: req.cloudinaryFile.bytes
       }
     });
   } catch (error) {

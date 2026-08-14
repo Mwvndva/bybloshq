@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAdminRefundRequestsQuery, useConfirmRefundMutation, useRejectRefundMutation } from '@/hooks/admin/mutations/useAdminRefunds';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -106,14 +107,11 @@ export default function RefundRequestsPage() {
       </div>
 
       {requests.length === 0 ? (
-        <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
-          <CardContent className="flex flex-col items-center justify-center py-24 opacity-40">
-            <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mb-6 border border-white/5">
-              <DollarSign className="h-10 w-10 text-gray-400" />
-            </div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">No {statusFilter} signals detected</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<DollarSign className="h-7 w-7" />}
+          title={`No ${statusFilter} signals detected`}
+          description="There are currently no refund requests in this view."
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {requests.map((request) => (
