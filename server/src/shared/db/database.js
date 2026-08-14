@@ -8,36 +8,50 @@ const { Pool } = pg;
 /** @type {import('pg').Pool} */
 let pool;
 
-// Required environment variables for database
+const hasDatabaseUrl = !!process.env.DATABASE_URL;
 const requiredEnvVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+const missingVars = hasDatabaseUrl ? [] : requiredEnvVars.filter(varName => !process.env[varName]);
 
-if (missingVars.length > 0) {
-  const errorMsg = `❌ FATAL: Missing required environment variables: ${missingVars.join(', ')}`;
+if (!hasDatabaseUrl && missingVars.length > 0) {
+  const errorMsg = `❌ FATAL: Missing required database configuration. Set DATABASE_URL or: ${missingVars.join(', ')}`;
   logger.error(errorMsg);
-  logger.error('In production, you must use individual DB_* variables.');
   throw new Error(errorMsg);
 }
 
-const dbConfig = {
-  host: process.env.DB_HOST,
-  port: Number.parseInt(process.env.DB_PORT, 10) || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  // SSL is required in production and for Render/Heroku Postgres
-  // Allow disabling it via DB_SSL environment variable for internal Docker networks
-  ssl: process.env.DB_SSL === 'false' ? false : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false),
+const sslConfig = process.env.DB_SSL === 'false'
+  ? false
+  : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false);
 
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 25,
-  query_timeout: 30000,
-  allowExitOnIdle: false,
-};
+const dbConfig = hasDatabaseUrl
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: sslConfig,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: process.env.NODE_ENV === 'production' ? 100 : 25,
+      query_timeout: 30000,
+      allowExitOnIdle: false,
+    }
+  : {
+      host: process.env.DB_HOST,
+      port: Number.parseInt(process.env.DB_PORT, 10) || 5432,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      ssl: sslConfig,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: process.env.NODE_ENV === 'production' ? 100 : 25,
+      query_timeout: 30000,
+      allowExitOnIdle: false,
+    };
 
-// Log connection attempt details (masking password)
-logger.info(`Initializing database pool: ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database} (SSL: ${!!dbConfig.ssl})`);
+// Log connection attempt details
+if (hasDatabaseUrl) {
+  logger.info(`Initializing database pool with DATABASE_URL (SSL: ${!!sslConfig})`);
+} else {
+  logger.info(`Initializing database pool: ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database} (SSL: ${!!sslConfig})`);
+}
 
 pool = new Pool(dbConfig);
 
@@ -50,7 +64,6 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   logger.error('Unexpected error on idle client', err);
-  // Removed process.exit(-1) to prevent aggressive crashes on minor network blips
 });
 
 export const query = async (text, params) => {
@@ -89,5 +102,3 @@ export const testConnection = async () => {
     throw error;
   }
 };
-
-
