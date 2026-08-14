@@ -25,7 +25,7 @@ const metaForRole = (role: SwitchableRole): RoleMeta => {
     case 'seller':
       return { label: 'Seller', icon: Store };
     case 'creator':
-      return { label: 'Ambassador', icon: Megaphone };
+      return { label: 'Creator', icon: Megaphone };
     case 'buyer':
     default:
       return { label: 'Buyer', icon: ShoppingBag };

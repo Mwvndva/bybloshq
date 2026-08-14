@@ -17,7 +17,7 @@ const NativeAppHome = () => (
 
     <Link to="/creator/login" className="absolute right-5 top-5">
       <Button className="h-7 rounded-full border border-white/15 bg-white/[0.06] px-3 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm hover:bg-white/10">
-        Ambassador
+        Creator
       </Button>
     </Link>
     <main className="flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)]">
