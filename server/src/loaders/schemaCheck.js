@@ -430,39 +430,47 @@ export const verifyRequiredIndexes = async () => {
                 ADD COLUMN IF NOT EXISTS custom_production_reminder_sent_at TIMESTAMP WITH TIME ZONE;
         `);
 
+        // 9. Drop unused legacy clients table
+        await pool.query('DROP TABLE IF EXISTS clients CASCADE;');
+
         logger.info('[SCHEMA-CHECK] Comprehensive app schema auto-heal verified.');
     } catch (err) {
         logger.warn('[SCHEMA-CHECK] Comprehensive schema auto-heal warning:', err.message);
     }
 
-    // Auto-seed/verify admin user credentials
+    // Auto-seed/verify admin, marketing, and logistics credentials
     try {
-        const adminEmail = (process.env.ADMIN_EMAIL || 'admin@bybloshq.space').toLowerCase().trim();
-        const adminPassword = process.env.ADMIN_PASSWORD || '14253553805';
         const bcrypt = (await import('bcrypt')).default;
-        const passwordHash = await bcrypt.hash(adminPassword, 12);
+        const defaultAccounts = [
+            { email: (process.env.ADMIN_EMAIL || 'admin@bybloshq.space').toLowerCase().trim(), password: process.env.ADMIN_PASSWORD || '14253553805', role: 'admin' },
+            { email: 'adminmarketing@bybloshq.space', password: '14253553805', role: 'marketing' },
+            { email: 'mzigoego@gmail.com', password: '123456789', role: 'logistics' }
+        ];
 
-        const checkRes = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1', [adminEmail]);
-        if (checkRes.rows.length > 0) {
-            await pool.query(`
-                UPDATE users
-                SET password_hash = $1,
-                    role = 'admin',
-                    is_verified = true,
-                    is_active = true,
-                    updated_at = NOW()
-                WHERE LOWER(email) = $2
-            `, [passwordHash, adminEmail]);
-            logger.info(`[SCHEMA-CHECK] Existing admin user updated for ${adminEmail}`);
-        } else {
-            await pool.query(`
-                INSERT INTO users (email, password_hash, role, is_verified, is_active, created_at, updated_at)
-                VALUES ($1, $2, 'admin', true, true, NOW(), NOW())
-            `, [adminEmail, passwordHash]);
-            logger.info(`[SCHEMA-CHECK] New admin user created for ${adminEmail}`);
+        for (const account of defaultAccounts) {
+            const passwordHash = await bcrypt.hash(account.password, 12);
+            const checkRes = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1', [account.email]);
+            if (checkRes.rows.length > 0) {
+                await pool.query(`
+                    UPDATE users
+                    SET password_hash = $1,
+                        role = $2,
+                        is_verified = true,
+                        is_active = true,
+                        updated_at = NOW()
+                    WHERE LOWER(email) = $3
+                `, [passwordHash, account.role, account.email]);
+                logger.info(`[SCHEMA-CHECK] Existing account updated for ${account.email} (${account.role})`);
+            } else {
+                await pool.query(`
+                    INSERT INTO users (email, password_hash, role, is_verified, is_active, created_at, updated_at)
+                    VALUES ($1, $2, $3, true, true, NOW(), NOW())
+                `, [account.email, passwordHash, account.role]);
+                logger.info(`[SCHEMA-CHECK] New account created for ${account.email} (${account.role})`);
+            }
         }
     } catch (err) {
-        logger.error('[SCHEMA-CHECK] Admin auto-seed ERROR:', err);
+        logger.error('[SCHEMA-CHECK] Credentials auto-seed ERROR:', err);
     }
 
     const failures = [];

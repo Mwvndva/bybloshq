@@ -58,9 +58,9 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
               <MailPlus className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white">Invite Ambassadors</h3>
+              <h3 className="text-xl font-black text-white">Invite Creators</h3>
               <p className="text-white/60 text-xs sm:text-sm">
-                Give influencers an ambassador link for your shop. They earn your chosen commission after completed sales.
+                Give influencers a creator link for your shop. They earn your chosen commission after completed sales.
               </p>
             </div>
           </div>
@@ -69,10 +69,10 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
         <div className="rounded-2xl border border-yellow-400/25 bg-yellow-400/[0.08] p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: 'var(--theme-accent, #f5c518)' }}>Ambassador commission</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: 'var(--theme-accent, #f5c518)' }}>Creator commission</p>
               <h4 className="mt-1 text-lg font-black text-white">{creatorCommissionLabel} per completed sale</h4>
               <p className="mt-1 text-xs font-medium text-white/60 sm:text-sm">
-                This is the cut ambassadors earn from sales they bring to your shop. Default is 1%; you can raise it before inviting ambassadors.
+                This is the cut creators earn from sales they bring to your shop. Default is 1%; you can raise it before inviting creators.
               </p>
             </div>
             {isEditing ? (

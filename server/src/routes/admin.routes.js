@@ -72,9 +72,6 @@ router.get('/metrics/financial', adminController.getDashboardStats);
 router.get('/metrics/financial/monthly', adminController.getMonthlyMetrics);
 router.get('/payment-provider/balances', adminController.getPaymentProviderBalances);
 
-// Clients management
-router.get('/clients', adminController.getAllClients);
-
 // User management (Delete/Block)
 router.delete('/users/:id', validate(V.deleteUser), adminController.deleteUser);
 

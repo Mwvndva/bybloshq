@@ -41,7 +41,7 @@ export default function CreatorForgotPassword() {
               <span>Back</span>
             </Button>
             <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Ambassador Portal</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Creator Portal</h1>
             </div>
             <div className="flex-1" aria-hidden="true" />
           </div>
@@ -70,7 +70,7 @@ export default function CreatorForgotPassword() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Ambassador program</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Creator program</p>
                 <h1 className="text-3xl font-black tracking-tight">Forgot password?</h1>
                 <p className="text-sm font-medium leading-6 text-white/55">
                   Enter your account email and we&apos;ll send you a link to set a new password.
