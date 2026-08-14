@@ -63,7 +63,7 @@ export default function CreatorResetPassword() {
               <span>Back</span>
             </Button>
             <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Ambassador Portal</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Creator Portal</h1>
             </div>
             <div className="flex-1" aria-hidden="true" />
           </div>
@@ -80,7 +80,7 @@ export default function CreatorResetPassword() {
               <Lock className="h-6 w-6 text-yellow-300" />
             </span>
             <h1 className="text-3xl font-black tracking-tight">Set a new password</h1>
-            <p className="text-sm font-medium leading-6 text-white/55">Choose a strong password for your ambassador account.</p>
+            <p className="text-sm font-medium leading-6 text-white/55">Choose a strong password for your creator account.</p>
           </div>
 
           <div className="relative">
