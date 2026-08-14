@@ -212,6 +212,23 @@ export default async (app) => {
         });
     });
 
+    // Root health check endpoints for cloud monitoring and keep-alive (UptimeRobot, Render, Kubernetes)
+    app.get(['/health', '/api/health', '/ping'], async (req, res) => {
+        try {
+            res.status(200).json({
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                uptime: process.uptime()
+            });
+        } catch {
+            res.status(200).send('OK');
+        }
+    });
+
+    app.get('/', (req, res) => {
+        res.status(200).json({ status: 'ok', message: 'Byblos API is operational' });
+    });
+
     // 7. Routes
     app.use(handleSocialCrawlerSeo);
     app.use('/', seoRoutes);
