@@ -88,7 +88,7 @@ const NewAdminDashboard = () => {
   const statsCards: StatsCardProps[] = [
     {
       title: 'Products',
-      value: dashboardState.analytics.totalProducts.toLocaleString(),
+      value: (dashboardState.analytics.totalProducts || 0).toLocaleString(),
       icon: <Package className="h-4 w-4 text-orange-500" />,
       description: `${dashboardState.analytics.lowStockProducts || 0} low stock`,
       trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.products ?? 0)
@@ -122,16 +122,16 @@ const NewAdminDashboard = () => {
     },
     {
       title: 'Sales',
-      value: `KSh ${dashboardState.financialMetrics.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `KSh ${(dashboardState.financialMetrics?.totalSales || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-green-600" />,
-      description: `${dashboardState.financialMetrics.totalOrders} orders`,
+      description: `${dashboardState.financialMetrics?.totalOrders || 0} orders`,
       trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.revenue ?? 0)
         ? dashboardState.analytics.monthlyGrowth?.revenue ?? 0
         : null
     },
     {
       title: 'Commission',
-      value: `KSh ${dashboardState.financialMetrics.totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `KSh ${(dashboardState.financialMetrics?.totalCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-yellow-600" />,
       description: 'Platform earnings',
       trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.revenue ?? 0)
@@ -140,9 +140,9 @@ const NewAdminDashboard = () => {
     },
     {
       title: 'Refunds',
-      value: `KSh ${dashboardState.financialMetrics.totalRefunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `KSh ${(dashboardState.financialMetrics?.totalRefunds || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-red-600" />,
-      description: `${dashboardState.financialMetrics.totalRefundRequests} completed`,
+      description: `${dashboardState.financialMetrics?.totalRefundRequests || 0} completed`,
       trend: null
     },
     {
