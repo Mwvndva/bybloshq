@@ -23,7 +23,7 @@ export const logoutLogisticsPartner = async (req, res, next) => {
         res.clearCookie('jwt', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            sameSite: 'lax',
             path: '/',
             domain: process.env.COOKIE_DOMAIN || undefined
         });
