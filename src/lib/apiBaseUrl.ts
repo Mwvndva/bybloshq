@@ -9,13 +9,14 @@ export const buildApiBaseUrl = () => {
   const envApiUrl = import.meta.env.VITE_API_URL;
 
   if (isNativeApp()) {
-    const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || envApiUrl || 'https://byblosafrica.site';
+    const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || envApiUrl || 'https://www.byblosafrica.site/api';
     return ensureApiSuffix(nativeApiUrl);
   }
 
-  if (import.meta.env.DEV && !envApiUrl) {
+  // In web browsers (dev & production), relative '/api' routes through the same-origin reverse proxy
+  if (!envApiUrl || envApiUrl === '/api' || envApiUrl.startsWith('/')) {
     return '/api';
   }
 
-  return ensureApiSuffix(envApiUrl || '/api');
+  return ensureApiSuffix(envApiUrl);
 };
