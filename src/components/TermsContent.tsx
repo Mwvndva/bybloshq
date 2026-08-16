@@ -300,23 +300,20 @@ export function TermsContent() {
                 Unresolved disputes shall be referred to binding arbitration under the Arbitration Act, 1995 (Kenya), administered by the NCIA, with a sole arbitrator appointed by agreement or, failing agreement, by the NCIA. Proceedings shall be conducted in English in Nairobi, Kenya.
               </Sub>
 
-              <Sub title="8.4 Small Claims">
-                Notwithstanding clause 8.3, either party may bring a claim in the Small Claims Court for disputes not exceeding KES 1,000,000.
+              <Sub title="8.1 Informal Negotiation">
+                Parties agree to first attempt amicable resolution within 14 days of written notice of a dispute.
               </Sub>
-
-              <Sub title="8.5 Class Action Waiver">
-                You irrevocably waive any right to participate in a class action, class arbitration, or representative proceeding against Byblos. All disputes must be brought individually.
+              <Sub title="8.2 Arbitration">
+                Any unresolved dispute shall be referred to and finally resolved by arbitration under the Arbitration Act, 1995 (Kenya) in Nairobi, conducted in English.
               </Sub>
             </section>
 
             {/* ── 9. AMENDMENTS ── */}
             <section id="section-amendments" className="mb-12">
               <SectionHeading number="9" title="AMENDMENTS" />
-
-              <Sub title="9.1 Right to Amend">
-                Byblos reserves the right to amend these Terms at any time. Changes will be published on the platform and users notified via email or in-app notification at least 14 days before taking effect, except where immediate changes are required by law.
+              <Sub title="9.1 Notice of Changes">
+                We may revise these Terms from time to time. Material updates will be notified via email or platform announcement.
               </Sub>
-
               <Sub title="9.2 Continued Use">
                 Continued use of the platform after the effective date of any amendment constitutes acceptance of the updated Terms. If you do not accept the new Terms, you must immediately deactivate your account.
               </Sub>
@@ -325,7 +322,7 @@ export function TermsContent() {
             {/* ── 10. GOVERNING LAW ── */}
             <section id="section-governing" className="mb-12">
               <SectionHeading number="10" title="GOVERNING LAW & JURISDICTION" />
-              <div className="text-gray-700 space-y-3">
+              <div className="text-slate-300 space-y-3">
                 <p>These Terms are governed by and construed in accordance with the Laws of Kenya, including but not limited to:</p>
                 <BulletList items={[
                   "The Constitution of Kenya, 2010",
@@ -338,10 +335,10 @@ export function TermsContent() {
                   "The Copyright Act, 2001 and the Industrial Property Act, 2001"
                 ]} />
                 <p>Any court proceedings not subject to arbitration shall be brought exclusively before the courts of Kenya, and each party irrevocably submits to the personal jurisdiction of such courts.</p>
-                <div className="mt-6 p-4 bg-[#1a1a1a] text-white text-xs rounded">
+                <div className="mt-6 p-4 bg-white/[0.04] border border-white/10 text-white text-xs rounded-xl">
                   <p className="text-[#c9a84c] font-semibold mb-1 uppercase tracking-widest text-[10px]">Legal Contact</p>
                   <p>📧 bybloshqke@zohomail.com</p>
-                  <p className="mt-2 text-gray-400">ByblosHQ — Nairobi, Kenya &nbsp;|&nbsp; Version 2.0, January 2026</p>
+                  <p className="mt-2 text-slate-400">ByblosHQ — Nairobi, Kenya &nbsp;|&nbsp; Version 2.0, January 2026</p>
                 </div>
               </div>
             </section>
@@ -353,21 +350,20 @@ const SectionHeading = ({ number, title }: { number: string; title: string }) =>
   <div className="mb-5 pb-3 border-b-2 border-[#c9a84c]">
     <div className="flex items-baseline gap-3">
       <span className="text-[#c9a84c] font-bold text-sm">{number}.</span>
-      <h2 className="text-base font-bold text-[#1a1a1a] tracking-wide uppercase">{title}</h2>
+      <h2 className="text-base font-bold text-white tracking-wide uppercase">{title}</h2>
     </div>
   </div>
 );
 
 const Sub = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="mb-5">
-    <h3 className="font-semibold text-[#1a1a1a] mb-2 text-[13px]">{title}</h3>
-    <div className="text-[#1a1a1a] leading-relaxed">{children}</div>
+    <h3 className="font-semibold text-white/95 mb-2 text-[13px]">{title}</h3>
+    <div className="text-slate-300 leading-relaxed">{children}</div>
   </div>
 );
 
 const BulletList = ({ items }: { items: string[] }) => (
-  <ul className="list-disc pl-5 mt-2 space-y-1.5 text-[#1a1a1a]">
+  <ul className="list-disc pl-5 mt-2 space-y-1.5 text-slate-300">
     {items.map((item, i) => <li key={i}>{item}</li>)}
   </ul>
 );
-
