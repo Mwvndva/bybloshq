@@ -29,7 +29,7 @@ router.post('/logout', async (req, res) => {
     const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
         expires: new Date(0),
         path: '/'
     };
@@ -68,9 +68,12 @@ router.get('/products/seller/:sellerId', adminController.getSellerProducts);
 
 // Metrics
 router.get('/metrics/monthly', adminController.getMonthlyMetrics);
-router.get('/metrics/financial', adminController.getDashboardStats);
-router.get('/metrics/financial/monthly', adminController.getMonthlyMetrics);
+
+// Payment provider health
 router.get('/payment-provider/balances', adminController.getPaymentProviderBalances);
+
+// Clients management
+router.get('/clients', adminController.getAllClients);
 
 // User management (Delete/Block)
 router.delete('/users/:id', validate(V.deleteUser), adminController.deleteUser);
