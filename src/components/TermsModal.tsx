@@ -34,7 +34,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-        className="max-w-5xl sm:h-[92dvh] h-[100dvh] w-full sm:w-[95vw] flex flex-col p-0 overflow-hidden rounded-none sm:rounded-3xl bg-[#faf9f6] dark:bg-[#faf9f6] text-[#1a1a1a] dark:text-[#1a1a1a] border border-[#d4c9a8] dark:border-[#d4c9a8] shadow-2xl [&>button]:text-white/80 [&>button]:hover:text-white [&>button]:hover:bg-white/10"
+        className="max-w-5xl sm:h-[92dvh] h-[100dvh] w-full sm:w-[95vw] flex flex-col p-0 overflow-hidden rounded-none sm:rounded-3xl bg-[#141414] dark:bg-[#141414] text-white dark:text-white border border-white/10 dark:border-white/10 shadow-2xl [&>button]:text-white/80 [&>button]:hover:text-white [&>button]:hover:bg-white/10"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Byblos Terms &amp; Conditions</DialogTitle>
@@ -44,7 +44,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
         </DialogHeader>
 
         {/* Header */}
-        <div className="flex-shrink-0 bg-[#1a1a1a] text-white px-5 sm:px-8 py-5 sm:py-6 pr-14 sm:pr-16">
+        <div className="flex-shrink-0 bg-[#1a1a1a] text-white px-5 sm:px-8 py-5 sm:py-6 pr-14 sm:pr-16 border-b border-white/10">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-[10px] tracking-[0.3em] text-[#c9a84c] uppercase mb-1">Legal Documentation</p>
@@ -61,7 +61,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
               </div>
             </div>
           </div>
-          <div className="mt-3.5 p-2.5 bg-[#c9a84c]/10 border-l-2 border-[#c9a84c] text-[10px] sm:text-xs text-[#e8d9a0] leading-normal">
+          <div className="mt-3.5 p-2.5 bg-[#c9a84c]/10 border-l-2 border-[#c9a84c] text-[10px] sm:text-xs text-[#e8d9a0] leading-normal rounded-r">
             <strong>IMPORTANT:</strong> By using Byblos, you agree to be bound by these Terms. If you do not agree, cease all use immediately.
           </div>
         </div>
@@ -69,16 +69,16 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
         {/* Body */}
         <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
           {/* Nav - Horizontal on mobile, Sidebar on desktop */}
-          <nav className="flex-shrink-0 w-full sm:w-52 bg-[#1a1a1a] border-b sm:border-b-0 border-white/5 flex sm:flex-col overflow-x-auto sm:overflow-y-auto py-2 sm:py-6 px-4 no-scrollbar">
-            <p className="hidden sm:block text-[10px] tracking-widest text-gray-500 uppercase mb-4 px-2">Sections</p>
+          <nav className="flex-shrink-0 w-full sm:w-52 bg-[#181818] border-b sm:border-b-0 sm:border-r border-white/10 flex sm:flex-col overflow-x-auto sm:overflow-y-auto py-2 sm:py-6 px-4 no-scrollbar">
+            <p className="hidden sm:block text-[10px] tracking-widest text-gray-400 uppercase mb-4 px-2">Sections</p>
             {sections.map((s) => (
               <button
                 key={s.id}
                 onClick={() => scrollTo(s.id)}
-                className={`flex-shrink-0 sm:w-full text-left text-[11px] sm:text-xs px-3 py-1.5 sm:py-2.5 rounded mr-2 sm:mr-0 sm:mb-1 transition-all duration-150 leading-tight whitespace-nowrap sm:whitespace-normal
+                className={`flex-shrink-0 sm:w-full text-left text-[11px] sm:text-xs px-3 py-1.5 sm:py-2.5 rounded-lg mr-2 sm:mr-0 sm:mb-1 transition-all duration-150 leading-tight whitespace-nowrap sm:whitespace-normal
                   ${activeSection === s.id
-                    ? 'bg-[#c9a84c] text-[#1a1a1a] font-semibold'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                    ? 'bg-[#c9a84c] text-[#1a1a1a] font-bold shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
               >
                 {s.label}
@@ -88,7 +88,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
 
           {/* Content */}
           <div
-            className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8 text-[13px] sm:text-[13.5px] text-gray-800 leading-relaxed"
+            className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8 text-[13px] sm:text-[13.5px] text-slate-300 bg-[#0d0d0d] leading-relaxed"
             onScroll={(e) => {
               const container = e.currentTarget;
               for (const s of sections) {
@@ -102,14 +102,14 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-[#d4c9a8] bg-[#f5f2ea] px-8 py-4 flex items-center justify-between">
-          <p className="text-xs text-gray-500 italic">
-            By clicking "I Agree" or using Byblos, you confirm you have read and accepted all terms above.
+        <div className="flex-shrink-0 border-t border-white/10 bg-[#161616] px-5 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-slate-400 italic">
+            By clicking &quot;I Agree&quot; or using Byblos, you confirm you have read and accepted all terms above.
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-3 w-full sm:w-auto justify-end">
             <button
               onClick={onClose}
-              className="px-5 py-2 text-xs border border-gray-300 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              className="px-5 py-2 text-xs border border-white/20 text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors font-medium"
             >
               Decline
             </button>
@@ -118,7 +118,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
                 if (onAccept) onAccept();
                 onClose();
               }}
-              className="px-6 py-2 text-xs bg-[#1a1a1a] text-white hover:bg-[#c9a84c] hover:text-[#1a1a1a] font-semibold rounded transition-colors tracking-wide"
+              className="px-6 py-2 text-xs bg-yellow-400 hover:bg-yellow-300 text-black font-bold rounded-xl shadow-lg transition-colors tracking-wide"
             >
               I Agree
             </button>
