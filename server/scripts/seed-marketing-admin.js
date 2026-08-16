@@ -1,6 +1,6 @@
 /**
  * seed-marketing-admin.js
- * Seeds the marketing admin user with the correct bcrypt password hash.
+ * Seeds the marketing admin user with the env-provided email/password.
  * Run: node scripts/seed-marketing-admin.js
  */
 import bcrypt from 'bcrypt'
@@ -20,11 +20,16 @@ if (process.env.NODE_ENV === 'production') {
     logger.warn('⚠️ WARNING: Running seed-marketing-admin in PRODUCTION environment! This is NOT RECOMMENDED.');
 }
 
-const MARKETING_EMAIL = 'adminmarketing@bybloshq.space'
-const MARKETING_PASSWORD = process.env.MARKETING_ADMIN_PASSWORD
+const MARKETING_EMAIL = process.env.MARKETING_EMAIL
+const MARKETING_PASSWORD = process.env.MARKETING_PASSWORD
+
+if (!MARKETING_EMAIL) {
+    console.error('❌ Error: MARKETING_EMAIL environment variable is not set!')
+    process.exit(1)
+}
 
 if (!MARKETING_PASSWORD) {
-    console.error('❌ Error: MARKETING_ADMIN_PASSWORD environment variable is not set!')
+    console.error('❌ Error: MARKETING_PASSWORD environment variable is not set!')
     process.exit(1)
 }
 
@@ -56,7 +61,7 @@ try {
     console.log(`   Email: ${user.email}`)
     console.log(`   Role:  ${user.role}`)
     console.log('')
-    console.log('🎉 Done. Login at /marketing/login.')
+    console.log('🎉 Done. Login at /admin/marketing/login.')
 } catch (err) {
     console.error('❌ Seeding failed:', err.message)
     process.exit(1)

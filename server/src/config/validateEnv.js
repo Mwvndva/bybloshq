@@ -5,7 +5,12 @@ const REQUIRED_ENV_VARS = [
     'BACKEND_URL',
     'NODE_ENV',
     'EMAIL_FROM_EMAIL',
-    'MARKETING_EMAIL'
+    'ADMIN_EMAIL',
+    'ADMIN_PASSWORD',
+    'MARKETING_EMAIL',
+    'MARKETING_PASSWORD',
+    'MZIGO_EMAIL',
+    'MZIGO_PASSWORD'
 ];
 
 
@@ -147,7 +152,7 @@ export function validateEnvironment() {
     console.log(`Backend URL: ${process.env.BACKEND_URL}`);
     console.log(`Payment Provider: ${paymentProvider} (M-Pesa)`);
     console.log(`Payout Provider: ${payoutProvider}`);
-    console.log(`Courier WhatsApp: ${process.env.COURIER_WHATSAPP_NUMBER || '0748137819'}`);
+    console.log(`Courier WhatsApp: ${process.env.COURIER_WHATSAPP_NUMBER || 'not configured'}`);
     console.log(process.env.REDIS_URL ? 'Redis: Configured' : 'Redis: Not configured');
     console.log('');
 }

@@ -26,7 +26,7 @@ export async function findAllWithSeller({ status } = {}) {
       COALESCE(NULLIF(s.shop_name, ''), NULLIF(s.full_name, ''), NULLIF(CONCAT_WS(' ', c.first_name, c.last_name), ''), NULLIF(b.full_name, ''), NULLIF(wr.mpesa_name, ''), 'Withdrawal user') AS entity_name,
       COALESCE(s.email, c.email, b.email) AS entity_email,
       COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone,
-      COALESCE(s.balance, c.balance, b.refunds) AS current_balance
+      COALESCE(s.balance, c.balance, b.refunds, 0) AS current_balance
     FROM withdrawal_requests wr
     LEFT JOIN sellers s ON wr.seller_id = s.id
     LEFT JOIN creators c ON wr.creator_id = c.id
@@ -51,7 +51,7 @@ export async function findByIdWithSeller(id) {
   const sql = `
     SELECT wr.*,
            COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone,
-           COALESCE(s.balance, c.balance, b.refunds) AS entity_balance
+           COALESCE(s.balance, c.balance, b.refunds, 0) AS entity_balance
     FROM withdrawal_requests wr
     LEFT JOIN sellers s ON wr.seller_id = s.id
     LEFT JOIN creators c ON wr.creator_id = c.id
@@ -82,7 +82,7 @@ export async function findByIdWithSellerForUpdate(id, executor = DEFAULT_EXECUTO
   const sql = `
     SELECT wr.*,
            COALESCE(s.whatsapp_number, c.whatsapp_number, c.mpesa_number, b.whatsapp_number, b.mobile_payment) AS entity_phone,
-           COALESCE(s.balance, c.balance, b.refunds) AS entity_balance
+           COALESCE(s.balance, c.balance, b.refunds, 0) AS entity_balance
     FROM withdrawal_requests wr
     LEFT JOIN sellers s ON wr.seller_id = s.id
     LEFT JOIN creators c ON wr.creator_id = c.id

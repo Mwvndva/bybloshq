@@ -95,7 +95,7 @@ export function useAdminDashboardStatsQuery(enabled = true) {
 export function useAdminClientsQuery(enabled = true) {
   return useQuery({
     queryKey: adminQueryKeys.clients(),
-    queryFn: async () => [],
+    queryFn: adminApi.getClients,
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     enabled,

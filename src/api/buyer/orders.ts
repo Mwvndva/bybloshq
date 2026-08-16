@@ -21,13 +21,8 @@ export async function getOrders(): Promise<ApiOrder[]> {
       } as ApiOrder;
     });
 
-    if (import.meta.env.DEV) {
-      console.log('=== TRANSFORMED ORDERS ===', transformedOrders.length);
-    }
-
     return transformedOrders;
   } catch (error) {
-    console.error('Error fetching orders:', error);
     throw error;
   }
 }
@@ -37,7 +32,6 @@ export async function getOrder(orderId: string): Promise<ApiOrder> {
     const response = await buyerApiInstance.get<ApiResponse<ApiOrder>>(`/orders/${orderId}`);
     return response.data.data;
   } catch (error) {
-    console.error(`Error fetching order ${orderId}:`, error);
     throw error;
   }
 }
@@ -48,7 +42,6 @@ export async function cancelOrder(orderId: string): Promise<{ success: boolean; 
     return { success: true };
   } catch (error) {
     const err = error as ApiError;
-    console.error(`Error cancelling order ${orderId}:`, err);
     return {
       success: false,
       message: err.response?.data?.message || 'Failed to cancel order'
@@ -58,8 +51,6 @@ export async function cancelOrder(orderId: string): Promise<{ success: boolean; 
 
 export async function confirmOrderReceipt(orderId: string): Promise<{ success: boolean; message?: string }> {
   try {
-    console.log(`Sending confirm receipt request for order ${orderId}...`);
-
     const idempotencyKey = `confirm-receipt-${orderId}`;
 
     await buyerApiInstance.patch(`/orders/${orderId}/confirm-receipt`, {}, {
@@ -72,8 +63,6 @@ export async function confirmOrderReceipt(orderId: string): Promise<{ success: b
     return { success: true };
   } catch (error) {
     const err = error as ApiError;
-    console.error(`Error confirming receipt for order ${orderId}:`, err);
-
     let errorMessage = 'Failed to confirm order receipt';
 
     if (err.code === 'ECONNABORTED') {
@@ -121,24 +110,20 @@ export async function downloadDigitalProduct(orderId: string, productId: string,
     window.URL.revokeObjectURL(url);
   } catch (error) {
     const err = error as ApiError;
-    console.error('Error downloading digital product:', err);
     throw new Error(err.response?.data?.message || 'Failed to download digital product');
   }
 }
 
 export async function markOrderAsCollected(orderId: string): Promise<{ success: boolean; message?: string }> {
   try {
-    console.log(`Sending mark as collected request for order ${orderId}...`);
     await buyerApiInstance.post(`/buyers/orders/${orderId}/collected`);
     return { success: true };
   } catch (error) {
     const err = error as ApiError;
-    console.error(`Error marking order ${orderId} as collected:`, err);
     return {
       success: false,
       message: err.response?.data?.message || 'Failed to mark order as collected'
     };
   }
 }
-
 
