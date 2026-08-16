@@ -135,15 +135,15 @@ export function validateEnvironment() {
         missingOptional.forEach(v => console.warn(`- ${v}`));
     }
 
-    const hasEmail = !!(process.env.EMAIL_HOST || process.env.SMTP_HOST);
+    const hasEmail = !!(process.env.RESEND_API_KEY || process.env.EMAIL_HOST || process.env.SMTP_HOST);
     if (!hasEmail) {
         if (isProduction) {
-            console.error('CRITICAL: EMAIL_HOST or SMTP_HOST must be set in production');
+            console.error('CRITICAL: RESEND_API_KEY (or EMAIL_HOST/SMTP_HOST) must be set in production');
             process.exit(1);
         }
-        console.warn('Email is not configured (EMAIL_HOST or SMTP_HOST required for email notifications)');
+        console.warn('Email is not configured (RESEND_API_KEY or SMTP host required for email notifications)');
     } else {
-        console.log(`Email configured via ${process.env.EMAIL_HOST ? 'EMAIL_HOST' : 'SMTP_HOST'}`);
+        console.log(`Email configured via ${process.env.RESEND_API_KEY ? 'Resend HTTP API' : (process.env.EMAIL_HOST ? 'EMAIL_HOST' : 'SMTP_HOST')}`);
     }
 
     console.log('Environment validation passed');
