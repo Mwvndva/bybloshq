@@ -322,9 +322,14 @@ class AuthService {
             termsAccepted: true // We already validated it above
         });
 
-        // 3. Send verification email
+        // 3. Send verification email (non-blocking)
         const { sendVerificationEmail } = await import('../shared/utils/email.js');
-        await sendVerificationEmail(normalizedEmail, rawToken, type);
+        sendVerificationEmail(normalizedEmail, rawToken, type).catch(err => {
+            logger.error('[AUTH] Failed to send registration verification email:', {
+                email: normalizedEmail,
+                error: err.message
+            });
+        });
 
         return { status: 'pending_verification', email: normalizedEmail };
     }
