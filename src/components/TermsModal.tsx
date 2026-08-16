@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { TermsContent } from './TermsContent';
 
@@ -34,22 +34,29 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-        className="max-w-5xl sm:h-[92dvh] h-[100dvh] w-full sm:w-[95vw] flex flex-col p-0 overflow-hidden bg-[#faf9f6] border border-[#d4c9a8]"
+        className="max-w-5xl sm:h-[92dvh] h-[100dvh] w-full sm:w-[95vw] flex flex-col p-0 overflow-hidden rounded-none sm:rounded-3xl bg-[#faf9f6] dark:bg-[#faf9f6] text-[#1a1a1a] dark:text-[#1a1a1a] border border-[#d4c9a8] dark:border-[#d4c9a8] shadow-2xl [&>button]:text-white/80 [&>button]:hover:text-white [&>button]:hover:bg-white/10"
       >
+        <DialogHeader className="sr-only">
+          <DialogTitle>Byblos Terms &amp; Conditions</DialogTitle>
+          <DialogDescription>
+            Official Byblos terms, conditions, privacy policy, and user agreements.
+          </DialogDescription>
+        </DialogHeader>
+
         {/* Header */}
-        <div className="flex-shrink-0 bg-[#1a1a1a] text-white px-5 sm:px-8 py-5 sm:py-6">
+        <div className="flex-shrink-0 bg-[#1a1a1a] text-white px-5 sm:px-8 py-5 sm:py-6 pr-14 sm:pr-16">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-[10px] tracking-[0.3em] text-[#c9a84c] uppercase mb-1">Legal Documentation</p>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight leading-tight" style={{ fontFamily: "'Georgia', serif" }}>
-                BYBLOS TERMS & CONDITIONS
+                BYBLOS TERMS &amp; CONDITIONS
               </h1>
               <p className="text-[10px] sm:text-xs text-gray-400 mt-1.5 sm:mt-2">
                 Effective Date: Jan 2026 &nbsp;|&nbsp; Ver 2.0 &nbsp;|&nbsp; ByblosHQ
               </p>
             </div>
-            <div className="hidden sm:block text-right">
-              <div className="inline-block border border-[#c9a84c] px-3 py-1 text-[10px] tracking-widest text-[#c9a84c] uppercase">
+            <div className="hidden sm:block text-right mr-6 sm:mr-8">
+              <div className="inline-block border border-[#c9a84c] px-3 py-1 text-[10px] tracking-widest text-[#c9a84c] uppercase rounded">
                 Legally Binding
               </div>
             </div>
