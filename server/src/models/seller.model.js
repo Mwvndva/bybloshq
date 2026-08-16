@@ -360,83 +360,11 @@ export const updateSeller = async (id, updates) => {
 
 
 export const becomeClient = async (sellerId, userId) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1. Check if relationship already exists
-    const check = await client.query(
-      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
-      [sellerId, userId]
-    );
-
-    if (check.rowCount > 0) {
-      // Already a client, just return current count or do nothing
-      await client.query('ROLLBACK');
-      const countResult = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
-      return { clientCount: countResult.rows[0]?.client_count || 0, alreadyClient: true };
-    }
-
-    // 2. Insert into seller_clients
-    await client.query(
-      'INSERT INTO seller_clients (seller_id, user_id) VALUES ($1, $2)',
-      [sellerId, userId]
-    );
-
-    // 3. Increment client_count in sellers
-    const updateResult = await client.query(
-      'UPDATE sellers SET client_count = COALESCE(client_count, 0) + 1 WHERE id = $1 RETURNING client_count',
-      [sellerId]
-    );
-
-    await client.query('COMMIT');
-    return { clientCount: updateResult.rows[0].client_count, alreadyClient: false };
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+  return { clientCount: 0, alreadyClient: false };
 };
 
 export const removeClient = async (sellerId, userId) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1. Check if relationship exists
-    const check = await client.query(
-      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
-      [sellerId, userId]
-    );
-
-    if (check.rowCount === 0) {
-      // Not a client, nothing to remove
-      await client.query('ROLLBACK');
-      const countResult = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
-      return { clientCount: countResult.rows[0]?.client_count || 0, wasClient: false };
-    }
-
-    // 2. Remove from seller_clients
-    await client.query(
-      'DELETE FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
-      [sellerId, userId]
-    );
-
-    // 3. Decrement client_count in sellers
-    const updateResult = await client.query(
-      'UPDATE sellers SET client_count = GREATEST(COALESCE(client_count, 0) - 1, 0) WHERE id = $1 RETURNING client_count',
-      [sellerId]
-    );
-
-    await client.query('COMMIT');
-    return { clientCount: updateResult.rows[0].client_count, wasClient: true };
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+  return { clientCount: 0, wasClient: false };
 };
 
 export const findSellersByUserId = async (userId, options = {}) => {
@@ -458,14 +386,20 @@ export const findSellersByUserId = async (userId, options = {}) => {
       s.avatar_url AS "avatarUrl",
       s.theme,
       s.instagram_link AS "instagramLink",
-      s.client_count AS "clientCount",
+      0 AS "clientCount",
       COALESCE(w.total_wishlist_count, 0) AS "totalWishlistCount",
       COALESCE(w.total_wishlist_count, 0) AS "wishlistCount",
       COALESCE(k.knock_count, 0) AS "knockCount",
       s.created_at AS "createdAt",
       COUNT(*) OVER() AS "totalCount"
      FROM sellers s
-     JOIN seller_clients sc ON s.id = sc.seller_id
+     JOIN (
+       SELECT DISTINCT o.seller_id, MAX(o.created_at) as last_order_at
+       FROM product_orders o
+       JOIN buyers b ON o.buyer_id = b.id
+       WHERE b.user_id = $1
+       GROUP BY o.seller_id
+     ) buyer_sellers ON s.id = buyer_sellers.seller_id
      LEFT JOIN LATERAL (
        SELECT COUNT(wl.id)::int AS total_wishlist_count
        FROM products p
@@ -478,8 +412,7 @@ export const findSellersByUserId = async (userId, options = {}) => {
        WHERE sk.seller_id = s.id
          AND sk.created_at >= NOW() - INTERVAL '24 hours'
      ) k ON true
-     WHERE sc.user_id = $1
-     ORDER BY sc.created_at DESC, s.id ASC
+     ORDER BY buyer_sellers.last_order_at DESC, s.id ASC
      LIMIT $2 OFFSET $3`,
     [userId, pageSize, offset]
   );
