@@ -1,3 +1,4 @@
+import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -9,34 +10,37 @@ import logger from './logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Helper function to create transporter with retry logic
+// Lazy Resend client initialization
+let resendClient = null;
+const getResendClient = () => {
+  if (!resendClient && process.env.RESEND_API_KEY) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+};
+
+// Helper function to create transporter as fallback if RESEND_API_KEY is not set
 const createTransporter = () => {
-  // Map standard variable names to their values or fallback to alternative names
   const config = {
     host: process.env.EMAIL_HOST || process.env.SMTP_HOST,
     port: process.env.EMAIL_PORT || process.env.SMTP_PORT,
     user: process.env.EMAIL_USERNAME || process.env.SMTP_USER,
     pass: process.env.EMAIL_PASSWORD || process.env.SMTP_PASS,
-    fromEmail: process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_USER,
+    fromEmail: process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_USER || 'no-reply@byblosafrica.site',
     fromName: process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'Byblos'
   };
 
-  // Validate required environment variables
-  const requiredFields = ['host', 'port', 'user', 'pass', 'fromEmail'];
+  const requiredFields = ['host', 'port', 'user', 'pass'];
   const missingFields = requiredFields.filter(field => !config[field]);
 
   if (missingFields.length > 0) {
-    const errorMsg = `Missing required email configuration fields: ${missingFields.join(', ')}. ` +
-      `Checked both EMAIL_* and SMTP_* environment variables.`;
-    logger.error('Email Configuration Error', { missingFields });
-    throw new Error(errorMsg);
+    logger.warn('[EMAIL] Fallback SMTP configuration incomplete', { missingFields });
+    return null;
   }
 
-  // Parse port as number and handle secure flag
   const port = parseInt(config.port, 10);
   const secure = process.env.EMAIL_SECURE === 'true' || port === 465;
 
-  // Create transporter with connection pooling and timeout
   return nodemailer.createTransport({
     host: config.host,
     port,
@@ -45,29 +49,22 @@ const createTransporter = () => {
       user: config.user,
       pass: config.pass,
     },
-    pool: true, // use pooled connections
-    maxConnections: 5, // maximum number of connections in the pool
-    maxMessages: 100, // maximum number of messages to send through a single connection
-    socketTimeout: 60000, // 60 seconds socket timeout
-    connectionTimeout: 20000, // 20 seconds connection timeout
-    greetingTimeout: 30000, // 30 seconds to wait for greeting after connection
-    dnsTimeout: 10000, // 10 seconds DNS lookup timeout
-    debug: process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true',
-    logger: process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true',
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    socketTimeout: 30000,
+    connectionTimeout: 10000,
+    greetingTimeout: 15000,
+    dnsTimeout: 5000,
     tls: {
-      // Allow ignoring cert errors if EMAIL_IGNORE_CERT_ERRORS is set, 
-      // otherwise only fail on invalid certs in production
       rejectUnauthorized: process.env.EMAIL_IGNORE_CERT_ERRORS === 'true' ? false : (process.env.NODE_ENV === 'production'),
     },
   });
 };
 
-// Transporter will be lazily initialized in sendEmail
-let transporter;
+let transporter = null;
 
-// Email templates are read once per name and cached for the lifetime of the
-// process. EJS templates are not user-uploaded, so cache invalidation isn't
-// needed.
+// Email templates are read once per name and cached for the lifetime of the process
 const templateCache = new Map();
 const readTemplate = async (templateName, data) => {
   let template = templateCache.get(templateName);
@@ -95,113 +92,79 @@ const readTemplate = async (templateName, data) => {
   return ejs.render(template, data);
 };
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000; // 2 seconds
+export const sendEmail = async (options) => {
+  const fromName = process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'Byblos';
+  const fromEmail = process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_FROM || 'no-reply@byblosafrica.site';
+  const fromAddress = `"${fromName}" <${fromEmail}>`;
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  logger.info('[EMAIL] Preparing email dispatch', {
+    to: options.to,
+    subject: options.subject,
+    from: fromAddress
+  });
 
-export const sendEmail = async (options, retryCount = 0) => {
-  // Ensure we have a valid transporter
-  if (!transporter) {
+  // 1. Primary Transport: Resend HTTP API
+  const resend = getResendClient();
+  if (resend) {
     try {
-      transporter = createTransporter();
-    } catch (error) {
-      logger.error('Failed to create email transporter', { error: error.message });
-      throw new Error('Email service is not properly configured');
+      const payload = {
+        from: fromAddress,
+        to: Array.isArray(options.to) ? options.to : [options.to],
+        subject: options.subject,
+        html: options.html,
+        text: options.text || undefined,
+      };
+
+      if (options.attachments && options.attachments.length > 0) {
+        payload.attachments = options.attachments.map(att => ({
+          filename: att.filename,
+          content: att.content,
+          path: att.path
+        }));
+      }
+
+      const { data, error } = await resend.emails.send(payload);
+
+      if (error) {
+        logger.error('[EMAIL] Resend API error response:', { error, to: options.to });
+        throw new Error(`Resend API Error: ${error.message || JSON.stringify(error)}`);
+      }
+
+      logger.info('[EMAIL] Successfully sent email via Resend', { to: options.to, id: data?.id });
+      return data;
+    } catch (resendError) {
+      logger.error('[EMAIL] Resend send failure:', { error: resendError.message, to: options.to });
+      throw resendError;
     }
   }
 
+  // 2. Fallback Transport: Nodemailer SMTP
+  logger.warn('[EMAIL] RESEND_API_KEY not found, falling back to SMTP transporter');
+  if (!transporter) {
+    transporter = createTransporter();
+  }
+
+  if (!transporter) {
+    logger.warn('[EMAIL] Neither Resend nor SMTP is configured. Email skipped.', { to: options.to, subject: options.subject });
+    return { id: 'mock-id', skipped: true };
+  }
+
   try {
-    logger.info('Preparing to send email', {
-      attempt: retryCount + 1,
-      to: options.to,
-      subject: options.subject
-    });
-
-    const fromName = process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'Byblos';
-    const fromEmail = process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_USER;
-
     const mailOptions = {
-      from: `"${fromName}" <${fromEmail}>`,
+      from: fromAddress,
       to: options.to,
       subject: options.subject,
       text: options.text,
       html: options.html,
       attachments: options.attachments || [],
-      // Add message-id and other headers for better tracking
-      messageId: `<${Date.now()}@${process.env.EMAIL_DOMAIN || 'byblos.exchange'}>`,
-      headers: {
-        'X-Auto-Response-Suppress': 'OOF, AutoReply',
-        'Precedence': 'bulk'
-      }
     };
 
-    let isVerified = false;
-    try {
-      if (!isVerified) {
-        if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true') {
-          logger.debug('Verifying SMTP connection...');
-        }
-        await transporter.verify();
-        isVerified = true;
-      }
-    } catch (verifyError) {
-      logger.error('SMTP connection verification failed', {
-        message: verifyError.message,
-        code: verifyError.code
-      });
-      transporter = null; // Reset cached transporter so next attempt triggers createTransporter
-      isVerified = false;
-      throw new Error(`SMTP connection failed: ${verifyError.message}`);
-    }
-
-    try {
-      const info = await transporter.sendMail(mailOptions);
-      logger.info('Successfully sent email', { to: options.to, messageId: info.messageId });
-      return info;
-    } catch (sendError) {
-      logger.error('Error sending email', {
-        attempt: retryCount + 1,
-        error: sendError.message,
-        code: sendError.code
-      });
-
-      // If we have retries left, wait and try again
-      if (retryCount < MAX_RETRIES) {
-        logger.info('Retrying email delivery', { delay: RETRY_DELAY, nextAttempt: retryCount + 2 });
-        await delay(RETRY_DELAY);
-        return sendEmail(options, retryCount + 1);
-      }
-
-      // If we've exhausted retries, rethrow the error
-      throw new Error(`Failed to send email after ${MAX_RETRIES + 1} attempts: ${sendError.message}`);
-    }
-  } catch (error) {
-    logger.error('Fatal error in sendEmail', {
-      message: error.message,
-      retryCount,
-      to: options.to,
-      subject: options.subject
-    });
-
-    // If this is a connection error, we might want to recreate the transporter
-    if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
-      logger.warn('Connection error detected, recreating transporter...');
-      try {
-        transporter = createTransporter();
-        // If we have retries left, try again with the new transporter
-        if (retryCount < MAX_RETRIES) {
-          logger.info('Retrying with new transporter', { delay: RETRY_DELAY });
-          await delay(RETRY_DELAY);
-          return sendEmail(options, retryCount + 1);
-        }
-      } catch (transporterError) {
-        logger.error('Failed to recreate transporter', { error: transporterError.message });
-      }
-    }
-
-    throw new Error(`Failed to send email: ${error.message}`);
+    const info = await transporter.sendMail(mailOptions);
+    logger.info('[EMAIL] Successfully sent email via fallback SMTP', { to: options.to, messageId: info.messageId });
+    return info;
+  } catch (smtpError) {
+    logger.error('[EMAIL] Fallback SMTP failed to send email', { error: smtpError.message, to: options.to });
+    throw smtpError;
   }
 };
 
