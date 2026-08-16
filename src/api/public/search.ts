@@ -11,8 +11,6 @@ export async function searchSellers(filters: { city: string; location?: string }
       params.append('location', filters.location);
     }
 
-    console.log('Searching for sellers with params:', { city: filters.city, location: filters.location });
-
     const response = await publicApi.get(`sellers/search?${params.toString()}`);
 
     let sellersData: unknown[] = [];
@@ -26,20 +24,9 @@ export async function searchSellers(filters: { city: string; location?: string }
       sellersData = (responseData as Record<string, unknown>).sellers as unknown[];
     }
 
-    console.log(`Found ${sellersData.length} sellers for city: ${filters.city}${filters.location ? `, location: ${filters.location}` : ''}`);
-
     return sellersData.map(transformSeller).filter((seller): seller is ApiPublicSeller => seller !== null);
   } catch (error) {
     const err = error as { message?: string; response?: { status?: number; statusText?: string; data?: unknown }; stack?: string };
-    console.error('Error searching for sellers:', {
-      message: err.message,
-      response: err.response ? {
-        status: err.response.status,
-        statusText: err.response.statusText,
-        data: err.response.data
-      } : 'No response',
-      stack: err.stack
-    });
     return [];
   }
 }
@@ -69,7 +56,6 @@ export async function searchProducts(query: string, filters: Record<string, unkn
 
     return productsData.map(transformProduct);
   } catch (error) {
-    console.error('Error searching products:', error);
     return [];
   }
 }

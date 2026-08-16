@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
+const UNIFIED_SCHEMA_FILE = path.resolve(__dirname, '../migrations/20260814195000_unified_runtime_schema.sql');
 
 // Task 1: Correct the Import using createRequire for robust CJS handling
 const migrate = require('node-pg-migrate').default || require('node-pg-migrate');
@@ -30,6 +31,17 @@ console.log('------------------------');
 dotenv.config({ path: envPath });
 
 const { Pool } = pg;
+
+async function tableExists(pool, tableName) {
+    const { rowCount } = await pool.query(
+        `SELECT 1
+         FROM information_schema.tables
+         WHERE table_schema = 'public'
+           AND table_name = $1`,
+        [tableName]
+    );
+    return rowCount > 0;
+}
 
 async function run() {
     console.log(`[${new Date().toISOString()}] [DEBUG] Initial DATABASE_URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.substring(0, 15) + '...') : 'undefined'}`);
@@ -64,35 +76,17 @@ async function run() {
     });
 
     try {
-        // 3. Pre-Flight Connection & Critical Column Check
+        // 3. Pre-Flight Connection
         await pool.query('SELECT 1');
         console.log(`[${new Date().toISOString()}] [SUCCESS] Connection established.`);
 
-        console.log(`[${new Date().toISOString()}] [INFO] Ensuring critical columns and tables exist on database...`);
-        await pool.query(`
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
-            UPDATE users SET is_active = TRUE WHERE is_active IS NULL;
-            UPDATE users SET is_verified = TRUE WHERE is_verified IS NULL;
-
-            CREATE TABLE IF NOT EXISTS pending_registrations (
-                id SERIAL PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(50),
-                registration_data JSONB,
-                physical_address TEXT,
-                latitude NUMERIC(10, 8),
-                longitude NUMERIC(11, 8),
-                verification_token VARCHAR(255),
-                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                terms_accepted BOOLEAN DEFAULT FALSE,
-                terms_accepted_at TIMESTAMP WITH TIME ZONE,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log(`[${new Date().toISOString()}] [SUCCESS] Critical columns and tables verified on database.`);
+        const hasRefundRequests = await tableExists(pool, 'refund_requests');
+        if (!hasRefundRequests && fs.existsSync(UNIFIED_SCHEMA_FILE)) {
+            console.log(`[${new Date().toISOString()}] [INFO] Applying unified runtime schema bootstrap...`);
+            const unifiedSchemaSql = fs.readFileSync(UNIFIED_SCHEMA_FILE, 'utf8');
+            await pool.query(unifiedSchemaSql);
+            console.log(`[${new Date().toISOString()}] [SUCCESS] Unified runtime schema bootstrap applied.`);
+        }
 
         // 4. Migration Execution
         console.log(`[${new Date().toISOString()}] [INFO] Running Migrations...`);

@@ -44,10 +44,6 @@ export interface RegisterData {
 export async function login(credentials: { email: string; password: string }): Promise<LoginResponse> {
   try {
     const loginUrl = '/buyers/login';
-
-    if (import.meta.env.DEV) {
-      console.log('=== LOGIN ATTEMPT ===');
-    }
     const response = await apiClient.post<LoginApiResponse>(
       loginUrl,
       credentials
@@ -73,7 +69,6 @@ export async function login(credentials: { email: string; password: string }): P
 
     return { buyer: transformBuyer(buyer), token, refreshToken };
   } catch (error) {
-    console.error('Login error:', error);
     throw error;
   }
 }
@@ -117,7 +112,6 @@ export async function register(data: RegisterData): Promise<LoginResponse> {
 
     return { buyer: transformBuyer(buyer) };
   } catch (error) {
-    console.error('Registration error:', error);
     throw error;
   }
 }
@@ -149,7 +143,6 @@ export async function forgotPassword(email: string): Promise<{ message: string }
     return response.data;
   } catch (error) {
     const err = error as ApiError;
-    console.error('Forgot password error:', err);
     if (err.response?.data?.message) {
       throw new Error(err.response.data.message);
     }
@@ -171,7 +164,6 @@ export async function resetPassword(token: string, newPassword: string, email: s
     return response.data;
   } catch (error) {
     const err = error as ApiError;
-    console.error('Reset password error:', err);
     if (err.response?.data?.message) {
       throw new Error(err.response.data.message);
     } else if (err.response?.data?.error) {
@@ -189,9 +181,6 @@ export async function checkBuyerByPhone(phone: string): Promise<{
   token?: string;
 }> {
   try {
-    if (import.meta.env.DEV) {
-      console.log('Checking buyer by phone...');
-    }
     const response = await apiClient.post<{
       status: string;
       data: {
@@ -210,7 +199,6 @@ export async function checkBuyerByPhone(phone: string): Promise<{
     return response.data.data;
   } catch (error) {
     const err = error as ApiError;
-    console.error('Error checking buyer by phone:', err);
     if (err.response?.data?.message) {
       throw new Error(err.response.data.message);
     }
@@ -228,10 +216,6 @@ export async function saveBuyerInfo(buyerInfo: {
   password?: string;
 }): Promise<{ buyer?: Buyer; token?: string; message?: string; requiresLogin?: boolean; exists?: boolean }> {
   try {
-    if (import.meta.env.DEV) {
-      console.log('Saving buyer info...');
-    }
-
     const response = await apiClient.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
       `/buyers/save-info`,
       {
@@ -247,8 +231,6 @@ export async function saveBuyerInfo(buyerInfo: {
     return response.data.data;
   } catch (error) {
     const err = error as ApiError;
-    console.error('Error saving buyer info:', err);
-
     if (err.response?.data?.message) {
       throw new Error(err.response.data.message);
     }
@@ -268,7 +250,6 @@ export async function verifyEmail(email: string, token: string): Promise<{ succe
     };
   } catch (error) {
     const err = error as ApiError;
-    console.error('Email verification error:', err);
     throw new Error(err.response?.data?.message || 'Email verification failed');
   }
 }
@@ -278,7 +259,6 @@ export async function autoLogin(autoLoginToken: string): Promise<unknown> {
     const response = await apiClient.post('/buyers/auto-login', { autoLoginToken });
     return response.data;
   } catch (error) {
-    console.error('Auto-login error:', error);
     throw error;
   }
 }

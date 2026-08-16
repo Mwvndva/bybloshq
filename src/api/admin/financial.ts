@@ -2,9 +2,7 @@ import { api } from './instance';
 
 export async function getFinancialMetrics() {
   try {
-    console.log('Fetching financial metrics from API...');
     const response = await api.get('/admin/metrics/financial');
-    console.log('Financial metrics API response:', response);
     return response.data.data || {
       totalSales: 0,
       totalOrders: 0,
@@ -15,7 +13,6 @@ export async function getFinancialMetrics() {
       netRevenue: 0
     };
   } catch (error) {
-    console.error('Error fetching financial metrics:', error);
     return {
       totalSales: 0,
       totalOrders: 0,
@@ -30,12 +27,9 @@ export async function getFinancialMetrics() {
 
 export async function getMonthlyFinancialData() {
   try {
-    console.log('Fetching monthly financial data from API...');
     const response = await api.get('/admin/metrics/financial/monthly');
-    console.log('Monthly financial data API response:', response);
     return response.data.data || [];
   } catch (error) {
-    console.error('Error fetching monthly financial data:', error);
     return [];
   }
 }
@@ -45,7 +39,6 @@ export async function getPaymentProviderBalances() {
     const response = await api.get('/admin/payment-provider/balances');
     return response.data.data || null;
   } catch (error) {
-    console.error('Error fetching payment provider balance/status:', error);
     return {
       payin: { error: 'Unavailable' },
       payout: { error: 'Unavailable' },

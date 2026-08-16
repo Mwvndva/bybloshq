@@ -2,7 +2,6 @@ import { api } from './instance';
 
 export async function getCreators() {
   try {
-    console.log('Fetching creators from API...');
     const response = await api.get('/admin/creators');
     const creatorsData = Array.isArray(response.data.data) ? response.data.data : [];
     return creatorsData.map((creator: Record<string, unknown>) => ({
@@ -25,7 +24,6 @@ export async function getCreators() {
       createdAt: creator.created_at || creator.createdAt || new Date().toISOString()
     }));
   } catch (error) {
-    console.error('Error fetching creators:', error);
     return [];
   }
 }
@@ -35,7 +33,6 @@ export async function deleteCreator(creatorId: string) {
     const response = await api.delete(`/admin/creators/${creatorId}`);
     return response.data;
   } catch (error) {
-    console.error('Error deleting creator:', error);
     throw error;
   }
 }

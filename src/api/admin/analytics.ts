@@ -2,10 +2,7 @@ import { api } from './instance';
 
 export async function getAnalytics() {
   try {
-    console.log('Fetching dashboard analytics...');
     const { data } = await api.get('/admin/analytics');
-    console.log('Dashboard analytics response:', data);
-
     return {
       ...data.data,
       userGrowth: data.data?.userGrowth || [],
@@ -15,7 +12,6 @@ export async function getAnalytics() {
       geoDistribution: data.data?.geoDistribution || []
     };
   } catch (error) {
-    console.error('Error fetching analytics:', error);
     return {
       userGrowth: [],
       revenueTrends: [],
@@ -28,10 +24,7 @@ export async function getAnalytics() {
 
 export async function getMonthlyMetrics() {
   try {
-    console.log('Fetching monthly metrics...');
     const response = await api.get('/admin/metrics/monthly');
-    console.log('Monthly metrics response:', response.data);
-
     if (response.data && response.data.data) {
       return {
         ...response.data,
@@ -46,7 +39,6 @@ export async function getMonthlyMetrics() {
 
     return response.data;
   } catch (error) {
-    console.error('Error fetching monthly metrics:', error);
     throw error;
   }
 }
