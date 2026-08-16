@@ -18,5 +18,13 @@ export const buildApiBaseUrl = () => {
     return '/api';
   }
 
+  // Defensive check: If web build is configured with an absolute cross-origin URL
+  if (typeof window !== 'undefined' && (envApiUrl.includes('onrender.com') || /^https?:\/\//i.test(envApiUrl))) {
+    console.error(
+      `[CRITICAL CONFIG WARNING] VITE_API_URL is set to an absolute cross-origin URL: "${envApiUrl}". ` +
+      `In web environments, bypassing the same-origin reverse proxy ('/api') breaks CSRF validation and SameSite cookie synchronization in modern browsers.`
+    );
+  }
+
   return ensureApiSuffix(envApiUrl);
 };
