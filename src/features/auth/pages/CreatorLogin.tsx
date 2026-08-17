@@ -81,7 +81,7 @@ export default function CreatorLogin() {
             </Link>
           </p>
           <p className="text-center text-sm font-medium text-white/50">
-            New ambassador?{' '}
+            New creator?{' '}
             <Link to="/creator/register" className="font-black text-yellow-300 hover:text-yellow-200">
               Create an account
             </Link>

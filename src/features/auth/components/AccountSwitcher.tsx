@@ -34,7 +34,7 @@ const metaForRole = (role: SwitchableRole): RoleMeta => {
 
 /**
  * Dropdown that lets a user who owns more than one account type (buyer /
- * seller / ambassador) switch between them. Renders nothing when the user owns
+ * seller / creator) switch between them. Renders nothing when the user owns
  * a single account, so there is only ever a control when there is somewhere to
  * switch to.
  */
