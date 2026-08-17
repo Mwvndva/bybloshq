@@ -105,18 +105,17 @@ export default function CreatorRegister() {
     }
     setLoading(true);
     try {
-      const result = await registerMutation.mutateAsync({ token: token || undefined, ...form, referralCode: referralCode || undefined }) as Record<string, unknown>;
-      // The API returns response.data directly. Check status at both the top level
-      // (most backends) and one level deeper (some return { data: { status } }).
-      const status = (result as { status?: string })?.status
-        ?? (result as { data?: { status?: string } })?.data?.status;
-      if (status === 'created') {
-        toast.success('Creator access added. You can now log in.');
+      const resObj = result as { status?: string; message?: string; data?: { status?: string; email?: string } };
+      const registrationStatus = resObj?.data?.status;
+      const responseMessage = resObj?.message;
+
+      if (registrationStatus === 'created' || responseMessage?.includes('Creator access added')) {
+        toast.success(responseMessage || 'Creator access added. You can now log in.');
         navigate('/creator/login');
         return;
       }
 
-      toast.success('Account created. Check your email to verify it.');
+      toast.success(responseMessage || 'Account created. Check your email to verify it.');
       navigate(`/verify-email?email=${encodeURIComponent(form.email)}&type=creator`);
     } catch (error: unknown) {
       const apiError = error as ApiError;
