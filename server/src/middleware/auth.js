@@ -51,6 +51,22 @@ export const hasPermission = (...permissions) => {
   };
 };
 
+/**
+ * Middleware to restrict access based on user roles
+ * @param {...string} roles - Permitted roles (e.g. 'marketing', 'admin', 'logistics')
+ */
+export const restrictTo = (...roles) => {
+  return (req, res, next) => {
+    const userRole = req.user?.role || req.user?.userType;
+    if (!userRole || !roles.includes(userRole)) {
+      return next(
+        new AppError('You do not have permission to perform this action', 403)
+      );
+    }
+    next();
+  };
+};
+
 export const protect = async (req, res, next) => {
   try {
     // console.log('\n=== Auth Middleware ===');
