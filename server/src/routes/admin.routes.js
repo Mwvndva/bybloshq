@@ -67,6 +67,8 @@ router.get('/products', adminController.getAllProducts);
 router.get('/products/seller/:sellerId', adminController.getSellerProducts);
 
 // Metrics
+router.get('/metrics/financial', adminController.getFinancialMetrics);
+router.get('/metrics/financial/monthly', adminController.getMonthlyFinancialMetrics);
 router.get('/metrics/monthly', adminController.getMonthlyMetrics);
 
 // Payment provider health
