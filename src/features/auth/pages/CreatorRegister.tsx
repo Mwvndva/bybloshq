@@ -13,8 +13,9 @@ type CreatorInvite = {
 };
 
 type ApiError = {
-  response?: { data?: { message?: string } };
+  response?: { data?: { message?: string; code?: string; status?: string } };
   message?: string;
+  code?: string;
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -29,6 +30,7 @@ export default function CreatorRegister() {
   const referralCode = params.get('ref') || '';
   const [invite, setInvite] = useState<CreatorInvite | null>(null);
   const [loading, setLoading] = useState(false);
+  const [existingAccountPrompt, setExistingAccountPrompt] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [form, setForm] = useState({
@@ -87,7 +89,15 @@ export default function CreatorRegister() {
       toast.success('Account created. Check your email to verify it.');
       navigate(`/verify-email?email=${encodeURIComponent(form.email)}&type=creator`);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Could not create creator account.'));
+      const apiError = error as ApiError;
+      const code = apiError?.response?.data?.code || apiError?.code;
+      const errorMsg = getErrorMessage(error, 'Could not create creator account.');
+
+      if (code === 'EXISTING_ACCOUNT' || errorMsg.toLowerCase().includes('already has a byblos account')) {
+        setExistingAccountPrompt(true);
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -245,6 +255,51 @@ export default function CreatorRegister() {
         </form>
         </div>
       </div>
+
+      {existingAccountPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative max-w-md w-full rounded-3xl border border-white/10 bg-[#121212] p-6 sm:p-8 text-center space-y-4 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setExistingAccountPrompt(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-white/50 hover:bg-white/10 hover:text-white transition"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-400/10 text-2xl text-yellow-400">
+              👤
+            </div>
+
+            <h2 className="text-xl font-black tracking-tight text-white">
+              You already have a Byblos account
+            </h2>
+
+            <p className="text-sm text-white/70 leading-relaxed">
+              Log in with your existing account, then add Creator access from your account switcher.
+            </p>
+
+            <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+              <Button
+                type="button"
+                onClick={() => navigate('/buyer/login')}
+                className="h-11 flex-1 rounded-xl bg-yellow-400 font-black text-black hover:bg-yellow-300 transition"
+              >
+                Go to Login
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setExistingAccountPrompt(false)}
+                className="h-11 rounded-xl border-white/15 bg-white/[0.05] text-white hover:bg-white/10 transition"
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

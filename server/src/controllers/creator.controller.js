@@ -92,6 +92,9 @@ export const register = async (req, res, next) => {
     if (message.includes('not found') || message.includes('expired')) {
       return res.status(404).json({ status: 'fail', message });
     }
+    if (error.code === 'EXISTING_ACCOUNT' || message.includes('already has a Byblos account')) {
+      return res.status(400).json({ status: 'fail', code: 'EXISTING_ACCOUNT', message });
+    }
     if (message.includes('required') || message.includes('do not match') || message.includes('email')) {
       return res.status(400).json({ status: 'fail', message });
     }
