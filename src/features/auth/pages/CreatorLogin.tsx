@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGlobalAuth } from '@/features/auth/contexts';
+import { getFreshCsrfToken } from '@/lib/apiClient';
 
 export default function CreatorLogin() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,10 @@ export default function CreatorLogin() {
 
   const { login } = useGlobalAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    void getFreshCsrfToken();
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

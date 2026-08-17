@@ -84,8 +84,15 @@ apiClient.interceptors.request.use(
             config.headers['Authorization'] = `Bearer ${token}`;
         }
 
-        // Attach CSRF token to all non-GET requests (including authentication and login)
+        // Attach CSRF token to all non-GET requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+            const ADMIN_LOGIN_PATHS = [
+                '/admin/login',
+                '/admin/marketing/login',
+                '/logistics/login'
+            ];
+            const isAdminLogin = ADMIN_LOGIN_PATHS.some((path) => url === path || url.endsWith(path));
+
             // Use cached CSRF token if it's not stale (10-minute TTL)
             const isFresh = csrfTokenCache && (Date.now() - lastFetchedAt < CSRF_TTL);
 
@@ -94,7 +101,15 @@ apiClient.interceptors.request.use(
                 return config;
             }
 
-            // If we don't have a token or it's stale, fetch one before proceeding
+            // For admin/marketing/logistics logins: do NOT block with pre-fetch to prevent lockout
+            if (isAdminLogin) {
+                if (csrfTokenCache) {
+                    config.headers['X-CSRF-Token'] = csrfTokenCache;
+                }
+                return config;
+            }
+
+            // For all other requests (Buyer, Seller, Creator login, mutations): fetch token before proceeding
             return getFreshCsrfToken().then((token) => {
                 if (token) {
                     config.headers['X-CSRF-Token'] = token;
