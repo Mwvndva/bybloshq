@@ -325,7 +325,9 @@ class CreatorService {
       } else {
         const isPasswordCorrect = await User.verifyPassword(data.password, user.password_hash);
         if (!isPasswordCorrect) {
-          throw new Error('This email already has a Byblos account. Enter that account password to add creator access.');
+          const err = new Error('This email already has a Byblos account. Enter that account password to add creator access.');
+          err.code = 'EXISTING_ACCOUNT';
+          throw err;
         }
 
         await client.query(
@@ -419,7 +421,9 @@ class CreatorService {
       } else {
         const isPasswordCorrect = await User.verifyPassword(data.password, user.password_hash);
         if (!isPasswordCorrect) {
-          throw new Error('This email already has a Byblos account. Enter that account password to add creator access.');
+          const err = new Error('This email already has a Byblos account. Enter that account password to add creator access.');
+          err.code = 'EXISTING_ACCOUNT';
+          throw err;
         }
 
         await client.query(
