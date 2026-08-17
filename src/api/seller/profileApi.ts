@@ -136,10 +136,10 @@ export const sellerProfileApi = {
       await getFreshCsrfToken();
 
       return { seller: transformSeller(seller), token, refreshToken };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+      if (error?.response?.data?.message && !error.message) {
+        error.message = error.response.data.message;
       }
       throw error;
     }

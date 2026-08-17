@@ -23,7 +23,7 @@ export const globalErrorHandler = (err, req, res, next) => {
   error.message = err.message;
   error.name = err.name;
   error.stack = err.stack;
-  error.isOperational = err.isOperational ?? (error.statusCode >= 400 && error.statusCode < 500);
+  error.isOperational = err.isOperational;
 
   // Handle specific error types
   if (error.code === '23505') error = handlePostgresUniqueError(error);
