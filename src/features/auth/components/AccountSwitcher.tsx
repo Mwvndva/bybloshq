@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Loader2, Megaphone, ShoppingBag, Store, type LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, ChevronDown, Loader2, Megaphone, Plus, ShoppingBag, Store, type LucideIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useMyAccounts } from '../hooks/useMyAccounts';
@@ -33,12 +35,11 @@ const metaForRole = (role: SwitchableRole): RoleMeta => {
 };
 
 /**
- * Dropdown that lets a user who owns more than one account type (buyer /
- * seller / creator) switch between them. Renders nothing when the user owns
- * a single account, so there is only ever a control when there is somewhere to
- * switch to.
+ * Dropdown that lets a user who owns multiple account types switch between them,
+ * and lets single-role users discover and add new account access (e.g. Creator).
  */
 export function AccountSwitcher() {
+  const navigate = useNavigate();
   const { data } = useMyAccounts();
   const { switchAccount, role: currentRole } = useGlobalAuth();
   const [switching, setSwitching] = useState<SwitchableRole | null>(null);
@@ -53,7 +54,7 @@ export function AccountSwitcher() {
     return list;
   }, [data]);
 
-  if (owned.length < 2) return null;
+  if (!data || owned.length === 0) return null;
 
   const active: SwitchableRole = isSwitchableRole(currentRole)
     ? currentRole
@@ -90,10 +91,10 @@ export function AccountSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-52 border-white/10 bg-[#0a0a0a] text-white"
+        className="w-56 border-white/10 bg-[#0a0a0a] text-white"
       >
         <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
-          Switch account
+          {owned.length > 1 ? 'Switch account' : 'Active Account'}
         </div>
         {owned.map((role) => {
           const meta = metaForRole(role);
@@ -120,9 +121,42 @@ export function AccountSwitcher() {
             </DropdownMenuItem>
           );
         })}
+
+        {!data.accounts.creator && (
+          <>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                navigate('/creator/register');
+              }}
+              className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm text-yellow-400 focus:bg-yellow-400/10 focus:text-yellow-300 font-semibold"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="flex-1">Add Creator Access</span>
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {!data.accounts.seller && (
+          <>
+            {data.accounts.creator && <DropdownMenuSeparator className="bg-white/10" />}
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                navigate('/seller/register');
+              }}
+              className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm text-white/80 focus:bg-white/10 focus:text-white"
+            >
+              <Plus className="h-4 w-4 text-white/50" />
+              <span className="flex-1">Become a Seller</span>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 export default AccountSwitcher;
+

@@ -325,8 +325,24 @@ class CreatorService {
       } else {
         const isPasswordCorrect = await User.verifyPassword(data.password, user.password_hash);
         if (!isPasswordCorrect) {
+          const { rows: roles } = await client.query(
+            `SELECT
+               EXISTS(SELECT 1 FROM buyers WHERE user_id = $1) as has_buyer,
+               EXISTS(SELECT 1 FROM sellers WHERE user_id = $1) as has_seller`,
+            [user.id]
+          );
+          const hasBuyer = Boolean(roles[0]?.has_buyer);
+          const hasSeller = Boolean(roles[0]?.has_seller);
+          const suggestedRole = hasSeller && !hasBuyer ? 'seller' : hasBuyer && !hasSeller ? 'buyer' : user.role || 'buyer';
+
           const err = new Error('This email already has a Byblos account. Enter that account password to add creator access.');
           err.code = 'EXISTING_ACCOUNT';
+          err.existingRoles = {
+            hasBuyer,
+            hasSeller,
+            suggestedRole,
+            loginPath: suggestedRole === 'seller' ? '/seller/login' : '/buyer/login'
+          };
           throw err;
         }
 
@@ -421,8 +437,24 @@ class CreatorService {
       } else {
         const isPasswordCorrect = await User.verifyPassword(data.password, user.password_hash);
         if (!isPasswordCorrect) {
+          const { rows: roles } = await client.query(
+            `SELECT
+               EXISTS(SELECT 1 FROM buyers WHERE user_id = $1) as has_buyer,
+               EXISTS(SELECT 1 FROM sellers WHERE user_id = $1) as has_seller`,
+            [user.id]
+          );
+          const hasBuyer = Boolean(roles[0]?.has_buyer);
+          const hasSeller = Boolean(roles[0]?.has_seller);
+          const suggestedRole = hasSeller && !hasBuyer ? 'seller' : hasBuyer && !hasSeller ? 'buyer' : user.role || 'buyer';
+
           const err = new Error('This email already has a Byblos account. Enter that account password to add creator access.');
           err.code = 'EXISTING_ACCOUNT';
+          err.existingRoles = {
+            hasBuyer,
+            hasSeller,
+            suggestedRole,
+            loginPath: suggestedRole === 'seller' ? '/seller/login' : '/buyer/login'
+          };
           throw err;
         }
 
