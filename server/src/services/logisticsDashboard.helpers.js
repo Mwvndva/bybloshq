@@ -453,7 +453,7 @@ function signLogisticsToken(account) {
 
     return jwt.sign(
         {
-            id: account.partner_id,
+            id: account.user_id,
             partnerId: account.partner_id,
             partnerSlug: account.partner_slug,
             userId: account.user_id,

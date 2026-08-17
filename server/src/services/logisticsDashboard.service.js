@@ -201,40 +201,76 @@ class LogisticsDashboardService {
     }
 
     static async getPartnerByTokenPayload(payload) {
-        const partnerId = payload?.partnerId || payload?.id;
-        const userId = payload?.userId || null;
+        const partnerId = payload?.partnerId || null;
+        const userId = payload?.userId || payload?.id || null;
 
-        if (!partnerId) {
+        if (!partnerId && !userId) {
             throw new AppError('Invalid logistics token', 401);
         }
 
-        const params = [partnerId];
-        let userFilter = '';
-        if (userId) {
-            params.push(userId);
-            userFilter = `AND u.id = $2`;
+        let queryStr;
+        let params;
+
+        if (partnerId && userId) {
+            queryStr = `
+                SELECT
+                    lp.id,
+                    lp.name,
+                    lp.slug,
+                    lp.email,
+                    lp.phone,
+                    lp.whatsapp_number,
+                    lp.active,
+                    u.id AS user_id,
+                    u.email AS user_email,
+                    u.is_active AS user_active
+                 FROM logistics_partners lp
+                 LEFT JOIN users u ON u.id = lp.user_id
+                 WHERE (lp.id = $1 OR lp.user_id = $2)
+                   AND lp.active = TRUE
+                 LIMIT 1`;
+            params = [partnerId, userId];
+        } else if (partnerId) {
+            queryStr = `
+                SELECT
+                    lp.id,
+                    lp.name,
+                    lp.slug,
+                    lp.email,
+                    lp.phone,
+                    lp.whatsapp_number,
+                    lp.active,
+                    u.id AS user_id,
+                    u.email AS user_email,
+                    u.is_active AS user_active
+                 FROM logistics_partners lp
+                 LEFT JOIN users u ON u.id = lp.user_id
+                 WHERE lp.id = $1
+                   AND lp.active = TRUE
+                 LIMIT 1`;
+            params = [partnerId];
+        } else {
+            queryStr = `
+                SELECT
+                    lp.id,
+                    lp.name,
+                    lp.slug,
+                    lp.email,
+                    lp.phone,
+                    lp.whatsapp_number,
+                    lp.active,
+                    u.id AS user_id,
+                    u.email AS user_email,
+                    u.is_active AS user_active
+                 FROM logistics_partners lp
+                 LEFT JOIN users u ON u.id = lp.user_id
+                 WHERE lp.user_id = $1
+                   AND lp.active = TRUE
+                 LIMIT 1`;
+            params = [userId];
         }
 
-        const { rows } = await pool.query(
-            `SELECT
-                lp.id,
-                lp.name,
-                lp.slug,
-                lp.email,
-                lp.phone,
-                lp.whatsapp_number,
-                lp.active,
-                u.id AS user_id,
-                u.email AS user_email,
-                u.is_active AS user_active
-             FROM logistics_partners lp
-             LEFT JOIN users u ON u.id = lp.user_id
-             WHERE lp.id = $1
-               AND lp.active = TRUE
-               ${userFilter}
-             LIMIT 1`,
-            params
-        );
+        const { rows } = await pool.query(queryStr, params);
 
         const partner = rows[0];
         if (!partner || partner.user_active === false) {
