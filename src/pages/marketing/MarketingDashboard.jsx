@@ -55,8 +55,10 @@ export default function MarketingDashboard() {
     const user = JSON.parse(sessionStorage.getItem('marketing_user') || '{}')
 
     const logout = () => {
+        sessionStorage.removeItem('marketingToken')
         sessionStorage.removeItem('marketing_token')
         sessionStorage.removeItem('marketing_user')
+        sessionStorage.removeItem('marketingSessionActive')
         navigate('/admin/marketing/login')
     }
 
@@ -92,7 +94,7 @@ export default function MarketingDashboard() {
     }, [period])
 
     useEffect(() => {
-        const token = sessionStorage.getItem('marketing_token')
+        const token = sessionStorage.getItem('marketingToken') || sessionStorage.getItem('marketing_token')
         if (!token) { navigate('/admin/marketing/login'); return }
         fetchAll()
     }, [fetchAll, navigate])

@@ -5,10 +5,41 @@
  */
 import { UniversalHttpClient } from '@/lib/http/UniversalHttpClient';
 import { WebSessionStorageAdapter } from '@/lib/auth/adapters';
-import { WebAuthStrategy } from '@/lib/auth/WebAuthStrategy';
 
 const marketingStorage = new WebSessionStorageAdapter();
-const marketingAuthStrategy = new WebAuthStrategy(marketingStorage);
+
+class MarketingAuthStrategy {
+  platform = 'web';
+
+  constructor(storageAdapter) {
+    this.storageAdapter = storageAdapter;
+  }
+
+  async getAuthHeaders() {
+    let token = await this.storageAdapter.getItem('marketingToken');
+    if (!token) {
+      token = await this.storageAdapter.getItem('marketing_token');
+    }
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async getCsrfHeader() {
+    return {};
+  }
+
+  async handleUnauthorized() {
+    return false;
+  }
+
+  async clearSession() {
+    await this.storageAdapter.removeItem('marketingToken');
+    await this.storageAdapter.removeItem('marketing_token');
+    await this.storageAdapter.removeItem('marketing_user');
+    await this.storageAdapter.removeItem('marketingSessionActive');
+  }
+}
+
+const marketingAuthStrategy = new MarketingAuthStrategy(marketingStorage);
 
 const marketingClient = new UniversalHttpClient({
   storageAdapter: marketingStorage,
@@ -19,8 +50,13 @@ const marketingClient = new UniversalHttpClient({
 export const marketingApi = {
     login: async (email, password) => {
         const response = await marketingClient.post('/admin/marketing/login', { email, password });
-        if (response.data?.user) {
-            await marketingStorage.setItem('marketing_user', JSON.stringify(response.data.user));
+        const authData = response.data?.data;
+        if (authData?.token) {
+            await marketingStorage.setItem('marketingToken', authData.token);
+            await marketingStorage.setItem('marketing_token', authData.token);
+        }
+        if (authData?.user) {
+            await marketingStorage.setItem('marketing_user', JSON.stringify(authData.user));
             await marketingStorage.setItem('marketingSessionActive', 'true');
         }
         return response;
