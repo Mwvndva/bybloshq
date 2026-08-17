@@ -24,6 +24,7 @@ export default function MarketingLogin() {
             const res = await marketingApi.login(email, password)
             const { token, user } = res.data.data
 
+            sessionStorage.setItem('marketingToken', token)
             sessionStorage.setItem('marketing_token', token)
             sessionStorage.setItem('marketing_user', JSON.stringify(user))
             navigate('/admin/marketing')
