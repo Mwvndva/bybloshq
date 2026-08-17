@@ -62,17 +62,8 @@ export class UniversalHttpClient {
         // 2. Attach CSRF header on state-changing requests if strategy provides one (Web mode)
         const method = config.method ? config.method.toLowerCase() : 'get';
         if (!['get', 'head', 'options'].includes(method)) {
-          const ADMIN_LOGIN_PATHS = [
-            '/admin/login',
-            '/admin/marketing/login',
-            '/logistics/login'
-          ];
-          const isAdminLogin = ADMIN_LOGIN_PATHS.some((path) => url === path || url.endsWith(path));
-
-          if (!isAdminLogin) {
-            const csrfHeaders = await this.authStrategy.getCsrfHeader();
-            Object.assign(config.headers, csrfHeaders);
-          }
+          const csrfHeaders = await this.authStrategy.getCsrfHeader();
+          Object.assign(config.headers, csrfHeaders);
         }
 
         return config;
