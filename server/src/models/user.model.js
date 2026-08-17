@@ -9,25 +9,10 @@ class User {
      */
     static async findByEmail(email) {
         if (!email) return null;
-        try {
-            const query = 'SELECT id, email, password_hash, role, is_verified, is_active FROM users WHERE LOWER(email) = $1';
-            const result = await pool.query(query, [email.toLowerCase()]);
-            return result.rows[0] || null;
-        } catch (err) {
-            const fallbackQuery = `
-                SELECT
-                    id,
-                    email,
-                    password_hash,
-                    role,
-                    COALESCE((to_jsonb(users)->>'is_verified')::boolean, true) AS is_verified,
-                    COALESCE((to_jsonb(users)->>'is_active')::boolean, true) AS is_active
-                FROM users
-                WHERE LOWER(email) = $1
-            `;
-            const result = await pool.query(fallbackQuery, [email.toLowerCase()]);
-            return result.rows[0] || null;
-        }
+        // PERF-06: select only needed columns
+        const query = 'SELECT id, email, password_hash, role, is_verified, is_active FROM users WHERE LOWER(email) = $1';
+        const result = await pool.query(query, [email.toLowerCase()]);
+        return result.rows[0] || null;
     }
 
     /**
@@ -37,24 +22,9 @@ class User {
      */
     static async findById(id) {
         if (!id) return null;
-        try {
-            const query = 'SELECT id, email, role, is_verified, is_active FROM users WHERE id = $1';
-            const result = await pool.query(query, [id]);
-            return result.rows[0] || null;
-        } catch (err) {
-            const fallbackQuery = `
-                SELECT
-                    id,
-                    email,
-                    role,
-                    COALESCE((to_jsonb(users)->>'is_verified')::boolean, true) AS is_verified,
-                    COALESCE((to_jsonb(users)->>'is_active')::boolean, true) AS is_active
-                FROM users
-                WHERE id = $1
-            `;
-            const result = await pool.query(fallbackQuery, [id]);
-            return result.rows[0] || null;
-        }
+        const query = 'SELECT id, email, role, is_verified, is_active FROM users WHERE id = $1';
+        const result = await pool.query(query, [id]);
+        return result.rows[0] || null;
     }
 
     /**

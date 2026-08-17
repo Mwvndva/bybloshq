@@ -206,7 +206,8 @@ export const sendVerificationEmail = async (email, token, userType = 'buyer') =>
 
 export const sendPasswordResetEmail = async (email, token, userType = 'seller') => {
   try {
-    const baseUrl = process.env.FRONTEND_URL.replace(/\/+$/, '');
+    const rawFrontendUrl = process.env.FRONTEND_URL || 'https://www.byblosafrica.site';
+    const baseUrl = rawFrontendUrl.replace(/\/+$/, '');
     const resetUrl = `${baseUrl}/${userType}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
     const appName = process.env.APP_NAME || 'Byblos';
 
