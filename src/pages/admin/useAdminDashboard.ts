@@ -394,19 +394,19 @@ export function useAdminDashboard() {
   };
 
   const handleDeleteCreator = async (creatorId: string, creatorName?: string) => {
-    if (!window.confirm(`Delete ${creatorName || 'this ambassador'}'s account? Their earnings and sales history will be preserved for audit.`)) {
+    if (!window.confirm(`Delete ${creatorName || 'this creator'}'s account? Their earnings and sales history will be preserved for audit.`)) {
       return;
     }
 
     try {
       await deleteCreatorMutation.mutateAsync(creatorId);
-      toast.success('Ambassador account deleted. History was preserved.');
+      toast.success('Creator account deleted. History was preserved.');
       setDashboardState(prev => ({
         ...prev,
         creators: prev.creators.filter(creator => String(creator.id) !== String(creatorId))
       }));
     } catch (error) {
-      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete ambassador account');
+      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete creator account');
     }
   };
 

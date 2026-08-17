@@ -52,7 +52,7 @@ export default function CreatorRegister() {
 
   useEffect(() => {
     if (inviteError) {
-      toast.error(getErrorMessage(inviteError, 'Ambassador invite not found.'));
+      toast.error(getErrorMessage(inviteError, 'Creator invite not found.'));
     }
   }, [inviteError]);
 
@@ -85,7 +85,7 @@ export default function CreatorRegister() {
       const status = (result as { status?: string })?.status
         ?? (result as { data?: { status?: string } })?.data?.status;
       if (status === 'created') {
-        toast.success('Ambassador access added. You can now log in.');
+        toast.success('Creator access added. You can now log in.');
         navigate('/creator/login');
         return;
       }
@@ -93,7 +93,7 @@ export default function CreatorRegister() {
       toast.success('Account created. Check your email to verify it.');
       navigate(`/verify-email?email=${encodeURIComponent(form.email)}&type=creator`);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Could not create ambassador account.'));
+      toast.error(getErrorMessage(error, 'Could not create creator account.'));
     } finally {
       setLoading(false);
     }
@@ -109,14 +109,14 @@ export default function CreatorRegister() {
           <div className="text-4xl">🔗</div>
           <h1 className="text-xl font-black tracking-tight">Invalid invite link</h1>
           <p className="text-sm text-white/55 leading-relaxed">
-            This ambassador invite link is missing or has expired. Please ask the seller to resend your invite, then open the link from the email.
+            This creator invite link is missing or has expired. Please ask the seller to resend your invite, then open the link from the email.
           </p>
           <button
             type="button"
             onClick={() => navigate('/creator/login')}
             className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-yellow-400 text-sm font-black text-black hover:bg-yellow-300 transition"
           >
-            Go to ambassador login
+            Go to creator login
           </button>
         </div>
       </main>
@@ -124,7 +124,7 @@ export default function CreatorRegister() {
   }
 
   if (inviteError) {
-    const errorMsg = getErrorMessage(inviteError, 'Ambassador invite not found or has expired.');
+    const errorMsg = getErrorMessage(inviteError, 'Creator invite not found or has expired.');
     const isAlreadyUsed = errorMsg.toLowerCase().includes('already been used') || errorMsg.toLowerCase().includes('already used');
     return (
       <main className="auth-page min-h-screen bg-[#090909] text-white flex items-center justify-center px-4">
@@ -135,7 +135,7 @@ export default function CreatorRegister() {
           </h1>
           <p className="text-sm text-white/55 leading-relaxed">
             {isAlreadyUsed
-              ? 'This ambassador invite has already been redeemed. If you have already created your account, please log in.'
+              ? 'This creator invite has already been redeemed. If you have already created your account, please log in.'
               : errorMsg}
           </p>
           <button
@@ -143,7 +143,7 @@ export default function CreatorRegister() {
             onClick={() => navigate('/creator/login')}
             className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-yellow-400 text-sm font-black text-black hover:bg-yellow-300 transition"
           >
-            Go to ambassador login
+            Go to creator login
           </button>
         </div>
       </main>

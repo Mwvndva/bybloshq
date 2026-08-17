@@ -8,7 +8,7 @@ import { Link, Navigate } from 'react-router-dom';
 const NativeAppHome = () => (
   <div className="relative flex min-h-[100svh] items-center justify-center bg-black px-6 py-10 text-white selection:bg-yellow-300 selection:text-black">
     {/* Mzigo Ego delivery partners get a discreet entry, mirroring the
-        Ambassador pill — the logo itself is the button. */}
+        Creator pill — the logo itself is the button. */}
     <Link to="/mzigo/login" className="absolute left-5 top-5" aria-label="Mzigo Ego delivery partner login">
       <Button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] p-0 shadow-[0_12px_30px_rgba(0,0,0,0.5)] hover:bg-white/10">
         <img src="/mzigo-ego.png" alt="Mzigo Ego" className="h-6 w-6 object-contain" />
@@ -21,11 +21,11 @@ const NativeAppHome = () => (
       </Button>
     </Link>
     <main className="flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)]">
-      <div className="rounded-full border border-white/20 p-2 bg-black/40 backdrop-blur-md shadow-2xl overflow-hidden">
+      <div className="overflow-hidden">
         <img
           src="/byblos-icon.png"
           alt="Byblos logo"
-          className="h-auto w-[min(68vw,260px)] rounded-full object-cover"
+          className="h-auto w-[min(68vw,260px)] object-cover"
         />
       </div>
 

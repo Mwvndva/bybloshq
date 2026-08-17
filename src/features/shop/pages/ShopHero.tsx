@@ -2,7 +2,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Store, Users } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils';
-import { isNativeApp, isAndroidDevice, openInAndroidApp } from '@/lib/mobileApp';
 import { SHOP_DEFAULT_BANNER_STYLE, type ShopSeller } from './shopPage.shared';
 
 interface ShopHeroProps {
@@ -27,21 +26,6 @@ export function ShopHero({ sellerInfo, bannerLoadFailed, setBannerLoadFailed, sh
 
   return (
     <>
-      {isAndroidDevice() && !isNativeApp() && sellerInfo?.shopSlug && (
-        <div className="w-full bg-slate-950 text-white px-3 py-2 text-xs flex items-center justify-between shadow-md z-30 relative border-b border-white/10">
-          <div className="flex items-center gap-2 truncate pr-2">
-            <span className="font-bold text-yellow-400">Byblos App</span>
-            <span className="text-white/80 truncate">Open {sellerInfo.shopName || 'this shop'} in the native app</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => openInAndroidApp(`shop/${sellerInfo.shopSlug}`, window.location.href)}
-            className="shrink-0 bg-yellow-400 hover:bg-yellow-300 text-black px-3 py-1 rounded-lg text-xs font-bold transition-all active:scale-[0.97]"
-          >
-            Open App
-          </button>
-        </div>
-      )}
       {/* Modern Hero Section */}
       <div className="relative h-[22dvh] min-h-[180px] sm:h-[44dvh] sm:min-h-[340px] lg:h-[50dvh] w-full overflow-hidden">
         {sellerInfo?.bannerImage && !bannerLoadFailed ? (
