@@ -34,7 +34,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-        className="max-w-5xl sm:h-[92dvh] h-[100dvh] w-full sm:w-[95vw] flex flex-col p-0 overflow-hidden rounded-none sm:rounded-3xl bg-[#141414] dark:bg-[#141414] text-white dark:text-white border border-white/10 dark:border-white/10 shadow-2xl [&>button]:text-white/80 [&>button]:hover:text-white [&>button]:hover:bg-white/10"
+        className="max-w-5xl h-[90dvh] sm:h-[92dvh] w-[95vw] sm:w-[95vw] flex flex-col p-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-[#141414] dark:bg-[#141414] text-white dark:text-white border border-white/10 dark:border-white/10 shadow-2xl [&>button]:text-white/80 [&>button]:hover:text-white [&>button]:hover:bg-white/10"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Byblos Terms &amp; Conditions</DialogTitle>
@@ -44,7 +44,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
         </DialogHeader>
 
         {/* Header */}
-        <div className="flex-shrink-0 bg-[#1a1a1a] text-white px-5 sm:px-8 py-5 sm:py-6 pr-14 sm:pr-16 border-b border-white/10">
+        <div className="flex-shrink-0 bg-[#1a1a1a] text-white px-5 sm:px-8 py-4 sm:py-6 pr-14 sm:pr-16 border-b border-white/10">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-[10px] tracking-[0.3em] text-[#c9a84c] uppercase mb-1">Legal Documentation</p>
@@ -61,21 +61,40 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
               </div>
             </div>
           </div>
-          <div className="mt-3.5 p-2.5 bg-[#c9a84c]/10 border-l-2 border-[#c9a84c] text-[10px] sm:text-xs text-[#e8d9a0] leading-normal rounded-r">
+          <div className="mt-3 p-2 sm:p-2.5 bg-[#c9a84c]/10 border-l-2 border-[#c9a84c] text-[10px] sm:text-xs text-[#e8d9a0] leading-normal rounded-r">
             <strong>IMPORTANT:</strong> By using Byblos, you agree to be bound by these Terms. If you do not agree, cease all use immediately.
           </div>
         </div>
 
         {/* Body */}
         <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
-          {/* Nav - Horizontal on mobile, Sidebar on desktop */}
-          <nav className="flex-shrink-0 w-full sm:w-52 bg-[#181818] border-b sm:border-b-0 sm:border-r border-white/10 flex sm:flex-col overflow-x-auto sm:overflow-y-auto py-2 sm:py-6 px-4 no-scrollbar">
-            <p className="hidden sm:block text-[10px] tracking-widest text-gray-400 uppercase mb-4 px-2">Sections</p>
+          {/* Mobile Section Dropdown Nav */}
+          <div className="sm:hidden flex-shrink-0 bg-[#181818] border-b border-white/10 px-4 py-2.5 flex items-center gap-2">
+            <label htmlFor="terms-mobile-section" className="text-[10px] tracking-wider text-gray-400 uppercase whitespace-nowrap font-medium">
+              Section:
+            </label>
+            <select
+              id="terms-mobile-section"
+              value={activeSection}
+              onChange={(e) => scrollTo(e.target.value)}
+              className="flex-1 bg-[#222222] border border-white/15 text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#c9a84c]"
+            >
+              {sections.map((s) => (
+                <option key={s.id} value={s.id} className="bg-[#181818] text-white">
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Desktop Sidebar Nav */}
+          <nav className="hidden sm:flex flex-shrink-0 w-52 bg-[#181818] border-r border-white/10 flex-col overflow-y-auto py-6 px-4">
+            <p className="text-[10px] tracking-widest text-gray-400 uppercase mb-4 px-2">Sections</p>
             {sections.map((s) => (
               <button
                 key={s.id}
                 onClick={() => scrollTo(s.id)}
-                className={`flex-shrink-0 sm:w-full text-left text-[11px] sm:text-xs px-3 py-1.5 sm:py-2.5 rounded-lg mr-2 sm:mr-0 sm:mb-1 transition-all duration-150 leading-tight whitespace-nowrap sm:whitespace-normal
+                className={`w-full text-left text-xs px-3 py-2.5 rounded-lg mb-1 transition-all duration-150 leading-tight
                   ${activeSection === s.id
                     ? 'bg-[#c9a84c] text-[#1a1a1a] font-bold shadow-sm'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
