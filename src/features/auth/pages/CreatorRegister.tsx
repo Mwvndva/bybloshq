@@ -41,7 +41,7 @@ export default function CreatorRegister() {
     confirmPassword: ''
   });
 
-  const { data: inviteData, error: inviteError } = useCreatorInviteQuery(token, !!token);
+  const { data: inviteData, error: inviteError, isLoading: inviteLoading } = useCreatorInviteQuery(token, Boolean(token));
 
   useEffect(() => {
     if (inviteData) {
@@ -49,12 +49,6 @@ export default function CreatorRegister() {
       setForm((current) => ({ ...current, email: inviteData.email || '' }));
     }
   }, [inviteData]);
-
-  useEffect(() => {
-    if (inviteError) {
-      toast.error(getErrorMessage(inviteError, 'Creator invite not found.'));
-    }
-  }, [inviteError]);
 
   const updateForm = (key: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -79,7 +73,7 @@ export default function CreatorRegister() {
     }
     setLoading(true);
     try {
-      const result = await registerMutation.mutateAsync({ token, ...form, referralCode }) as Record<string, unknown>;
+      const result = await registerMutation.mutateAsync({ token: token || undefined, ...form, referralCode: referralCode || undefined }) as Record<string, unknown>;
       // The API returns response.data directly. Check status at both the top level
       // (most backends) and one level deeper (some return { data: { status } }).
       const status = (result as { status?: string })?.status
@@ -99,44 +93,33 @@ export default function CreatorRegister() {
     }
   };
 
-  // Guard: the registration form requires a valid invite token in the URL.
-  // Without it, the backend will always reject the submission. Show a clear
-  // error state instead of letting the user fill out the form and fail later.
-  if (!token) {
+  // If a token was provided in the URL, validate it first
+  if (token && inviteLoading) {
     return (
       <main className="auth-page min-h-screen bg-[#090909] text-white flex items-center justify-center px-4">
-        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center space-y-4 shadow-2xl">
-          <div className="text-4xl">🔗</div>
-          <h1 className="text-xl font-black tracking-tight">Invalid invite link</h1>
-          <p className="text-sm text-white/55 leading-relaxed">
-            This creator invite link is missing or has expired. Please ask the seller to resend your invite, then open the link from the email.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/creator/login')}
-            className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-yellow-400 text-sm font-black text-black hover:bg-yellow-300 transition"
-          >
-            Go to creator login
-          </button>
+        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 shadow-xl">
+          <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+          <span className="text-sm font-semibold text-white/80">Validating invite link...</span>
         </div>
       </main>
     );
   }
 
-  if (inviteError) {
-    const errorMsg = getErrorMessage(inviteError, 'Creator invite not found or has expired.');
+  // If a token was provided but failed validation, show the dedicated error screen
+  if (token && inviteError) {
+    const errorMsg = getErrorMessage(inviteError, 'This creator invite link is missing or has expired.');
     const isAlreadyUsed = errorMsg.toLowerCase().includes('already been used') || errorMsg.toLowerCase().includes('already used');
     return (
       <main className="auth-page min-h-screen bg-[#090909] text-white flex items-center justify-center px-4">
         <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center space-y-4 shadow-2xl">
-          <div className="text-4xl">{isAlreadyUsed ? '✅' : '⚠️'}</div>
+          <div className="text-4xl">{isAlreadyUsed ? '✅' : '🔗'}</div>
           <h1 className="text-xl font-black tracking-tight">
-            {isAlreadyUsed ? 'Invite Already Used' : 'Invite Link Error'}
+            {isAlreadyUsed ? 'Invite Already Used' : 'Invalid invite link'}
           </h1>
           <p className="text-sm text-white/55 leading-relaxed">
             {isAlreadyUsed
               ? 'This creator invite has already been redeemed. If you have already created your account, please log in.'
-              : errorMsg}
+              : 'This creator invite link is missing or has expired. Please ask the seller to resend your invite, then open the link from the email.'}
           </p>
           <button
             type="button"
