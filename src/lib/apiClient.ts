@@ -84,18 +84,9 @@ apiClient.interceptors.request.use(
             config.headers['Authorization'] = `Bearer ${token}`;
         }
 
-        // Attach CSRF token to non-GET requests (excluding authentication login)
-        const LOGIN_PATHS = [
-            '/admin/login',
-            '/admin/marketing/login',
-            '/logistics/login',
-            '/sellers/login',
-            '/buyers/login',
-            '/creators/login'
-        ];
-        const isLogin = LOGIN_PATHS.some((path) => url === path || url.endsWith(path));
-        if (!isLogin && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-            // FIX (Task 11): Use cached CSRF token if it's not stale (10-minute TTL)
+        // Attach CSRF token to all non-GET requests (including authentication and login)
+        if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+            // Use cached CSRF token if it's not stale (10-minute TTL)
             const isFresh = csrfTokenCache && (Date.now() - lastFetchedAt < CSRF_TTL);
 
             if (isFresh) {
@@ -103,7 +94,7 @@ apiClient.interceptors.request.use(
                 return config;
             }
 
-            // If we don't have a token or it's stale, fetch one and then proceed
+            // If we don't have a token or it's stale, fetch one before proceeding
             return getFreshCsrfToken().then((token) => {
                 if (token) {
                     config.headers['X-CSRF-Token'] = token;
