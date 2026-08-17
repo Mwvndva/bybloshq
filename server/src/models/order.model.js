@@ -468,8 +468,8 @@ class Order {
           'name', s.full_name,
           'shopName', s.shop_name,
           'theme', s.theme,
-          'clientCount', 0,
-          'isClient', false
+          'clientCount', COALESCE(s.client_count, 0),
+          'isClient', (sc.user_id IS NOT NULL)
         ) as seller,
         COALESCE(
           json_agg(
@@ -493,8 +493,10 @@ class Order {
       LEFT JOIN order_items oi ON o.id = oi.order_id
       LEFT JOIN products p ON oi.product_id = p.id
       LEFT JOIN sellers s ON o.seller_id = s.id
+      LEFT JOIN buyers b ON o.buyer_id = b.id
+      LEFT JOIN seller_clients sc ON s.id = sc.seller_id AND sc.user_id = b.user_id
       ${whereClause}
-      GROUP BY o.id, s.id
+      GROUP BY o.id, s.id, sc.user_id
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
