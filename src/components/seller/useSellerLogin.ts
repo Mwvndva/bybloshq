@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSellerAuth } from '@/features/auth/contexts';
+import { getFreshCsrfToken } from '@/lib/apiClient';
 
 export function useSellerLogin() {
   const { toast } = useToast();
@@ -18,6 +19,10 @@ export function useSellerLogin() {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [isSendingResetLink, setIsSendingResetLink] = useState(false);
   const loginInFlightRef = useRef(false);
+
+  useEffect(() => {
+    void getFreshCsrfToken();
+  }, []);
 
   // Keep the standalone auth route aligned with the light app shell.
   useEffect(() => {

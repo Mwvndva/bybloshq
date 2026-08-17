@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Loader2, Mail, ArrowLeft, ShoppingBag, Lock, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerAuth } from '@/features/auth/contexts';
+import { getFreshCsrfToken } from '@/lib/apiClient';
 import { VerifyEmailModal } from '../auth/VerifyEmailModal';
 
 interface LoginFormData {
@@ -29,6 +30,10 @@ export function BuyerLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useBuyerAuth();
+
+  useEffect(() => {
+    void getFreshCsrfToken();
+  }, []);
 
   useEffect(() => {
     if (location.state?.message) {
