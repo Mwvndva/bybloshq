@@ -25,7 +25,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
 
   const handleInviteCreator = async () => {
     if (!creatorEmail.trim()) {
-      toast.error('Enter an ambassador email.');
+      toast.error('Enter a creator email.');
       return;
     }
 
@@ -33,7 +33,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
     try {
       await inviteCreatorMutation.mutateAsync(creatorEmail.trim());
       setCreatorEmail('');
-      toast.success('Ambassador invite sent.');
+      toast.success('Creator invite sent.');
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
       toast.error(err?.response?.data?.message || err?.message || 'Could not send invite.');
@@ -45,7 +45,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
   const copyCreatorLink = async (link?: string, label?: string) => {
     if (!link) return;
     const copyMode = await copyLinkedTextToClipboard(label || link, link);
-    toast.success(copyMode === 'rich' ? 'Ambassador link copied as linked text.' : 'Ambassador link copied.');
+    toast.success(copyMode === 'rich' ? 'Creator link copied as linked text.' : 'Creator link copied.');
   };
 
   const creatorCommissionLabel = `${Number(formData.creatorCommissionRate || 1).toFixed(2).replace(/\.?0+$/, '')}%`;
@@ -112,7 +112,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
             type="email"
             value={creatorEmail}
             onChange={(event) => setCreatorEmail(event.target.value)}
-            placeholder="ambassador@example.com"
+            placeholder="creator@example.com"
             className={inputClass}
           />
           <Button
@@ -129,7 +129,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
         <div className="overflow-hidden rounded-2xl border border-white/10">
           {invites.length === 0 ? (
             <div className="bg-white/[0.03] p-4 text-sm font-medium text-white/50">
-              No ambassador invites yet.
+              No creator invites yet.
             </div>
           ) : (
             <div className="divide-y divide-white/10">
@@ -143,7 +143,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
                      </p>
                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
                        {invite.status}
-                       {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% ambassador cut` : ''}
+                       {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% creator cut` : ''}
                      </p>
                      {invite.shopUrl && (
                        <a

@@ -51,7 +51,7 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
           <p className="mt-3 text-2xl font-black text-white tabular-nums">{creators.reduce((sum, creator) => sum + (Number(creator.linkClicks) || 0), 0).toLocaleString()}</p>
         </div>
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200/70">Ambassador earnings</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200/70">Creator earnings</p>
           <p className="mt-3 text-2xl font-black text-white tabular-nums">KSh {creators.reduce((sum, creator) => sum + (Number(creator.totalIncome) || 0), 0).toLocaleString()}</p>
         </div>
       </div>
@@ -60,7 +60,7 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
           <table className="w-full text-left border-collapse">
             <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
               <tr>
-                <th className="px-5 md:px-8 py-4 md:py-6">Ambassador</th>
+                <th className="px-5 md:px-8 py-4 md:py-6">Creator</th>
                 <th className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">Contact</th>
                 <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden xl:table-cell">Linked Shops</th>
                 <th className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">Performance</th>
@@ -68,48 +68,47 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
                 <th className="px-5 md:px-8 py-4 md:py-6 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-white/5 font-medium">
               {filtered.map((creator) => (
-                <tr key={creator.id} className="hover:bg-white/[0.02] transition-all group">
+                <tr key={creator.id} className="hover:bg-white/[0.02] transition-colors group">
                   <td className="px-5 md:px-8 py-4 md:py-6">
-                    <div className="flex items-center gap-3 md:gap-5">
-                      <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-yellow-500/30 transition-all shadow-inner">
-                        <UserPlus className="w-4 h-4 md:w-6 md:h-6 text-gray-500 group-hover:text-yellow-500 transition-all" />
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 md:h-10 md:w-10 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center font-black text-yellow-500 text-xs md:text-sm uppercase group-hover:scale-105 transition-transform">
+                        {creator.name?.[0] || 'C'}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm md:text-base font-black text-white tracking-tight truncate">{creator.name}</p>
-                        <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50 truncate">CID: {String(creator.id).slice(0, 12)}</p>
+                        <p className="font-bold text-white text-sm md:text-base group-hover:text-yellow-400 transition-colors truncate">{creator.name || 'Unnamed'}</p>
+                        <p className="text-xs text-gray-500 truncate">{creator.email || 'No email'}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6 hidden lg:table-cell">
-                    <div className="space-y-1">
-                      <p className="text-sm font-bold text-gray-300">{creator.email}</p>
-                      <p className="text-xs text-gray-500 font-medium tabular-nums">{creator.whatsappNumber || creator.mpesaNumber || '—'}</p>
-                    </div>
+                  <td className="px-5 md:px-8 py-4 md:py-6 hidden lg:table-cell">
+                    <p className="text-sm font-semibold text-gray-300">{creator.mpesaNumber || '—'}</p>
+                    <p className="text-xs text-gray-500">M-Pesa</p>
                   </td>
-                  <td className="px-8 py-6 text-center hidden xl:table-cell">
-                    <p className="text-lg font-black text-white tabular-nums">{creator.linkedShops}</p>
-                    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-500">{creator.pendingRequests} pending</p>
+                  <td className="px-5 md:px-8 py-4 md:py-6 text-center hidden xl:table-cell">
+                    <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-bold bg-white/5 border border-white/10 text-gray-300 tabular-nums">
+                      {creator.linkedShops || 0}
+                    </span>
                   </td>
                   <td className="px-5 md:px-8 py-4 md:py-6 text-center hidden md:table-cell">
-                    <p className="text-sm font-black text-white tabular-nums">{creator.totalSales} sales</p>
-                    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-500">{creator.linkClicks} clicks</p>
+                    <p className="text-sm font-black text-white tabular-nums">{creator.totalSales || 0}</p>
+                    <p className="text-[10px] uppercase font-black text-gray-500 tracking-wider">Sales</p>
                   </td>
                   <td className="px-5 md:px-8 py-4 md:py-6 text-right">
-                    <p className="text-sm md:text-lg font-black text-white tracking-tighter tabular-nums">KSh {creator.totalIncome.toLocaleString()}</p>
-                    <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">Balance KSh {creator.balance.toLocaleString()}</p>
+                    <p className="text-sm font-black text-emerald-400 tabular-nums">KSh {(Number(creator.totalIncome) || 0).toLocaleString()}</p>
+                    <p className="text-[10px] uppercase font-black text-gray-500 tracking-wider">Earned</p>
                   </td>
                   <td className="px-5 md:px-8 py-4 md:py-6 text-right">
-                    <IconButton
-                      type="button"
+                    <Button
                       variant="ghost"
+                      size="sm"
                       onClick={() => onDelete(creator.id, creator.name)}
-                      className="h-11 w-11 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-100"
-                      aria-label={`Delete ${creator.name || 'creator'} account`}
+                      className="h-8 md:h-9 px-2.5 md:px-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl font-bold text-xs"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </IconButton>
+                      <Trash2 className="h-4 w-4 md:mr-1.5" />
+                      <span className="hidden md:inline">Delete</span>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -119,7 +118,7 @@ export const AdminCreatorsTab = ({ creators, searchQuery, onSearchChange, onDele
       </CardContent>
       <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01]">
         <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
-          Total ambassadors: <span className="text-white ml-2 tabular-nums">{creators.length}</span>
+          Total creators: <span className="text-white ml-2 tabular-nums">{creators.length}</span>
         </p>
       </CardFooter>
     </Card>

@@ -121,7 +121,7 @@ export default function CreatorDashboard() {
       <main className="dashboard-layout flex min-h-screen items-center justify-center bg-[var(--byblos-bg,#000000)] px-4 text-slate-950 dark:text-white transition-colors duration-200">
         <div className="flex items-center gap-3 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] px-5 py-3 shadow-xl">
           <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
-          <span className="text-sm font-semibold text-slate-700 dark:text-white/80">Loading ambassador dashboard...</span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-white/80">Loading creator dashboard...</span>
         </div>
       </main>
     );
@@ -281,13 +281,13 @@ export default function CreatorDashboard() {
 
         <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-5 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-500 dark:text-white/40">Account</p>
-          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-white/50">Sign out of your ambassador account on this device.</p>
+          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-white/50">Sign out of your creator account on this device.</p>
           <Button
             type="button"
             variant="outline"
             onClick={handleLogout}
             className="mt-3 h-10 w-full border-slate-300 dark:border-white/10 bg-white dark:bg-white/[0.03] text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 sm:w-auto font-bold"
-            aria-label="Log out of ambassador dashboard"
+            aria-label="Log out of creator dashboard"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
