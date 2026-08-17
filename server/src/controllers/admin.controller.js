@@ -252,6 +252,74 @@ const getMonthlyMetrics = async (req, res, next) => {
   }
 };
 
+const getFinancialMetrics = async (req, res, next) => {
+  try {
+    const [sales, commission, completedRefunds, pendingRefunds] = await Promise.all([
+      adminMetricsRepository.findTotalSales(),
+      adminMetricsRepository.findTotalCommission(),
+      adminMetricsRepository.findCompletedRefundsTotal(),
+      adminMetricsRepository.findPendingRefundsTotal()
+    ]);
+
+    const totalSales = Number.parseFloat(sales?.total_sales) || 0;
+    const totalOrders = Number.parseInt(sales?.total_orders, 10) || 0;
+    const totalCommission = Number.parseFloat(commission?.total_commission) || 0;
+    const totalRefunds = Number.parseFloat(completedRefunds?.total_refunds) || 0;
+    const totalRefundRequests = Number.parseInt(completedRefunds?.total_refund_requests, 10) || 0;
+    const pendingRefundsVal = Number.parseFloat(pendingRefunds?.pending_refunds) || 0;
+    const netRevenue = totalSales - totalRefunds;
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalSales,
+        totalOrders,
+        totalCommission,
+        totalRefunds,
+        totalRefundRequests,
+        pendingRefunds: pendingRefundsVal,
+        netRevenue
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching financial metrics:', error);
+    next(new AppError(`Failed to fetch financial metrics: ${error.message}`, 500));
+  }
+};
+
+const getMonthlyFinancialMetrics = async (req, res, next) => {
+  try {
+    const rows = await adminMetricsRepository.findMonthlyFinancials();
+
+    const monthlyFinancialData = rows.map(row => {
+      let monthStr = '';
+      if (row.month instanceof Date) {
+        monthStr = row.month.toISOString().split('T')[0];
+      } else if (typeof row.month === 'string') {
+        monthStr = row.month.split('T')[0];
+      } else {
+        monthStr = String(row.month || '');
+      }
+
+      return {
+        month: monthStr,
+        sales: Number.parseFloat(row.sales) || 0,
+        commission: Number.parseFloat(row.commission) || 0,
+        refunds: Number.parseFloat(row.refunds) || 0
+      };
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: monthlyFinancialData
+    });
+  } catch (error) {
+    logger.error('Error fetching monthly financial metrics:', error);
+    next(new AppError(`Failed to fetch monthly financial metrics: ${error.message}`, 500));
+  }
+};
+
+
 /**
  * Process pending payments (admin only)
  */
@@ -594,6 +662,8 @@ export {
   getAllProducts,
   getSellerProducts,
   getMonthlyMetrics,
+  getFinancialMetrics,
+  getMonthlyFinancialMetrics,
   getAllWithdrawalRequests,
   updateWithdrawalRequestStatus,
   getAnalytics,
