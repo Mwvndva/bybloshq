@@ -93,7 +93,12 @@ export const register = async (req, res, next) => {
       return res.status(404).json({ status: 'fail', message });
     }
     if (error.code === 'EXISTING_ACCOUNT' || message.includes('already has a Byblos account')) {
-      return res.status(400).json({ status: 'fail', code: 'EXISTING_ACCOUNT', message });
+      return res.status(400).json({
+        status: 'fail',
+        code: 'EXISTING_ACCOUNT',
+        message,
+        data: error.existingRoles || {}
+      });
     }
     if (message.includes('required') || message.includes('do not match') || message.includes('email')) {
       return res.status(400).json({ status: 'fail', message });
