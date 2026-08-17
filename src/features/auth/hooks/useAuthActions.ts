@@ -297,7 +297,7 @@ export function useAuthActions({
       navigate(typeof dashboardPath === 'string' ? dashboardPath : '/', { replace: true });
 
       toast.success('Account switched', {
-        description: `You are now using your ${role === 'creator' ? 'ambassador' : role} account.`,
+        description: `You are now using your ${role} account.`,
         duration: 2000,
       });
     } catch (error) {

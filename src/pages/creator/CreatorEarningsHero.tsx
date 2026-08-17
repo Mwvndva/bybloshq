@@ -66,7 +66,7 @@ export function CreatorEarningsHero({
 }: CreatorEarningsHeroProps) {
   const animatedEarnings = useCountUp(totalEarnings);
   const hasEarnings = totalEarnings > 0;
-  const name = firstName || 'Ambassador';
+  const name = firstName || 'Creator';
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-yellow-400/30 bg-slate-50 dark:bg-[#0a0a0a] p-5 shadow-sm transition-colors duration-200 sm:p-6">
@@ -75,7 +75,7 @@ export function CreatorEarningsHero({
 
       <div className="relative">
         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-600 dark:text-yellow-300">
-          Ambassador · {name}
+          Creator · {name}
         </p>
 
         {hasEarnings ? (

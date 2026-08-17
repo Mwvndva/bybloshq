@@ -101,10 +101,10 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
           <Package className="h-3.5 w-3.5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
           {liveProducts.toLocaleString()} live {liveProducts === 1 ? 'product' : 'products'}
         </span>
-        {ambassadorSales > 0 && (
+        {creatorSales > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-bold text-white/80">
             <Megaphone className="h-3 w-3" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-            {formatCurrency(ambassadorSales)} creator sales
+            {formatCurrency(creatorSales)} creator sales
           </span>
         )}
       </div>
