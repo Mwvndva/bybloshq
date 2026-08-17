@@ -1,11 +1,8 @@
-import axios from 'axios';
-import { getFreshCsrfToken } from '@/lib/apiClient';
-import { buildApiBaseUrl } from '@/lib/apiBaseUrl';
+import { defaultUniversalClient } from '@/lib/http/UniversalHttpClient';
+import { getFreshCsrfToken, getCachedCsrfToken, setCachedCsrfToken } from '@/lib/auth/WebAuthStrategy';
 
-// Type for axios instance
 type AxiosInstance = import('axios').AxiosInstance;
 
-// Type definitions for error handling
 export interface ApiError {
   message: string;
   response?: {
@@ -20,17 +17,7 @@ export interface ApiError {
   request?: unknown;
 }
 
-const API_BASE_URL = buildApiBaseUrl();
-
-// Create axios instance with default config
-export const adminApiInstance: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
+export const adminApiInstance: AxiosInstance = defaultUniversalClient.getAxiosInstance();
 export const api = adminApiInstance;
 
 export type AdminLogisticsStatusFilter =
@@ -62,40 +49,4 @@ export interface AdminLogisticsResponse {
   };
 }
 
-// CSRF Token Cache for admin instance
-export let csrfTokenCache: string | null = null;
-
-export function setCsrfTokenCache(val: string | null) {
-  csrfTokenCache = val;
-}
-
-// Request Interceptor for CSRF
-api.interceptors.request.use(
-  async (config: import('axios').InternalAxiosRequestConfig) => {
-    const url = config.url || '';
-    const isLogin = url === '/admin/login' || url.endsWith('/login');
-    if (!isLogin && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-      if (!csrfTokenCache) {
-        csrfTokenCache = await getFreshCsrfToken();
-      }
-      if (csrfTokenCache) {
-        config.headers['X-CSRF-Token'] = csrfTokenCache;
-      }
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor to handle 401 Unauthorized responses
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('admin_authenticated');
-    }
-    return Promise.reject(error);
-  }
-);
-
-
+export { getCachedCsrfToken as csrfTokenCache, setCachedCsrfToken as setCsrfTokenCache, setCachedCsrfToken };

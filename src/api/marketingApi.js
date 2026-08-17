@@ -1,73 +1,30 @@
 /**
  * marketingApi.js
  * All API calls for the marketing dashboard.
- * Token is stored in sessionStorage (clears when browser tab closes).
+ * Uses UniversalHttpClient with WebSessionStorageAdapter.
  */
-import axios from 'axios'
-import { getFreshCsrfToken, getCachedCsrfToken } from '@/lib/apiClient'
-import { buildApiBaseUrl } from '@/lib/apiBaseUrl'
+import { UniversalHttpClient } from '@/lib/http/UniversalHttpClient';
+import { WebSessionStorageAdapter } from '@/lib/auth/adapters';
+import { WebAuthStrategy } from '@/lib/auth/WebAuthStrategy';
 
-const BASE_URL = buildApiBaseUrl()
+const marketingStorage = new WebSessionStorageAdapter();
+const marketingAuthStrategy = new WebAuthStrategy(marketingStorage);
 
-const marketingClient = axios.create({
-    baseURL: BASE_URL,
-    withCredentials: true // Ensure cookies are sent
-})
-
-// Attach token to every request
-marketingClient.interceptors.request.use(async (config) => {
-    // 1. Attach Auth Token
-    const token = sessionStorage.getItem('marketing_token')
-    if (token) config.headers.Authorization = `Bearer ${token}`
-
-    // 2. Attach CSRF token to non-GET requests (excluding authentication login)
-    const isLogin = config.url && (config.url === '/admin/marketing/login' || config.url.endsWith('/login'));
-    if (!isLogin && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-        let csrfToken = getCachedCsrfToken();
-        if (!csrfToken) {
-            csrfToken = await getFreshCsrfToken();
-        }
-        if (csrfToken) {
-            config.headers['X-CSRF-Token'] = csrfToken;
-        }
-    }
-
-    return config
-})
-
-marketingClient.interceptors.response.use(
-    (res) => res,
-    async (err) => {
-        const config = err.config;
-        const status = err.response?.status;
-        const message = err.response?.data?.message || '';
-
-        // Handle CSRF Mismatch
-        if (status === 403 && message.includes('CSRF mismatch') && !config._retry) {
-            config._retry = true;
-
-            const newToken = await getFreshCsrfToken();
-            if (newToken) {
-                config.headers['X-CSRF-Token'] = newToken;
-                return marketingClient(config);
-            }
-        }
-
-        // Only redirect to login if NOT already trying to login/logout
-        const isAuthRequest = config?.url?.includes('/admin/marketing/login');
-
-        if (status === 401 && !isAuthRequest) {
-            sessionStorage.removeItem('marketing_token');
-            sessionStorage.removeItem('marketing_user');
-            globalThis.location.href = '/admin/marketing/login';
-        }
-        throw err;
-    }
-);
+const marketingClient = new UniversalHttpClient({
+  storageAdapter: marketingStorage,
+  authStrategy: marketingAuthStrategy,
+  defaultRole: 'marketing'
+});
 
 export const marketingApi = {
-    login: (email, password) =>
-        marketingClient.post('/admin/marketing/login', { email, password }),
+    login: async (email, password) => {
+        const response = await marketingClient.post('/admin/marketing/login', { email, password });
+        if (response.data?.user) {
+            await marketingStorage.setItem('marketing_user', JSON.stringify(response.data.user));
+            await marketingStorage.setItem('marketingSessionActive', 'true');
+        }
+        return response;
+    },
     getOverview: () =>
         marketingClient.get('/admin/marketing/overview'),
     getGmvTrend: (months = 12) =>
@@ -86,4 +43,4 @@ export const marketingApi = {
         marketingClient.get('/admin/marketing/referrals'),
     getActivity: (limit = 20) =>
         marketingClient.get(`/admin/marketing/activity?limit=${limit}`)
-}
+};

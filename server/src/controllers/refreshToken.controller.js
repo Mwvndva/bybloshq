@@ -6,14 +6,24 @@ import { AppError } from '../shared/utils/errorHandler.js';
  */
 export const refreshToken = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    const tokenString = req.cookies?.refreshToken || req.body?.refreshToken;
 
-    if (!refreshToken) {
+    if (!tokenString) {
       return next(new AppError('Refresh token is required', 400));
     }
 
     // Generate new access token (plus a rolling refresh token)
-    const { accessToken, refreshToken: newRefreshToken, user } = refreshAccessToken(refreshToken);
+    const { accessToken, refreshToken: newRefreshToken, user } = refreshAccessToken(tokenString);
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/api/auth/refresh-token',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      domain: process.env.COOKIE_DOMAIN || undefined
+    });
 
     res.status(200).json({
       status: 'success',
