@@ -55,3 +55,13 @@ test('logistics partner attachment attaches req.logisticsPartner using logistics
   assert.match(authMiddleware, /req\.logisticsPartner = \{/);
   assert.match(authMiddleware, /userId: userData\.user_table_id \|\| decoded\.id/);
 });
+
+test('AndroidAuthStrategy constructs Bearer headers from stored tokens and handles refresh', () => {
+  const androidStrategy = read('src/lib/auth/AndroidAuthStrategy.ts');
+  const logisticsAuth = read('src/api/logistics/auth.ts');
+
+  assert.match(androidStrategy, /Authorization:\s*`Bearer \$\{token\}`/);
+  assert.match(androidStrategy, /const refreshToken = await this\.storageAdapter\.getItem\(`\$\{role\}RefreshToken`\)/);
+  assert.match(logisticsAuth, /if \(isNativeApp\(\) && data\?\.token\)/);
+  assert.match(logisticsAuth, /await storage\.set\('logisticsToken', data\.token\)/);
+});

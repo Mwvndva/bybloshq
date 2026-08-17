@@ -1,5 +1,7 @@
 import apiClient from '@/lib/apiClient';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
+import { isNativeApp } from '@/lib/mobileApp';
+import { storage } from '@/lib/storage';
 
 const LOGISTICS_PARTNER_KEY = 'mzigoLogisticsPartner';
 const LOGISTICS_ACTIVE_KEY = 'mzigoLogisticsActive';
@@ -42,6 +44,10 @@ export async function clearLogisticsSession() {
   sessionStorage.removeItem(LOGISTICS_PARTNER_KEY);
   localStorage.removeItem('mzigoLogisticsToken');
   localStorage.removeItem('mzigoLogisticsPartner');
+  if (isNativeApp()) {
+    await storage.remove('logisticsToken');
+    await storage.remove('logisticsRefreshToken');
+  }
   try {
     await apiClient.post('/logistics/logout');
   } catch {
@@ -62,6 +68,12 @@ export async function loginLogisticsPartner(email: string, password: string) {
   const data = response.data?.data;
   if (!data?.partner) {
     throw new Error('Logistics login response was incomplete');
+  }
+
+  if (isNativeApp() && data?.token) {
+    await storage.set('logisticsToken', data.token);
+    const refreshToken = (data as { refreshToken?: string }).refreshToken;
+    if (refreshToken) await storage.set('logisticsRefreshToken', refreshToken);
   }
 
   setLogisticsSession(data.partner);
