@@ -22,7 +22,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const clicks = Number(analytics.clickCount || 0);
   const wishlist = Number(analytics.wishlistCount || 0);
   const liveProducts = Number(analytics.totalProducts || 0);
-  const ambassadorSales = analytics.creatorGeneratedSales || 0;
+  const creatorSales = analytics.creatorGeneratedSales || 0;
 
   // "Nothing yet" — a brand-new shop with no numbers to show. We greet them and
   // point at the next action instead of a wall of zeros, but keep the metrics
