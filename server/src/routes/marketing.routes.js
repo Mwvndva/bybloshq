@@ -5,7 +5,7 @@ import * as V from '../validations/marketing.validation.js';
  * All routes are read-only. No writes happen in this router.
  */
 import express from 'express'
-import { protectMarketing } from '../middleware/marketingAuth.js'
+import { protect, restrictTo } from '../middleware/auth.js'
 import { authLimiter } from '../middleware/authRateLimiter.js'
 import {
     marketingLogin,
@@ -25,8 +25,8 @@ const router = express.Router()
 // Public: login only
 router.post('/login', authLimiter, validate(V.login), marketingLogin)
 
-// All remaining routes require marketing JWT
-router.use(protectMarketing)
+// All remaining routes require marketing or admin role
+router.use(protect, restrictTo('marketing', 'admin'))
 
 router.get('/overview', getOverview)
 router.get('/gmv-trend', getGmvTrend)

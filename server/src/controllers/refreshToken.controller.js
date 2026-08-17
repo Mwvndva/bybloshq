@@ -1,5 +1,6 @@
 import { refreshAccessToken } from '../shared/utils/refreshToken.js';
 import { AppError } from '../shared/utils/errorHandler.js';
+import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 
 /**
  * Refresh access token using refresh token
@@ -14,6 +15,9 @@ export const refreshToken = async (req, res, next) => {
 
     // Generate new access token (plus a rolling refresh token)
     const { accessToken, refreshToken: newRefreshToken, user } = refreshAccessToken(tokenString);
+
+    // Set updated HttpOnly jwt access cookie for Web browser sessions
+    setAuthCookie(res, accessToken);
 
     const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', newRefreshToken, {

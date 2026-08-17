@@ -94,10 +94,8 @@ export default function MarketingDashboard() {
     }, [period])
 
     useEffect(() => {
-        const token = sessionStorage.getItem('marketingToken') || sessionStorage.getItem('marketing_token')
-        if (!token) { navigate('/admin/marketing/login'); return }
         fetchAll()
-    }, [fetchAll, navigate])
+    }, [fetchAll])
 
     if (loading) return (
         <div className="flex min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#050505]">
