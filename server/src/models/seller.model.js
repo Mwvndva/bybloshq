@@ -360,11 +360,82 @@ export const updateSeller = async (id, updates) => {
 
 
 export const becomeClient = async (sellerId, userId) => {
-  return { clientCount: 0, alreadyClient: false };
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Check if relationship already exists
+    const check = await client.query(
+      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
+
+    if (check.rowCount > 0) {
+      await client.query('ROLLBACK');
+      const countResult = await pool.query(
+        'SELECT COUNT(*)::int AS count FROM seller_clients WHERE seller_id = $1',
+        [sellerId]
+      );
+      return { clientCount: countResult.rows[0]?.count || 0, alreadyClient: true };
+    }
+
+    // 2. Insert into seller_clients
+    await client.query(
+      'INSERT INTO seller_clients (seller_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [sellerId, userId]
+    );
+
+    // 3. Increment/reconcile client_count in sellers
+    const countResult = await client.query(
+      'SELECT COUNT(*)::int AS count FROM seller_clients WHERE seller_id = $1',
+      [sellerId]
+    );
+    const newCount = countResult.rows[0]?.count || 0;
+    await client.query(
+      'UPDATE sellers SET client_count = $1 WHERE id = $2',
+      [newCount, sellerId]
+    );
+
+    await client.query('COMMIT');
+    return { clientCount: newCount, alreadyClient: false };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const removeClient = async (sellerId, userId) => {
-  return { clientCount: 0, wasClient: false };
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Remove from seller_clients
+    await client.query(
+      'DELETE FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
+
+    // 2. Decrement/reconcile client_count in sellers
+    const countResult = await client.query(
+      'SELECT COUNT(*)::int AS count FROM seller_clients WHERE seller_id = $1',
+      [sellerId]
+    );
+    const newCount = countResult.rows[0]?.count || 0;
+    await client.query(
+      'UPDATE sellers SET client_count = $1 WHERE id = $2',
+      [newCount, sellerId]
+    );
+
+    await client.query('COMMIT');
+    return { clientCount: newCount, wasClient: true };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const findSellersByUserId = async (userId, options = {}) => {
@@ -386,20 +457,19 @@ export const findSellersByUserId = async (userId, options = {}) => {
       s.avatar_url AS "avatarUrl",
       s.theme,
       s.instagram_link AS "instagramLink",
-      0 AS "clientCount",
+      COALESCE(sc_counts.count, s.client_count, 0) AS "clientCount",
       COALESCE(w.total_wishlist_count, 0) AS "totalWishlistCount",
       COALESCE(w.total_wishlist_count, 0) AS "wishlistCount",
       COALESCE(k.knock_count, 0) AS "knockCount",
       s.created_at AS "createdAt",
       COUNT(*) OVER() AS "totalCount"
      FROM sellers s
-     JOIN (
-       SELECT DISTINCT o.seller_id, MAX(o.created_at) as last_order_at
-       FROM product_orders o
-       JOIN buyers b ON o.buyer_id = b.id
-       WHERE b.user_id = $1
-       GROUP BY o.seller_id
-     ) buyer_sellers ON s.id = buyer_sellers.seller_id
+     JOIN seller_clients sc ON s.id = sc.seller_id
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS count
+       FROM seller_clients sc2
+       WHERE sc2.seller_id = s.id
+     ) sc_counts ON true
      LEFT JOIN LATERAL (
        SELECT COUNT(wl.id)::int AS total_wishlist_count
        FROM products p
@@ -412,7 +482,8 @@ export const findSellersByUserId = async (userId, options = {}) => {
        WHERE sk.seller_id = s.id
          AND sk.created_at >= NOW() - INTERVAL '24 hours'
      ) k ON true
-     ORDER BY buyer_sellers.last_order_at DESC, s.id ASC
+     WHERE sc.user_id = $1
+     ORDER BY sc.created_at DESC, s.id ASC
      LIMIT $2 OFFSET $3`,
     [userId, pageSize, offset]
   );
