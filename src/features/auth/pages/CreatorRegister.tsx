@@ -7,13 +7,15 @@ import { useCreatorInviteQuery } from '@/hooks/creator/queries/useCreatorInviteQ
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
+
 type CreatorInvite = {
   email?: string;
   shopName?: string;
 };
 
 type ApiError = {
-  response?: { data?: { message?: string; code?: string; status?: string } };
+  response?: { data?: { message?: string; code?: string; status?: string; data?: { hasBuyer?: boolean; hasSeller?: boolean; loginPath?: string; suggestedRole?: string } } };
   message?: string;
   code?: string;
 };
@@ -26,11 +28,18 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 export default function CreatorRegister() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { user: authUser } = useGlobalAuth();
   const token = params.get('token') || '';
   const referralCode = params.get('ref') || '';
   const [invite, setInvite] = useState<CreatorInvite | null>(null);
   const [loading, setLoading] = useState(false);
   const [existingAccountPrompt, setExistingAccountPrompt] = useState(false);
+  const [existingAccountInfo, setExistingAccountInfo] = useState<{
+    hasBuyer?: boolean;
+    hasSeller?: boolean;
+    loginPath?: string;
+    suggestedRole?: string;
+  } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [form, setForm] = useState({
@@ -51,6 +60,27 @@ export default function CreatorRegister() {
       setForm((current) => ({ ...current, email: inviteData.email || '' }));
     }
   }, [inviteData]);
+
+  // Pre-fill fields for an already logged-in user browsing to register as creator
+  useEffect(() => {
+    if (authUser && !token) {
+      const userAny = authUser as Record<string, unknown>;
+      const fullName = (userAny.fullName as string) || '';
+      const nameParts = fullName.trim().split(/\s+/);
+      const inferredFirst = nameParts[0] || (userAny.firstName as string) || '';
+      const inferredLast = nameParts.slice(1).join(' ') || (userAny.lastName as string) || '';
+      const inferredPhone = (userAny.whatsappNumber as string) || (userAny.phone as string) || (userAny.mobilePayment as string) || '';
+
+      setForm((current) => ({
+        ...current,
+        email: current.email || authUser.email || '',
+        firstName: current.firstName || inferredFirst,
+        lastName: current.lastName || inferredLast,
+        whatsappNumber: current.whatsappNumber || inferredPhone,
+        mpesaNumber: current.mpesaNumber || inferredPhone
+      }));
+    }
+  }, [authUser, token]);
 
   const updateForm = (key: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -92,8 +122,10 @@ export default function CreatorRegister() {
       const apiError = error as ApiError;
       const code = apiError?.response?.data?.code || apiError?.code;
       const errorMsg = getErrorMessage(error, 'Could not create creator account.');
+      const rolesData = apiError?.response?.data?.data;
 
       if (code === 'EXISTING_ACCOUNT' || errorMsg.toLowerCase().includes('already has a byblos account')) {
+        setExistingAccountInfo(rolesData || null);
         setExistingAccountPrompt(true);
       } else {
         toast.error(errorMsg);
@@ -281,13 +313,40 @@ export default function CreatorRegister() {
             </p>
 
             <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
-              <Button
-                type="button"
-                onClick={() => navigate('/buyer/login')}
-                className="h-11 flex-1 rounded-xl bg-yellow-400 font-black text-black hover:bg-yellow-300 transition"
-              >
-                Go to Login
-              </Button>
+              {existingAccountInfo?.hasSeller && !existingAccountInfo?.hasBuyer ? (
+                <Button
+                  type="button"
+                  onClick={() => navigate('/seller/login')}
+                  className="h-11 flex-1 rounded-xl bg-yellow-400 font-black text-black hover:bg-yellow-300 transition"
+                >
+                  Log in as Seller
+                </Button>
+              ) : existingAccountInfo?.hasBuyer && !existingAccountInfo?.hasSeller ? (
+                <Button
+                  type="button"
+                  onClick={() => navigate('/buyer/login')}
+                  className="h-11 flex-1 rounded-xl bg-yellow-400 font-black text-black hover:bg-yellow-300 transition"
+                >
+                  Log in as Buyer
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    onClick={() => navigate('/buyer/login')}
+                    className="h-11 flex-1 rounded-xl bg-yellow-400 font-black text-black hover:bg-yellow-300 transition"
+                  >
+                    Buyer Login
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => navigate('/seller/login')}
+                    className="h-11 flex-1 rounded-xl border border-yellow-400/40 bg-yellow-400/10 font-bold text-yellow-300 hover:bg-yellow-400/20 transition"
+                  >
+                    Seller Login
+                  </Button>
+                </>
+              )}
               <Button
                 type="button"
                 variant="outline"
