@@ -31,7 +31,7 @@ export default function CreatorDashboard() {
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
   const withdrawRef = useRef<HTMLDivElement>(null);
-  const { theme, setTheme } = useThemeScope('ambassador');
+  const { theme, setTheme } = useThemeScope('creator');
 
   const dashboardQuery = useCreatorDashboardQuery(analysisPeriod);
   const referralQuery = useCreatorReferralDashboardQuery();
