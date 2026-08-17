@@ -398,7 +398,15 @@ class CreatorService {
       await client.query('COMMIT');
 
       if (!user.is_verified) {
-        await AuthService.sendEmailVerification(email, 'creator');
+        try {
+          await AuthService.sendEmailVerification(email, 'creator');
+        } catch (emailErr) {
+          logger.error('[CREATOR] Failed to dispatch verification email during invite registration:', {
+            email,
+            error: emailErr.message,
+            stack: emailErr.stack
+          });
+        }
         return { status: 'pending_verification', email };
       }
 
@@ -488,7 +496,15 @@ class CreatorService {
       await client.query('COMMIT');
 
       if (!user.is_verified) {
-        await AuthService.sendEmailVerification(email, 'creator');
+        try {
+          await AuthService.sendEmailVerification(email, 'creator');
+        } catch (emailErr) {
+          logger.error('[CREATOR] Failed to dispatch verification email during direct registration:', {
+            email,
+            error: emailErr.message,
+            stack: emailErr.stack
+          });
+        }
         return { status: 'pending_verification', email };
       }
 

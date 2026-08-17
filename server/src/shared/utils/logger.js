@@ -57,9 +57,12 @@ if (!logger) {
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, stack }) => {
+        winston.format.printf((info) => {
+          const { timestamp, level, message, stack, ...meta } = info;
           const stackMessage = stack ? `\n${stack}` : '';
-          return `${timestamp} ${level}: ${message}${stackMessage}`;
+          const metaKeys = Object.keys(meta).filter(k => k !== 'level' && k !== 'message' && k !== 'splat');
+          const metaStr = metaKeys.length > 0 ? ` ${JSON.stringify(meta)}` : '';
+          return `${timestamp || new Date().toISOString()} ${level}: ${message}${metaStr}${stackMessage}`;
         })
       )
     })
