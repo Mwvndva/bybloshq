@@ -571,6 +571,7 @@ class AdminService {
       }
 
       // --- Universal cleanup: runs for ALL roles (Sellers can be Buyers too) ---
+      await client.query('DELETE FROM seller_clients WHERE user_id = $1', [userId]);
 
       const buyerRow = await client.query('SELECT id FROM buyers WHERE user_id = $1 FOR UPDATE', [userId]);
       if (buyerRow.rows.length > 0) {
