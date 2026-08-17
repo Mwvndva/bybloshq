@@ -169,32 +169,40 @@ export const sendEmail = async (options) => {
 };
 
 export const sendVerificationEmail = async (email, token, userType = 'buyer') => {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  logger.info('[EMAIL] Dispatching verification email', { email: normalizedEmail, userType });
   try {
-    const baseUrl = process.env.FRONTEND_URL.replace(/\/+$/, '');
+    const rawFrontendUrl = process.env.FRONTEND_URL || 'https://www.byblosafrica.site';
+    const baseUrl = rawFrontendUrl.replace(/\/+$/, '');
     // Include email in URL so backend can look up the user without a session
-    const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email)}&type=${userType}`
-    const appName = process.env.APP_NAME || 'Byblos'
+    const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(normalizedEmail)}&type=${userType}`;
+    const appName = process.env.APP_NAME || 'Byblos';
 
     const html = await readTemplate('verify-email', {
       verificationUrl,
       appName,
-      name: email.split('@')[0], // fallback name until we have it
-    })
+      name: normalizedEmail.split('@')[0], // fallback name until we have it
+    });
 
-    await sendEmail({
-      to: email,
+    const result = await sendEmail({
+      to: normalizedEmail,
       subject: `${appName} — Please verify your email address`,
       html,
       text: `Please verify your email by clicking: ${verificationUrl}\n\nThis link expires in 24 hours.`
-    })
+    });
 
-    logger.info('Verification email sent', { email, userType })
-    return true
+    if (result?.skipped) {
+      logger.warn('[EMAIL] Verification email skipped (no email transport configured)', { email: normalizedEmail, userType });
+    } else {
+      logger.info('[EMAIL] Verification email sent successfully', { email: normalizedEmail, userType, id: result?.id });
+    }
+
+    return true;
   } catch (error) {
-    logger.error('Error sending verification email:', { email, error: error.message })
-    throw error
+    logger.error('[EMAIL] Error sending verification email:', { email: normalizedEmail, error: error.message, stack: error.stack });
+    throw error;
   }
-}
+};
 
 export const sendPasswordResetEmail = async (email, token, userType = 'seller') => {
   try {
