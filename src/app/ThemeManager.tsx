@@ -17,14 +17,14 @@ import {
 const SCOPE_READY: Record<ThemeScope, boolean> = {
   default: true,
   buyer: true,
-  ambassador: true,
+  creator: true,
   seller: true,
   shop: false,
 };
 
 function scopeForPath(pathname: string): ThemeScope {
   if (pathname.startsWith('/seller')) return 'seller';
-  if (pathname.startsWith('/creator')) return 'ambassador';
+  if (pathname.startsWith('/creator')) return 'creator';
   if (pathname.startsWith('/buyer')) return 'buyer'; // includes /buyer/shop/*
   if (pathname.startsWith('/shop/')) return 'shop';  // public storefront
   return 'default';

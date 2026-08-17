@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type AppTheme = 'system' | 'light' | 'dark';
-export type ThemeScope = 'buyer' | 'seller' | 'ambassador' | 'shop' | 'default';
+export type ThemeScope = 'buyer' | 'seller' | 'creator' | 'shop' | 'default';
 
 const LEGACY_KEY = 'byblos-app-theme';
 const keyFor = (scope: ThemeScope) => `byblos-theme-${scope}`;
@@ -35,6 +35,10 @@ export function readScopePref(scope: ThemeScope): AppTheme {
   try {
     const v = localStorage.getItem(keyFor(scope));
     if (isAppTheme(v)) return v;
+    if (scope === 'creator') {
+      const amb = localStorage.getItem('byblos-theme-ambassador');
+      if (isAppTheme(amb)) return amb;
+    }
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (isAppTheme(legacy)) return legacy;
   } catch { /* localStorage unavailable */ }
