@@ -193,7 +193,7 @@ export const SellerRegistrationSteps = ({
                             Adding your shop location helps local customers find you easily.
                           </p>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
                           <Button
                             type="button"
                             onClick={() => {
@@ -202,23 +202,27 @@ export const SellerRegistrationSteps = ({
                               setCurrentStep(4); // Move directly to verification
                             }}
                             variant="ghost"
-                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 uppercase tracking-wider bg-slate-50 dark:bg-white/5"
+                            className="min-h-[100px] h-auto flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl transition-all group active:scale-95 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 uppercase tracking-wider bg-slate-50 dark:bg-white/5 text-center"
                           >
                             <div className="flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <Globe className="h-12 w-12 text-slate-500 dark:text-zinc-400 group-hover:text-slate-950 dark:group-hover:text-white" />
+                              <Globe className="h-8 w-8 text-slate-500 dark:text-zinc-400 group-hover:text-slate-950 dark:group-hover:text-white" />
                             </div>
-                            <span className="font-bold text-[10px] text-slate-600 dark:text-gray-400 group-hover:text-slate-950 dark:group-hover:text-white transition-colors">No, online only</span>
+                            <span className="font-bold text-[10px] sm:text-xs text-slate-600 dark:text-gray-400 group-hover:text-slate-950 dark:group-hover:text-white transition-colors leading-tight break-words">
+                              No, online only
+                            </span>
                           </Button>
                           <Button
                             type="button"
                             onClick={() => setHasPhysicalShop(true)}
                             variant="ghost"
-                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-slate-200 dark:border-white/10 hover:bg-yellow-400/10 hover:text-yellow-600 dark:hover:text-yellow-400 uppercase tracking-wider bg-slate-50 dark:bg-white/5"
+                            className="min-h-[100px] h-auto flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl transition-all group active:scale-95 border border-slate-200 dark:border-white/10 hover:bg-yellow-400/10 hover:text-yellow-600 dark:hover:text-yellow-400 uppercase tracking-wider bg-slate-50 dark:bg-white/5 text-center"
                           >
                             <div className="flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <Store className="h-12 w-12 text-yellow-500" />
+                              <Store className="h-8 w-8 text-yellow-500" />
                             </div>
-                            <span className="font-bold text-[10px] text-slate-600 dark:text-gray-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">Yes, I have a physical shop</span>
+                            <span className="font-bold text-[10px] sm:text-xs text-slate-600 dark:text-gray-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors leading-tight break-words">
+                              Yes, I have a physical shop
+                            </span>
                           </Button>
                         </div>
                       </div>

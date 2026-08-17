@@ -12,7 +12,7 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
         <Link to="/creator/login">
           <Button className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-semibold text-white shadow-[0_10px_28px_rgba(0,0,0,0.5)] transition-all duration-300 hover:bg-yellow-400 hover:text-black sm:px-5 sm:py-2.5 sm:text-sm">
-            Creator
+            Ambassador
           </Button>
         </Link>
       </div>
@@ -28,11 +28,11 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
         <div className="mx-auto flex max-w-6xl flex-col items-center space-y-4 text-center sm:space-y-5 lg:space-y-6">
 
           <div className="space-y-3 sm:space-y-4">
-            <div className="mx-auto inline-block rounded-full border border-white/20 p-2 sm:p-3 bg-black/40 backdrop-blur-md shadow-2xl overflow-hidden">
+            <div className="mx-auto inline-block">
               <img
                 src="/byblos-icon.png"
                 alt="Byblos logo"
-                className="h-auto w-[min(42vw,150px)] sm:w-[min(24vw,220px)] lg:w-[260px] rounded-full object-cover"
+                className="h-auto w-[min(42vw,150px)] sm:w-[min(24vw,220px)] lg:w-[260px] object-cover"
               />
             </div>
 
