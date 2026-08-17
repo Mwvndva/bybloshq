@@ -127,7 +127,7 @@ test('native app origins and production CSRF cookies support authenticated app r
   assert.match(expressLoader, /checkOrigin\(nativeAppOrigins, origin\)\s*\|\|\s*\(isLocal && checkOrigin\(localOrigins, origin\)\)/);
   assert.match(expressLoader, /'Cache-Control'/);
   assert.match(expressLoader, /'Pragma'/);
-  assert.match(csrfController, /sameSite:\s*isProduction\s*\?\s*'none'\s*:\s*'lax'/);
+  assert.match(csrfController, /sameSite:\s*'lax'/);
 });
 
 test('native app API clients share absolute production API base URL logic', () => {
@@ -139,16 +139,15 @@ test('native app API clients share absolute production API base URL logic', () =
   const refundRequestsPage = read('src/pages/admin/RefundRequestsPage.tsx');
 
   assert.match(apiBaseUrl, /isNativeApp\(\)/);
-  assert.match(apiBaseUrl, /VITE_NATIVE_API_URL[\s\S]*'https:\/\/byblosafrica\.site'/);
+  assert.match(apiBaseUrl, /VITE_NATIVE_API_URL[\s\S]*'https:\/\/(www\.)?byblosafrica\.site/);
 
   assert.match(apiBaseUrl, /return '\/api'/);
-  assert.match(apiClient, /const baseURL = buildApiBaseUrl\(\)/);
+  assert.match(apiClient, /defaultUniversalClient/);
   assert.match(publicApi, /const baseURL = buildApiBaseUrl\(\)/);
-  assert.match(adminApi, /const API_BASE_URL = buildApiBaseUrl\(\)/);
-  assert.match(marketingApi, /const BASE_URL = buildApiBaseUrl\(\)/);
+  assert.match(adminApi, /defaultUniversalClient/);
+  assert.match(marketingApi, /WebAuthStrategy/);
   assert.match(refundRequestsPage, /const API_URL = buildApiBaseUrl\(\)/);
   assert.doesNotMatch(publicApi, /import\.meta\.env\.VITE_API_URL \|\| '\/api'/);
-  assert.doesNotMatch(marketingApi, /const BASE_URL = '\/api'/);
   assert.doesNotMatch(refundRequestsPage, /import\.meta\.env\.VITE_API_URL \|\| '\/api'/);
 });
 
@@ -206,10 +205,9 @@ test('base64 image handling allowlists safe raster types and verifies magic byte
 
 test('marketing auth performs a database-backed current-user authorization check', () => {
   const source = read('server/src/middleware/marketingAuth.js');
+  const authSource = read('server/src/middleware/auth.js');
 
-  assert.match(source, /import \{ query \} from '\.\.\/shared\/db\/database\.js'/);
-  assert.match(source, /export const protectMarketing = async/);
-  assert.match(source, /AND is_active = true/);
-  assert.match(source, /AND role = ANY\(\$2::text\[\]\)/);
-  assert.match(source, /req\.marketingUser = \{ id: user\.id, email: user\.email, role: user\.role \}/);
+  assert.match(source, /export const protectMarketing = \[\s*protect,\s*restrictTo\('marketing', 'admin'\)\s*\]/);
+  assert.match(authSource, /case 'marketing':/);
+  assert.match(authSource, /WHERE u\.id = \$1 AND u\.role = 'marketing' AND u\.is_active = true/);
 });

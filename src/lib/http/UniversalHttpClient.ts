@@ -17,6 +17,7 @@ export class UniversalHttpClient {
   private instance: AxiosInstance;
   private authStrategy: AuthStrategy;
   private defaultRole?: AppRole;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor(options: UniversalHttpClientOptions = {}) {
     const baseURL = buildApiBaseUrl();
@@ -91,13 +92,20 @@ export class UniversalHttpClient {
           }
         }
 
-        // 2. Handle 401 Unauthorized - Silent Token Refresh (Retry 1x)
+        // 2. Handle 401 Unauthorized - Single-Flight Silent Token Refresh (Retry 1x)
         if (status === 401 && !config._refreshRetried) {
           const url = config.url || '';
           if (!url.includes('/auth/refresh-token') && !url.includes('/login') && !url.includes('/logout')) {
             config._refreshRetried = true;
             const role = this.resolveRole(url);
-            const refreshed = await this.authStrategy.handleUnauthorized(role);
+
+            if (!this.refreshPromise) {
+              this.refreshPromise = this.authStrategy.handleUnauthorized(role).finally(() => {
+                this.refreshPromise = null;
+              });
+            }
+
+            const refreshed = await this.refreshPromise;
             if (refreshed) {
               const updatedAuthHeaders = await this.authStrategy.getAuthHeaders(role);
               Object.assign(config.headers, updatedAuthHeaders);

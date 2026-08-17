@@ -168,6 +168,26 @@ export const protect = async (req, res, next) => {
               AND COALESCE(c.status, 'active') = 'active'
           `;
         break;
+      case 'marketing':
+        userQuery = `
+          SELECT u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at, u.id as profile_id
+          FROM users u
+          WHERE u.id = $1 AND u.role = 'marketing' AND u.is_active = true
+        `;
+        break;
+      case 'logistics':
+        userQuery = `
+          SELECT
+            u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
+            lp.id as profile_id, lp.name as partner_name, lp.slug as partner_slug, lp.active as partner_active
+          FROM users u
+          LEFT JOIN logistics_partners lp ON u.id = lp.user_id
+          WHERE u.id = $1
+            AND u.role = 'logistics'
+            AND u.is_active = true
+            AND (lp.active = true OR lp.id IS NULL)
+        `;
+        break;
       default:
         return next(new AppError('Invalid user role', 401));
     }
@@ -187,10 +207,10 @@ export const protect = async (req, res, next) => {
 
     // 5) CROSS-ROLE SUPPORT: Check if user has other role profiles
     // This allows sellers who make purchases to access buyer endpoints
-    // Skip for admin users
+    // Skip for admin, marketing, and logistics users
     let crossRoles = { buyer_id: null, seller_id: null, creator_id: null };
 
-    if (userType !== 'admin') {
+    if (userType !== 'admin' && userType !== 'marketing' && userType !== 'logistics') {
       const cacheKey = `user:${decoded.id}:cross-roles`;
       const cachedRoles = await CacheService.get(cacheKey);
 
@@ -211,7 +231,7 @@ export const protect = async (req, res, next) => {
       }
     }
 
-    if (userType !== 'admin' && !userData.is_verified) {
+    if (userType !== 'admin' && userType !== 'marketing' && userType !== 'logistics' && !userData.is_verified) {
       const error = new AppError('Please verify your email address to access this feature.', 403);
       error.code = 'EMAIL_NOT_VERIFIED';
       error.email = userData.email;
@@ -245,6 +265,17 @@ export const protect = async (req, res, next) => {
     user.sellerProfileId = user.sellerId;
     user.buyerProfileId = user.buyerId;
     user.creatorProfileId = user.creatorId;
+
+    if (userType === 'logistics' && userData.profile_id) {
+      req.logisticsPartner = {
+        id: userData.profile_id,
+        name: userData.partner_name,
+        slug: userData.partner_slug,
+        userId: userData.user_table_id || decoded.id,
+        email: userData.email
+      };
+      res.locals.logisticsPartner = req.logisticsPartner;
+    }
 
     if (userType !== 'admin') {
       logger.debug(`[AUTH] Identity verified`, { userId: user.id, userType: user.userType });
