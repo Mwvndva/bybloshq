@@ -162,7 +162,7 @@ export function ResetPasswordPage() {
             <p className="text-sm text-gray-400">The password reset link is invalid or has expired.</p>
           </div>
           <div className="space-y-3">
-            <Button className="w-full bg-yellow-500 text-black hover:bg-yellow-600 rounded-xl" onClick={() => navigate('/seller/forgot-password')}>
+            <Button className="w-full bg-yellow-500 text-black hover:bg-yellow-600 rounded-xl" onClick={() => navigate('/seller/login', { state: { openForgotPassword: true } })}>
               Request New Reset Link
             </Button>
             <Button variant="ghost" className="w-full text-slate-500 hover:text-slate-950 hover:bg-slate-100" onClick={() => navigate('/seller/login')}>

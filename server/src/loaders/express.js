@@ -197,7 +197,24 @@ export default async (app) => {
         // This allows fetching the token and initial page loads
         if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
 
-        // Simple Double Submit Cookie Check
+        // Native mobile apps (Capacitor/Cordova) operate in a sandboxed WebView
+        // container (https://localhost / capacitor://localhost) and authenticate via
+        // explicit Bearer tokens in device storage, making them immune to browser
+        // ambient-credential CSRF attacks.
+        const origin = req.headers.origin;
+        const isNativeOrigin = origin && (
+            origin === 'https://localhost' ||
+            origin === 'capacitor://localhost' ||
+            origin === 'ionic://localhost'
+        );
+        const hasBearerAuth = typeof req.headers.authorization === 'string' &&
+            req.headers.authorization.startsWith('Bearer ');
+
+        if (isNativeOrigin || hasBearerAuth) {
+            return next();
+        }
+
+        // Simple Double Submit Cookie Check (for standard web browser sessions)
         const cookieToken = req.cookies['csrf-token-v2'];
         const headerToken = req.headers['x-csrf-token'];
 

@@ -52,13 +52,13 @@ export async function login(credentials: { email: string; password: string }): P
     const responseData = response.data;
 
     if (!responseData) {
-      throw new Error('Invalid response from server - no data received');
+      throw new Error('Unable to connect to server. Please try again.');
     }
 
     const { data } = responseData;
 
     if (!data?.buyer) {
-      throw new Error('Invalid response from server - missing buyer data');
+      throw new Error(responseData.message || 'Unable to load buyer account details. Please try again.');
     }
 
     const { buyer, token, refreshToken } = data;
