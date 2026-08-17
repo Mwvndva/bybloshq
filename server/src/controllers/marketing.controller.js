@@ -7,13 +7,13 @@ import * as marketingAnalyticsRepository from '../repositories/marketingAnalytic
 import { AppError } from '../shared/utils/errorHandler.js'
 import logger from '../shared/utils/logger.js'
 import AuthService from '../services/auth.service.js'
+import { setAuthCookie } from '../shared/utils/cookie.utils.js'
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
 /**
  * POST /api/admin/marketing/login
- * Separate login for marketing admin — does NOT use the main admin cookie.
- * Returns a JWT in the response body (marketing dashboard reads it from localStorage).
+ * Standard login for marketing admin — sets HttpOnly jwt cookie and returns token for native.
  */
 export const marketingLogin = async (req, res, next) => {
   try {
@@ -32,6 +32,8 @@ export const marketingLogin = async (req, res, next) => {
     const { user, token } = authResult
 
     logger.info(`[MARKETING-AUTH] Login successful: ${user.email}`)
+
+    setAuthCookie(res, token)
 
     res.status(200).json({
       status: 'success',
