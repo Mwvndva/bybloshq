@@ -208,7 +208,7 @@ export const SellerRegistrationSteps = ({
                               <Globe className="h-8 w-8 text-slate-500 dark:text-zinc-400 group-hover:text-slate-950 dark:group-hover:text-white" />
                             </div>
                             <span className="font-bold text-[10px] sm:text-xs text-slate-600 dark:text-gray-400 group-hover:text-slate-950 dark:group-hover:text-white transition-colors leading-tight break-words">
-                              No, online only
+                              Online Only
                             </span>
                           </Button>
                           <Button
@@ -221,7 +221,7 @@ export const SellerRegistrationSteps = ({
                               <Store className="h-8 w-8 text-yellow-500" />
                             </div>
                             <span className="font-bold text-[10px] sm:text-xs text-slate-600 dark:text-gray-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors leading-tight break-words">
-                              Yes, I have a physical shop
+                              Have a Shop
                             </span>
                           </Button>
                         </div>
