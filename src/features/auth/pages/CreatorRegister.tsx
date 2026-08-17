@@ -105,6 +105,11 @@ export default function CreatorRegister() {
     }
     setLoading(true);
     try {
+      const result = await registerMutation.mutateAsync({
+        token: token || undefined,
+        ...form,
+        referralCode: referralCode || undefined
+      });
       const resObj = result as { status?: string; message?: string; data?: { status?: string; email?: string } };
       const registrationStatus = resObj?.data?.status;
       const responseMessage = resObj?.message;
