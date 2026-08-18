@@ -7,10 +7,7 @@ android {
   }
 }
 
-def cordovaVariablesFile = file("../capacitor-cordova-android-plugins/cordova.variables.gradle")
-if (cordovaVariablesFile.exists()) {
-    apply from: cordovaVariablesFile
-}
+apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-push-notifications')
