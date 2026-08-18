@@ -121,24 +121,28 @@ export const sellerProfileApi = {
   login: async (credentials: { email: string; password: string }): Promise<{ seller: ApiSeller; token?: string; refreshToken?: string }> => {
     try {
       const response = await sellerApiInstance.post<LoginResponse>('/sellers/login', credentials);
-      const responseData = response.data.data;
+      const responseBody = response.data;
+      const responseData = responseBody?.data;
 
-      if (!responseData) {
+      if (!responseBody || typeof responseBody !== 'object') {
         throw new Error('Invalid response from server');
       }
 
-      const { seller, token, refreshToken } = responseData;
-
-      if (!seller) {
-        throw new Error('Invalid response from server - missing seller');
+      if (responseBody.status === 'error') {
+        throw new Error(responseBody.message || 'Login failed');
       }
 
+      if (!responseData || !responseData.seller) {
+        throw new Error(responseBody.message || 'Invalid response from server - missing seller profile');
+      }
+
+      const { seller, token, refreshToken } = responseData;
       await getFreshCsrfToken();
 
       return { seller: transformSeller(seller), token, refreshToken };
     } catch (error: any) {
       console.error('Login error:', error);
-      if (error?.response?.data?.message && !error.message) {
+      if (error?.response?.data?.message) {
         error.message = error.response.data.message;
       }
       throw error;

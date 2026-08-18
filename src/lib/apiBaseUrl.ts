@@ -9,7 +9,7 @@ export const buildApiBaseUrl = () => {
   const envApiUrl = import.meta.env.VITE_API_URL;
 
   if (isNativeApp()) {
-    const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || envApiUrl || 'https://www.byblosafrica.site/api';
+    const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || envApiUrl || 'https://byblos-backend-fky5.onrender.com/api';
     return ensureApiSuffix(nativeApiUrl);
   }
 
