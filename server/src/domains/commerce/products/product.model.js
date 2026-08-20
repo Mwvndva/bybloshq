@@ -1,0 +1,180 @@
+import { pool } from '../../../infrastructure/database/database.js';
+
+const PRODUCT_UPDATABLE_FIELDS = new Set([
+    'name', 'price', 'description', 'image_url', 'images', 'aesthetic',
+    'status', 'sold_at', 'is_sold', 'service_options', 'service_locations',
+    'track_inventory', 'quantity', 'reserved_quantity', 'low_stock_threshold',
+    'is_custom_product', 'production_days', 'customization_prompt',
+    'is_imported_product', 'import_days', 'import_note', 'updated_at'
+]);
+
+class ProductModel {
+    static async create(client, data) {
+        const {
+            name, price, description, image_url, images, seller_id, aesthetic,
+            is_digital, digital_file_path, digital_file_name, digital_file_size,
+            product_type, service_locations, service_options,
+            is_custom_product, production_days, customization_prompt,
+            is_imported_product, import_days, import_note
+        } = data;
+
+        const query = `
+      INSERT INTO products (
+        name, price, description, image_url, images, seller_id, aesthetic,
+        status, created_at, updated_at,
+        is_digital, digital_file_path, digital_file_name, digital_file_size,
+        product_type, service_locations, service_options,
+        is_custom_product, production_days, customization_prompt,
+        is_imported_product, import_days, import_note
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'available', NOW(), NOW(), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      RETURNING *
+    `;
+
+        const values = [
+            name, price, description, image_url, images, seller_id, aesthetic,
+            is_digital, digital_file_path, digital_file_name, digital_file_size,
+            product_type, service_locations, service_options,
+            is_custom_product || false, production_days || null, customization_prompt || null,
+            is_imported_product || false, import_days || null, import_note || null
+        ];
+
+        // support transaction client or default pool
+        const executor = client || pool;
+        const { rows } = await executor.query(query, values);
+        return rows[0];
+    }
+
+    static async findById(id) {
+        const { rows } = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+        return rows[0];
+    }
+
+    static async findBySellerId(sellerId) {
+        const query = `
+      SELECT * FROM products 
+      WHERE seller_id = $1 
+      ORDER BY created_at DESC
+    `;
+        const { rows } = await pool.query(query, [sellerId]);
+        return rows;
+    }
+
+    static async getAllProducts() {
+        // Simple feed query, could be paginated later
+        // JOIN to get seller details including physical shop info
+        const query = `
+            SELECT 
+                p.*,
+                s.shop_name,
+                s.physical_address,
+                s.latitude,
+                s.longitude,
+                s.location as seller_location,
+                s.city as seller_city
+            FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            WHERE p.status = 'available'
+            ORDER BY p.created_at DESC
+        `;
+        const { rows } = await pool.query(query);
+        return rows;
+    }
+
+    static async update(client, id, sellerId, updateData) {
+        const keys = Object.keys(updateData).filter(k => PRODUCT_UPDATABLE_FIELDS.has(k));
+        if (keys.length === 0) return null;
+
+        const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
+        const values = keys.map(key => updateData[key]);
+
+        const query = `
+        UPDATE products 
+        SET ${setClause}, updated_at = NOW() 
+        WHERE id = $${keys.length + 1} AND seller_id = $${keys.length + 2}
+        RETURNING *
+      `;
+
+        const executor = client || pool;
+        const { rows } = await executor.query(query, [...values, id, sellerId]);
+        return rows[0];
+    }
+
+    // Specialized check to see if columns exist (legacy support from controller)
+    static async checkColumns(client, columns) {
+        const executor = client || pool;
+        // This is a bit specific, but kept for safe migration if schema varies
+        const query = `
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'products'
+        AND column_name = ANY($1)
+      `;
+        const { rows } = await executor.query(query, [columns]);
+        return rows.map(r => r.column_name);
+    }
+
+    static async delete(client, id, sellerId) {
+        const executor = client || pool;
+        const { rowCount } = await executor.query(
+            'DELETE FROM products WHERE id = $1 AND seller_id = $2',
+            [id, sellerId]
+        );
+        return rowCount > 0;
+    }
+
+    /**
+     * PIN-01: ATOMIC INVENTORY RESERVE
+     * Decrements available quantity and increments reserved quantity.
+     * Throws if insufficient stock.
+     */
+    static async reserve(client, id, qty) {
+        const query = `
+            UPDATE products 
+            SET quantity = CASE WHEN track_inventory = false THEN quantity ELSE quantity - $1 END,
+                reserved_quantity = CASE WHEN track_inventory = false THEN reserved_quantity ELSE reserved_quantity + $1 END,
+                updated_at = NOW()
+            WHERE id = $2 AND (quantity >= $1 OR track_inventory = false)
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [qty, id]);
+        if (rows.length === 0) {
+            throw new Error(`Insufficient stock for product ${id} or product not found`);
+        }
+        return rows[0];
+    }
+
+    /**
+     * PIN-01: ATOMIC INVENTORY RELEASE (EXPIRE/CANCEL)
+     * Restores available quantity and decrements reserved quantity.
+     */
+    static async release(client, id, qty) {
+        const query = `
+            UPDATE products 
+            SET quantity = quantity + $1, 
+                reserved_quantity = reserved_quantity - $1,
+                updated_at = NOW()
+            WHERE id = $2 AND reserved_quantity >= $1
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [qty, id]);
+        return rows[0];
+    }
+
+    /**
+     * PIN-01: ATOMIC INVENTORY COMMIT (PAID)
+     * Clears reserved quantity after payment success.
+     */
+    static async commit(client, id, qty) {
+        const query = `
+            UPDATE products 
+            SET reserved_quantity = reserved_quantity - $1,
+                updated_at = NOW()
+            WHERE id = $2 AND reserved_quantity >= $1
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [qty, id]);
+        return rows[0];
+    }
+}
+
+export default ProductModel;

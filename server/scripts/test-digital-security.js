@@ -1,4 +1,4 @@
-import ProductService from '../src/services/product.service.js';
+import ProductService from '../src/domains/commerce/products/product.service.js';
 import path from 'path';
 
 /**

@@ -8,14 +8,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Create logs directory if it doesn't exist
-const logsDir = path.join(__dirname, '../../logs');
+const logsDir = path.join(__dirname, '../../../logs');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
 const require = createRequire(import.meta.url);
+/** @type {any} */
 let winston;
+/** @type {any} */
 let DailyRotateFile;
+/** @type {import('winston').Logger | any} */
 let logger;
 
 try {
@@ -51,9 +54,9 @@ try {
 
 // Create a simple console logger
 if (!logger) {
-  const fileTransportsDisabled = process.env.DISABLE_FILE_LOGS === 'true' || process.env.NODE_ENV === 'test';
+  const fileTransportsDisabled = process.env.DISABLE_FILE_LOGS === 'true' || process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production';
   const transports = [
-    // Console transport - Always enabled for Docker visibility
+    // Console transport - Always enabled for Docker/Render container visibility
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),

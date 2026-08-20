@@ -8,7 +8,7 @@ import logger from './logger.js';
  * @param {string} role - User role (buyer, seller, organizer, admin)
  * @returns {string} JWT token
  */
-const VALID_ROLES = ['buyer', 'seller', 'admin', 'marketing', 'creator'];
+const VALID_ROLES = ['buyer', 'seller', 'admin', 'marketing', 'creator', 'logistics'];
 
 export const signToken = (id, role = 'buyer', email = null) => {
   if (!id) {

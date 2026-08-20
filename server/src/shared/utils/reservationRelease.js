@@ -1,4 +1,4 @@
-import InventoryReservationService from '../../services/inventoryReservation.service.js';
+import InventoryReservationService from '../../domains/commerce/products/inventoryReservation.service.js';
 
 export async function releaseOrderReservations(client, orderId) {
     const { rows: orderRows } = await client.query(
