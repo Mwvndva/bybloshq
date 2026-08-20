@@ -1,6 +1,11 @@
-import { Capacitor } from '@capacitor/core';
-
-export const isNativeApp = () => Capacitor.isNativePlatform();
+export const isNativeApp = () => {
+  if (typeof window === 'undefined') return false;
+  return (
+    Capacitor.isNativePlatform() ||
+    window.location.hostname === 'localhost' ||
+    window.location.protocol === 'capacitor:'
+  );
+};
 
 export const getNativePlatform = () => Capacitor.getPlatform();
 
