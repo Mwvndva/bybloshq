@@ -1,9 +1,9 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { authStateManager } from '@/lib/authState';
-import { storage } from '@/lib/storage';
-import { isNativeApp } from '@/lib/mobileApp';
+import { authStateManager } from '@/infrastructure/auth/authState';
+import { storage } from '@/infrastructure/storage/storage';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import {
   AUTH_REVALIDATION_TTL_MS,
   getDashboardPath,
@@ -17,7 +17,7 @@ import {
   sellerProfileQueryOptions,
   adminProfileQueryOptions,
   creatorProfileQueryOptions,
-} from '@/hooks/auth/useAuthQueries';
+} from './useAuthQueries';
 
 const LAST_NATIVE_PATH_KEY = 'byblos_last_native_path';
 const EXCLUDED_RESTORE_PATHS = ['/reset-password', '/forgot-password', '/payment', '/checkout', '/verify-email', '/login', '/register'];
@@ -188,11 +188,12 @@ export function useAuthRevalidation({
         activeRole = persistedRole;
       } else {
         const roles: UserRole[] = ['seller', 'buyer', 'creator', 'admin'];
-        for (const r of roles) {
-          if ((await storage.get(getSessionKey(r))) === 'true') {
-            activeRole = r;
-            break;
-          }
+        const sessionResults = await Promise.all(
+          roles.map(async (r) => ({ role: r, isActive: (await storage.get(getSessionKey(r))) === 'true' }))
+        );
+        const activeMatch = sessionResults.find((res) => res.isActive);
+        if (activeMatch) {
+          activeRole = activeMatch.role;
         }
       }
       if (!activeRole || cancelled) return;
