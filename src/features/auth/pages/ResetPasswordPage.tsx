@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useResetPasswordMutation } from '@/hooks/seller/mutations/useSellerAuthMutations';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { useToast } from '@/shared/hooks/use-toast';
+import { useResetPasswordMutation } from '@/features/seller/hooks/mutations/useSellerAuthMutations';
 import { Loader2, ArrowLeft, Eye, EyeOff, Lock, Check, X, ShieldCheck } from 'lucide-react';
-import { RouteFallback } from '@/components/common/RouteFallback';
+import { LoadingScreen as RouteFallback } from '@/shared/components/LoadingScreen';
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();

@@ -1,4 +1,4 @@
-export type UserRole = 'buyer' | 'seller' | 'admin' | 'creator';
+export type UserRole = 'buyer' | 'seller' | 'admin' | 'creator' | 'logistics' | 'marketing';
 
 interface BaseUser {
   id: number;
@@ -56,7 +56,15 @@ export interface CreatorProfile extends BaseUser {
   totalReferralEarnings?: number;
 }
 
-export type UserProfile = BuyerProfile | SellerProfile | AdminProfile | CreatorProfile;
+export interface LogisticsProfile extends BaseUser {
+  name: string;
+  phone: string;
+  slug?: string;
+}
+
+export type MarketingProfile = BaseUser;
+
+export type UserProfile = BuyerProfile | SellerProfile | AdminProfile | CreatorProfile | LogisticsProfile | MarketingProfile;
 
 export interface GlobalUser {
   role: UserRole;

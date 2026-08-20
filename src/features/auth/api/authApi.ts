@@ -1,7 +1,7 @@
-import buyerApi from '@/api/buyer';
-import { sellerApi } from '@/api/seller';
-import adminApi from '@/api/admin';
-import creatorApi from '@/api/creator';
+import buyerApi from '@/features/buyer/api';
+import { sellerApi } from '@/features/seller/api';
+import adminApi from '@/features/admin/api';
+import creatorApi from '@/features/creator/api';
 import type { UserRole } from '../types/authTypes';
 
 export const getApiForRole = (role: UserRole): unknown => {

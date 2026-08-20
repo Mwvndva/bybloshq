@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, ReactNode } from 'react';
-import { LoadingScreen } from '@/components/LoadingScreen';
+import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthActions } from '../hooks/useAuthActions';
 import { useAuthRevalidation } from '../hooks/useAuthRevalidation';
@@ -9,7 +9,7 @@ import {
     registerAppNavigator,
     SESSION_EXPIRED_EVENT,
     type SessionExpiredDetail,
-} from '@/lib/navigationService';
+} from '@/infrastructure/navigation/navigationService';
 
 export { GlobalAuthContext } from './authContextObjects';
 

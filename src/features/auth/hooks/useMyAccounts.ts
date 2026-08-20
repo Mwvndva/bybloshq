@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getMyAccounts } from '@/api/account';
+import { getMyAccounts } from '@/features/auth/api/account';
 
 /**
  * Fetches which account types (buyer / seller / ambassador) the signed-in user

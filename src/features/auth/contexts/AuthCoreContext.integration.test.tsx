@@ -65,27 +65,27 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/api/buyer', () => ({
+vi.mock('@/features/buyer/api', () => ({
   __esModule: true,
   default: mocks.mockBuyerApi,
 }));
 
-vi.mock('@/api/seller', () => ({
+vi.mock('@/features/seller/api', () => ({
   sellerApi: mocks.mockSellerApi,
 }));
 
-vi.mock('@/api/admin', () => ({
+vi.mock('@/features/admin/api', () => ({
   __esModule: true,
   default: mocks.mockAdminApi,
   adminApi: mocks.mockAdminApi,
 }));
 
-vi.mock('@/lib/apiClient', () => ({
+vi.mock('@/infrastructure/http/apiClient', () => ({
   __esModule: true,
   default: mocks.mockApiClient,
 }));
 
-vi.mock('@/lib/authState', () => ({
+vi.mock('@/infrastructure/auth/authState', () => ({
   authStateManager: mocks.mockAuthStateManager,
 }));
 
@@ -98,7 +98,7 @@ vi.mock('@/features/auth/services/authSession', async (importOriginal) => {
 });
 
 
-vi.mock('@/components/LoadingScreen', () => ({
+vi.mock('@/shared/components/LoadingScreen', () => ({
   LoadingScreen: ({ message }: { message: string }) => <div data-testid="loading">{message}</div>,
 }));
 

@@ -1,7 +1,8 @@
 import type { UserRole } from '../types/authTypes';
-import { storage } from '@/lib/storage';
+import { storage } from '@/infrastructure/storage/storage';
+import apiClient from '@/infrastructure/http/apiClient';
 
-const ALL_ROLES: UserRole[] = ['buyer', 'seller', 'admin', 'creator'];
+const ALL_ROLES: UserRole[] = ['buyer', 'seller', 'admin', 'creator', 'logistics', 'marketing'];
 
 // Points at the single account that is currently signed in on this device. Both
 // the request interceptor and the cold-start restore consult this so they bind
@@ -33,19 +34,35 @@ export const clearActiveRole = async (): Promise<void> => {
 };
 
 /**
- * Enforce a single active account on the device. Removes the token, refresh
- * token and session marker for every role OTHER than the one just signed in, so
- * a leftover session from a different account can never be picked up by the
- * request interceptor or the cold-start restore. Records the active role.
+ * Enforce a single active account on the device.
+ * 1. Collects previous JWT tokens for all roles other than activeRole.
+ * 2. Revokes previous tokens on the server via POST /auth/revoke-token.
+ * 3. Removes the token, refresh token and session marker for every role OTHER than the active one.
+ * 4. Records active role.
  */
 export const enforceSingleActiveRole = async (activeRole: UserRole): Promise<void> => {
+  const tokensToRevoke: string[] = [];
+
   for (const role of ALL_ROLES) {
     if (role === activeRole) continue;
+    const oldToken = await storage.get(`${role}Token`);
+    if (oldToken && typeof oldToken === 'string') {
+      tokensToRevoke.push(oldToken);
+    }
     await storage.remove(getSessionKey(role));
     await storage.remove(`${role}Token`);
     await storage.remove(`${role}RefreshToken`);
     try { localStorage.removeItem(getSessionKey(role)); } catch { /* ignore */ }
   }
+
+  if (tokensToRevoke.length > 0) {
+    try {
+      await apiClient.post('/auth/revoke-token', { tokens: tokensToRevoke });
+    } catch {
+      // Ignore network errors during background token revocation
+    }
+  }
+
   await setActiveRole(activeRole);
 };
 
@@ -57,5 +74,3 @@ export const clearRoleSessionMarkers = async (): Promise<void> => {
   }
   await clearActiveRole();
 };
-
-
