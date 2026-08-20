@@ -23,31 +23,6 @@ dotenv.config();
 /**
  * Start Server
  */
-import express from 'express';
-import http from 'http';
-import dotenv from 'dotenv';
-import logger from './shared/utils/logger.js';
-import { validateEnvironment } from './shared/config/validateEnv.js';
-import loaders from './application/bootstrap/index.js';
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', err);
-  process.exit(1);
-});
-
-// Handle unhandled rejections
-process.on('unhandledRejection', (err) => {
-  logger.error('UNHANDLED REJECTION! 💥 Shutting down...', err);
-  process.exit(1);
-});
-
-// Load environment variables
-dotenv.config();
-
-/**
- * Start Server
- */
 async function startServer() {
   const app = express();
 
@@ -129,5 +104,3 @@ startServer().catch(err => {
   logger.error('❌ Failed to start server:', err);
   process.exit(1);
 });
-
-

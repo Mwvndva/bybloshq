@@ -99,13 +99,22 @@ async function run() {
         // 4. Migration Execution
         console.log(`[${new Date().toISOString()}] [INFO] Running Migrations...`);
 
-        // Task 2: Fix the Function Call & Task 3: Path Verification
         await migrate({
             dir: path.resolve(__dirname, '../migrations'), // Ensure absolute path to migrations folder
             direction: 'up',
             migrationsTable: 'pgmigrations',
             databaseUrl: process.env.DATABASE_URL,
             verbose: true,
+            logger: {
+                info: console.log,
+                warn: console.warn,
+                error: (msg, ...args) => {
+                    if (typeof msg === 'string' && msg.startsWith("Can't determine timestamp for")) {
+                        return;
+                    }
+                    console.error(msg, ...args);
+                }
+            }
         });
 
         console.log(`[${new Date().toISOString()}] [SUCCESS] Migrations completed.`);
