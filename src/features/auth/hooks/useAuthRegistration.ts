@@ -1,12 +1,12 @@
 import { Dispatch, SetStateAction, useCallback } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { toast } from 'sonner';
-import { registerNativePushNotifications } from '@/lib/mobileNotifications';
-import { isNativeApp } from '@/lib/mobileApp';
+import { registerNativePushNotifications } from '@/features/notifications/utils/mobileNotifications';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { getDashboardPath } from '../utils/authRouting';
 import { markRoleSessionActive } from '../services/authSession';
 import type { BuyerRegistrationData, GlobalUser, RegistrationData, SellerRegistrationData, UserRole } from '../types/authTypes';
-import { useRegisterMutation } from '@/hooks/auth/useAuthMutations';
+import { useRegisterMutation } from './useAuthMutations';
 
 type AuthRequestError = {
   response?: {
@@ -58,7 +58,7 @@ export function useAuthRegistration({ navigate, setUser, setIsLoading, markAuthC
       });
 
       if (isNativeApp() && response?.token) {
-        const { storage } = await import('@/lib/storage');
+        const { storage } = await import('@/infrastructure/storage/storage');
         await storage.set(`${role}Token`, response.token);
       }
       await markRoleSessionActive(role);

@@ -1,19 +1,19 @@
 import { Dispatch, SetStateAction, useCallback } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { toast } from 'sonner';
-import apiClient from '@/lib/apiClient';
+import apiClient from '@/infrastructure/http/apiClient';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
-import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/lib/mobileNotifications';
+import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/features/notifications/utils/mobileNotifications';
 import { getDashboardPath } from '../utils/authRouting';
-import { isNativeApp } from '@/lib/mobileApp';
-import { storage } from '@/lib/storage';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
+import { storage } from '@/infrastructure/storage/storage';
 
 
 
 
 
-import { switchAccountRequest, type SwitchableRole } from '@/api/account';
+import { switchAccountRequest, type SwitchableRole } from '@/features/auth/api/account';
 import type {
   BuyerRegistrationData,
   GlobalUser,
@@ -27,17 +27,19 @@ import {
   useSellerLoginMutation,
   useAdminLoginMutation,
   useCreatorLoginMutation,
+  useLogisticsLoginMutation,
+  useMarketingLoginMutation,
   useRegisterMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useUpdateProfileMutation,
-} from '@/hooks/auth/useAuthMutations';
+} from './useAuthMutations';
 import {
   buyerProfileQueryOptions,
   sellerProfileQueryOptions,
   adminProfileQueryOptions,
   creatorProfileQueryOptions,
-} from '@/hooks/auth/useAuthQueries';
+} from './useAuthQueries';
 import { useAuthRegistration } from './useAuthRegistration';
 import { useAuthPasswordReset } from './useAuthPasswordReset';
 import { useAuthProfile } from './useAuthProfile';
@@ -73,6 +75,8 @@ export function useAuthActions({
   const sellerLoginMut = useSellerLoginMutation();
   const adminLoginMut = useAdminLoginMutation();
   const creatorLoginMut = useCreatorLoginMutation();
+  const logisticsLoginMut = useLogisticsLoginMutation();
+  const marketingLoginMut = useMarketingLoginMutation();
 
   const { register } = useAuthRegistration({ navigate, setUser, setIsLoading, markAuthChecked });
   const { forgotPassword, resetPassword } = useAuthPasswordReset({ navigate, setIsLoading });
@@ -81,18 +85,28 @@ export function useAuthActions({
   const login = useCallback(async (email: string, password: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      let response;
+      let response: any;
       if (role === 'buyer') {
         response = await buyerLoginMut.mutateAsync({ email, password });
       } else if (role === 'seller') {
         response = await sellerLoginMut.mutateAsync({ email, password });
       } else if (role === 'creator') {
         response = await creatorLoginMut.mutateAsync({ email, password });
+      } else if (role === 'admin') {
+        response = await adminLoginMut.mutateAsync({ email, password });
+      } else if (role === 'logistics') {
+        response = await logisticsLoginMut.mutateAsync({ email, password });
+      } else if (role === 'marketing') {
+        response = await marketingLoginMut.mutateAsync({ email, password });
       } else {
         throw new Error(`Unsupported login role: ${role}`);
       }
 
-      const profileData = role === 'buyer' ? response.buyer : role === 'creator' ? response.creator : response.seller;
+      const profileData = role === 'buyer' ? response.buyer
+        : role === 'creator' ? response.creator
+        : role === 'seller' ? response.seller
+        : role === 'logistics' ? response.partner
+        : response.user || response.data?.user;
 
       // Single active account: drop any other account's cached data and evict its
       // stored credentials/session before establishing this one, so the app can
@@ -142,7 +156,7 @@ export function useAuthActions({
     } finally {
       setIsLoading(false);
     }
-  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerLoginMut, sellerLoginMut, creatorLoginMut, queryClient]);
+  }, [markAuthChecked, navigate, setIsLoading, setUser, buyerLoginMut, sellerLoginMut, creatorLoginMut, adminLoginMut, logisticsLoginMut, marketingLoginMut, queryClient]);
 
   const loginWithToken = useCallback(async (token: string, role: UserRole) => {
     setIsLoading(true);
@@ -176,56 +190,8 @@ export function useAuthActions({
   }, [markAuthChecked, setIsLoading, setUser, queryClient]);
 
   const loginAdmin = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await adminLoginMut.mutateAsync({ email, password });
-      const success = response?.status === 'success' || !!response?.data?.token;
-
-      if (success) {
-        const adminProfile = await queryClient.fetchQuery(adminProfileQueryOptions);
-        if (!adminProfile?.id) {
-          throw new Error('Admin profile could not be verified after login');
-        }
-
-        // Single active account: clear any prior user's cache + evict other sessions.
-        queryClient.clear();
-        await enforceSingleActiveRole('admin');
-
-        setUser({
-          role: 'admin',
-          profile: adminProfile,
-          isAuthenticated: true
-        });
-
-        if (response?.data?.token) {
-          await storage.set('adminToken', response.data.token);
-          const adminRefreshToken = (response.data as { refreshToken?: string }).refreshToken;
-          if (adminRefreshToken) await storage.set('adminRefreshToken', adminRefreshToken);
-        }
-        await markRoleSessionActive('admin');
-        markAuthChecked();
-        void registerNativePushNotifications('admin');
-
-        toast.success('Welcome Admin', {
-          description: 'You have successfully logged in.',
-          duration: 2000,
-        });
-
-        navigate('/admin/dashboard', { replace: true });
-      } else {
-        throw new Error('Invalid credentials');
-      }
-    } catch (error) {
-      const err = error as AuthRequestError;
-      const message = !err.response
-        ? 'Connection error. Please check your network connection and try again.'
-        : err.response?.data?.message || err.message || 'Invalid email or password. Please try again.';
-      toast.error('Login Failed', { description: message });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [markAuthChecked, navigate, setIsLoading, setUser, adminLoginMut, queryClient]);
+    return login(email, password, 'admin');
+  }, [login]);
 
   const logout = useCallback(async () => {
     await clearRoleSessionMarkers();

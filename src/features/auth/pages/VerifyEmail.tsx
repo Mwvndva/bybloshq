@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, Loader2, ArrowRight, Mail } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { toast } from 'sonner';
-import { useBuyerVerifyEmailMutation, useBuyerResendVerificationMutation } from '@/hooks/buyer/mutations/useBuyerAuthMutations';
-import { useSellerVerifyEmailMutation, useSellerResendVerificationMutation } from '@/hooks/seller/mutations/useSellerAuthMutations';
-import { useCreatorVerifyEmailMutation, useCreatorResendVerificationMutation } from '@/hooks/creator/mutations/useCreatorAuthMutations';
+import { useBuyerVerifyEmailMutation, useBuyerResendVerificationMutation } from '@/features/buyer/hooks/mutations/useBuyerAuthMutations';
+import { useSellerVerifyEmailMutation, useSellerResendVerificationMutation } from '@/features/seller/hooks/mutations/useSellerAuthMutations';
+import { useCreatorVerifyEmailMutation, useCreatorResendVerificationMutation } from '@/features/creator/hooks/mutations/useCreatorAuthMutations';
 
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams();

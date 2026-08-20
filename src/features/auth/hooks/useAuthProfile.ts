@@ -1,10 +1,17 @@
 import { Dispatch, SetStateAction, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { registerNativePushNotifications } from '@/lib/mobileNotifications';
+import { registerNativePushNotifications } from '@/features/notifications/utils/mobileNotifications';
 import type { GlobalUser, UserProfile, UserRole } from '../types/authTypes';
-import { useUpdateProfileMutation } from '@/hooks/auth/useAuthMutations';
-import { buyerProfileQueryOptions, sellerProfileQueryOptions, adminProfileQueryOptions, creatorProfileQueryOptions } from '@/hooks/auth/useAuthQueries';
+import { useUpdateProfileMutation } from './useAuthMutations';
+import {
+  buyerProfileQueryOptions,
+  sellerProfileQueryOptions,
+  adminProfileQueryOptions,
+  creatorProfileQueryOptions,
+  logisticsProfileQueryOptions,
+  marketingProfileQueryOptions,
+} from './useAuthQueries';
 
 type AuthRequestError = {
   response?: {
@@ -34,6 +41,10 @@ export function useAuthProfile({ setUser }: UseAuthProfileOptions) {
       queryOpts = sellerProfileQueryOptions;
     } else if (role === 'creator') {
       queryOpts = creatorProfileQueryOptions;
+    } else if (role === 'logistics') {
+      queryOpts = logisticsProfileQueryOptions;
+    } else if (role === 'marketing') {
+      queryOpts = marketingProfileQueryOptions;
     } else {
       queryOpts = adminProfileQueryOptions;
     }

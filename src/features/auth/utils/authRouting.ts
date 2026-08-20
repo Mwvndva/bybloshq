@@ -11,6 +11,8 @@ export const getRoleFromRoute = (pathname: string): UserRole | null => {
   if (pathname.startsWith('/seller')) return 'seller';
   if (pathname.startsWith('/creator')) return 'creator';
   if (pathname.startsWith('/admin')) return 'admin';
+  if (pathname.startsWith('/logistics') || pathname.startsWith('/mzigo')) return 'logistics';
+  if (pathname.startsWith('/marketing')) return 'marketing';
   return null;
 };
 

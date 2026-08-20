@@ -7,10 +7,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/shared/ui/dropdown-menu';
 import { useMyAccounts } from '../hooks/useMyAccounts';
 import { useGlobalAuth } from '../hooks/useGlobalAuth';
-import type { SwitchableRole } from '@/api/account';
+import type { SwitchableRole } from '@/features/auth/api/account';
 
 interface RoleMeta {
   label: string;

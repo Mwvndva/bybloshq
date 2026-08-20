@@ -3,7 +3,7 @@ import type { NavigateFunction } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getLoginPath } from '../utils/authRouting';
 import type { UserRole } from '../types/authTypes';
-import { useForgotPasswordMutation, useResetPasswordMutation } from '@/hooks/auth/useAuthMutations';
+import { useForgotPasswordMutation, useResetPasswordMutation } from './useAuthMutations';
 
 type AuthRequestError = {
   response?: {
