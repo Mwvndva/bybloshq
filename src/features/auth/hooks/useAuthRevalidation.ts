@@ -17,6 +17,8 @@ import {
   sellerProfileQueryOptions,
   adminProfileQueryOptions,
   creatorProfileQueryOptions,
+  logisticsProfileQueryOptions,
+  marketingProfileQueryOptions,
 } from './useAuthQueries';
 
 const LAST_NATIVE_PATH_KEY = 'byblos_last_native_path';
@@ -92,6 +94,10 @@ export function useAuthRevalidation({
         queryOpts = sellerProfileQueryOptions;
       } else if (currentRole === 'admin') {
         queryOpts = adminProfileQueryOptions;
+      } else if (currentRole === 'logistics') {
+        queryOpts = logisticsProfileQueryOptions;
+      } else if (currentRole === 'marketing') {
+        queryOpts = marketingProfileQueryOptions;
       } else {
         queryOpts = creatorProfileQueryOptions;
       }
