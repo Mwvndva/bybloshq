@@ -4,7 +4,7 @@
  * Run: node scripts/seed-marketing-admin.js
  */
 import bcrypt from 'bcrypt'
-import { pool } from '../src/shared/db/database.js'
+import { pool } from '../src/infrastructure/database/database.js'
 import dotenv from 'dotenv'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'

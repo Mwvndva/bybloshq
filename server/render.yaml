@@ -37,3 +37,40 @@ services:
     # Free plan suspends after 15 min of inactivity. Upgrade to `standard` (or
     # higher) for production traffic — change requires billing approval.
     plan: free
+
+  - type: worker
+    name: byblos-atelier-worker
+    runtime: node
+    buildCommand: npm run build
+    startCommand: npm run start:worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: byblos
+          property: hostname
+      - key: DB_PORT
+        fromDatabase:
+          name: byblos
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: byblos
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: byblos
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: byblos
+          property: password
+      - key: JWT_SECRET
+        fromDatabase:
+          name: byblos-atelier-api
+          property: JWT_SECRET
+      - key: JWT_EXPIRES_IN
+        value: 24h
+    plan: free
+

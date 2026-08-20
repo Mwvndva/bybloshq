@@ -11,8 +11,8 @@
  *   docker compose exec backend node scripts/broadcast-membership-invite.js --dry-run
  *   docker compose exec backend node scripts/broadcast-membership-invite.js
  */
-import { pool } from '../src/shared/db/database.js';
-import NotificationService from '../src/services/notification.service.js';
+import { pool } from '../src/infrastructure/database/database.js';
+import NotificationService from '../src/domains/communication/notifications/notification.service.js';
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run');

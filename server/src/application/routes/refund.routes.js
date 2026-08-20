@@ -1,0 +1,26 @@
+import { validate } from '../middleware/validate.js';
+import * as V from '../../shared/validations/refund.validation.js';
+import express from 'express';
+import * as refundController from '../../domains/payments/refunds/refund.controller.js';
+import { protect, hasPermission } from '../middleware/auth.js';
+
+const router = express.Router();
+
+// All refund management routes require admin authentication
+router.use(protect);
+router.use(hasPermission('manage-all'));
+
+// Get all refund requests
+router.get('/', refundController.getAllRefundRequests);
+
+// Get specific refund request
+router.get('/:id', refundController.getRefundRequestById);
+
+// Confirm/Complete refund request (deducts from buyer)
+router.patch('/:id/confirm', validate(V.confirmRefund), refundController.confirmRefundRequest);
+
+// Reject refund request
+router.patch('/:id/reject', validate(V.rejectRefund), refundController.rejectRefundRequest);
+
+export default router;
+

@@ -7,8 +7,8 @@
  *   docker compose exec backend node scripts/send-test-push.js
  *   docker compose exec backend node scripts/send-test-push.js android
  */
-import { pool } from '../src/shared/db/database.js';
-import NotificationService from '../src/services/notification.service.js';
+import { pool } from '../src/infrastructure/database/database.js';
+import NotificationService from '../src/domains/communication/notifications/notification.service.js';
 
 async function main() {
   const platform = process.argv[2] || 'android';

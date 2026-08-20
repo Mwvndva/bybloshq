@@ -15,9 +15,16 @@ const UNIFIED_SCHEMA_FILE = path.resolve(__dirname, '../migrations/2026081419500
 const migrate = require('node-pg-migrate').default || require('node-pg-migrate');
 
 // Task 1: Absolute Path Loading & Task 2: Debugging
-let envPath = path.resolve(__dirname, '../.env');
-if (!fs.existsSync(envPath)) {
-    envPath = path.resolve(__dirname, '../.env.production');
+let envPath;
+if (process.env.DOTENV_CONFIG_PATH) {
+    envPath = path.resolve(process.cwd(), process.env.DOTENV_CONFIG_PATH);
+} else if (process.env.NODE_ENV === 'test') {
+    envPath = path.resolve(__dirname, '../.env.test');
+} else {
+    envPath = path.resolve(__dirname, '../.env');
+    if (!fs.existsSync(envPath)) {
+        envPath = path.resolve(__dirname, '../.env.production');
+    }
 }
 const envExists = fs.existsSync(envPath);
 
@@ -28,7 +35,7 @@ console.log(`.env exists: ${envExists}`);
 console.log('------------------------');
 
 // Load .env explicitly
-dotenv.config({ path: envPath });
+dotenv.config({ path: envPath, override: true });
 
 const { Pool } = pg;
 
@@ -80,8 +87,9 @@ async function run() {
         await pool.query('SELECT 1');
         console.log(`[${new Date().toISOString()}] [SUCCESS] Connection established.`);
 
+        const hasUsers = await tableExists(pool, 'users');
         const hasRefundRequests = await tableExists(pool, 'refund_requests');
-        if (!hasRefundRequests && fs.existsSync(UNIFIED_SCHEMA_FILE)) {
+        if (hasUsers && !hasRefundRequests && fs.existsSync(UNIFIED_SCHEMA_FILE)) {
             console.log(`[${new Date().toISOString()}] [INFO] Applying unified runtime schema bootstrap...`);
             const unifiedSchemaSql = fs.readFileSync(UNIFIED_SCHEMA_FILE, 'utf8');
             await pool.query(unifiedSchemaSql);
