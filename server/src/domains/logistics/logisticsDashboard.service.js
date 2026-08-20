@@ -196,7 +196,9 @@ class LogisticsDashboardService {
                 slug: account.partner_slug,
                 email: account.partner_email || account.email,
                 phone: account.partner_phone,
-                whatsappNumber: account.partner_whatsapp_number
+                whatsappNumber: account.partner_whatsapp_number,
+                is_verified: true,
+                emailVerified: true
             }
         };
     }
@@ -285,7 +287,9 @@ class LogisticsDashboardService {
             email: partner.email || partner.user_email,
             phone: partner.phone,
             whatsappNumber: partner.whatsapp_number,
-            userId: partner.user_id
+            userId: partner.user_id,
+            is_verified: true,
+            emailVerified: true
         };
     }
 

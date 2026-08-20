@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useGlobalAuth, UserRole } from '@/features/auth/contexts';
 import { RouteFallback } from '@/app/router/RouteFallback';
+import { requiresEmailVerification } from '@/features/auth/utils/authRouting';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface AppProtectedRouteProps {
@@ -54,7 +55,7 @@ export function AppProtectedRoute({
     }
 
     // ─── Verification Check ───────────────────────────────────────────────────
-    if (role !== 'admin' && user && !user.profile.is_verified) {
+    if (requiresEmailVerification(role) && user && !user.profile?.is_verified) {
         return (
             <Navigate
                 to={`/verify-email?email=${encodeURIComponent(String(user.profile.email || ''))}&type=${String(role || '')}`}
