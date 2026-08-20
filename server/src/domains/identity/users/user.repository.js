@@ -88,7 +88,6 @@ export async function findLogisticsAuthProfile(userId) {
     FROM users u
     LEFT JOIN logistics_partners lp ON u.id = lp.user_id
     WHERE u.id = $1
-      AND u.role = 'logistics'
       AND u.is_active = true
       AND (lp.active = true OR lp.id IS NULL)
   `;
