@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { Loader2, Store, Package } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ProductCard } from '@/components/ProductCard';
-import type { Product, Seller } from '@/types';
-import { type Theme } from '@/hooks/useShopTheme';
-import { isAesthetic } from './shopPage.shared';
-import { SEOHead } from '@/components/shared/SEOHead';
-import { ShopHero } from './ShopHero';
-import { ShopPageThemePicker } from './ShopPageThemePicker';
+import { cn, getImageUrl } from '@/shared/utils/formatting';
+import { ProductCard } from '@/features/shop/components/ProductCard';
+import type { Product, Seller } from '@/shared/types';
+import { type Theme } from '@/shared/hooks/useShopTheme';
+import { isAesthetic } from '../utils/shopPage.shared';
+import { SEOHead } from '@/shared/components/SEOHead';
+import { ShopHero } from '../components/ShopHero';
+import { ShopPageThemePicker } from '../components/ShopPageThemePicker';
+import { useShopPage } from './useShopPage';
 
 const ShopPage = () => {
   const {
@@ -76,9 +77,9 @@ const ShopPage = () => {
       data-shop-theme={resolvedShopTheme}
     >
       <SEOHead
-        title={sellerInfo?.shop_name || sellerInfo?.business_name || 'Shop'}
-        description={sellerInfo?.bio || `Shop ${sellerInfo?.shop_name || 'products'} on Byblos. Browse quality items and order securely.`}
-        image={sellerInfo?.business_photo_url || sellerInfo?.banner_url}
+        title={sellerInfo?.shopName || sellerInfo?.fullName || 'Shop'}
+        description={sellerInfo?.bio || `Shop ${sellerInfo?.shopName || 'products'} on Byblos. Browse quality items and order securely.`}
+        image={sellerInfo?.avatarUrl ? getImageUrl(sellerInfo.avatarUrl) : sellerInfo?.bannerImage ? getImageUrl(sellerInfo.bannerImage) : undefined}
       />
       {/* Light/Dark/System theme picker — top-right, small, no border touching */}
       <ShopPageThemePicker theme={shopPageTheme} onThemeChange={setShopPageTheme} />

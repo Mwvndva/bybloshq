@@ -1,3 +1,3 @@
-export { useShopTheme } from "@/hooks/useShopTheme";
+export { useShopTheme } from "@/shared/hooks/useShopTheme";
 
 

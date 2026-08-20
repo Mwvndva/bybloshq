@@ -1,9 +1,9 @@
 import { Clock, MapPin, Navigation, Radio, ShieldCheck, Truck } from 'lucide-react';
-import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/types/api/order';
-import { deriveJourneyFromStatuses, isDeliveryTrackable, isPickupTrackable } from '@/pages/logistics/mzigoJourney';
-import { MzigoJourneyStepper } from '@/pages/logistics/MzigoJourneyStepper';
-import { useLiveDelivery } from './useLiveDelivery';
-import { LiveDeliveryMap } from './LiveDeliveryMap';
+import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/shared/types';
+import { deriveJourneyFromStatuses, isDeliveryTrackable, isPickupTrackable } from '@/features/logistics/utils/mzigoJourney';
+import { MzigoJourneyStepper } from '@/features/logistics/components/MzigoJourneyStepper';
+import { useLiveDelivery } from '@/features/logistics/hooks/useLiveDelivery';
+import { LiveDeliveryMap } from '@/features/logistics/components/LiveDeliveryMap';
 
 type TrackingView = 'buyer' | 'seller';
 

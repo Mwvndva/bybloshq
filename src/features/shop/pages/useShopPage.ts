@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
-import { useSellerByShopNameQuery, usePublicSellerProductsQuery } from '@/hooks/public/useShopQueries';
-import { useTrackCreatorLinkMutation } from '@/hooks/creator/mutations/useTrackCreatorLinkMutation';
-import type { ApiSellerProduct } from '@/types/api/product';
+import { useSellerByShopNameQuery, usePublicSellerProductsQuery } from '@/features/shop/hooks/useShopQueries';
+import { useTrackCreatorLinkMutation } from '@/features/creator/hooks/mutations/useTrackCreatorLinkMutation';
+import type { ApiSellerProduct } from '@/shared/types/api/product';
 import { useBuyerAuth } from '@/features/auth/contexts';
-import { isNativeApp } from '@/lib/mobileApp';
-import { useShopTheme, useShopAccentOnly, type Theme } from '@/hooks/useShopTheme';
-import { useShopPageTheme, type ShopPageTheme } from './ShopPageThemePicker';
-import { isAesthetic, getSellerInitials, type ShopProduct, type ShopSeller } from './shopPage.shared';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
+import { useShopTheme, useShopAccentOnly, type Theme } from '@/shared/hooks/useShopTheme';
+import { useShopPageTheme, type ShopPageTheme } from '../components/ShopPageThemePicker';
+import { isAesthetic, getSellerInitials, type ShopProduct, type ShopSeller } from '../utils/shopPage.shared';
 
 export function useShopPage() {
   const { shopName } = useParams<{ shopName: string }>();
@@ -107,7 +107,7 @@ export function useShopPage() {
           status: p.status || 'available',
           createdAt: p.createdAt || new Date().toISOString(),
           updatedAt: p.updatedAt || new Date().toISOString(),
-          aesthetic: isAesthetic((p as unknown as Record<string, unknown>).aesthetic as string) ? ((p as unknown as Record<string, unknown>).aesthetic as import("@/types").Aesthetic) : 'all',
+          aesthetic: isAesthetic((p as unknown as Record<string, unknown>).aesthetic as string) ? ((p as unknown as Record<string, unknown>).aesthetic as import("@/shared/types").Aesthetic) : 'all',
           seller: sellerData
         } as unknown as ShopProduct))
         .filter(p => !p.isSold && p.status !== 'sold');

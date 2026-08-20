@@ -1,9 +1,9 @@
 import React, { ReactNode } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { LogOut, ArrowLeft, Menu, X } from 'lucide-react';
-import { isNativeApp } from '@/lib/mobileApp';
-import { cn } from '@/lib/utils';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
+import { cn } from '@/shared/utils/formatting';
 import { useGlobalAuth, UserRole } from '@/features/auth/contexts';
 
 // ============================================================================

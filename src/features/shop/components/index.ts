@@ -1,3 +1,3 @@
-export { ProductCard } from "@/components/ProductCard";
+export { ProductCard } from "@/features/shop/components/ProductCard";
 
 

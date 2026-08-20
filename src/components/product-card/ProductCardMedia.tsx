@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import ProductImage from '@/components/common/ProductImage';
-import type { Product } from '@/types';
-import { formatFileSize } from '@/lib/utils';
+import { Badge } from '@/shared/ui/badge';
+import ProductImage from '@/shared/ui/ProductImage';
+import type { Product } from '@/shared/types';
+import { formatFileSize } from '@/shared/utils/formatting';
 import { FileText, Handshake, Plane, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ProductCardMediaProps {

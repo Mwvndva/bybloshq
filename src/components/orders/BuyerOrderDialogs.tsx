@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { CheckCircle, Package, RefreshCw, XCircle } from 'lucide-react';
-import type { ApiOrder } from '@/types/api/order';
-import { getImageUrl } from '@/lib/utils';
-import { getBuyerServiceCharge, getConfirmReceiptLabel, isServiceOrder } from './ordersSectionUtils';
+import type { ApiOrder } from '@/shared/types';
+import { getImageUrl } from '@/shared/utils/formatting';
+import { getBuyerServiceCharge, getConfirmReceiptLabel, isServiceOrder } from '@/features/orders/utils/ordersSectionUtils';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 
 interface BuyerOrderDialogsProps {

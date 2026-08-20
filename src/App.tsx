@@ -1,9 +1,9 @@
 import { RouterProvider } from "react-router-dom";
 
-import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ErrorBoundary } from "@/shared/components/ErrorBoundary";
 import { router } from "@/app/router";
-import { LoadingScreen } from "@/components/LoadingScreen";
-import { useAppTheme } from "@/hooks/useAppTheme";
+import { LoadingScreen } from "@/shared/components/LoadingScreen";
+import { useAppTheme } from "@/shared/hooks/useAppTheme";
 
 function App() {
   // Bootstrap app theme (light / dark / system) on mount.
