@@ -6,11 +6,11 @@ import {
     BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
-import { marketingApi } from '../../api/marketingApi'
-import { StatCard } from './components/StatCard'
-import { ChartCard } from './components/ChartCard'
-import { SectionTitle } from './components/SectionTitle'
-import { LoadingSpinner } from './components/LoadingSpinner'
+import { marketingApi } from '../api/marketingApi'
+import { StatCard } from '../components/StatCard'
+import { ChartCard } from '../components/ChartCard'
+import { SectionTitle } from '../components/SectionTitle'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 // Chart colour palette — matches Byblos brand (yellow, white, greys + accent colours)
 const COLORS = ['#F5C842', '#E5E5E5', '#737373', '#D4D4D4', '#F59E0B', '#A3A3A3', '#E7E5DF', '#525252']
