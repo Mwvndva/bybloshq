@@ -11,4 +11,12 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SocialSharePlugin.class);
         super.onCreate(savedInstanceState);
     }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            this.bridge.getWebView().setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        }
+    }
 }
