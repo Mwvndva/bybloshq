@@ -10,8 +10,8 @@ export class PaymentService {
     }
 
     /**
-     * Process pending payments within the given lookback window.
-     * Claims pending payments with FOR UPDATE SKIP LOCKED and verifies status.
+     * Check payment provider balance.
+     */
     async checkBalance() {
         const paystack = new PaystackProviderClient();
         return paystack.checkBalance();
