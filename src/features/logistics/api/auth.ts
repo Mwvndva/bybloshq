@@ -16,7 +16,7 @@ export interface LogisticsPartner {
 }
 
 export function isLogisticsSessionActive(): boolean {
-  return sessionStorage.getItem(LOGISTICS_ACTIVE_KEY) === 'true';
+  return sessionStorage.getItem(LOGISTICS_ACTIVE_KEY) === 'true' || localStorage.getItem(LOGISTICS_ACTIVE_KEY) === 'true' || localStorage.getItem('logisticsSessionActive') === 'true';
 }
 
 // Deprecated token getter maintained for backwards compatibility
@@ -25,7 +25,7 @@ export function getLogisticsToken(): string | null {
 }
 
 export function getStoredLogisticsPartner(): LogisticsPartner | null {
-  const raw = sessionStorage.getItem(LOGISTICS_PARTNER_KEY);
+  const raw = sessionStorage.getItem(LOGISTICS_PARTNER_KEY) || localStorage.getItem(LOGISTICS_PARTNER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as LogisticsPartner;
@@ -58,9 +58,8 @@ export async function clearLogisticsSession() {
 function setLogisticsSession(partner: LogisticsPartner) {
   sessionStorage.setItem(LOGISTICS_ACTIVE_KEY, 'true');
   sessionStorage.setItem(LOGISTICS_PARTNER_KEY, JSON.stringify(partner));
-  // Clean up legacy plaintext localStorage entries if present
-  localStorage.removeItem('mzigoLogisticsToken');
-  localStorage.removeItem('mzigoLogisticsPartner');
+  localStorage.setItem(LOGISTICS_ACTIVE_KEY, 'true');
+  localStorage.setItem(LOGISTICS_PARTNER_KEY, JSON.stringify(partner));
 }
 
 
