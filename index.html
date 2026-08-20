@@ -4,7 +4,7 @@
 <head>
   <!-- Google Analytics -->
   <script>
-    if (typeof window !== 'undefined' && !window.Capacitor?.isNativePlatform?.()) {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.protocol !== 'capacitor:' && !window.Capacitor?.isNativePlatform?.()) {
       var s = document.createElement('script');
       s.async = true;
       s.src = 'https://www.googletagmanager.com/gtag/js?id=G-LKRPWS2FT3';
