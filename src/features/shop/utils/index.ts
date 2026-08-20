@@ -1,3 +1,3 @@
-export { copyLinkedTextToClipboard, getShopUrl, getShopUsername, getCreatorShopUrl } from "@/lib/shopLinks";
+export { copyLinkedTextToClipboard, getShopUrl, getShopUsername, getCreatorShopUrl } from "@/shared/utils/shopLinks";
 
 

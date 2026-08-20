@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent } from '@/shared/ui/card';
+import { OrderStatusBadge } from '@/shared/ui/OrderStatusBadge';
 import { ChevronDown, Download, Loader2, Package, RefreshCw, Users } from 'lucide-react';
-import type { ApiOrder } from '@/types/api/order';
-import { cn, getImageUrl } from '@/lib/utils';
-import { getOrderInstruction } from '@/utils/orderInstructions';
+import type { ApiOrder } from '@/shared/types';
+import { cn, getImageUrl } from '@/shared/utils/formatting';
+import { getOrderInstruction } from '@/features/orders/utils/orderInstructions';
 import { OrderLogisticsTracking } from './OrderLogisticsTracking';
 import {
   canConfirmOrderReceipt,
@@ -17,7 +18,7 @@ import {
   isDigitalOrder,
   isPaidOrder,
   isServiceOrder
-} from './ordersSectionUtils';
+} from '@/features/orders/utils/ordersSectionUtils';
 
 interface BuyerOrderCardProps {
   order: ApiOrder;

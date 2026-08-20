@@ -1,9 +1,9 @@
 import { useEffect, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
-import { getImageUrl } from '@/lib/utils';
+import { Button } from '@/shared/ui/button';
+import { IconButton } from '@/shared/ui/icon-button';
+import { getImageUrl } from '@/shared/utils/formatting';
 
 interface ProductImageViewerProps {
   images: string[];

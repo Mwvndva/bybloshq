@@ -1,10 +1,10 @@
-import { BuyerInfoModal, type BuyerInfo } from '@/components/BuyerInfoModal';
-import PhoneCheckModal, { type DoorDeliverySelection } from '@/components/PhoneCheckModal';
-import { PaymentStatusModal } from '@/components/PaymentStatusModal';
-import { ServiceBookingModal } from '@/components/ServiceBookingModal';
-import type { Product } from '@/types';
-import type { Theme } from './productCardUtils';
-import type { BuyerLocationPayload } from '@/lib/location';
+import { BuyerInfoModal, type BuyerInfo } from '@/shared/components/BuyerInfoModal';
+import PhoneCheckModal, { type DoorDeliverySelection } from '@/shared/components/PhoneCheckModal';
+import { PaymentStatusModal } from '@/features/payments/components/PaymentStatusModal';
+import { ServiceBookingModal } from '@/shared/components/ServiceBookingModal';
+import type { Product } from '@/shared/types';
+import type { Theme } from '@/features/shop/utils/productCardUtils';
+import type { BuyerLocationPayload } from '@/infrastructure/location/location';
 
 interface ProductCardModalsProps {
   product: Product;

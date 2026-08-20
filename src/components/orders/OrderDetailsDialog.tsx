@@ -1,10 +1,10 @@
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Package, Users } from 'lucide-react';
-import type { ApiOrder } from '@/types/api/order';
-import { getImageUrl } from '@/lib/utils';
-import { canConfirmOrderReceipt, formatOrderCurrency, formatOrderDate, getConfirmReceiptLabel, getPaymentStatusBadge } from './ordersSectionUtils';
-import { OrderStatusBadge } from './OrderStatusBadge';
+import type { ApiOrder } from '@/shared/types';
+import { getImageUrl } from '@/shared/utils/formatting';
+import { canConfirmOrderReceipt, formatOrderCurrency, formatOrderDate, getConfirmReceiptLabel, getPaymentStatusBadge } from '@/features/orders/utils/ordersSectionUtils';
+import { OrderStatusBadge } from '@/shared/ui/OrderStatusBadge';
 
 interface OrderDetailsDialogProps {
   order: ApiOrder | null;

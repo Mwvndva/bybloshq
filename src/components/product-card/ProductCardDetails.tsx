@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CardContent } from '@/components/ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import type { Product, Seller } from '@/types';
-import type { ApiSellerProduct, ApiProduct } from '@/types/api/product';
-import { cn, formatCurrency, isSellerShopless } from '@/lib/utils';
-import type { ProductCardThemeClasses, Theme } from './productCardUtils';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
+import { CardContent } from '@/shared/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import type { Product, Seller } from '@/shared/types';
+import type { ApiSellerProduct, ApiProduct } from '@/shared/types/api/product';
+import { cn, formatCurrency, isSellerShopless } from '@/shared/utils/formatting';
+import type { ProductCardThemeClasses, Theme } from '@/features/shop/utils/productCardUtils';
 import { Calendar, ChevronDown, ExternalLink, FileText, Loader2, MapPin, ShoppingCart, Store } from 'lucide-react';
 
 type ProductWithApiFields = Product & Partial<ApiSellerProduct> & Partial<ApiProduct>;
@@ -21,6 +21,7 @@ interface ProductCardDetailsProps {
   isDigital: boolean;
   isService: boolean;
   isSold: boolean;
+  isOutOfStock?: boolean;
   isLocked: boolean;
   onBuyClick: (event: MouseEvent<HTMLButtonElement>) => void;
   onOpenShop: () => void;
@@ -36,6 +37,7 @@ export function ProductCardDetails({
   isDigital,
   isService,
   isSold,
+  isOutOfStock = false,
   isLocked,
   onBuyClick,
   onOpenShop
@@ -228,7 +230,7 @@ export function ProductCardDetails({
           isSold ? 'bg-slate-200 text-slate-500 hover:bg-slate-200' : themeClasses.button
         )}
         onClick={onBuyClick}
-        disabled={isSold || isLocked || product.isOutOfStock || product.stock === 0}
+        disabled={isSold || isLocked || isOutOfStock || product.stock === 0}
         aria-busy={isLocked}
       >
         {isLocked ? (
@@ -246,7 +248,7 @@ export function ProductCardDetails({
               <ShoppingCart className="h-3.5 w-3.5" />
             )}
             <span>
-              {isSold || product.isOutOfStock || product.stock === 0
+              {isSold || isOutOfStock || product.stock === 0
                 ? 'Out of stock'
                 : isService
                   ? 'Book securely'

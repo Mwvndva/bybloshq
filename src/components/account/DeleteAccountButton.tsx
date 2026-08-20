@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
+import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/hooks/use-toast';
 
 interface DeleteAccountButtonProps {
   /** Calls the account-deletion endpoint. Resolves on success. */
