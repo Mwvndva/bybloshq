@@ -34,6 +34,7 @@ router.use('/buyers', buyerRoutes);
 router.use('/public', publicRoutes);
 router.use('/health', healthRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/admin/refunds', refundRoutes);
 router.use('/admin/marketing', marketingRoutes);
 router.use('/admin', adminRoutes);
 router.use('/refunds', refundRoutes);

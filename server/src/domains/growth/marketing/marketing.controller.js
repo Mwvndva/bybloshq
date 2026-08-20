@@ -39,7 +39,7 @@ export const marketingLogin = async (req, res, next) => {
       status: 'success',
       data: {
         token,
-        user: { id: user.id, email: user.email, role: 'marketing' }
+        user: { id: user.id, email: user.email, role: 'marketing', is_verified: true, emailVerified: true }
       }
     })
   } catch (err) {

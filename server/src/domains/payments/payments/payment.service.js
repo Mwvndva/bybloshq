@@ -12,6 +12,14 @@ export class PaymentService {
     /**
      * Process pending payments within the given lookback window.
      * Claims pending payments with FOR UPDATE SKIP LOCKED and verifies status.
+    async checkBalance() {
+        const paystack = new PaystackProviderClient();
+        return paystack.checkBalance();
+    }
+
+    /**
+     * Process pending payments within the given lookback window.
+     * Claims pending payments with FOR UPDATE SKIP LOCKED and verifies status.
      *
      * @param {number} [hoursAgo=24]
      * @param {number} [limit=50]
@@ -36,7 +44,7 @@ export class PaymentService {
         try {
             const { rows: pendingPayments } = await client.query(
                 `SELECT * FROM payments
-                 WHERE status IN ('pending', 'processing', 'PAYMENT_PENDING')
+                 WHERE status = 'pending'::payment_status
                    AND created_at >= NOW() - ($1 || ' hours')::INTERVAL
                  ORDER BY created_at ASC
                  LIMIT $2
