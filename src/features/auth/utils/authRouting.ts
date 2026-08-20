@@ -23,4 +23,8 @@ export const isPublicRoute = (pathname: string): boolean => {
   return publicPaths.some(path => pathname.includes(path));
 };
 
+export const requiresEmailVerification = (role: UserRole | null): boolean => {
+  return role === 'buyer' || role === 'seller';
+};
+
 

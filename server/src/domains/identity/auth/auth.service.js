@@ -171,13 +171,31 @@ class AuthService {
             }
 
             // CASE 3: An existing buyer/seller/admin accessing the CREATOR portal
-            // They can if they have accepted a creator invite.
+            // They can if they have accepted a creator invite or have creator role assigned.
             if (type === 'creator') {
-                const creatorResult = await pool.query(
+                let creatorResult = await pool.query(
                     `SELECT * FROM creators WHERE user_id = $1 AND status = 'active' LIMIT 1`,
                     [user.id]
                 );
-                const creatorProfile = creatorResult.rows[0] || null;
+                let creatorProfile = creatorResult.rows[0] || null;
+
+                if (!creatorProfile) {
+                    const roleRes = await pool.query(
+                        `SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = $1 AND r.slug = 'creator'`,
+                        [user.id]
+                    );
+                    if (roleRes.rows.length > 0) {
+                        const firstName = user.email ? user.email.split('@')[0] : 'Creator';
+                        const newCreatorRes = await pool.query(
+                            `INSERT INTO creators (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, status)
+                             VALUES ($1, $2, 'Ambassador', $3, '0700000000', '0700000000', 'active')
+                             ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+                             RETURNING *`,
+                            [user.id, firstName, user.email]
+                        );
+                        creatorProfile = newCreatorRes.rows[0];
+                    }
+                }
 
                 if (creatorProfile) {
                     const token = signToken(user.id, 'creator');
