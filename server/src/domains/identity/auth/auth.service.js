@@ -203,10 +203,16 @@ class AuthService {
                 }
             }
 
-            // CASE 4: A marketing admin accessing the MARKETING portal
-            if (type === 'marketing' && user.role === 'marketing') {
-                const token = signToken(user.id, 'marketing');
-                return { user, profile: { id: user.id, email: user.email, role: 'marketing' }, token, crossRole: true };
+            // CASE 4: Marketing / Admin cross-role access (marketing accessing admin or admin accessing marketing)
+            if ((type === 'admin' && user.role === 'marketing') || (type === 'marketing' && user.role === 'admin')) {
+                const issuedRole = type;
+                const token = signToken(user.id, issuedRole);
+                return {
+                    user,
+                    profile: { id: user.id, email: user.email, role: issuedRole },
+                    token,
+                    crossRole: true
+                };
             }
 
 
