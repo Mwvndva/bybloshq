@@ -60,7 +60,7 @@ export function BuyerResetPassword() {
             }}
         >
             {/* Header */}
-            <header className="bg-white/90 dark:bg-[#0d0d0d]/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 sticky top-0 z-30">
+            <header className="bg-white/90 dark:bg-[#0d0d0d]/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 sticky top-0 z-30 pt-safe-top">
                 <div className="w-full px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
                     <Button
                         variant="ghost"
