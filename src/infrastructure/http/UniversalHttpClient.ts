@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'sonner';
 import { buildApiBaseUrl } from './apiBaseUrl';
 import { isNativeApp } from '../navigation/mobileApp';
@@ -6,6 +6,7 @@ import { AuthStrategy, AppRole, StorageAdapter } from '../auth/types';
 import { WebAuthStrategy, getFreshCsrfToken } from '../auth/WebAuthStrategy';
 import { AndroidAuthStrategy } from '../auth/AndroidAuthStrategy';
 import { createDefaultStorageAdapter } from '../auth/adapters';
+import { emitSessionExpired } from '../navigation/navigationService';
 
 export interface UniversalHttpClientOptions {
   storageAdapter?: StorageAdapter;
@@ -42,11 +43,13 @@ export class UniversalHttpClient {
   }
 
   private resolveRole(url: string): AppRole | undefined {
-    if (url.includes('/sellers')) return 'seller';
-    if (url.includes('/creators')) return 'creator';
-    if (url.includes('/admin')) return 'admin';
-    if (url.includes('/buyers')) return 'buyer';
-    if (url.includes('/logistics') || url.includes('/mzigo')) return 'logistics';
+    const cleanUrl = url.split('?')[0];
+    if (/(^\/|^\/api\/)seller(\/|$)/.test(cleanUrl)) return 'seller';
+    if (/(^\/|^\/api\/)creator(\/|$)/.test(cleanUrl)) return 'creator';
+    if (/(^\/|^\/api\/)admin(\/|$)/.test(cleanUrl)) return 'admin';
+    if (/(^\/|^\/api\/)logistics(\/|$)/.test(cleanUrl) || /(^\/|^\/api\/)mzigo(\/|$)/.test(cleanUrl)) return 'logistics';
+    if (/(^\/|^\/api\/)marketing(\/|$)/.test(cleanUrl)) return 'marketing';
+    if (/(^\/|^\/api\/)buyer(\/|$)/.test(cleanUrl) || /(^\/|^\/api\/)orders(\/|$)/.test(cleanUrl)) return 'buyer';
     return this.defaultRole;
   }
 
@@ -56,9 +59,13 @@ export class UniversalHttpClient {
         const url = config.url || '';
         const role = this.resolveRole(url);
 
-        // 1. Attach Auth Headers if strategy provides them (e.g. Android Bearer header)
-        const authHeaders = await this.authStrategy.getAuthHeaders(role);
-        Object.assign(config.headers, authHeaders);
+        const isUnauthenticatedRoute = url.includes('/login') || url.includes('/register') || url.includes('/csrf-token') || url.includes('/forgot-password') || url.includes('/reset-password');
+
+        // 1. Attach Auth Headers if strategy provides them (unless it's an unauthenticated login/register route)
+        if (!isUnauthenticatedRoute) {
+          const authHeaders = await this.authStrategy.getAuthHeaders(role);
+          Object.assign(config.headers, authHeaders);
+        }
 
         // 2. Attach CSRF header on state-changing requests if strategy provides one (Web mode)
         const method = config.method ? config.method.toLowerCase() : 'get';
@@ -99,6 +106,12 @@ export class UniversalHttpClient {
             config._refreshRetried = true;
             const role = this.resolveRole(url);
 
+            if (role === 'marketing') {
+              await this.authStrategy.clearSession('marketing');
+              emitSessionExpired('/admin/marketing/login');
+              throw error;
+            }
+
             if (!this.refreshPromise) {
               this.refreshPromise = this.authStrategy.handleUnauthorized(role).finally(() => {
                 this.refreshPromise = null;
@@ -110,12 +123,27 @@ export class UniversalHttpClient {
               const updatedAuthHeaders = await this.authStrategy.getAuthHeaders(role);
               Object.assign(config.headers, updatedAuthHeaders);
               return this.instance(config);
+            } else if (role) {
+              const ROLE_LOGIN_ROUTES: Record<AppRole, string> = {
+                admin: '/admin/login',
+                marketing: '/admin/marketing/login',
+                seller: '/seller/login',
+                creator: '/creator/login',
+                logistics: '/logistics/login',
+                buyer: '/buyer/login',
+              };
+              emitSessionExpired(ROLE_LOGIN_ROUTES[role]);
             }
           }
         }
 
         // 3. UI Toast Alerts for non-retryable errors
-        if (status && status >= 500) {
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          toast.error('Connection Timeout', {
+            description: 'The server took too long to respond. Please check your connection and try again.',
+            duration: 5000,
+          });
+        } else if (status && status >= 500) {
           toast.error('Server Error', {
             description: 'Something went wrong on our end. Please try again later.',
             duration: 5000,
@@ -136,23 +164,23 @@ export class UniversalHttpClient {
     return this.instance;
   }
 
-  public get<T = unknown>(url: string, config?: InternalAxiosRequestConfig) {
+  public get<T = unknown>(url: string, config?: AxiosRequestConfig) {
     return this.instance.get<T>(url, config);
   }
 
-  public post<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig) {
+  public post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) {
     return this.instance.post<T>(url, data, config);
   }
 
-  public put<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig) {
+  public put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) {
     return this.instance.put<T>(url, data, config);
   }
 
-  public patch<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig) {
+  public patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) {
     return this.instance.patch<T>(url, data, config);
   }
 
-  public delete<T = unknown>(url: string, config?: InternalAxiosRequestConfig) {
+  public delete<T = unknown>(url: string, config?: AxiosRequestConfig) {
     return this.instance.delete<T>(url, config);
   }
 }

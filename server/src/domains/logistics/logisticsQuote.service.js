@@ -181,6 +181,27 @@ class LogisticsQuoteService {
         };
     }
 
+    static async quoteBuyerDoorDeliveryAsync(buyerLocation, options = {}) {
+        const hub = options.hub ? normalizeLocation(options.hub, 'hub') : this.getConfiguredHub(options.env);
+        const destination = normalizeLocation(buyerLocation, 'buyerLocation');
+        const originHash = `${hub.latitude.toFixed(4)}_${hub.longitude.toFixed(4)}`;
+        const destHash = `${destination.latitude.toFixed(4)}_${destination.longitude.toFixed(4)}`;
+        const cacheKey = `logistics:quote:delivery:${originHash}:${destHash}`;
+
+        try {
+            const { default: getRedisClient } = await import('../../shared/config/redis.js');
+            const redis = getRedisClient();
+            const cached = await redis.get(cacheKey);
+            if (cached) return JSON.parse(cached);
+
+            const quote = this.quoteBuyerDoorDelivery(buyerLocation, options);
+            await redis.set(cacheKey, JSON.stringify(quote), 'EX', 86400); // 24-hour TTL
+            return quote;
+        } catch {
+            return this.quoteBuyerDoorDelivery(buyerLocation, options);
+        }
+    }
+
     static quoteSellerPickup(sellerPickupLocation, options = {}) {
         const hub = options.hub
             ? normalizeLocation(options.hub, 'hub')
@@ -209,6 +230,27 @@ class LogisticsQuoteService {
             origin,
             destination: hub
         };
+    }
+
+    static async quoteSellerPickupAsync(sellerPickupLocation, options = {}) {
+        const hub = options.hub ? normalizeLocation(options.hub, 'hub') : this.getConfiguredHub(options.env);
+        const origin = normalizeLocation(sellerPickupLocation, 'sellerPickupLocation');
+        const originHash = `${origin.latitude.toFixed(4)}_${origin.longitude.toFixed(4)}`;
+        const destHash = `${hub.latitude.toFixed(4)}_${hub.longitude.toFixed(4)}`;
+        const cacheKey = `logistics:quote:pickup:${originHash}:${destHash}`;
+
+        try {
+            const { default: getRedisClient } = await import('../../shared/config/redis.js');
+            const redis = getRedisClient();
+            const cached = await redis.get(cacheKey);
+            if (cached) return JSON.parse(cached);
+
+            const quote = this.quoteSellerPickup(sellerPickupLocation, options);
+            await redis.set(cacheKey, JSON.stringify(quote), 'EX', 86400); // 24-hour TTL
+            return quote;
+        } catch {
+            return this.quoteSellerPickup(sellerPickupLocation, options);
+        }
     }
 }
 

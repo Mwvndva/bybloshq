@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -21,9 +22,27 @@ export default function CreatorLogin() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    let targetEmail = email?.trim();
+    let targetPassword = password?.trim();
+
+    if (!targetEmail) {
+      const emailEl = document.querySelector<HTMLInputElement>('input[name="email"], input[type="email"]');
+      if (emailEl?.value) targetEmail = emailEl.value.trim();
+    }
+    if (!targetPassword) {
+      const passEl = document.querySelector<HTMLInputElement>('input[name="password"], input[type="password"]');
+      if (passEl?.value) targetPassword = passEl.value;
+    }
+
+    if (!targetEmail || !targetPassword) {
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(email, password, 'creator');
+      await login(targetEmail, targetPassword, 'creator');
+      // Navigation is handled by useGlobalAuth().login() via getDashboardPath('creator')
     } catch (error: unknown) {
       // Error is handled inside useAuthActions with a toast
     } finally {
@@ -33,7 +52,7 @@ export default function CreatorLogin() {
 
   return (
     <main className="auth-page byblos-light-page min-h-screen bg-[#090909] text-white">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)]">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="relative flex h-16 items-center justify-between sm:h-20">
             <div className="flex flex-1 items-center gap-2">

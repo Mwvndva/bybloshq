@@ -1,0 +1,32 @@
+export function StatCard({ title, value, subtitle, trend, color = 'yellow', prefix = '', suffix = '', hero = false }) {
+    const colors = {
+        yellow: 'border-yellow-400/25 bg-yellow-400/10',
+        green: 'border-emerald-400/25 bg-emerald-400/10',
+        blue: 'border-sky-400/25 bg-sky-400/10',
+        purple: 'border-violet-400/25 bg-violet-400/10',
+        red: 'border-red-400/25 bg-red-400/10',
+    }
+
+    const formatValue = (v) => {
+        if (typeof v !== 'number') return v
+        if (v >= 1_000_000) return `${prefix}${(v / 1_000_000).toFixed(1)}M${suffix}`
+        if (v >= 1_000) return `${prefix}${(v / 1_000).toFixed(1)}K${suffix}`
+        return `${prefix}${v.toLocaleString()}${suffix}`
+    }
+
+    return (
+        <div className={`border rounded-2xl ${hero ? 'p-5 md:p-6' : 'p-4 md:p-5'} shadow-[0_18px_45px_rgba(0,0,0,0.45)] transition-all hover:border-yellow-300 ${colors[color]}`}>
+            <p className={`text-white/60 ${hero ? 'text-xs md:text-sm font-bold uppercase tracking-wider' : 'text-xs font-semibold'} mb-1.5 md:mb-2`}>{title}</p>
+            <p className={`${hero ? 'text-2xl md:text-3xl font-black text-white' : 'text-xl md:text-2xl font-semibold text-white'} tracking-tight`}>{formatValue(value)}</p>
+            {subtitle && <p className="text-white/50 text-[10px] md:text-xs mt-1 font-medium">{subtitle}</p>}
+            {trend !== undefined && (
+                <div className="flex items-center gap-1.5 mt-2 md:mt-3">
+                    <span className={`text-[9px] md:text-[10px] font-black px-1.5 py-0.5 rounded ${trend >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+                    </span>
+                    <span className="text-white/50 text-[9px] md:text-[10px] font-semibold">vs last month</span>
+                </div>
+            )}
+        </div>
+    )
+}

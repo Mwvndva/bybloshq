@@ -17,5 +17,3 @@ root.render(
     </HelmetProvider>
   </StrictMode>
 );
-
-

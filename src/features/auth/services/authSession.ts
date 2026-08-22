@@ -1,14 +1,10 @@
 import type { UserRole } from '../types/authTypes';
-import { storage } from '@/infrastructure/storage/storage';
+import { storage, authStorage, BYBLOS_AUTH_KEYS } from '@/infrastructure/storage/storage';
 import apiClient from '@/infrastructure/http/apiClient';
 
 const ALL_ROLES: UserRole[] = ['buyer', 'seller', 'admin', 'creator', 'logistics', 'marketing'];
 
-// Points at the single account that is currently signed in on this device. Both
-// the request interceptor and the cold-start restore consult this so they bind
-// to the account the user actually logged into — not whichever role token
-// happens to come first in a hardcoded priority list.
-export const ACTIVE_ROLE_KEY = 'activeRole';
+export const ACTIVE_ROLE_KEY = BYBLOS_AUTH_KEYS.ACTIVE_ROLE;
 
 export const getSessionKey = (role: UserRole): string => `${role}SessionActive`;
 
@@ -21,26 +17,29 @@ export const clearRoleSession = async (role: UserRole): Promise<void> => {
 };
 
 export const setActiveRole = async (role: UserRole): Promise<void> => {
-  await storage.set(ACTIVE_ROLE_KEY, role);
+  await authStorage.setActiveRole(role);
 };
 
 export const getActiveRole = async (): Promise<UserRole | null> => {
-  const value = await storage.get(ACTIVE_ROLE_KEY);
+  const value = await authStorage.getActiveRole();
   return value && ALL_ROLES.includes(value as UserRole) ? (value as UserRole) : null;
 };
 
 export const clearActiveRole = async (): Promise<void> => {
-  await storage.remove(ACTIVE_ROLE_KEY);
+  await storage.remove(BYBLOS_AUTH_KEYS.ACTIVE_ROLE);
 };
 
 /**
  * Enforce a single active account on the device.
- * 1. Collects previous JWT tokens for all roles other than activeRole.
- * 2. Revokes previous tokens on the server via POST /auth/revoke-token.
- * 3. Removes the token, refresh token and session marker for every role OTHER than the active one.
- * 4. Records active role.
+ * 1. Evicts legacy storage keys across all 6 roles.
+ * 2. Collects previous JWT tokens for all roles other than activeRole.
+ * 3. Revokes previous tokens on the server via POST /auth/revoke-token.
+ * 4. Removes token, refresh token and session marker for every role OTHER than active.
+ * 5. Records active role under byblos.auth.active_role.
  */
 export const enforceSingleActiveRole = async (activeRole: UserRole): Promise<void> => {
+  await authStorage.purgeLegacyAndInactiveKeys(activeRole);
+
   const tokensToRevoke: string[] = [];
 
   for (const role of ALL_ROLES) {
@@ -67,10 +66,10 @@ export const enforceSingleActiveRole = async (activeRole: UserRole): Promise<voi
 };
 
 export const clearRoleSessionMarkers = async (): Promise<void> => {
+  await authStorage.clearAuth();
   for (const role of ALL_ROLES) {
     await storage.remove(`${role}SessionActive`);
     await storage.remove(`${role}Token`);
     await storage.remove(`${role}RefreshToken`);
   }
-  await clearActiveRole();
 };

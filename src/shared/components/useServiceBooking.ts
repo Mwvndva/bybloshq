@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, isBefore, startOfDay } from 'date-fns';
 import { isSellerShopless } from '@/shared/utils/formatting';
-import { useBuyerAuth, useGlobalAuth } from '@/features/auth/contexts';
-import type { UserProfile } from '@/features/auth/types/authTypes';
+import { useGlobalAuth } from '@/features/auth/contexts';
+import type { BuyerProfile, UserProfile } from '@/features/auth/types/authTypes';
 import { toast } from 'sonner';
 import type { Product, ApiSellerProduct } from '@/shared/types';
 import {
@@ -37,8 +37,8 @@ export function useServiceBooking(
     const [serviceRequirements, setServiceRequirements] = useState('');
 
     // Managed Location state
-    const { user: buyerProfile } = useBuyerAuth();
-    const { updateProfile } = useGlobalAuth();
+    const { user: globalUser, updateProfile } = useGlobalAuth();
+    const buyerProfile = globalUser?.role === 'buyer' ? globalUser.profile as BuyerProfile : null;
 
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [buyerLocation, setBuyerLocation] = useState<OptionalBuyerLocation | null>(null);

@@ -1,5 +1,6 @@
-import apiClient from '@/infrastructure/http/apiClient';
+import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import type { ApiSellerProduct } from '@/shared/types/api/product';
+import { storage } from '@/infrastructure/storage/storage';
 
 const sellerApiInstance = apiClient;
 
@@ -55,22 +56,51 @@ export const sellerProductsApi = {
   },
 
   getProducts: async (): Promise<ApiSellerProduct[]> => {
+    let bodyData: any = null;
+
     try {
-      const response = await sellerApiInstance.get<ProductsResponse>('/sellers/products');
-      const products = response.data?.data?.products || [];
-      return products.map(transformProduct);
-    } catch (error) {
-      console.error('Error fetching products:', {
-        error: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: error.config
-      });
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+      const response = await sellerApiInstance.get<any>('/sellers/products');
+      bodyData = response?.data !== undefined ? response.data : response;
+      if (typeof bodyData === 'string' && bodyData.trim()) {
+        try {
+          bodyData = JSON.parse(bodyData);
+        } catch {
+          /* ignore json parse error */
+        }
       }
-      throw error;
+    } catch {
+      /* ignore Axios error for fetch fallback */
     }
+
+    if (!bodyData || typeof bodyData !== 'object') {
+      try {
+        const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
+        const csrfToken = await getFreshCsrfToken();
+        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/products', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+            'X-CSRF-Token': csrfToken || '',
+            'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+          },
+          credentials: 'include'
+        });
+        const textData = await fetchRes.text();
+        if (textData && typeof textData === 'string') {
+          try {
+            bodyData = JSON.parse(textData);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore fetch fallback error */
+      }
+    }
+
+    const products = bodyData?.data?.products || bodyData?.products || (Array.isArray(bodyData?.data) ? bodyData.data : []) || (Array.isArray(bodyData) ? bodyData : []);
+    return products.map(transformProduct);
   },
 
   getSellerProducts: async (sellerId: string | number): Promise<ApiSellerProduct[]> => {

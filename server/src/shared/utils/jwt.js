@@ -8,9 +8,11 @@ import logger from './logger.js';
  * @param {string} role - User role (buyer, seller, organizer, admin)
  * @returns {string} JWT token
  */
-const VALID_ROLES = ['buyer', 'seller', 'admin', 'marketing', 'creator', 'logistics'];
+const VALID_ROLES = ['buyer', 'seller', 'creator', 'admin', 'marketing', 'logistics'];
+const JWT_ISSUER = 'byblos-auth-api';
+const JWT_AUDIENCE = 'byblos-clients';
 
-export const signToken = (id, role = 'buyer', email = null) => {
+export const signToken = (id, role = 'buyer', extraClaims = {}) => {
   if (!id) {
     throw new Error('User ID is required to sign a token');
   }
@@ -23,13 +25,22 @@ export const signToken = (id, role = 'buyer', email = null) => {
     throw new Error(`Invalid role: "${role}". Must be one of: ${VALID_ROLES.join(', ')}`);
   }
 
-  const payload = { id, role };
-  if (email) payload.email = email;
+  let payload = { id, role };
+  if (typeof extraClaims === 'string') {
+    payload.email = extraClaims;
+  } else if (typeof extraClaims === 'object' && extraClaims !== null) {
+    payload = { ...payload, ...extraClaims };
+  }
 
   return jwt.sign(
     payload,
     process.env.JWT_SECRET,
-    { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    {
+      algorithm: 'HS256',
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+      expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+    }
   );
 };
 
@@ -48,7 +59,12 @@ export const signAutoLoginToken = (id, role = 'buyer', purpose = 'payment_succes
   return jwt.sign(
     { id, role, purpose, autoLogin: true },
     process.env.JWT_SECRET,
-    { algorithm: 'HS256', expiresIn: '5m' } // 5 minutes expiration for security
+    {
+      algorithm: 'HS256',
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+      expiresIn: '5m'
+    }
   );
 };
 
@@ -63,7 +79,20 @@ export const verifyToken = (token) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ['HS256']
+    });
+
+    if (decoded.iss && decoded.iss !== JWT_ISSUER) {
+      const err = new AppError('Token issuer mismatch', 401);
+      err.code = 'INVALID_TOKEN_ISSUER';
+      throw err;
+    }
+    if (decoded.aud && decoded.aud !== JWT_AUDIENCE) {
+      const err = new AppError('Token audience mismatch', 401);
+      err.code = 'INVALID_TOKEN_AUDIENCE';
+      throw err;
+    }
 
     // Handle both 'role' and 'type' fields for backward compatibility
     if (decoded.type && !decoded.role) {
@@ -72,11 +101,16 @@ export const verifyToken = (token) => {
 
     return decoded;
   } catch (error) {
+    if (error instanceof AppError) throw error;
     if (error.name === 'TokenExpiredError') {
-      throw new AppError('Your token has expired! Please log in again.', 401);
+      const err = new AppError('Your token has expired! Please log in again.', 401);
+      err.code = 'TOKEN_EXPIRED';
+      throw err;
     }
     logger.error('JWT Verification Error:', error.message);
-    throw new AppError('Invalid token. Please log in again!', 401);
+    const err = new AppError('Invalid token. Please log in again!', 401);
+    err.code = 'INVALID_TOKEN';
+    throw err;
   }
 };
 
@@ -92,7 +126,13 @@ export const getTokenFromRequest = (req) => {
     return authHeader.split(' ')[1];
   }
 
-  // 2. 'jwt' cookie — used by all authenticated web/mobile requests
+  // 2. x-access-token header (used by Capacitor/Ionic mobile webviews)
+  const customHeader = req.headers['x-access-token'] || req.headers['X-Access-Token'];
+  if (customHeader && typeof customHeader === 'string') {
+    return customHeader.trim();
+  }
+
+  // 3. 'jwt' cookie — used by all authenticated web/mobile requests
   if (req.cookies?.jwt) {
     return req.cookies.jwt;
   }

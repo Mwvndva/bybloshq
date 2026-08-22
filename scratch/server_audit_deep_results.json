@@ -1,0 +1,347 @@
+{
+  "totalFiles": 232,
+  "domainToAppImports": [],
+  "controllersSql": [],
+  "sharedRepositories": [],
+  "cyclesCount": 0,
+  "cycles": [],
+  "testMappings": [
+    {
+      "testFile": "test/architecture-cleanup.static.test.js",
+      "loc": 75,
+      "targets": [
+        "src/application/bootstrap/cron.js",
+        "src/application/bootstrap/index.js",
+        "src/application/bootstrap/services.js",
+        "src/application/routes/index.js",
+        "src/application/routes/notification.routes.js",
+        "src/application/workflows/PaymentWebhookWorkflow.js",
+        "src/domains/communication/notifications/notification.controller.js",
+        "src/domains/communication/notifications/notification.service.js",
+        "src/domains/payments/payments/CorePaymentService.js",
+        "src/domains/payments/payments/payment.controller.js",
+        "src/domains/payments/payments/payment.service.js",
+        "src/domains/payments/payments/PaymentService.js",
+        "src/index.js",
+        "src/infrastructure/providers/PaystackProviderClient.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/fulfillment.js",
+        "src/shared/utils/index.js",
+        "src/worker.js"
+      ]
+    },
+    {
+      "testFile": "test/auth-remediation.static.test.js",
+      "loc": 67,
+      "targets": [
+        "src/application/middleware/auth.js",
+        "src/application/middleware/logisticsAuth.js",
+        "src/domains/logistics/logisticsDashboard.helpers.js",
+        "src/domains/logistics/logisticsDashboard.service.js",
+        "src/shared/utils/refreshToken.js"
+      ]
+    },
+    {
+      "testFile": "test/creator-registration.unit.test.js",
+      "loc": 30,
+      "targets": [
+        "src/shared/utils/email.js"
+      ]
+    },
+    {
+      "testFile": "test/critical-systems.regression.test.js",
+      "loc": 577,
+      "targets": [
+        "src/application/bootstrap/index.js",
+        "src/application/middleware/auth.js",
+        "src/application/middleware/paystackWebhookSecurity.js",
+        "src/application/routes/index.js",
+        "src/domains/identity/auth/authorization.service.js",
+        "src/domains/orders/escrow/EscrowManager.js",
+        "src/domains/orders/order/order.controller.js",
+        "src/domains/payments/payments/CorePaymentService.js",
+        "src/domains/payments/payments/payment.controller.js",
+        "src/domains/payments/payments/PaymentService.js",
+        "src/index.js",
+        "src/infrastructure/database/database.js",
+        "src/shared/constants/enums.js",
+        "src/shared/utils/fulfillment.js",
+        "src/shared/utils/index.js",
+        "src/shared/utils/OrderStatusGuard.js",
+        "src/shared/validations/order.validation.js"
+      ]
+    },
+    {
+      "testFile": "test/e2e-android-contract-proof.integration.test.js",
+      "loc": 204,
+      "targets": [
+        "src/application/bootstrap/express.js",
+        "src/infrastructure/database/database.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/jwt.js",
+        "src/shared/utils/refreshToken.js"
+      ]
+    },
+    {
+      "testFile": "test/e2e-auth-cleanup-verification.integration.test.js",
+      "loc": 203,
+      "targets": [
+        "src/application/bootstrap/express.js",
+        "src/infrastructure/database/database.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/jwt.js"
+      ]
+    },
+    {
+      "testFile": "test/e2e-auth-database.integration.test.js",
+      "loc": 272,
+      "targets": [
+        "src/application/middleware/auth.js",
+        "src/infrastructure/database/database.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/jwt.js",
+        "src/shared/utils/refreshToken.js"
+      ]
+    },
+    {
+      "testFile": "test/e2e-final-release-gate-six-role.integration.test.js",
+      "loc": 264,
+      "targets": [
+        "src/application/bootstrap/express.js",
+        "src/application/middleware/auth.js",
+        "src/infrastructure/database/database.js",
+        "src/shared/utils/email.js"
+      ]
+    },
+    {
+      "testFile": "test/e2e-http-auth.integration.test.js",
+      "loc": 354,
+      "targets": [
+        "src/application/bootstrap/express.js",
+        "src/application/middleware/auth.js",
+        "src/infrastructure/database/database.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/jwt.js",
+        "src/shared/utils/refreshToken.js"
+      ]
+    },
+    {
+      "testFile": "test/e2e-security-fixes-regression.integration.test.js",
+      "loc": 239,
+      "targets": [
+        "src/application/bootstrap/express.js",
+        "src/application/middleware/auth.js",
+        "src/infrastructure/database/database.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/jwt.js"
+      ]
+    },
+    {
+      "testFile": "test/fintech-remediation.integration.test.js",
+      "loc": 1388,
+      "targets": [
+        "src/application/bootstrap/cron.js",
+        "src/application/bootstrap/index.js",
+        "src/application/events/eventBus.js",
+        "src/application/events/payment.events.js",
+        "src/application/routes/index.js",
+        "src/application/workflows/PaymentWebhookWorkflow.js",
+        "src/domains/commerce/products/inventoryReservation.service.js",
+        "src/domains/growth/creators/creator.service.js",
+        "src/domains/logistics/logisticsQuote.service.js",
+        "src/domains/logistics/logisticsRequest.service.js",
+        "src/domains/orders/escrow/EscrowManager.js",
+        "src/domains/orders/escrow/settlement.service.js",
+        "src/domains/orders/fulfillment/fulfillmentQueue.service.js",
+        "src/domains/orders/order/orderFulfillmentTransition.service.js",
+        "src/domains/orders/order/OrderService.js",
+        "src/domains/payments/payments/CorePaymentService.js",
+        "src/domains/payments/payments/payment.service.js",
+        "src/domains/payments/payments/PaymentService.js",
+        "src/domains/payments/payouts/payout.service.js",
+        "src/domains/payments/payouts/payoutCallbackStateMachine.service.js",
+        "src/domains/payments/withdrawals/withdrawal.service.js",
+        "src/index.js",
+        "src/infrastructure/database/database.js",
+        "src/infrastructure/providers/PaystackProviderClient.js",
+        "src/shared/core/CoreOrderService.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/fulfillment.js",
+        "src/shared/utils/index.js",
+        "src/shared/utils/providerReference.js",
+        "src/worker.js"
+      ]
+    },
+    {
+      "testFile": "test/image-service-security.test.js",
+      "loc": 42,
+      "targets": [
+        "src/application/middleware/upload.js",
+        "src/infrastructure/storage/image.service.js"
+      ]
+    },
+    {
+      "testFile": "test/logistics-quote.service.test.js",
+      "loc": 220,
+      "targets": [
+        "src/domains/logistics/logisticsQuote.service.js"
+      ]
+    },
+    {
+      "testFile": "test/payment-remediation.static.test.js",
+      "loc": 1650,
+      "targets": [
+        "src/application/bootstrap/cron.js",
+        "src/application/bootstrap/express.js",
+        "src/application/bootstrap/index.js",
+        "src/application/bootstrap/schemaCheck.js",
+        "src/application/bootstrap/services.js",
+        "src/application/controllers/admin.controller.js",
+        "src/application/controllers/callback.controller.js",
+        "src/application/controllers/paystackWebhook.controller.js",
+        "src/application/controllers/public.controller.js",
+        "src/application/controllers/refund.controller.js",
+        "src/application/controllers/tracking.controller.js",
+        "src/application/controllers/withdrawal.controller.js",
+        "src/application/cron/fulfillmentWorker.js",
+        "src/application/cron/orderDeadlineCron.js",
+        "src/application/cron/paymentCron.js",
+        "src/application/cron/reconciliationEngine.js",
+        "src/application/events/eventBus.js",
+        "src/application/events/eventDispatcher.js",
+        "src/application/events/eventTypes.js",
+        "src/application/events/logistics.events.js",
+        "src/application/events/order.events.js",
+        "src/application/events/outboxRepository.js",
+        "src/application/events/payment.events.js",
+        "src/application/events/recipientDelivery.js",
+        "src/application/middleware/auth.js",
+        "src/application/middleware/logisticsAuth.js",
+        "src/application/middleware/paystackWebhookSecurity.js",
+        "src/application/middleware/requestId.js",
+        "src/application/middleware/validate.js",
+        "src/application/routes/admin.routes.js",
+        "src/application/routes/callback.routes.js",
+        "src/application/routes/index.js",
+        "src/application/routes/logistics.routes.js",
+        "src/application/routes/order.routes.js",
+        "src/application/routes/payment.routes.js",
+        "src/application/routes/seller.routes.js",
+        "src/application/routes/tracking.routes.js",
+        "src/application/routes/webhook.routes.js",
+        "src/application/workflows/PaymentWebhookWorkflow.js",
+        "src/domains/commerce/buyers/buyer.controller.js",
+        "src/domains/commerce/products/inventoryReservation.service.js",
+        "src/domains/commerce/products/product.model.js",
+        "src/domains/commerce/products/product.service.js",
+        "src/domains/commerce/repositories/publicCatalog.repository.js",
+        "src/domains/commerce/sellers/seller.clientele.controller.js",
+        "src/domains/commerce/sellers/seller.controller.js",
+        "src/domains/commerce/sellers/seller.profile.controller.js",
+        "src/domains/commerce/sellers/seller.repository.js",
+        "src/domains/commerce/sellers/seller.shop.controller.js",
+        "src/domains/commerce/sellers/sellerAnalytics.repository.js",
+        "src/domains/growth/referrals/referral.service.js",
+        "src/domains/identity/auth/seller.auth.controller.js",
+        "src/domains/logistics/logisticsDashboard.helpers.js",
+        "src/domains/logistics/logisticsDashboard.service.js",
+        "src/domains/logistics/logisticsQuote.service.js",
+        "src/domains/logistics/logisticsRequest.service.js",
+        "src/domains/logistics/logisticsTrackingLink.service.js",
+        "src/domains/orders/escrow/EscrowManager.js",
+        "src/domains/orders/fulfillment/fulfillmentQueue.service.js",
+        "src/domains/orders/order/order.controller.js",
+        "src/domains/orders/order/order.model.js",
+        "src/domains/orders/order/orderCancellation.service.js",
+        "src/domains/orders/order/orderDeadline.service.js",
+        "src/domains/orders/order/orderFulfillmentTransition.service.js",
+        "src/domains/orders/order/orderHubDropoff.service.js",
+        "src/domains/orders/order/OrderService.js",
+        "src/domains/orders/repositories/publicOrderStatus.repository.js",
+        "src/domains/payments/payments/CorePaymentService.js",
+        "src/domains/payments/payments/payment.controller.js",
+        "src/domains/payments/payments/payment.model.js",
+        "src/domains/payments/payments/payment.service.js",
+        "src/domains/payments/payments/paymentReceipt.service.js",
+        "src/domains/payments/payments/PaymentService.js",
+        "src/domains/payments/payouts/payout.service.js",
+        "src/domains/payments/payouts/payoutCallbackStateMachine.service.js",
+        "src/domains/payments/withdrawals/withdrawal.service.js",
+        "src/index.js",
+        "src/infrastructure/database/database.js",
+        "src/infrastructure/providers/PaystackProviderClient.js",
+        "src/infrastructure/providers/PaystackTransferClient.js",
+        "src/shared/config/fees.js",
+        "src/shared/constants/enums.js",
+        "src/shared/core/CoreOrderService.js",
+        "src/shared/utils/email.js",
+        "src/shared/utils/fulfillment.js",
+        "src/shared/utils/index.js",
+        "src/shared/utils/paystackPaymentNormalizer.js",
+        "src/shared/utils/paystackTransferNormalizer.js",
+        "src/shared/utils/reservationRelease.js",
+        "src/shared/utils/sanitize.js",
+        "src/shared/validations/order.validation.js",
+        "src/worker.js"
+      ]
+    },
+    {
+      "testFile": "test/paystack-normalizers.test.js",
+      "loc": 101,
+      "targets": [
+        "src/shared/constants/enums.js",
+        "src/shared/utils/paystackPaymentNormalizer.js",
+        "src/shared/utils/paystackTransferNormalizer.js"
+      ]
+    },
+    {
+      "testFile": "test/paystack-transfer-client.test.js",
+      "loc": 110,
+      "targets": [
+        "src/infrastructure/providers/PaystackTransferClient.js"
+      ]
+    },
+    {
+      "testFile": "test/paystack-webhook-security.test.js",
+      "loc": 82,
+      "targets": [
+        "src/application/middleware/paystackWebhookSecurity.js"
+      ]
+    },
+    {
+      "testFile": "test/security-findings.static.test.js",
+      "loc": 214,
+      "targets": [
+        "src/application/bootstrap/express.js",
+        "src/application/controllers/csrf.controller.js",
+        "src/application/middleware/auth.js",
+        "src/application/middleware/marketingAuth.js",
+        "src/application/middleware/upload.js",
+        "src/application/middleware/validate.js",
+        "src/application/routes/buyer.routes.js",
+        "src/application/routes/creator.routes.js",
+        "src/application/routes/seller.routes.js",
+        "src/domains/commerce/buyers/buyer.controller.js",
+        "src/domains/commerce/buyers/buyer.model.js",
+        "src/domains/commerce/products/product.controller.js",
+        "src/domains/growth/creators/creator.controller.js",
+        "src/domains/growth/creators/creator.service.js",
+        "src/domains/identity/auth/auth.service.js",
+        "src/domains/identity/users/user.model.js",
+        "src/domains/orders/order/order.controller.js",
+        "src/domains/orders/repositories/publicOrderStatus.repository.js",
+        "src/infrastructure/database/database.js",
+        "src/infrastructure/storage/image.service.js",
+        "src/shared/utils/cloudinary.js",
+        "src/shared/utils/email.js"
+      ]
+    },
+    {
+      "testFile": "test/setup.js",
+      "loc": 53,
+      "targets": [
+        "src/infrastructure/database/database.js"
+      ]
+    }
+  ]
+}

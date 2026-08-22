@@ -40,21 +40,24 @@ export function isDeliveryTrackable(status) {
  * Courier posts its current position for one logistics request it owns.
  * Ownership (request belongs to this partner) is verified before writing.
  */
-export async function setCourierLocation({ requestId, partnerId, lat, lng, accuracy, heading, speed }) {
+export async function setCourierLocation({ requestId, partnerId, riderId, lat, lng, accuracy, heading, speed }) {
   const validLat = toFiniteNumber(lat, -90, 90);
   const validLng = toFiniteNumber(lng, -180, 180);
   if (validLat === null || validLng === null) {
-    throw new AppError('Valid lat/lng are required', 400);
+    throw new AppError('Valid lat/lng required', 400);
   }
 
-  const { rows } = await pool.query(
-    `SELECT id FROM logistics_requests WHERE id = $1 AND partner_id = $2 LIMIT 1`,
-    [requestId, partnerId]
-  );
-  if (!rows[0]) {
-    throw new AppError('Logistics request not found for this partner', 404);
+  if (partnerId) {
+    const { rows } = await pool.query(
+      `SELECT id FROM logistics_requests WHERE id = $1 AND partner_id = $2 LIMIT 1`,
+      [requestId, partnerId]
+    );
+    if (!rows[0]) {
+      throw new AppError('Logistics request not found for this partner', 404);
+    }
   }
 
+  const effectiveRiderId = String(riderId || partnerId || `request:${requestId}`);
   const payload = {
     lat: validLat,
     lng: validLng,
@@ -65,7 +68,22 @@ export async function setCourierLocation({ requestId, partnerId, lat, lng, accur
   };
 
   const redis = getRedisClient();
-  await redis.set(keyFor(requestId), JSON.stringify(payload), 'EX', TTL_SECONDS);
+  const pipeline = redis.pipeline ? redis.pipeline() : null;
+
+  if (pipeline) {
+    // 1. Update spatial index for dispatch radius searches
+    pipeline.geoadd('logistics:active_couriers', validLng, validLat, effectiveRiderId);
+    // 2. Set request telemetry payload with 180s TTL
+    pipeline.set(keyFor(requestId), JSON.stringify(payload), 'EX', TTL_SECONDS);
+    // 3. Broadcast to Pub/Sub channel for live SSE map updates
+    pipeline.publish(`channel:logistics:${requestId}`, JSON.stringify(payload));
+    await pipeline.exec();
+  } else {
+    await redis.geoadd('logistics:active_couriers', validLng, validLat, effectiveRiderId);
+    await redis.set(keyFor(requestId), JSON.stringify(payload), 'EX', TTL_SECONDS);
+    await redis.publish(`channel:logistics:${requestId}`, JSON.stringify(payload));
+  }
+
   return { updatedAt: payload.updatedAt };
 }
 

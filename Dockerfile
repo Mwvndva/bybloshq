@@ -18,11 +18,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 COPY package*.json ./
-# Install all dependencies including devDependencies (needed for vite build)
-# npm ci trusts the lockfile, which (npm bug #4828) omits Rollup's Linux-only
-# optional binary and breaks `vite build`. Remove the lock and install fresh so
-# npm resolves the correct @rollup/rollup-linux-x64-gnu for this platform.
-RUN rm -f package-lock.json && npm install --include=dev
+# Install all dependencies using lockfile for 100% deterministic builds
+RUN npm ci
 
 # Build stage
 FROM deps AS builder

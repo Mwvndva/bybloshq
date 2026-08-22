@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_scratch_clean_build_test_android_build_gradle", "label": "build.gradle", "file_type": "code", "source_file": "scratch/clean_build_test/android/build.gradle", "source_location": "L1"}], "edges": [], "raw_calls": [], "parse_errors": {"first_error_line": 32, "multiline_error": false}}

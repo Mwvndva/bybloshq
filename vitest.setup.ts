@@ -15,3 +15,16 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock Capacitor PushNotifications for jsdom test environment
+vi.mock('@capacitor/push-notifications', () => ({
+  PushNotifications: {
+    requestPermissions: vi.fn().mockResolvedValue({ receive: 'granted' }),
+    register: vi.fn().mockResolvedValue(undefined),
+    addListener: vi.fn().mockImplementation((_event: string, _callback: (...args: unknown[]) => void) => {
+      return Promise.resolve({ remove: vi.fn() });
+    }),
+    removeAllListeners: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+

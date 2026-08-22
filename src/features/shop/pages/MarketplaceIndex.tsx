@@ -9,13 +9,13 @@ const NativeAppHome = () => (
   <div className="relative flex min-h-[100svh] items-center justify-center bg-black px-6 py-10 text-white selection:bg-yellow-300 selection:text-black">
     {/* Mzigo Ego delivery partners get a discreet entry, mirroring the
         Creator pill — the logo itself is the button. */}
-    <Link to="/mzigo/login" className="absolute left-5 top-5" aria-label="Mzigo Ego delivery partner login">
+    <Link to="/mzigo/login" className="absolute left-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))]" aria-label="Mzigo Ego delivery partner login">
       <Button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] p-0 shadow-[0_12px_30px_rgba(0,0,0,0.5)] hover:bg-white/10">
         <img src="/mzigo-ego.png" alt="Mzigo Ego" className="h-6 w-6 object-contain" />
       </Button>
     </Link>
 
-    <Link to="/creator/login" className="absolute right-5 top-5">
+    <Link to="/creator/login" className="absolute right-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))]">
       <Button className="h-7 rounded-full border border-white/15 bg-white/[0.06] px-3 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm hover:bg-white/10">
         Creator
       </Button>

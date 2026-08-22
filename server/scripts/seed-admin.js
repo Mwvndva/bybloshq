@@ -1,6 +1,4 @@
 import bcrypt from 'bcrypt';
-import { pool } from '../src/infrastructure/database/database.js';
-
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,10 +6,12 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Load .env BEFORE importing database module
+const envFile = process.env.DOTENV_CONFIG_PATH || '.env';
+dotenv.config({ path: path.resolve(__dirname, '..', envFile) });
 
 async function seedAdmin() {
+    const { pool } = await import('../src/infrastructure/database/database.js');
     const email = process.env.ADMIN_EMAIL;
     const password = process.env.ADMIN_PASSWORD;
 

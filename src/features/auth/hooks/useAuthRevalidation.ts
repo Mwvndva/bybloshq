@@ -193,7 +193,7 @@ export function useAuthRevalidation({
       if (persistedRole && (await storage.get(getSessionKey(persistedRole))) === 'true') {
         activeRole = persistedRole;
       } else {
-        const roles: UserRole[] = ['seller', 'buyer', 'creator', 'admin'];
+        const roles: UserRole[] = ['seller', 'buyer', 'creator', 'logistics', 'admin'];
         const sessionResults = await Promise.all(
           roles.map(async (r) => ({ role: r, isActive: (await storage.get(getSessionKey(r))) === 'true' }))
         );
@@ -208,6 +208,7 @@ export function useAuthRevalidation({
       if (activeRole === 'buyer') queryOpts = buyerProfileQueryOptions;
       else if (activeRole === 'seller') queryOpts = sellerProfileQueryOptions;
       else if (activeRole === 'admin') queryOpts = adminProfileQueryOptions;
+      else if (activeRole === 'logistics') queryOpts = logisticsProfileQueryOptions;
       else queryOpts = creatorProfileQueryOptions;
 
       try {

@@ -104,7 +104,34 @@ export const publicApiRateLimiter = rateLimit({
 });
 
 // ========================================
-// 7. File Upload (STRICT)
+// 7. Public Tracking (60 req/min)
+// ========================================
+export const publicTrackingRateLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 60, // 60 requests per minute
+    message: {
+        status: 'error',
+        message: 'Too many tracking requests. Please wait a moment before trying again.',
+        retryAfter: '1 minute'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        logger.warn('[RATE-LIMIT] Public tracking link rate limit exceeded', {
+            ip: req.ip,
+            path: req.path
+        });
+
+        res.status(429).json({
+            status: 'error',
+            message: 'Too many tracking link requests. Please wait a moment.',
+            retryAfter: 60
+        });
+    }
+});
+
+// ========================================
+// 8. File Upload (STRICT)
 // ========================================
 export const uploadRateLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour

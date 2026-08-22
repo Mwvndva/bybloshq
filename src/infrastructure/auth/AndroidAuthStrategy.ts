@@ -2,6 +2,8 @@ import axios from 'axios';
 import { AuthStrategy, AuthPlatform, AppRole, StorageAdapter } from './types';
 import { buildApiBaseUrl } from '../http/apiBaseUrl';
 
+import { getFreshCsrfToken, getCachedCsrfToken } from './WebAuthStrategy';
+
 export class AndroidAuthStrategy implements AuthStrategy {
   readonly platform: AuthPlatform = 'android';
 
@@ -22,8 +24,14 @@ export class AndroidAuthStrategy implements AuthStrategy {
   }
 
   async getCsrfHeader(): Promise<Record<string, string>> {
-    // Native Android requests using Bearer authentication are exempt from browser cookie CSRF.
-    return {};
+    let token = getCachedCsrfToken();
+    if (!token) {
+      token = await getFreshCsrfToken();
+    }
+    return token ? {
+      'X-CSRF-Token': token,
+      'Cookie': `csrf-token-v2=${token}; _csrf=${token}`
+    } : {};
   }
 
   async handleUnauthorized(role?: AppRole): Promise<boolean> {

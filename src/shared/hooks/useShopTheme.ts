@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type RefObject } from 'react';
 import type { Theme } from '@/shared/types';
 
 export type { Theme };
@@ -100,154 +100,151 @@ const THEME_DEFINITIONS: Record<Theme, ThemeDefinition> = {
     },
     green: {
         classes: {
-            bgGradient: 'from-green-50 to-white',
-            textColor: 'text-green-900',
-            buttonGradient: 'from-green-500 to-green-600',
+            bgGradient: 'from-emerald-50 to-white',
+            textColor: 'text-emerald-900',
+            buttonGradient: 'from-emerald-500 to-emerald-600',
             cardBg: 'bg-white/60',
-            accentColor: 'text-green-600',
-            borderColor: 'border-green-200'
+            accentColor: 'text-emerald-600',
+            borderColor: 'border-emerald-200'
         },
         vars: {
-            '--theme-bg-color': '#f0fdf4',
-            '--theme-text': '#166534',
+            '--theme-bg-color': '#ecfdf5',
+            '--theme-text': '#064e3b',
             '--theme-card-bg': 'rgba(255, 255, 255, 0.95)',
-            '--theme-accent': '#16a34a',
-            '--theme-accent-rgb': '22, 163, 74',
-            '--theme-border': 'rgba(187, 247, 208, 0.5)',
-            '--theme-button-bg': '#16a34a',
+            '--theme-accent': '#059669',
+            '--theme-accent-rgb': '5, 150, 105',
+            '--theme-border': 'rgba(167, 243, 208, 0.5)',
+            '--theme-button-bg': '#059669',
             '--theme-button-text': '#ffffff',
         }
     },
     red: {
         classes: {
-            bgGradient: 'from-red-50 to-white',
-            textColor: 'text-red-900',
-            buttonGradient: 'from-red-500 to-red-600',
+            bgGradient: 'from-rose-50 to-white',
+            textColor: 'text-rose-900',
+            buttonGradient: 'from-rose-500 to-rose-600',
             cardBg: 'bg-white/60',
-            accentColor: 'text-red-600',
-            borderColor: 'border-red-200'
+            accentColor: 'text-rose-600',
+            borderColor: 'border-rose-200'
         },
         vars: {
-            '--theme-bg-color': '#fef2f2',
-            '--theme-text': '#991b1b',
+            '--theme-bg-color': '#fff1f2',
+            '--theme-text': '#881337',
             '--theme-card-bg': 'rgba(255, 255, 255, 0.95)',
-            '--theme-accent': '#dc2626',
-            '--theme-accent-rgb': '220, 38, 38',
-            '--theme-border': 'rgba(254, 202, 202, 0.5)',
-            '--theme-button-bg': '#dc2626',
+            '--theme-accent': '#e11d48',
+            '--theme-accent-rgb': '225, 29, 72',
+            '--theme-border': 'rgba(254, 205, 211, 0.5)',
+            '--theme-button-bg': '#e11d48',
             '--theme-button-text': '#ffffff',
         }
     },
     yellow: {
         classes: {
-            bgGradient: 'from-yellow-50 to-white',
-            textColor: 'text-yellow-900',
-            buttonGradient: 'from-yellow-400 to-yellow-500',
+            bgGradient: 'from-amber-50 to-white',
+            textColor: 'text-amber-950',
+            buttonGradient: 'from-amber-400 to-amber-500 text-black',
             cardBg: 'bg-white/60',
-            accentColor: 'text-yellow-600',
-            borderColor: 'border-yellow-200'
-        },
-        vars: {
-            '--theme-bg-color': '#fefce8',
-            '--theme-text': '#713f12',
-            '--theme-card-bg': 'rgba(255, 255, 255, 0.95)',
-            '--theme-accent': '#ca8a04',
-            '--theme-accent-rgb': '202, 138, 4',
-            '--theme-border': 'rgba(254, 240, 138, 0.5)',
-            '--theme-button-bg': '#ca8a04',
-            '--theme-button-text': '#ffffff',
-        }
-    },
-    brown: {
-        classes: {
-            bgGradient: 'from-[#fdf8f6] to-white',
-            textColor: 'text-[#451a03]',
-            buttonGradient: 'from-[#78350f] to-[#92400e]',
-            cardBg: 'bg-white/60',
-            accentColor: 'text-[#92400e]',
-            borderColor: 'border-[#f3e3d3]'
+            accentColor: 'text-amber-600',
+            borderColor: 'border-amber-200'
         },
         vars: {
             '--theme-bg-color': '#fffbeb',
             '--theme-text': '#451a03',
             '--theme-card-bg': 'rgba(255, 255, 255, 0.95)',
-            '--theme-accent': '#92400e',
-            '--theme-accent-rgb': '146, 64, 14',
-            '--theme-border': 'rgba(251, 235, 198, 0.5)',
-            '--theme-button-bg': '#92400e',
+            '--theme-accent': '#d97706',
+            '--theme-accent-rgb': '217, 119, 6',
+            '--theme-border': 'rgba(253, 230, 138, 0.5)',
+            '--theme-button-bg': '#d97706',
+            '--theme-button-text': '#ffffff',
+        }
+    },
+    brown: {
+        classes: {
+            bgGradient: 'from-stone-100 to-stone-50',
+            textColor: 'text-stone-900',
+            buttonGradient: 'from-stone-700 to-stone-800 text-white',
+            cardBg: 'bg-white/70',
+            accentColor: 'text-stone-700',
+            borderColor: 'border-stone-300'
+        },
+        vars: {
+            '--theme-bg-color': '#f5f5f4',
+            '--theme-text': '#1c1917',
+            '--theme-card-bg': 'rgba(255, 255, 255, 0.95)',
+            '--theme-accent': '#44403c',
+            '--theme-accent-rgb': '68, 64, 60',
+            '--theme-border': 'rgba(214, 211, 209, 0.5)',
+            '--theme-button-bg': '#44403c',
             '--theme-button-text': '#ffffff',
         }
     },
     default: {
         classes: {
-            bgGradient: 'from-gray-50 to-white',
-            textColor: 'text-gray-900',
-            buttonGradient: 'from-yellow-400 to-yellow-500',
-            cardBg: 'bg-white/60',
-            accentColor: 'text-yellow-600',
-            borderColor: 'border-gray-200'
+            bgGradient: 'from-black to-[#0a0a0a]',
+            textColor: 'text-white',
+            buttonGradient: 'bg-yellow-400 text-black hover:bg-yellow-300',
+            cardBg: 'bg-[#0a0a0a]',
+            accentColor: 'text-yellow-400',
+            borderColor: 'border-white/10'
         },
         vars: {
-            '--theme-bg-color': '#f9fafb',
-            '--theme-text': '#111827',
-            '--theme-card-bg': 'rgba(255, 255, 255, 0.95)',
-            '--theme-accent': '#f59e0b',
-            '--theme-accent-rgb': '245, 158, 11',
-            '--theme-border': 'rgba(229, 231, 235, 0.5)',
-            '--theme-button-bg': '#f59e0b',
-            '--theme-button-text': '#ffffff',
+            '--theme-bg-color': '#000000',
+            '--theme-text': '#ffffff',
+            '--theme-card-bg': 'rgba(10, 10, 10, 0.98)',
+            '--theme-accent': '#f5c518',
+            '--theme-accent-rgb': '245, 197, 24',
+            '--theme-border': 'rgba(255, 255, 255, 0.1)',
+            '--theme-button-bg': '#f5c518',
+            '--theme-button-text': '#000000',
         }
     }
 };
 
-export function useShopTheme(themeName: Theme = 'default') {
+export function useShopTheme(
+    themeName: Theme = 'default',
+    targetRef?: RefObject<HTMLElement | null>
+) {
     const config = useMemo(() => THEME_DEFINITIONS[themeName] || THEME_DEFINITIONS.default, [themeName]);
 
     useEffect(() => {
-        const root = document.documentElement;
+        const targetElement = targetRef?.current || document.documentElement;
         const currentVars = config.vars;
 
         Object.entries(currentVars).forEach(([key, value]) => {
-            root.style.setProperty(key, value);
+            targetElement.style.setProperty(key, value);
         });
 
         return () => {
             Object.keys(currentVars).forEach((key) => {
-                root.style.removeProperty(key);
+                targetElement.style.removeProperty(key);
             });
         };
-    }, [config]);
+    }, [config, targetRef]);
 
     return config.classes;
 }
 
 // ─── Accent-only variant ─────────────────────────────────────────────────────
-// Use this in the seller dashboard so the shop accent colour only tints
-// interactive highlights (buttons, borders, glows) without overriding the
-// page background or text colour that are governed by the app theme.
-
 const ACCENT_KEYS = ['--theme-accent', '--theme-accent-rgb', '--theme-button-bg', '--theme-button-text'] as const;
 
-export function useShopAccentOnly(themeName: Theme = 'default') {
+export function useShopAccentOnly(
+    themeName: Theme = 'default',
+    targetRef?: RefObject<HTMLElement | null>
+) {
     const config = useMemo(() => THEME_DEFINITIONS[themeName] || THEME_DEFINITIONS.default, [themeName]);
 
     useEffect(() => {
-        const root = document.documentElement;
+        const targetElement = targetRef?.current || document.documentElement;
         const vars = config.vars;
 
         ACCENT_KEYS.forEach((key) => {
-            if (vars[key]) root.style.setProperty(key, vars[key]);
+            if (vars[key]) targetElement.style.setProperty(key, vars[key]);
         });
 
         return () => {
-            ACCENT_KEYS.forEach((key) => root.style.removeProperty(key));
+            ACCENT_KEYS.forEach((key) => targetElement.style.removeProperty(key));
         };
-    }, [config]);
+    }, [config, targetRef]);
 
     return config.classes;
 }
-
-
-
-
-

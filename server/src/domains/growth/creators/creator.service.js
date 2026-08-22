@@ -641,7 +641,6 @@ class CreatorService {
       [amount, attribution.creator_id]
     );
 
-    await this.creditCreatorReferral(client, { creatorId: attribution.creator_id, order });
     await this.notifyCreatorSaleSuccess(client, {
       creatorId: attribution.creator_id,
       order,
@@ -678,63 +677,42 @@ class CreatorService {
         channels: ['in_app', 'push']
       }).catch((error) => logger.warn('[Feed] creator sale notification failed', { creatorId, error: error.message }));
     }
-
   }
 
-  static async creditCreatorReferral(client, { creatorId, order }) {
-    const { rows } = await client.query(
-      `SELECT referred_by_creator_id FROM creators WHERE id = $1 LIMIT 1`,
-      [creatorId]
-    );
-    const referrerId = rows[0]?.referred_by_creator_id;
-    if (!referrerId) return;
-
-    const units = Math.max(Number(order.total_quantity || 1), 1);
-    const amount = roundMoney(units * Number(Fees.REFERRAL_REWARD_PER_PRODUCT || 3));
-    const { rows: inserted } = await client.query(
-      `INSERT INTO creator_referral_earnings
-         (referrer_creator_id, referred_creator_id, order_id, amount, units_sold)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (order_id) DO NOTHING
-       RETURNING id`,
-      [referrerId, creatorId, order.id, amount, units]
-    );
-
-    if (!inserted.length) return;
-
-    await client.query(
-      `UPDATE creators
-       SET balance = balance + $1,
-           total_referral_earnings = total_referral_earnings + $1,
-           updated_at = NOW()
-       WHERE id = $2`,
-      [amount, referrerId]
-    );
-  }
-
+  /**
+   * Hardened Creator-Refers-Seller Logic:
+   * Credits a creator KSh 3 per product sold when a seller they referred to Byblos completes an order.
+   * Note: The KSh 3 reward per product is deducted from the platform's KSh 10 flat commission fee.
+   */
   static async creditCreatorReferralForSeller(client, { order }) {
     const sellerId = order.seller_id ?? order.sellerId;
-    if (!sellerId) return;
+    if (!sellerId) return null;
 
     const { rows } = await client.query(
       `SELECT referred_by_creator_id FROM sellers WHERE id = $1 LIMIT 1`,
       [sellerId]
     );
     const referrerId = rows[0]?.referred_by_creator_id;
-    if (!referrerId) return;
+    if (!referrerId) return null;
 
     const units = Math.max(Number(order.total_quantity || 1), 1);
-    const amount = roundMoney(units * Number(Fees.REFERRAL_REWARD_PER_PRODUCT || 3));
+    const rewardRate = Number(Fees.REFERRAL_REWARD_PER_PRODUCT || 3);
+    const amountCents = Math.round(units * rewardRate * 100);
+    const amount = amountCents / 100;
+
+    if (amount <= 0) return null;
+
+    // Deducted from platform flat commission (KSh 10)
     const { rows: inserted } = await client.query(
       `INSERT INTO creator_referral_earnings
-         (referrer_creator_id, referred_creator_id, referred_seller_id, order_id, amount, units_sold)
-       VALUES ($1, NULL, $2, $3, $4, $5)
+         (referrer_creator_id, referred_seller_id, order_id, amount, units_sold)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (order_id) DO NOTHING
        RETURNING id`,
       [referrerId, sellerId, order.id, amount, units]
     );
 
-    if (!inserted.length) return;
+    if (!inserted.length) return null;
 
     await client.query(
       `UPDATE creators
@@ -744,6 +722,30 @@ class CreatorService {
        WHERE id = $2`,
       [amount, referrerId]
     );
+
+    logger.info(
+      `[CreatorService] Credited creator ${referrerId} KES ${amount} (deducted from platform flat fee KES ${Fees.PLATFORM_COMMISSION_AMOUNT || 10}) for seller ${sellerId} referral on Order ${order.id}`
+    );
+
+    const { rows: referrerRows } = await client.query(
+      `SELECT user_id FROM creators WHERE id = $1 LIMIT 1`,
+      [referrerId]
+    );
+    if (referrerRows[0]?.user_id) {
+      const amountText = Number(amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const orderRef = order.order_number || order.orderNumber || ('#' + order.id);
+      notificationService.send({
+        recipientUserId: referrerRows[0].user_id,
+        recipientRole: 'creator',
+        type: 'creator_referral',
+        title: 'Referral Reward: KSh ' + amountText,
+        body: 'You earned a referral reward from a referred seller sale on order ' + orderRef + '.',
+        data: { path: '/creator/dashboard', orderId: order.id },
+        channels: ['in_app', 'push']
+      }).catch((error) => logger.warn('[Feed] creator referral notification failed', { referrerId, error: error.message }));
+    }
+
+    return inserted[0];
   }
 
   static async recordLinkClick({ code, ipAddress, userAgent }) {

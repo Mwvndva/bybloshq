@@ -9,28 +9,38 @@ class AuthorizationService {
      * @returns {Promise<Set<string>>}
      */
     static async getUserPermissions(userId) {
-        const cacheKey = `user:${userId}:permissions`;
+        const cacheKey = `user:permissions:${userId}`;
+        const legacyCacheKey = `user:${userId}:permissions`;
 
         try {
             // 1. Try Cache
-            const cachedPerms = await CacheService.get(cacheKey);
+            let cachedPerms = await CacheService.get(cacheKey);
+            if (!cachedPerms) {
+                cachedPerms = await CacheService.get(legacyCacheKey);
+            }
+
             if (cachedPerms && Array.isArray(cachedPerms)) {
                 return new Set(cachedPerms);
             }
 
-            // 2. Try DB
-            const sql = `
-                SELECT DISTINCT p.slug
-                FROM user_roles ur
-                JOIN role_permissions rp ON ur.role_id = rp.role_id
-                JOIN permissions p ON rp.permission_id = p.id
-                WHERE ur.user_id = $1
-            `;
-            const result = await query(sql, [userId]);
+            // 2. Try DB (named prepared statement)
+            const sql = {
+                name: 'find-user-permissions-by-user-id',
+                text: `
+                    SELECT DISTINCT p.slug
+                    FROM user_roles ur
+                    JOIN role_permissions rp ON ur.role_id = rp.role_id
+                    JOIN permissions p ON rp.permission_id = p.id
+                    WHERE ur.user_id = $1
+                `,
+                values: [userId]
+            };
+            const result = await query(sql);
             const permsArray = result.rows.map(row => row.slug);
 
-            // 3. Save to Cache (5 min TTL)
+            // 3. Save to Cache (5 min sliding TTL = 300s)
             await CacheService.set(cacheKey, permsArray, 300);
+            await CacheService.set(legacyCacheKey, permsArray, 300);
 
             return new Set(permsArray);
         } catch (error) {
@@ -101,11 +111,13 @@ class AuthorizationService {
 
     /**
      * Invalidates the permission cache for a user.
-     * Call this when roles or permissions are updated.
+     * Call this when profile, password, roles or permissions are updated.
      */
     static async invalidateUserPermissions(userId) {
         if (!userId) return;
+        await CacheService.delete(`user:permissions:${userId}`);
         await CacheService.delete(`user:${userId}:permissions`);
+        await CacheService.delete(`user:${userId}:cross-roles`);
     }
 }
 

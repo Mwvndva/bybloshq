@@ -261,8 +261,36 @@ const CorePaymentService = {
      *   focused Core collaborators without changing money behavior.
      */
     async initiateProductPayment(normalizedOrder) {
-        const { default: paymentLifecycleService } = await import('../services/paymentLifecycle.service.js');
-        return paymentLifecycleService.initiateProductPaymentLegacy(normalizedOrder);
+        const orderId = normalizedOrder.orderId || normalizedOrder.service?.id || normalizedOrder.id;
+        const lockKey = orderId ? `lock:payment:initiate:${orderId}` : null;
+
+        let redisClient = null;
+        if (lockKey) {
+            try {
+                const { getRedisClient } = await import('../../../shared/config/redis.js');
+                redisClient = getRedisClient();
+            } catch (e) {
+                redisClient = null;
+            }
+        }
+
+        if (redisClient && lockKey) {
+            const acquired = await redisClient.set(lockKey, '1', 'NX', 'EX', 15);
+            if (!acquired) {
+                const err = new Error('Payment processing is already in progress for this order.');
+                /** @type {any} */ (err).statusCode = 429;
+                throw err;
+            }
+        }
+
+        try {
+            const { default: paymentLifecycleService } = await import('../services/paymentLifecycle.service.js');
+            return await paymentLifecycleService.initiateProductPaymentLegacy(normalizedOrder);
+        } finally {
+            if (redisClient && lockKey) {
+                await redisClient.del(lockKey).catch(() => {});
+            }
+        }
     },
 
     async initiatePayment(paymentData) {

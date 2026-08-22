@@ -1,0 +1,116 @@
+import express from 'express';
+import { validate } from '../middleware/validate.js';
+import { z } from 'zod';
+import paymentController from '../../domains/payments/payments/payment.controller.js';
+import { protect, hasPermission } from '../middleware/auth.js';
+import { requirePaystackWebhookHmac, verifyPaystackWebhook, webhookRateLimiter } from '../middleware/paystackWebhookSecurity.js';
+import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
+import { paymentRateLimiter } from '../middleware/rateLimiting.js';
+
+const router = express.Router();
+
+const initiateProductSchema = z.object({
+  phone: z.string().min(1, 'Phone number is required'),
+  email: z.string().email().optional().nullable().or(z.literal('')),
+  amount: z.coerce.number().positive('Valid amount is required').optional(),
+  productId: z.coerce.string().min(1, 'Product ID is required'),
+  sellerId: z.coerce.string().optional().nullable(),
+  productName: z.string().optional().nullable(),
+  customerName: z.string().optional().nullable(),
+  narrative: z.string().optional().nullable(),
+  paymentMethod: z.enum(['paystack']).optional(),
+  checkout_token: z.string().optional().nullable(),
+  clientCheckoutToken: z.string().optional().nullable(),
+  checkoutAttemptId: z.string().optional().nullable(),
+  idempotencyKey: z.string().optional().nullable(),
+  // PIN-12: PERSISTENCE SHIELD (Do not strip these fields)
+  buyerLocation: z.any().optional(),
+  delivery: z.any().optional(),
+  metadata: z.any().optional(),
+});
+
+const checkStatusSchema = z.object({
+  invoiceId: z.coerce.string().min(1, 'Invoice ID is required'),
+});
+
+const logisticsQuoteSchema = z.object({
+  legType: z.enum(['delivery', 'pickup']).optional(),
+  location: z.object({
+    address: z.string().optional().nullable(),
+    fullAddress: z.string().optional().nullable(),
+    full_address: z.string().optional().nullable(),
+    latitude: z.coerce.number().optional(),
+    longitude: z.coerce.number().optional(),
+    lat: z.coerce.number().optional(),
+    lng: z.coerce.number().optional(),
+  }).passthrough(),
+});
+
+// Public routes (no authentication required)
+const publicRouter = express.Router();
+
+// Apply payment logger to all public routes
+publicRouter.use(paymentRequestLogger);
+
+
+// Product payment initiation (public) — same flow as tickets, but for products
+publicRouter.post(
+  '/initiate-product',
+  paymentRateLimiter,
+  validate(initiateProductSchema),
+  paymentController.initiateProductPayment
+);
+
+publicRouter.post(
+  '/logistics-quote',
+  paymentRateLimiter,
+  validate(logisticsQuoteSchema),
+  paymentController.quoteLogistics
+);
+
+// Webhook endpoint (public) - Paystack
+publicRouter.post(
+  '/webhook/paystack',
+  verifyPaystackWebhook,
+  webhookRateLimiter,
+  requirePaystackWebhookHmac,
+  paymentController.handlePaystackWebhook
+);
+
+// Check payment status (public)
+publicRouter.get(
+  '/status/:invoiceId',
+  validate(checkStatusSchema),
+  (req, res, next) => {
+    // Map invoiceId to paymentId for backward compatibility
+    req.params.paymentId = req.params.invoiceId;
+    paymentController.checkStatus(req, res, next);
+  }
+);
+
+// Mount public routes
+router.use(publicRouter);
+
+// Mount protected routes
+const protectedRouter = express.Router();
+protectedRouter.use(protect);
+
+// Add health check routes (admin only)
+protectedRouter.get('/health/provider',
+  hasPermission('manage-all'),
+  paymentController.getAgentStatus
+);
+
+protectedRouter.post('/health/provider/reset',
+  hasPermission('manage-all'),
+  paymentController.resetAgent
+);
+
+protectedRouter.get('/health/network',
+  hasPermission('manage-all'),
+  paymentController.checkNetwork
+);
+
+router.use(protectedRouter);
+
+export default router;

@@ -60,8 +60,10 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
         const handleSessionExpired = (event: Event) => {
             const detail = (event as CustomEvent<SessionExpiredDetail>).detail;
             const redirectPath = detail?.redirectPath ?? '/buyer/login';
-            // Drop the session so protected routes gate correctly, then route to
-            // login client-side (no reload).
+            try {
+                localStorage.removeItem('byblos_auth_checked');
+                localStorage.removeItem('byblos_user_role');
+            } catch { /* ignore storage errors */ }
             setUser(null);
             navigate(redirectPath, { replace: true });
         };

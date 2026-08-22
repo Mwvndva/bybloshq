@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
+import type { BuyerProfile } from '@/features/auth/types/authTypes';
 import { useBuyerWishlistQuery } from '@/features/buyer/hooks/queries/useBuyerWishlistQuery';
 import { useAddWishlistMutation, useRemoveWishlistMutation } from '@/features/buyer/hooks/mutations/useWishlistMutations';
 import { useWishlistStore } from '@/features/buyer/stores/wishlistStore';
@@ -10,7 +11,8 @@ import type { Product, Seller, Aesthetic } from '@/shared/types';
 import type { WishlistItem } from '@/features/buyer/api';
 
 export function useWishlist() {
-  const { user } = useBuyerAuth();
+  const { user: globalUser } = useGlobalAuth();
+  const user = globalUser?.role === 'buyer' ? globalUser.profile as BuyerProfile : null;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

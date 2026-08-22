@@ -1,0 +1,41 @@
+import { validate } from '../middleware/validate.js';
+import * as V from '../../shared/validations/marketing.validation.js';
+/**
+ * marketing.routes.js
+ * All routes are read-only. No writes happen in this router.
+ */
+import express from 'express'
+import { protect, restrictTo } from '../middleware/auth.js'
+import { authLimiter } from '../middleware/authRateLimiter.js'
+import {
+    marketingLogin,
+    getOverview,
+    getGmvTrend,
+    getUserGrowth,
+    getProductMix,
+    getOrderFunnel,
+    getGeography,
+    getTopPerformers,
+    getReferralPerformance,
+    getRecentActivity
+} from '../../domains/growth/marketing/marketing.controller.js'
+
+const router = express.Router()
+
+// Public: login only
+router.post('/login', authLimiter, validate(V.login), marketingLogin)
+
+// All remaining routes require marketing or admin role
+router.use(protect, restrictTo('marketing', 'admin'))
+
+router.get('/overview', getOverview)
+router.get('/gmv-trend', getGmvTrend)
+router.get('/user-growth', getUserGrowth)
+router.get('/product-mix', getProductMix)
+router.get('/order-funnel', getOrderFunnel)
+router.get('/geography', getGeography)
+router.get('/top-performers', getTopPerformers)
+router.get('/referrals', getReferralPerformance)
+router.get('/activity', getRecentActivity)
+
+export default router

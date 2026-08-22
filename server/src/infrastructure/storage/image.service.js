@@ -47,11 +47,13 @@ class ImageService {
             const allowedTypes = {
                 'image/jpeg': 'jpg',
                 'image/png': 'png',
-                'image/webp': 'webp'
+                'image/webp': 'webp',
+                'image/avif': 'avif',
+                'image/gif': 'gif'
             };
             const extension = allowedTypes[mimeType];
             if (!extension) {
-                throw new AppError('Unsupported image type. Use JPEG, PNG, or WebP.', 400);
+                throw new AppError('Unsupported image type. Use JPEG, PNG, WebP, AVIF, or GIF.', 400);
             }
 
             const imageData = matches[2].replace(/\s/g, '');
@@ -68,20 +70,26 @@ class ImageService {
             // 1. Always write to local temp first (required by Cloudinary uploader)
             await fs.promises.writeFile(filepath, buffer);
 
-            // 2. If Cloudinary is configured, upload and return secure_url
+            // 2. If Cloudinary is configured, upload and return secure_url with guaranteed cleanup
             if (this.useCloudinary) {
                 const folder = prefix.includes('product') ? 'products' : 'profiles';
-                const result = await uploadToCloudinary(filepath, folder);
-
-                // Note: uploadToCloudinary already deletes the local file
-                logger.info(`Uploaded to Cloudinary: ${result.secure_url}`);
-                return result.secure_url;
+                try {
+                    const result = await uploadToCloudinary(filepath, folder);
+                    logger.info(`Uploaded to Cloudinary: ${result.secure_url}`);
+                    return result.secure_url;
+                } finally {
+                    if (fs.existsSync(filepath)) {
+                        await fs.promises.unlink(filepath).catch(err =>
+                            logger.warn(`[ImageService] Temp file cleanup warning: ${err.message}`)
+                        );
+                    }
+                }
             }
 
             // 3. Fallback to local URL (allowed in development / test only)
             if (process.env.NODE_ENV === 'production') {
                 if (fs.existsSync(filepath)) {
-                    await fs.promises.unlink(filepath);
+                    await fs.promises.unlink(filepath).catch(() => {});
                 }
                 logger.error('CRITICAL: Persistent media storage failed. Cloudinary is required in production.');
                 throw new AppError('Persistent media storage is unavailable in production. Cloudinary configuration required.', 503);
@@ -135,6 +143,14 @@ class ImageService {
         if (mimeType === 'image/webp') {
             return buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
                 buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+        }
+
+        if (mimeType === 'image/gif') {
+            return buffer.subarray(0, 3).toString('ascii') === 'GIF';
+        }
+
+        if (mimeType === 'image/avif') {
+            return buffer.subarray(4, 8).toString('ascii') === 'ftyp';
         }
 
         return false;

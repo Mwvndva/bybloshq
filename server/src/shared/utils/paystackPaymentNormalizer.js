@@ -44,15 +44,26 @@ export function normalizePaystackPaymentStatus(input = {}) {
 export function normalizePaystackPaymentAmount(rawPayload = {}) {
     const data = getProviderPayloadData(rawPayload);
     const rawAmount = data.amount ?? rawPayload.amount;
-    const amountSubunit = Number.parseInt(rawAmount, 10);
-    const amount = Number.isFinite(amountSubunit)
-        ? Math.round(amountSubunit) / 100
-        : Number.parseFloat(data.amount_major ?? rawPayload.amount_major);
+    let amountSubunit = Number.parseInt(rawAmount, 10);
+
+    if (!Number.isFinite(amountSubunit) || amountSubunit <= 0) {
+        const major = Number.parseFloat(data.amount_major ?? rawPayload.amount_major ?? data.amount ?? rawPayload.amount);
+        if (Number.isFinite(major) && major > 0) {
+            amountSubunit = Math.round(major * 100);
+        }
+    }
+
+    if (!Number.isFinite(amountSubunit) || amountSubunit <= 0) {
+        throw new Error('Paystack payload missing valid subunit amount');
+    }
+
+    const amount = amountSubunit / 100;
 
     return {
+        amountSubunit,
         amount,
         rawAmount,
-        paystackAmountSubunit: Number.isFinite(amountSubunit) ? amountSubunit : null
+        paystackAmountSubunit: amountSubunit
     };
 }
 

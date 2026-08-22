@@ -6,8 +6,13 @@ const currentRole = (req) => req.logisticsPartner ? 'logistics' : (req.user?.rol
 
 export const registerDevice = async (req, res) => {
     try {
+        const userId = currentUserId(req);
+        if (!userId || !Number.isInteger(userId) || userId <= 0) {
+            return res.status(401).json({ status: 'error', message: 'Authentication required' });
+        }
+
         const device = await NotificationService.registerDeviceToken({
-            userId: currentUserId(req),
+            userId,
             role: currentRole(req),
             platform: req.body.platform,
             token: req.body.token,
@@ -34,9 +39,14 @@ export const registerDevice = async (req, res) => {
 
 export const unregisterDevice = async (req, res) => {
     try {
+        const userId = currentUserId(req);
+        if (!userId || !Number.isInteger(userId) || userId <= 0) {
+            return res.status(401).json({ status: 'error', message: 'Authentication required' });
+        }
+
         const token = req.body.token || req.params.token;
         const removed = await NotificationService.unregisterDeviceToken({
-            userId: currentUserId(req),
+            userId,
             token
         });
 
@@ -57,8 +67,13 @@ export const unregisterDevice = async (req, res) => {
 };
 
 export const listNotifications = async (req, res) => {
+    const userId = currentUserId(req);
+    if (!userId || !Number.isInteger(userId) || userId <= 0) {
+        return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    }
+
     const notifications = await NotificationService.listForUser({
-        userId: currentUserId(req),
+        userId,
         limit: req.query.limit,
         unreadOnly: req.query.unreadOnly === 'true' || req.query.unread_only === 'true'
     });
@@ -70,8 +85,13 @@ export const listNotifications = async (req, res) => {
 };
 
 export const markNotificationRead = async (req, res) => {
+    const userId = currentUserId(req);
+    if (!userId || !Number.isInteger(userId) || userId <= 0) {
+        return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    }
+
     const notification = await NotificationService.markRead({
-        userId: currentUserId(req),
+        userId,
         notificationId: req.params.notificationId
     });
 
@@ -89,8 +109,13 @@ export const markNotificationRead = async (req, res) => {
 };
 
 export const markAllNotificationsRead = async (req, res) => {
+    const userId = currentUserId(req);
+    if (!userId || !Number.isInteger(userId) || userId <= 0) {
+        return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    }
+
     const updated = await NotificationService.markAllRead({
-        userId: currentUserId(req)
+        userId
     });
 
     res.status(200).json({

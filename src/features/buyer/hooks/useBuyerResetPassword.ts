@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { useToast } from '@/shared/hooks/use-toast';
 
 export function useBuyerResetPassword() {
@@ -8,7 +8,8 @@ export function useBuyerResetPassword() {
     const token = searchParams.get('token');
     const email = searchParams.get('email') || '';
     const { toast } = useToast();
-    const { resetPassword, isLoading } = useBuyerAuth();
+    const { resetPassword, isLoading } = useGlobalAuth();
+    const resetBuyerPassword = (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'buyer');
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         password: '',
@@ -128,7 +129,7 @@ export function useBuyerResetPassword() {
         }
 
         try {
-            await resetPassword(token, formData.password, email);
+            await resetBuyerPassword(token, formData.password, email);
             toast({
                 title: 'Success',
                 description: 'Your password has been reset successfully.',

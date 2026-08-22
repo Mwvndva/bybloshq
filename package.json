@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run generate-sitemap && vite build",
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "build": "npm run typecheck && npm run generate-sitemap && vite build",
     "build:dev": "vite build --mode development",
-    "vercel-build": "npm run generate-sitemap && vite build --mode production",
+    "vercel-build": "npm run typecheck && npm run generate-sitemap && vite build --mode production",
     "generate-sitemap": "node scripts/generate-sitemap.mjs",
     "lint": "eslint .",
     "preview": "vite preview",

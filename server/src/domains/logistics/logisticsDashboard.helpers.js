@@ -55,22 +55,57 @@ const LOGISTICS_STATUS_MESSAGES = {
 
 const ALLOWED_LOGISTICS_TRANSITIONS = {
     pickup: {
-        pending: new Set(['assigned', 'failed']),
-        assigned: new Set(['started', 'failed']),
-        started: new Set(['picked_up', 'failed']),
-        picked_up: new Set(['dropped_at_hub', 'failed']),
-        dropped_at_hub: new Set([]),
+        pending: new Set(['assigned', 'failed', 'cancelled']),
+        assigned: new Set(['started', 'en_route_pickup', 'arrived_at_seller', 'picked_up', 'failed', 'cancelled']),
+        started: new Set(['picked_up', 'failed', 'cancelled']),
+        en_route_pickup: new Set(['arrived_at_seller', 'picked_up', 'failed', 'cancelled']),
+        arrived_at_seller: new Set(['picked_up', 'failed', 'cancelled']),
+        picked_up: new Set(['dropped_at_hub', 'hub_dropoff_pending', 'out_for_delivery', 'failed', 'cancelled']),
+        dropped_at_hub: new Set(['out_for_delivery']),
         failed: new Set([])
     },
     delivery: {
-        delivery_pending: new Set(['assigned', 'delayed', 'failed']),
-        assigned: new Set(['out_for_delivery', 'delayed', 'failed']),
-        out_for_delivery: new Set(['delivered', 'delayed', 'failed']),
+        delivery_pending: new Set(['assigned', 'delayed', 'failed', 'cancelled']),
+        assigned: new Set(['out_for_delivery', 'delayed', 'failed', 'cancelled']),
+        out_for_delivery: new Set(['delivered', 'failed_attempt', 'delayed', 'failed']),
         delayed: new Set(['assigned', 'out_for_delivery', 'delivered', 'failed']),
         delivered: new Set([]),
         failed: new Set([])
     }
 };
+
+export const LEG_TRANSITIONS = {
+  'payment_pending': ['assigned', 'cancelled'],
+  'assigned': ['en_route_pickup', 'started', 'arrived_at_seller', 'picked_up', 'out_for_delivery', 'cancelled'],
+  'en_route_pickup': ['arrived_at_seller', 'picked_up', 'cancelled'],
+  'arrived_at_seller': ['picked_up', 'cancelled'],
+  'picked_up': ['hub_dropoff_pending', 'dropped_at_hub', 'out_for_delivery'],
+  'hub_dropoff_pending': ['at_central_hub', 'dropped_at_hub'],
+  'at_central_hub': ['out_for_delivery'],
+  'out_for_delivery': ['delivered', 'failed_attempt', 'delayed', 'failed'],
+  'delivered': [],
+  'cancelled': [],
+  'pending': ['assigned', 'failed', 'cancelled'],
+  'delivery_pending': ['assigned', 'delayed', 'failed', 'cancelled'],
+  'started': ['picked_up', 'failed', 'cancelled'],
+  'dropped_at_hub': ['out_for_delivery', 'completed'],
+  'delayed': ['assigned', 'out_for_delivery', 'delivered', 'failed'],
+  'failed': []
+};
+
+export function assertValidLegTransition(currentStatus, targetStatus, legId) {
+  if (!currentStatus || currentStatus === targetStatus) return true;
+  const normalizedCurrent = String(currentStatus).toLowerCase();
+  const normalizedTarget = String(targetStatus).toLowerCase();
+
+  if (normalizedCurrent === normalizedTarget) return true;
+
+  const allowed = LEG_TRANSITIONS[normalizedCurrent] || [];
+  if (!allowed.includes(normalizedTarget)) {
+    throw new AppError(`Illegal leg transition for Leg ${legId || 'unknown'}: ${currentStatus} -> ${targetStatus}`, 400);
+  }
+  return true;
+}
 
 const REQUEST_PROGRESS_STATUSES = new Set([
     'assigned',

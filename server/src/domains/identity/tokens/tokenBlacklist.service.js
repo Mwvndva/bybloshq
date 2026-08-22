@@ -15,6 +15,7 @@ class TokenBlacklistService {
     constructor() {
         // In-memory fallback — used when Redis is unavailable
         this._memBlacklist = new Map();
+        this.memoryFallbackMap = this._memBlacklist;
         this._redisAvailable = false;
 
         // Attempt to get the Redis client created by config/redis.js
@@ -46,29 +47,36 @@ class TokenBlacklistService {
     /**
      * Add a token to the blacklist.
      * @param {string} token - JWT token to blacklist
-     * @param {number} expiresAt - Unix timestamp when the token expires
+     * @param {number} expiresAt - Unix timestamp when the token expires (seconds or ms)
      */
     async addToken(token, expiresAt) {
-        const ttl = expiresAt - Math.floor(Date.now() / 1000);
+        let expSec = typeof expiresAt === 'number' ? expiresAt : Math.floor(Date.now() / 1000) + 86400;
+        if (expSec > 100000000000) { // If in milliseconds
+            expSec = Math.floor(expSec / 1000);
+        }
+        const ttl = expSec - Math.floor(Date.now() / 1000);
         if (ttl <= 0) return; // Token already expired — nothing to do
 
-        const redisKey = `bl:${token}`;
+        // Always store in memory fallback for zero-downtime logout resilience
+        this._memBlacklist.set(token, expSec);
+
+        const redisKey = `blacklist:${token}`;
+        const redisKeyAlt = `bl:${token}`;
 
         if (this.redis && this._redisAvailable) {
             try {
                 await this.redis.setex(redisKey, ttl, '1');
+                await this.redis.setex(redisKeyAlt, ttl, '1');
                 logger.info('[TOKEN-BLACKLIST] Token blacklisted in Redis', {
                     tokenPrefix: token.substring(0, 20) + '...',
                     ttlSeconds: ttl
                 });
                 return;
             } catch (err) {
-                logger.warn('[TOKEN-BLACKLIST] Redis setex failed — falling back to memory:', err.message);
+                logger.warn('[TOKEN-BLACKLIST] Redis setex failed — using memory fallback:', err.message);
             }
         }
 
-        // In-memory fallback
-        this._memBlacklist.set(token, expiresAt);
         logger.warn('[TOKEN-BLACKLIST] Token blacklisted in memory (Redis unavailable)', {
             tokenPrefix: token.substring(0, 20) + '...'
         });
@@ -80,12 +88,15 @@ class TokenBlacklistService {
      * @returns {Promise<boolean>}
      */
     async isBlacklisted(token) {
-        const redisKey = `bl:${token}`;
+        const redisKey = `blacklist:${token}`;
+        const redisKeyAlt = `bl:${token}`;
 
         if (this.redis && this._redisAvailable) {
             try {
                 const result = await this.redis.get(redisKey);
-                return result === '1';
+                if (result === '1') return true;
+                const resultAlt = await this.redis.get(redisKeyAlt);
+                if (resultAlt === '1') return true;
             } catch (err) {
                 logger.warn('[TOKEN-BLACKLIST] Redis get failed — checking in-memory:', err.message);
             }

@@ -3,7 +3,7 @@ import { useParams, useLocation } from 'react-router-dom';
 import { useSellerByShopNameQuery, usePublicSellerProductsQuery } from '@/features/shop/hooks/useShopQueries';
 import { useTrackCreatorLinkMutation } from '@/features/creator/hooks/mutations/useTrackCreatorLinkMutation';
 import type { ApiSellerProduct } from '@/shared/types/api/product';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { useShopTheme, useShopAccentOnly, type Theme } from '@/shared/hooks/useShopTheme';
 import { useShopPageTheme, type ShopPageTheme } from '../components/ShopPageThemePicker';
@@ -20,7 +20,7 @@ export function useShopPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
 
-  const { isAuthenticated } = useBuyerAuth();
+  const { isAuthenticated } = useGlobalAuth();
 
   // Visitor-controlled page theme (light / dark / system)
   const { theme: shopPageTheme, setTheme: setShopPageTheme, resolved: resolvedShopTheme } = useShopPageTheme();

@@ -1,4 +1,4 @@
-import apiClient from '@/infrastructure/http/apiClient';
+import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 
 export interface CreatorRegistrationPayload {
   token: string;
@@ -21,12 +21,59 @@ export const login = async (emailOrCredentials: string | { email: string; passwo
   const credentials = typeof emailOrCredentials === 'string'
     ? { email: emailOrCredentials, password: maybePassword }
     : emailOrCredentials;
-  const response = await apiClient.post('/creators/login', credentials);
+
+  let responseBody: any = null;
+
+  try {
+    const response = await apiClient.post<any>('/creators/login', credentials);
+    responseBody = response?.data !== undefined ? response.data : response;
+    if (typeof responseBody === 'string' && responseBody.trim()) {
+      try {
+        responseBody = JSON.parse(responseBody);
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore Axios error for fetch fallback */
+  }
+
+  if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
+    try {
+      const csrfToken = await getFreshCsrfToken();
+      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/creators/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+          'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include'
+      });
+      const textData = await fetchRes.text();
+      if (textData && typeof textData === 'string') {
+        try {
+          responseBody = JSON.parse(textData);
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      /* ignore fetch fallback error */
+    }
+  }
+
+  const responseData = responseBody?.data || responseBody;
+  const rawCreator = responseData?.creator || responseData?.user || responseBody?.creator || responseBody?.user;
+  const token = responseData?.token || responseData?.accessToken || responseBody?.token || responseBody?.accessToken;
+  const refreshToken = responseData?.refreshToken || responseBody?.refreshToken;
+
   return {
-    creator: response.data?.data?.creator,
-    token: response.data?.data?.token,
-    refreshToken: response.data?.data?.refreshToken,
-    ...response.data
+    creator: rawCreator,
+    token,
+    refreshToken,
+    ...responseBody
   };
 };
 

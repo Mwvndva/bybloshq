@@ -55,7 +55,11 @@ export async function findActiveProductsWithSeller({ aesthetic, city, location, 
   params.push(limit, offset);
   sql += ` ORDER BY p.created_at DESC, p.id DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
-  const { rows } = await query(sql, params);
+  const { rows } = await query({
+    name: 'fetch-public-catalog-by-category',
+    text: sql,
+    values: params
+  });
   return rows;
 }
 
@@ -79,7 +83,11 @@ export async function findProductByIdWithSeller(productId) {
     JOIN sellers s ON p.seller_id = s.id
     WHERE p.id = $1
   `;
-  const { rows } = await query(sql, [productId]);
+  const { rows } = await query({
+    name: 'find-product-by-id-with-seller',
+    text: sql,
+    values: [productId]
+  });
   return rows[0];
 }
 
@@ -91,7 +99,11 @@ export async function findProductByIdWithSeller(productId) {
  */
 export async function findDistinctAestheticsForAvailable() {
   const sql = `SELECT DISTINCT aesthetic FROM products WHERE status = $1`;
-  const { rows } = await query(sql, ['available']);
+  const { rows } = await query({
+    name: 'find-distinct-aesthetics-available',
+    text: sql,
+    values: ['available']
+  });
   return rows.map(r => r.aesthetic).filter(Boolean);
 }
 
@@ -121,6 +133,10 @@ export async function findUnavailableServiceSlots({ productId, date }) {
       AND (status = 'BOOKED' OR (status = 'RESERVED' AND expires_at > NOW()))
     ORDER BY time_slot ASC, id ASC
   `;
-  const { rows } = await query(sql, [productId, date]);
+  const { rows } = await query({
+    name: 'find-unavailable-service-slots',
+    text: sql,
+    values: [productId, date]
+  });
   return rows;
 }

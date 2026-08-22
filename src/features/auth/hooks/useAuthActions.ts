@@ -208,9 +208,13 @@ export function useAuthActions({
       await unregisterNativePushNotifications(role);
       const logoutUrl = role === 'seller'
         ? '/sellers/logout'
-        : role === 'admin'
+        : role === 'admin' || role === 'marketing'
           ? '/admin/logout'
-          : '/buyers/logout';
+          : role === 'creator'
+            ? '/creators/logout'
+            : role === 'logistics'
+              ? '/logistics/logout'
+              : '/buyers/logout';
       await apiClient.post(logoutUrl);
     } catch (error) {
       // Fail silently

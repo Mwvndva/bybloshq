@@ -28,19 +28,23 @@ async function persistDeviceToken(
   role: AppNotificationRole,
   requestConfig?: AxiosRequestConfig
 ) {
-  await apiClient.post(notificationEndpoint(role), {
-    platform: getNativePlatform(),
-    token,
-    deviceId: getStableDeviceId(),
-    appVersion: appVersion(),
-  }, requestConfig);
+  try {
+    await apiClient.post(notificationEndpoint(role), {
+      platform: getNativePlatform(),
+      token,
+      deviceId: getStableDeviceId(),
+      appVersion: appVersion(),
+    }, requestConfig);
 
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
-  localStorage.setItem(REGISTRATION_STORAGE_KEY, JSON.stringify({
-    role,
-    platform: getNativePlatform(),
-    registeredAt: new Date().toISOString(),
-  }));
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    localStorage.setItem(REGISTRATION_STORAGE_KEY, JSON.stringify({
+      role,
+      platform: getNativePlatform(),
+      registeredAt: new Date().toISOString(),
+    }));
+  } catch (err) {
+    console.warn('[MobileNotifications] Failed to persist device token to backend', err);
+  }
 }
 
 let retryCount = 0;
@@ -98,10 +102,14 @@ export async function registerNativePushNotifications(
   ensurePushListeners();
 
   registrationPromise = (async () => {
-    const permission = await PushNotifications.requestPermissions();
-    if (permission.receive !== 'granted') return;
+    try {
+      const permission = await PushNotifications.requestPermissions();
+      if (permission.receive !== 'granted') return;
 
-    await PushNotifications.register();
+      await PushNotifications.register();
+    } catch (err) {
+      console.warn('[MobileNotifications] Push registration exception', err);
+    }
   })().finally(() => {
     registrationPromise = null;
   });
@@ -115,19 +123,27 @@ export async function unregisterNativePushNotifications(
 ) {
   if (!isNativeApp()) return;
 
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-  const registration = localStorage.getItem(REGISTRATION_STORAGE_KEY);
-  const registeredRole = role || (registration ? JSON.parse(registration).role : undefined);
+  try {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const registration = localStorage.getItem(REGISTRATION_STORAGE_KEY);
+    const registeredRole = role || (registration ? JSON.parse(registration).role : undefined);
 
-  if (token && registeredRole) {
-    await apiClient.delete(notificationEndpoint(registeredRole), {
-      ...requestConfig,
-      data: { token },
-    });
+    if (token && registeredRole) {
+      await apiClient.delete(notificationEndpoint(registeredRole), {
+        ...requestConfig,
+        data: { token },
+      });
+    }
+  } catch (e) {
+    console.warn('[MobileNotifications] Unregister request error ignored', e);
+  } finally {
+    try {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(REGISTRATION_STORAGE_KEY);
+    } catch {
+      /* ignore storage removal errors */
+    }
   }
-
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-  localStorage.removeItem(REGISTRATION_STORAGE_KEY);
 }
 
 

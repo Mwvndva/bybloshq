@@ -9,11 +9,21 @@ export interface LocationSearchResult {
 }
 
 export async function searchLocations(query: string): Promise<LocationSearchResult[]> {
-  const response = await apiClient.get('/locations/search', {
-    params: { q: query }
-  });
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    return [];
+  }
 
-  return Array.isArray(response.data?.data) ? response.data.data : [];
+  try {
+    const response = await apiClient.get('/locations/search', {
+      params: { q: trimmed }
+    });
+
+    return Array.isArray(response.data?.data) ? response.data.data : [];
+  } catch (error) {
+    console.error('[locationApi] Location search failed:', error);
+    return [];
+  }
 }
 
 

@@ -37,22 +37,62 @@ public class SocialSharePlugin extends Plugin {
         if (!dir.exists()) {
             dir.mkdirs();
         }
-        File file = new File(dir, "byblos-card.png");
+
+        // Clean up stale shared files older than 1 hour to prevent cache bloat
+        long now = System.currentTimeMillis();
+        File[] existing = dir.listFiles();
+        if (existing != null) {
+            for (File f : existing) {
+                if (now - f.lastModified() > 3600000) {
+                    f.delete();
+                }
+            }
+        }
+
+        String fileName = "byblos-card-" + now + ".png";
+        File file = new File(dir, fileName);
         try (FileOutputStream fos = new FileOutputStream(file)) {
             fos.write(bytes);
             fos.flush();
         }
+
         String authority = getContext().getPackageName() + ".fileprovider";
         return FileProvider.getUriForFile(getContext(), authority, file);
     }
 
+    private String getBase64Arg(PluginCall call) {
+        String base64 = call.getString("pngBase64");
+        if (base64 == null || base64.trim().isEmpty()) {
+            base64 = call.getString("imageBase64");
+        }
+        return base64;
+    }
+
+    private String getCaptionArg(PluginCall call) {
+        String caption = call.getString("caption");
+        if (caption == null || caption.trim().isEmpty()) {
+            caption = call.getString("text", "");
+        }
+        return caption;
+    }
+
     @PluginMethod
     public void shareToInstagramStory(PluginCall call) {
-        String base64 = call.getString("pngBase64");
-        if (base64 == null) {
-            call.reject("Missing pngBase64");
+        handleInstagramShare(call);
+    }
+
+    @PluginMethod
+    public void shareToInstagramStories(PluginCall call) {
+        handleInstagramShare(call);
+    }
+
+    private void handleInstagramShare(PluginCall call) {
+        String base64 = getBase64Arg(call);
+        if (base64 == null || base64.trim().isEmpty()) {
+            call.reject("Missing or empty base64 image data");
             return;
         }
+
         try {
             Uri uri = writePng(base64);
             Activity activity = getActivity();
@@ -66,7 +106,7 @@ public class SocialSharePlugin extends Plugin {
             activity.grantUriPermission(IG_PACKAGE, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
             if (activity.getPackageManager().resolveActivity(intent, 0) == null) {
-                call.reject("Instagram is not installed");
+                call.reject("Instagram application is not installed on this device");
                 return;
             }
 
@@ -75,25 +115,36 @@ public class SocialSharePlugin extends Plugin {
             ret.put("shared", true);
             call.resolve(ret);
         } catch (Exception e) {
-            call.reject("Failed to open Instagram Stories", e);
+            call.reject("Failed to launch Instagram Story composer", e);
         }
     }
 
     @PluginMethod
     public void shareImage(PluginCall call) {
-        String base64 = call.getString("pngBase64");
-        String caption = call.getString("caption", "");
-        if (base64 == null) {
-            call.reject("Missing pngBase64");
+        handleShareChooser(call);
+    }
+
+    @PluginMethod
+    public void shareToWhatsApp(PluginCall call) {
+        handleShareChooser(call);
+    }
+
+    private void handleShareChooser(PluginCall call) {
+        String base64 = getBase64Arg(call);
+        String caption = getCaptionArg(call);
+
+        if (base64 == null || base64.trim().isEmpty()) {
+            call.reject("Missing or empty base64 image data");
             return;
         }
+
         try {
             Uri uri = writePng(base64);
 
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("image/png");
             intent.putExtra(Intent.EXTRA_STREAM, uri);
-            if (caption != null && !caption.isEmpty()) {
+            if (caption != null && !caption.trim().isEmpty()) {
                 intent.putExtra(Intent.EXTRA_TEXT, caption);
             }
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -106,7 +157,7 @@ public class SocialSharePlugin extends Plugin {
             ret.put("shared", true);
             call.resolve(ret);
         } catch (Exception e) {
-            call.reject("Failed to share image", e);
+            call.reject("Failed to launch share chooser", e);
         }
     }
 }

@@ -86,16 +86,24 @@ async function startServer() {
   // Handle SIGTERM
   process.on('SIGTERM', () => {
     logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully');
+    const forceExit = setTimeout(() => {
+      logger.error('❌ Forced shutdown triggered after 10s connection drain timeout');
+      process.exit(1);
+    }, 10000);
+    if (forceExit.unref) forceExit.unref();
+
     server.close(async () => {
+      clearTimeout(forceExit);
       try {
         const { pool } = await import('./infrastructure/database/database.js');
         await pool.end();
         logger.info('📦 Database pool closed');
       } catch (poolErr) {
         logger.error('❌ Error closing pool:', poolErr);
+      } finally {
+        logger.info('Graceful shutdown complete');
+        process.exit(0);
       }
-      logger.info('Graceful shutdown complete');
-      process.exit(0);
     });
   });
 }

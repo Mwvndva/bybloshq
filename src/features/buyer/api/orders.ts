@@ -1,5 +1,7 @@
 import { buyerApiInstance, ApiError } from './instance';
 import type { ApiOrder } from '@/shared/types';
+import { storage } from '@/infrastructure/storage/storage';
+import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -8,23 +10,72 @@ interface ApiResponse<T> {
 }
 
 export async function getOrders(): Promise<ApiOrder[]> {
+  let responseBody: any = null;
+
   try {
-    const response = await buyerApiInstance.get<ApiResponse<unknown[]>>('/orders/user');
-
-    const transformedOrders = response.data.data.map((order: unknown) => {
-      const o = order as Record<string, unknown>;
-      return {
-        ...o,
-        items: o.items || [],
-        status: typeof o.status === 'string' ? o.status.toUpperCase() : 'PENDING',
-        paymentStatus: typeof o.paymentStatus === 'string' ? o.paymentStatus.toUpperCase() : 'PENDING'
-      } as ApiOrder;
-    });
-
-    return transformedOrders;
-  } catch (error) {
-    throw error;
+    const response = await buyerApiInstance.get<any>('/orders/user');
+    responseBody = response?.data !== undefined ? response.data : response;
+    if (typeof responseBody === 'string' && responseBody.trim()) {
+      try {
+        responseBody = JSON.parse(responseBody);
+      } catch {
+        /* ignore json parse error */
+      }
+    }
+  } catch {
+    /* ignore Axios error for fetch fallback */
   }
+
+  if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
+    try {
+      const token = (await storage.get('buyerToken')) || localStorage.getItem('buyerToken');
+      const csrfToken = await getFreshCsrfToken();
+      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/orders/user', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+          'X-CSRF-Token': csrfToken || '',
+          'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+        },
+        credentials: 'include'
+      });
+      const textData = await fetchRes.text();
+      if (textData && typeof textData === 'string') {
+        try {
+          responseBody = JSON.parse(textData);
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      /* ignore fetch fallback error */
+    }
+  }
+
+  if (!responseBody || typeof responseBody !== 'object') {
+    return [];
+  }
+
+  const rawOrders = Array.isArray(responseBody)
+    ? responseBody
+    : (Array.isArray(responseBody?.data)
+        ? responseBody.data
+        : (Array.isArray(responseBody?.data?.orders)
+            ? responseBody.data.orders
+            : (Array.isArray(responseBody?.orders)
+                ? responseBody.orders
+                : [])));
+
+  return rawOrders.map((order: unknown) => {
+    const o = (order && typeof order === 'object') ? (order as Record<string, unknown>) : {};
+    return {
+      ...o,
+      items: o.items || [],
+      status: typeof o.status === 'string' ? o.status.toUpperCase() : 'PENDING',
+      paymentStatus: typeof o.paymentStatus === 'string' ? o.paymentStatus.toUpperCase() : 'PENDING'
+    } as ApiOrder;
+  });
 }
 
 export async function getOrder(orderId: string): Promise<ApiOrder> {
