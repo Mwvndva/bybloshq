@@ -19,11 +19,11 @@ export async function findByIdMinimal(userId) {
 
 export async function findAdminAuthProfile(userId) {
   const userQuery = {
-    name: 'find-admin-auth-profile',
+    name: 'find-admin-auth-profile-v2',
     text: `
       SELECT u.*, u.id as profile_id
       FROM users u 
-      WHERE u.id = $1 AND u.role = 'admin' AND u.is_active = true
+      WHERE u.id = $1 AND (u.role = 'admin' OR u.role = 'marketing') AND u.is_active = true
     `,
     values: [userId]
   };
@@ -92,11 +92,11 @@ export async function findCreatorAuthProfile(userId) {
 
 export async function findMarketingAuthProfile(userId) {
   const userQuery = {
-    name: 'find-marketing-auth-profile',
+    name: 'find-marketing-auth-profile-v2',
     text: `
       SELECT u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at, u.id as profile_id
       FROM users u
-      WHERE u.id = $1 AND u.role = 'marketing' AND u.is_active = true
+      WHERE u.id = $1 AND (u.role = 'marketing' OR u.role = 'admin') AND u.is_active = true
     `,
     values: [userId]
   };

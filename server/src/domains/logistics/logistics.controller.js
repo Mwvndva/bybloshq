@@ -53,8 +53,13 @@ export const getLogisticsMe = async (req, res, next) => {
 
 export const getLogisticsDashboardRequests = async (req, res, next) => {
     try {
+        const partnerId = req.logisticsPartner?.id || req.user?.profile_id || req.user?.id;
+        if (!partnerId) {
+            return next(new AppError('Logistics partner identity not found', 400));
+        }
+
         const dashboard = await LogisticsDashboardService.getDashboardRequests({
-            partnerId: req.logisticsPartner.id,
+            partnerId,
             sort: req.query.sort,
             limit: req.query.limit,
             offset: req.query.offset
@@ -71,9 +76,14 @@ export const getLogisticsDashboardRequests = async (req, res, next) => {
 
 export const updateLogisticsLegStatus = async (req, res, next) => {
     try {
+        const partnerId = req.logisticsPartner?.id || req.user?.profile_id || req.user?.id;
+        if (!partnerId) {
+            return next(new AppError('Logistics partner identity not found', 400));
+        }
+
         const result = await LogisticsDashboardService.updateLegStatus({
-            partner: req.logisticsPartner,
-            partnerId: req.logisticsPartner.id,
+            partner: req.logisticsPartner || { id: partnerId, email: req.user?.email },
+            partnerId,
             requestId: req.params.requestId,
             legType: req.params.legType,
             status: req.body?.status
@@ -90,9 +100,14 @@ export const updateLogisticsLegStatus = async (req, res, next) => {
 
 export const postLogisticsLocation = async (req, res, next) => {
     try {
+        const partnerId = req.logisticsPartner?.id || req.user?.profile_id || req.user?.id;
+        if (!partnerId) {
+            return next(new AppError('Logistics partner identity not found', 400));
+        }
+
         const result = await setCourierLocation({
             requestId: req.params.requestId,
-            partnerId: req.logisticsPartner.id,
+            partnerId,
             lat: req.body?.lat,
             lng: req.body?.lng,
             accuracy: req.body?.accuracy,
