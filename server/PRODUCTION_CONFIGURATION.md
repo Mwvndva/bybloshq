@@ -16,11 +16,6 @@ DB_NAME=your_production_db_name
 DB_USER=your_production_db_user
 DB_PASSWORD=your_production_db_password
 
-# IntaSend Production Configuration
-INTASEND_BASE_URL=https://payment.intasend.com/api/
-INTASEND_PUBLIC_KEY=your_live_intasend_public_key
-INTASEND_SECRET_KEY=your_live_intasend_secret_key
-
 # Production URLs (Replace with your actual domain)
 PUBLIC_BASE_URL=https://yourdomain.com
 BACKEND_URL=https://yourdomain.com

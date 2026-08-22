@@ -5,48 +5,41 @@ DO $$
 BEGIN
     -- Only proceed if the buyers table exists
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'buyers') THEN
-        -- Add columns if they don't exist
+        -- Add mobile_payment (for M-Pesa STK Pushes) and whatsapp_number (for Admin contact)
         ALTER TABLE buyers 
-            ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS mobile_payment VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
             ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE,
             ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255),
             ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMP WITH TIME ZONE,
             ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
 
-        -- Create indexes if columns exist and indexes do not exist
+        -- Create index on mobile_payment for fast checkout identity resolution
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'mobile_payment')
+           AND NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_buyers_mobile_payment' AND tablename = 'buyers') THEN
+            CREATE INDEX idx_buyers_mobile_payment ON buyers(mobile_payment) WHERE mobile_payment IS NOT NULL;
+        END IF;
+
         IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'email')
            AND NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_buyers_email') THEN
             CREATE INDEX idx_buyers_email ON buyers(LOWER(email));
         END IF;
 
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'phone')
-           AND NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_buyers_phone' AND tablename = 'buyers') THEN
-            CREATE INDEX idx_buyers_phone ON buyers(phone) WHERE phone IS NOT NULL;
-        END IF;
-
-        -- Add comments if columns exist
+        -- Add comments for documentation
         IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'buyers') THEN
             COMMENT ON TABLE buyers IS 'Stores buyer authentication and profile information';
         END IF;
 
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'mobile_payment') THEN
+            COMMENT ON COLUMN buyers.mobile_payment IS 'Mobile payment number used exclusively for M-Pesa STK Pushes';
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'whatsapp_number') THEN
+            COMMENT ON COLUMN buyers.whatsapp_number IS 'Admin contact number for manual customer support (no automated notifications)';
+        END IF;
+
         IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'email') THEN
             COMMENT ON COLUMN buyers.email IS 'Unique email address used for login';
-        END IF;
-
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'password') THEN
-            COMMENT ON COLUMN buyers.password IS 'Hashed password using bcrypt';
-        END IF;
-
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'status') THEN
-            COMMENT ON COLUMN buyers.status IS 'Account status: active, suspended, or inactive';
-        END IF;
-
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'verification_token') THEN
-            COMMENT ON COLUMN buyers.verification_token IS 'Token for email verification';
-        END IF;
-
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buyers' AND column_name = 'reset_password_token') THEN
-            COMMENT ON COLUMN buyers.reset_password_token IS 'Token for password reset';
         END IF;
     END IF;
 END $$;

@@ -63,30 +63,19 @@ class Buyer {
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
-  static async findByPhone(phone) {
-    if (!phone) return null;
-    // Generate all possible phone formats to check
-    let normalized = phone.toString().replace(/\D/g, ''); // Remove all non-digits
-
+  static async findByMobilePayment(mobilePayment) {
+    if (!mobilePayment) return null;
+    let normalized = mobilePayment.toString().replace(/\D/g, '');
     const phoneVariations = new Set();
     phoneVariations.add(normalized);
 
-    // 07XXXXXXXX -> +2547XXXXXXXX, 2547XXXXXXXX
     if (normalized.startsWith('0') && normalized.length === 10) {
       phoneVariations.add('+254' + normalized.substring(1));
       phoneVariations.add('254' + normalized.substring(1));
-    }
-    // 2547XXXXXXXX -> +2547XXXXXXXX, 07XXXXXXXX
-    else if (normalized.startsWith('254') && normalized.length === 12) {
+    } else if (normalized.startsWith('254') && normalized.length === 12) {
       phoneVariations.add('+' + normalized);
       phoneVariations.add('0' + normalized.substring(3));
-    }
-    // +2547XXXXXXXX -> 2547XXXXXXXX, 07XXXXXXXX
-    else if (normalized.startsWith('254') && normalized.length === 12) {
-      // already handled by Replace(\D)
-    }
-    // 7XXXXXXXX -> 07XXXXXXXX, +2547XXXXXXXX, 2547XXXXXXXX
-    else if (normalized.length === 9) {
+    } else if (normalized.length === 9) {
       phoneVariations.add('0' + normalized);
       phoneVariations.add('+254' + normalized);
       phoneVariations.add('254' + normalized);
@@ -96,17 +85,14 @@ class Buyer {
       SELECT *, user_id AS "userId" 
       FROM buyers 
       WHERE mobile_payment = ANY($1) 
-      OR whatsapp_number = ANY($1)
       LIMIT 1
     `;
     const result = await pool.query(query, [Array.from(phoneVariations)]);
-
-    if (result.rows.length > 0) {
-      // Log matched without actual value
-      logger.debug('Found buyer with matched phone variation');
-    }
-
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
+  }
+
+  static async findByPhone(phone) {
+    return this.findByMobilePayment(phone);
   }
 
   // Find buyer by ID
