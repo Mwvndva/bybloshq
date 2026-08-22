@@ -46,13 +46,19 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'product_orders') THEN
         ALTER TABLE product_orders 
             ALTER COLUMN status TYPE order_status_new 
-            USING (CASE UPPER(status::text)
+            USING (CASE status::text
                 WHEN 'PENDING' THEN 'PENDING'::order_status_new
+                WHEN 'pending' THEN 'PENDING'::order_status_new
                 WHEN 'READY_FOR_PICKUP' THEN 'READY_FOR_PICKUP'::order_status_new
+                WHEN 'ready_for_pickup' THEN 'READY_FOR_PICKUP'::order_status_new
                 WHEN 'PROCESSING' THEN 'PROCESSING'::order_status_new
+                WHEN 'processing' THEN 'PROCESSING'::order_status_new
                 WHEN 'COMPLETED' THEN 'COMPLETED'::order_status_new
+                WHEN 'completed' THEN 'COMPLETED'::order_status_new
                 WHEN 'CANCELLED' THEN 'CANCELLED'::order_status_new
+                WHEN 'cancelled' THEN 'CANCELLED'::order_status_new
                 WHEN 'FAILED' THEN 'FAILED'::order_status_new
+                WHEN 'failed' THEN 'FAILED'::order_status_new
                 ELSE 'PENDING'::order_status_new
             END);
         
@@ -64,13 +70,19 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'order_status_history') THEN
         ALTER TABLE order_status_history 
             ALTER COLUMN status TYPE order_status_new 
-            USING (CASE UPPER(status::text)
+            USING (CASE status::text
                 WHEN 'PENDING' THEN 'PENDING'::order_status_new
+                WHEN 'pending' THEN 'PENDING'::order_status_new
                 WHEN 'READY_FOR_PICKUP' THEN 'READY_FOR_PICKUP'::order_status_new
+                WHEN 'ready_for_pickup' THEN 'READY_FOR_PICKUP'::order_status_new
                 WHEN 'PROCESSING' THEN 'PROCESSING'::order_status_new
+                WHEN 'processing' THEN 'PROCESSING'::order_status_new
                 WHEN 'COMPLETED' THEN 'COMPLETED'::order_status_new
+                WHEN 'completed' THEN 'COMPLETED'::order_status_new
                 WHEN 'CANCELLED' THEN 'CANCELLED'::order_status_new
+                WHEN 'cancelled' THEN 'CANCELLED'::order_status_new
                 WHEN 'FAILED' THEN 'FAILED'::order_status_new
+                WHEN 'failed' THEN 'FAILED'::order_status_new
                 ELSE 'PENDING'::order_status_new
             END);
     END IF;
@@ -80,6 +92,21 @@ BEGIN
     
     -- Rename the new type to the original name
     ALTER TYPE order_status_new RENAME TO order_status;
+
+    -- Re-attach triggers to product_orders
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'product_orders') THEN
+        DROP TRIGGER IF EXISTS update_product_orders_updated_at ON product_orders;
+        CREATE TRIGGER update_product_orders_updated_at BEFORE UPDATE ON product_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+        DROP TRIGGER IF EXISTS generate_order_number_trigger ON product_orders;
+        CREATE TRIGGER generate_order_number_trigger BEFORE INSERT ON product_orders FOR EACH ROW WHEN (NEW.order_number IS NULL) EXECUTE FUNCTION generate_order_number();
+
+        DROP TRIGGER IF EXISTS update_order_status_history_trigger ON product_orders;
+        CREATE TRIGGER update_order_status_history_trigger AFTER UPDATE OF status ON product_orders FOR EACH ROW EXECUTE FUNCTION update_order_status_history();
+
+        DROP TRIGGER IF EXISTS handle_order_completion_trigger ON product_orders;
+        CREATE TRIGGER handle_order_completion_trigger AFTER UPDATE OF status ON product_orders FOR EACH ROW WHEN (NEW.status = 'COMPLETED' AND OLD.status IS DISTINCT FROM 'COMPLETED') EXECUTE FUNCTION handle_order_completion();
+    END IF;
     
     RAISE NOTICE 'Successfully updated order_status enum to include READY_FOR_PICKUP';
 
