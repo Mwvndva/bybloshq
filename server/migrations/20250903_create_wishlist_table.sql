@@ -16,6 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_wishlist_buyer_id ON wishlist(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_wishlist_product_id ON wishlist(product_id);
 
 -- Create trigger to update updated_at timestamp
+DROP TRIGGER IF EXISTS update_wishlist_updated_at ON wishlist;
 CREATE TRIGGER update_wishlist_updated_at
 BEFORE UPDATE ON wishlist
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
