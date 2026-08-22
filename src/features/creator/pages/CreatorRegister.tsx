@@ -181,7 +181,7 @@ export default function CreatorRegister() {
 
   return (
     <main className="auth-page byblos-light-page min-h-screen bg-[#090909] text-white">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md pt-safe-top">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="relative flex h-16 items-center justify-between sm:h-20">
             <div className="flex flex-1 items-center gap-2">
