@@ -17,11 +17,43 @@ body,
 }
 
 :root {
-    /* ── Safe-area inset CSS variables (set by the browser from env()) ─────── */
-    --sat: env(safe-area-inset-top, 0px);
-    --sab: env(safe-area-inset-bottom, 0px);
-    --sal: env(safe-area-inset-left, 0px);
-    --sar: env(safe-area-inset-right, 0px);
+    /* ── Safe-area inset CSS variables (set by browser env or native fallback) ─────── */
+    --sat: max(env(safe-area-inset-top, 0px), 0px);
+    --sab: max(env(safe-area-inset-bottom, 0px), 0px);
+    --sal: max(env(safe-area-inset-left, 0px), 0px);
+    --sar: max(env(safe-area-inset-right, 0px), 0px);
+}
+
+/* ── Capacitor Native Mobile (Android & iOS) Safe Area Overrides ── */
+html.native-app,
+html.capacitor-native,
+body.native-app,
+body.capacitor-native {
+    --sat: max(env(safe-area-inset-top, 0px), 36px);
+    --sab: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+html.android-native,
+body.android-native {
+    --sat: max(env(safe-area-inset-top, 0px), 36px);
+    --sab: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+/* Utility classes for safe area insets */
+.pt-safe-top {
+    padding-top: var(--sat) !important;
+}
+.pb-safe-bottom {
+    padding-bottom: var(--sab) !important;
+}
+.mt-safe-top {
+    margin-top: var(--sat) !important;
+}
+.mb-safe-bottom {
+    margin-bottom: var(--sab) !important;
+}
+
+:root {
     /* ── Byblos dark theme — pure black base, charcoal surfaces, yellow accent. */
     --byblos-bg: #000000;
     --byblos-surface: #0a0a0a;

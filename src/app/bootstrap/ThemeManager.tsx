@@ -46,8 +46,19 @@ function applyForPath(pathname: string): void {
  * and applies that scope's preference, so every surface, its modals, and the
  * global toasts follow the right per-scope theme. Mounted once, inside the router.
  */
+import { isNativeApp, getDevicePlatform } from '@/infrastructure/navigation/mobileApp';
+
 export function ThemeManager() {
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (typeof document !== 'undefined' && isNativeApp()) {
+      document.documentElement.classList.add('native-app', 'capacitor-native');
+      if (getDevicePlatform() === 'android') {
+        document.documentElement.classList.add('android-native');
+      }
+    }
+  }, []);
 
   // Apply on route change, and follow the OS while the active scope is on 'system'.
   useEffect(() => {
