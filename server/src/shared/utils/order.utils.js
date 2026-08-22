@@ -54,14 +54,14 @@ export async function normalizeOrderInput(req) {
         || body.idempotencyKey
         || metadata.client_checkout_token;
 
-    // 1. Resolve Identity via Phone (PIN-10: IDENTITY RESOLUTION)
-    const phone = req.user?.phone || rawPhone;
+    // 1. Resolve Identity via Mobile Payment Number (STK Push Contact)
+    const mobilePayment = req.user?.mobile_payment || req.body?.mobilePayment || req.body?.mobile_payment || rawPhone;
     let existingBuyer = null;
 
-    if (phone) {
-        existingBuyer = await Buyer.findByPhone(phone);
+    if (mobilePayment) {
+        existingBuyer = await Buyer.findByMobilePayment?.(mobilePayment) || await Buyer.findByPhone?.(mobilePayment);
         if (existingBuyer) {
-            logger.info('Buyer identity resolved from phone lookup', { buyer_id: existingBuyer.id, name: existingBuyer.fullName });
+            logger.info('Buyer identity resolved from mobile payment lookup', { buyer_id: existingBuyer.id, name: existingBuyer.fullName });
         }
     }
 
@@ -92,17 +92,18 @@ export async function normalizeOrderInput(req) {
     if (customerName && customerName !== 'Guest' && !existingBuyer?.fullName) {
         finalName = customerName;
     }
-    let finalPhone = phone;
+    let finalMobilePayment = mobilePayment;
 
     if (user && !overrideContact) {
         finalName = user.name || user.full_name;
-        finalPhone = user.mobile_payment || user.phone;
+        finalMobilePayment = user.mobile_payment;
     }
 
     const buyer = {
         id: buyerId, // Correctly point to buyers.id
         name: finalName || 'Customer',
-        phone: finalPhone || 'N/A',
+        phone: finalMobilePayment || 'N/A',
+        mobilePayment: finalMobilePayment || 'N/A',
         email,
         city: buyerCity,
         location: buyerArea
