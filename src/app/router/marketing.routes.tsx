@@ -9,6 +9,24 @@ const MarketingDashboard = safeLazy(() => import('@/features/marketing/pages/Mar
 
 export const marketingRoutes: RouteObject[] = [
   {
+    path: '/marketing/login',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MarketingLogin />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/marketing',
+    element: (
+      <AppProtectedRoute allowedRoles={['marketing', 'admin']}>
+        <Suspense fallback={<RouteFallback />}>
+          <MarketingDashboard />
+        </Suspense>
+      </AppProtectedRoute>
+    ),
+  },
+  {
     path: '/admin/marketing/login',
     element: (
       <Suspense fallback={<RouteFallback />}>

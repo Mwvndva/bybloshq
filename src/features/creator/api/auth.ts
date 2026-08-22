@@ -45,8 +45,7 @@ export const login = async (emailOrCredentials: string | { email: string; passwo
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken || '',
-          'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+          'X-CSRF-Token': csrfToken || ''
         },
         body: JSON.stringify(credentials),
         credentials: 'include'

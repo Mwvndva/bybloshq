@@ -147,7 +147,7 @@ export const sellerProfileApi = {
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-Token': csrfToken || '',
-            'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+
           },
           body: JSON.stringify(credentials),
           credentials: 'include'
@@ -284,7 +284,7 @@ export const sellerProfileApi = {
             'Content-Type': 'application/json',
             'Authorization': token ? `Bearer ${token}` : '',
             'X-CSRF-Token': csrfToken || '',
-            'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+
           },
           credentials: 'include'
         });
@@ -369,7 +369,7 @@ export const sellerProfileApi = {
             'Content-Type': 'application/json',
             'Authorization': token ? `Bearer ${token}` : '',
             'X-CSRF-Token': csrfToken || '',
-            'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+
           },
           credentials: 'include'
         });

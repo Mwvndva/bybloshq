@@ -51,8 +51,7 @@ export class WebAuthStrategy implements AuthStrategy {
       token = await getFreshCsrfToken();
     }
     return token ? {
-      'X-CSRF-Token': token,
-      'Cookie': `csrf-token-v2=${token}; _csrf=${token}`
+      'X-CSRF-Token': token
     } : {};
   }
 

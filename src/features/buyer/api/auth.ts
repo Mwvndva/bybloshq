@@ -66,8 +66,7 @@ export async function login(credentials: { email: string; password: string }): P
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken || '',
-          'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+          'X-CSRF-Token': csrfToken || ''
         },
         body: JSON.stringify(credentials),
         credentials: 'include'
