@@ -84,25 +84,28 @@ CREATE TABLE IF NOT EXISTS order_status_history (
 );
 
 -- Create indexes
-CREATE INDEX idx_product_orders_order_number ON product_orders(order_number);
-CREATE INDEX idx_product_orders_buyer_id ON product_orders(buyer_id);
-CREATE INDEX idx_product_orders_seller_id ON product_orders(seller_id);
-CREATE INDEX idx_product_orders_status ON product_orders(status);
-CREATE INDEX idx_product_orders_payment_status ON product_orders(payment_status);
-CREATE INDEX idx_order_items_order_id ON order_items(order_id);
-CREATE INDEX idx_order_items_product_id ON order_items(product_id);
-CREATE INDEX idx_payouts_seller_id ON payouts(seller_id);
-CREATE INDEX idx_payouts_status ON payouts(status);
+CREATE INDEX IF NOT EXISTS idx_product_orders_order_number ON product_orders(order_number);
+CREATE INDEX IF NOT EXISTS idx_product_orders_buyer_id ON product_orders(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_product_orders_seller_id ON product_orders(seller_id);
+CREATE INDEX IF NOT EXISTS idx_product_orders_status ON product_orders(status);
+CREATE INDEX IF NOT EXISTS idx_product_orders_payment_status ON product_orders(payment_status);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_seller_id ON payouts(seller_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status);
 
 -- Add triggers for updated_at
+DROP TRIGGER IF EXISTS update_product_orders_updated_at ON product_orders;
 CREATE TRIGGER update_product_orders_updated_at
 BEFORE UPDATE ON product_orders
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_order_items_updated_at ON order_items;
 CREATE TRIGGER update_order_items_updated_at
 BEFORE UPDATE ON order_items
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_payouts_updated_at ON payouts;
 CREATE TRIGGER update_payouts_updated_at
 BEFORE UPDATE ON payouts
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -128,6 +131,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to generate order number before insert
+DROP TRIGGER IF EXISTS generate_order_number_trigger ON product_orders;
 CREATE TRIGGER generate_order_number_trigger
 BEFORE INSERT ON product_orders
 FOR EACH ROW
@@ -148,6 +152,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to update order status history
+DROP TRIGGER IF EXISTS update_order_status_history_trigger ON product_orders;
 CREATE TRIGGER update_order_status_history_trigger
 AFTER UPDATE OF status ON product_orders
 FOR EACH ROW
@@ -192,6 +197,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to handle order completion
+DROP TRIGGER IF EXISTS handle_order_completion_trigger ON product_orders;
 CREATE TRIGGER handle_order_completion_trigger
 AFTER UPDATE OF status ON product_orders
 FOR EACH ROW
