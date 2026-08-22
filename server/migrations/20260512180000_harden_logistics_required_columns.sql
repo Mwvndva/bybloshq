@@ -209,6 +209,7 @@ ALTER TABLE logistics_tracking_events
     ALTER COLUMN metadata SET NOT NULL,
     ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
 
+DROP TRIGGER IF EXISTS logistics_tracking_events_immutable ON logistics_tracking_events;
 CREATE TRIGGER logistics_tracking_events_immutable
     BEFORE UPDATE OR DELETE ON logistics_tracking_events
     FOR EACH ROW

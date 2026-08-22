@@ -27,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_buyers_city ON buyers(city) WHERE city IS NOT NUL
 CREATE INDEX IF NOT EXISTS idx_buyers_location ON buyers(location) WHERE location IS NOT NULL;
 
 -- Create trigger to update updated_at
+DROP TRIGGER IF EXISTS update_buyers_updated_at ON buyers;
 CREATE TRIGGER update_buyers_updated_at
 BEFORE UPDATE ON buyers
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
