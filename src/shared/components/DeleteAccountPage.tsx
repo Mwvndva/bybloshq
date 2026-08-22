@@ -11,7 +11,7 @@ const SUPPORT_EMAIL = 'bybloshqke@zohomail.com';
 export default function DeleteAccountPage() {
   return (
     <div className="min-h-[100svh] bg-black text-white">
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-black/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-white/10 bg-black/95 px-4 py-3 backdrop-blur pt-safe-top">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <Link
             to="/"
