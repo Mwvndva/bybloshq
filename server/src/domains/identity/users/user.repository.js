@@ -7,15 +7,6 @@ import { query } from '../../../infrastructure/database/database.js';
  * @param {number|string} userId
  * @returns {Promise<{id: number, email: string, role: string, created_at: string}|undefined>}
  */
-import { query } from '../../../infrastructure/database/database.js';
-
-/**
- * Fetches a minimal user record (id, email, role, created_at) by id.
- * Returns undefined when not found.
- *
- * @param {number|string} userId
- * @returns {Promise<{id: number, email: string, role: string, created_at: string}|undefined>}
- */
 export async function findByIdMinimal(userId) {
   const sql = {
     name: 'find-user-by-id-minimal',
