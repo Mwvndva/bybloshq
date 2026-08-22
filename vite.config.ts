@@ -96,21 +96,11 @@ export default defineConfig(({ command, mode }) => {
       assetsInlineLimit: 0,
       rollupOptions: {
         output: {
-          manualChunks(id: string) {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-                return 'react-vendor';
-              }
-              if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('class-variance-authority') || id.includes('tailwind-merge') || id.includes('sonner')) {
-                return 'ui-vendor';
-              }
-              if (id.includes('recharts') || id.includes('chart.js') || id.includes('react-chartjs-2')) {
-                return 'charts-vendor';
-              }
-              if (id.includes('@tanstack') || id.includes('axios') || id.includes('date-fns') || id.includes('lodash')) {
-                return 'utils-vendor';
-              }
-            }
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-slot', 'lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge'],
+            'utils-vendor': ['lodash', 'date-fns', 'axios', '@tanstack/react-query'],
+            'charts-vendor': ['recharts'],
           },
         },
       },
