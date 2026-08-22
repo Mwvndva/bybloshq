@@ -81,8 +81,7 @@ export const sellerProductsApi = {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': token ? `Bearer ${token}` : '',
-            'X-CSRF-Token': csrfToken || '',
-            'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+            'X-CSRF-Token': csrfToken || ''
           },
           credentials: 'include'
         });
