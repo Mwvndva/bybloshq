@@ -279,8 +279,8 @@ export const protect = async (req, res, next) => {
  * Call this after profile updates.
  */
 export const invalidateAuthCache = (token) => {
-  if (token) {
-    _authCache.delete(token);
+  if (token && typeof token === 'string') {
+    _authCache.delete(token.trim());
   }
 };
 

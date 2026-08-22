@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title><%= typeof subject !== 'undefined' ? subject : 'Your Ticket Confirmation - ' + (eventName || 'Event') %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      line-height: 1.6;
+      color: #1a202c;
+      background-color: #f7fafc;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      padding: 30px 20px;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      border-radius: 8px 8px 0 0;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      margin: 8px 0 0;
+      opacity: 0.9;
+      font-weight: 400;
+    }
+    .ticket {
+      background: #ffffff;
+      border-radius: 0 0 8px 8px;
+      padding: 0;
+      margin: 0 0 30px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      overflow: hidden;
+    }
+    .ticket-header {
+      padding: 25px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .ticket-header h2 {
+      margin: 0 0 5px 0;
+      color: #1a202c;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .ticket-header p {
+      margin: 0;
+      color: #4a5568;
+      font-size: 14px;
+    }
+    .ticket-content {
+      padding: 25px;
+    }
+    .ticket-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    .detail {
+      margin-bottom: 15px;
+    }
+    .detail-label {
+      font-size: 12px;
+      color: #718096;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    .detail-value {
+      font-weight: 500;
+      color: #2d3748;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .qr-section {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 25px;
+      margin: 25px 0;
+      text-align: center;
+      border: 1px dashed #e2e8f0;
+    }
+    .qr-code {
+      display: inline-block;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border: 1px solid #e2e8f0;
+    }
+    .qr-code img {
+      max-width: 180px;
+      height: auto;
+      display: block;
+    }
+    .qr-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 10px;
+      color: #2d3748;
+    }
+    .qr-subtitle {
+      font-size: 13px;
+      color: #718096;
+      margin: 10px 0 0;
+      line-height: 1.5;
+    }
+    .ticket-number {
+      display: inline-block;
+      background: #edf2f7;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-top: 10px;
+    }
+    .event-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 25px;
+      border-top: 1px solid #e2e8f0;
+      color: #718096;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    .divider {
+      height: 1px;
+      background-color: #e2e8f0;
+      margin: 25px 0;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #4f46e5;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 15px;
+      margin: 10px 0;
+      transition: all 0.2s ease;
+    }
+    .button:hover {
+      background: #4338ca;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+    .info-box {
+      background: #f0f9ff;
+      border-left: 4px solid #0ea5e9;
+      padding: 16px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .info-box p {
+      margin: 0;
+      font-size: 14px;
+      color: #0369a1;
+      line-height: 1.5;
+    }
+    @media (max-width: 600px) {
+      .ticket-details {
+        grid-template-columns: 1fr;
+      }
+      .container {
+        padding: 10px;
+      }
+      .header {
+        padding: 25px 15px;
+      }
+      .header h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><%= typeof appName !== 'undefined' ? appName : 'Byblos Experience' %></h1>
+      <p>Your Ticket Confirmation</p>
+    </div>
+
+    <div class="ticket">
+      <% if (typeof eventImage !== 'undefined' && eventImage) { %>
+        <img src="<%= eventImage %>" alt="<%= eventName || 'Event' %>" class="event-image">
+      <% } %>
+      
+      <div class="ticket-header">
+        <h2><%= typeof eventName !== 'undefined' ? eventName : 'Event' %></h2>
+        <span class="ticket-number">Ticket #<%= typeof ticketNumber !== 'undefined' ? ticketNumber : 'N/A' %></span>
+        <% if (typeof eventDate !== 'undefined') { %>
+          <p><%= eventDate %></p>
+        <% } %>
+      </div>
+
+      <div class="ticket-content">
+        <!-- Debug Info (hidden in email) -->
+        <div style="display: none; color: #999; font-size: 10px; padding: 10px; background: #f5f5f5; margin: -15px -25px 15px; border-bottom: 1px solid #eee;">
+          <strong>Debug Info:</strong><br>
+          Price: <%= typeof price !== 'undefined' ? price : 'undefined' %><br>
+          FormattedPrice: <%= typeof formattedPrice !== 'undefined' ? formattedPrice : 'undefined' %><br>
+          TotalPrice: <%= typeof totalPrice !== 'undefined' ? totalPrice : 'undefined' %><br>
+          FormattedTotalPrice: <%= typeof formattedTotalPrice !== 'undefined' ? formattedTotalPrice : 'undefined' %><br>
+          Quantity: <%= typeof quantity !== 'undefined' ? quantity : '1' %><br>
+          Currency: <%= typeof currency !== 'undefined' ? currency : 'KES' %>
+        </div>
+        
+        <div class="ticket-details">
+          <div class="detail">
+            <div class="detail-label">Ticket Holder</div>
+            <div class="detail-value"><%= typeof customerName !== 'undefined' ? customerName : 'Guest' %></div>
+          </div>
+          <div class="detail">
+            <div class="detail-label">Ticket Type</div>
+            <div class="detail-value"><%= typeof ticketType !== 'undefined' ? ticketType : 'General Admission' %></div>
+          </div>
+          <div class="detail">
+            <div class="detail-label">Quantity</div>
+            <div class="detail-value"><%= typeof quantity !== 'undefined' ? quantity : '1' %></div>
+          </div>
+          <% if (typeof venue !== 'undefined' && venue) { %>
+          <div class="detail">
+            <div class="detail-label">Venue</div>
+            <div class="detail-value"><%= venue %></div>
+          </div>
+          <% } %>
+          <div class="detail">
+            <div class="detail-label">Price</div>
+            <div class="detail-value">
+              <% 
+                // Debug log all available price-related variables
+                console.log('Email template price data:', {
+                  price: typeof price !== 'undefined' ? price : 'undefined',
+                  formattedPrice: typeof formattedPrice !== 'undefined' ? formattedPrice : 'undefined',
+                  totalPrice: typeof totalPrice !== 'undefined' ? totalPrice : 'undefined',
+                  formattedTotalPrice: typeof formattedTotalPrice !== 'undefined' ? formattedTotalPrice : 'undefined',
+                  quantity: typeof quantity !== 'undefined' ? quantity : 'undefined',
+                  currency: typeof currency !== 'undefined' ? currency : 'KES'
+                });
+                
+                // Use the pre-formatted prices that were passed in
+                let displayPrice = typeof formattedPrice !== 'undefined' ? formattedPrice : 'KSh 0';
+                let displayTotal = typeof formattedTotalPrice !== 'undefined' ? formattedTotalPrice : 'KSh 0';
+                
+                // Fallback to raw price if formatted price not available
+                if (displayPrice === 'KSh 0' && typeof price !== 'undefined' && price !== null) {
+                  const priceNum = Number(price);
+                  if (!isNaN(priceNum)) {
+                    // Format the unit price
+                    displayPrice = new Intl.NumberFormat('en-KE', {
+                      style: 'currency',
+                      currency: typeof currency !== 'undefined' ? currency : 'KES',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    }).format(priceNum);
+                    
+                    // Calculate and format the total price
+                    const itemQty = Math.max(1, Number(quantity) || 1);
+                    displayTotal = new Intl.NumberFormat('en-KE', {
+                      style: 'currency',
+                      currency: typeof currency !== 'undefined' ? currency : 'KES',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    }).format(priceNum * itemQty);
+                  }
+                }
+                // If we still don't have a price, try to get it from ticket object
+                else if (typeof ticket !== 'undefined' && ticket.price !== undefined) {
+                  // Fall back to ticket price if available
+                  const ticketPrice = Number(ticket.price);
+                  if (!isNaN(ticketPrice)) {
+                    const itemQty = Math.max(1, Number(quantity) || 1);
+                    displayPrice = new Intl.NumberFormat('en-KE', {
+                      style: 'currency',
+                      currency: typeof currency !== 'undefined' ? currency : 'KES',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    }).format(ticketPrice);
+                    displayTotal = new Intl.NumberFormat('en-KE', {
+                      style: 'currency',
+                      currency: typeof currency !== 'undefined' ? currency : 'KES',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    }).format(ticketPrice * itemQty);
+                  }
+                }
+                
+                // If we have a total price but no unit price, calculate it
+                if ((displayPrice === 'KSh 0' || displayPrice === 'KSh 0.00') && 
+                    typeof totalPrice !== 'undefined' && totalPrice) {
+                  const totalNum = Number(totalPrice);
+                  const itemQty = Math.max(1, Number(quantity) || 1);
+                  if (!isNaN(totalNum) && itemQty > 0) {
+                    const unitPrice = totalNum / itemQty;
+                    displayPrice = new Intl.NumberFormat('en-KE', {
+                      style: 'currency',
+                      currency: typeof currency !== 'undefined' ? currency : 'KES',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    }).format(unitPrice);
+                    displayTotal = new Intl.NumberFormat('en-KE', {
+                      style: 'currency',
+                      currency: typeof currency !== 'undefined' ? currency : 'KES',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    }).format(totalNum);
+                  }
+                }
+                
+                // Log final price for debugging
+                const itemQty = Math.max(1, Number(quantity) || 1);
+                console.log('Final price display:', { displayPrice, displayTotal, quantity: itemQty });
+                
+                // Output the price
+                if (itemQty > 1) {
+              %>
+                <div><%= displayPrice %></div>
+                <div style="font-size: 0.9em; color: #666; margin-top: 3px;">
+                  (<%= itemQty %> × <%= displayPrice %> = <strong><%= displayTotal %></strong>)
+                </div>
+              <% } else { %>
+                <div><%= displayPrice %></div>
+              <% } %>
+            </div>
+          </div>
+          <div class="detail">
+            <div class="detail-label">Order Date</div>
+            <div class="detail-value">
+              <% if (typeof formattedDate !== 'undefined') { %>
+                <%= formattedDate %>
+              <% } else if (typeof purchaseDate !== 'undefined') { %>
+                <%= new Date(purchaseDate).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) %>
+              <% } else { %>
+                <%= new Date().toLocaleDateString() %>
+              <% } %>
+            </div>
+          </div>
+          <% if (typeof location !== 'undefined') { %>
+          <div class="detail">
+            <div class="detail-label">Location</div>
+            <div class="detail-value"><%= location %></div>
+          </div>
+          <% } %>
+        </div>
+
+        <% if (typeof eventDescription !== 'undefined' && eventDescription) { %>
+        <div class="event-description" style="margin: 25px 0; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #4f46e5;">
+          <h3 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: 600;">About This Event</h3>
+          <p style="margin-bottom: 0; color: #4b5563; line-height: 1.6;"><%= eventDescription %></p>
+        </div>
+        <% } %>
+
+        <div class="info-box">
+          <p>Please present this email and the QR code below at the event entrance.</p>
+        </div>
+
+        <div class="qr-section" style="text-align: center; margin: 20px 0; padding: 20px; background: #f9fafb; border-radius: 8px;">
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 10px; color: #111827;">Your Ticket QR Code</div>
+          <div style="display: inline-block; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <img 
+              src="cid:qrcode" 
+              alt="QR Code for Ticket <%= typeof ticketNumber !== 'undefined' ? ticketNumber : '' %>"
+              style="max-width: 200px; height: auto;"
+            />
+          </div>
+          <p style="margin-top: 10px; font-size: 14px; color: #4b5563;">Scan this code at the entrance for quick check-in</p>
+          <div style="margin-top: 5px; font-family: monospace; font-size: 14px; color: #4f46e5; font-weight: 500;">
+            #<%= typeof ticketNumber !== 'undefined' ? ticketNumber : 'N/A' %>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 25px;">
+          <p style="font-size: 13px; color: #718096; margin-top: 15px;">
+            Need help? Contact our <a href="mailto:<%= typeof process !== 'undefined' && process.env && process.env.SUPPORT_EMAIL ? process.env.SUPPORT_EMAIL : 'support@byblos.com' %>" style="color: #4f46e5; text-decoration: none;">support team</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>© <%= new Date().getFullYear() %> <%= typeof appName !== 'undefined' ? appName : 'Byblos Experience' %>. All rights reserved.</p>
+      <p>
+        <a href="#" style="color: #718096; text-decoration: none; margin: 0 10px;">Privacy Policy</a> | 
+        <a href="#" style="color: #718096; text-decoration: none; margin: 0 10px;">Terms of Service</a> | 
+        <a href="#" style="color: #718096; text-decoration: none; margin: 0 10px;">Contact Us</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

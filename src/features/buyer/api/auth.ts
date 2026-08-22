@@ -43,35 +43,74 @@ export interface RegisterData {
 }
 
 export async function login(credentials: { email: string; password: string }): Promise<LoginResponse> {
+  let responseBody: any = null;
+
   try {
-    const loginUrl = '/buyers/login';
-    const response = await apiClient.post<LoginApiResponse>(
-      loginUrl,
-      credentials
-    );
-
-    const responseData = response.data;
-
-    if (!responseData) {
-      throw new Error('Unable to connect to server. Please try again.');
+    const response = await apiClient.post<any>('/buyers/login', credentials);
+    responseBody = response?.data !== undefined ? response.data : response;
+    if (typeof responseBody === 'string' && responseBody.trim()) {
+      try {
+        responseBody = JSON.parse(responseBody);
+      } catch {
+        /* ignore json parse error */
+      }
     }
-
-    const { data } = responseData;
-
-    if (!data?.buyer) {
-      throw new Error(responseData.message || 'Unable to load buyer account details. Please try again.');
-    }
-
-    const { buyer, token, refreshToken } = data;
-
-    delete buyerApiInstance.defaults.headers.common['Authorization'];
-
-    await getFreshCsrfToken();
-
-    return { buyer: transformBuyer(buyer), token, refreshToken };
-  } catch (error) {
-    throw error;
+  } catch {
+    /* ignore Axios error for fetch fallback */
   }
+
+  if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
+    try {
+      const csrfToken = await getFreshCsrfToken();
+      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/buyers/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+          'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include'
+      });
+      const textData = await fetchRes.text();
+      if (textData && typeof textData === 'string') {
+        try {
+          responseBody = JSON.parse(textData);
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      /* ignore fetch fallback error */
+    }
+  }
+
+  if (!responseBody || typeof responseBody !== 'object') {
+    throw new Error('Unable to connect to server. Please try again.');
+  }
+
+  if (responseBody.status === 'error' || responseBody.status === 'fail') {
+    throw new Error(responseBody.message || responseBody.error || 'Login failed');
+  }
+
+  const responseData = responseBody.data || responseBody;
+  const rawBuyer = responseData?.buyer || responseData?.user || responseBody?.buyer || responseBody?.user || (responseData?.id ? responseData : null);
+  const token = responseData?.token || responseData?.accessToken || responseBody?.token || responseBody?.accessToken;
+  const refreshToken = responseData?.refreshToken || responseBody?.refreshToken;
+
+  if (!rawBuyer) {
+    throw new Error(responseBody.message || 'Unable to load buyer account details. Please try again.');
+  }
+
+  delete buyerApiInstance.defaults.headers.common['Authorization'];
+
+  try {
+    await getFreshCsrfToken();
+  } catch {
+    /* ignore post-login CSRF refresh errors */
+  }
+
+  return { buyer: transformBuyer(rawBuyer), token, refreshToken };
 }
 
 export async function register(data: RegisterData): Promise<LoginResponse> {

@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDeleteProductMutation, useUpdateProductMutation } from '@/features/seller/hooks/useSellerProducts';
 import { useToast } from '@/shared/hooks/use-toast';
 import { useSwipeTabs } from '@/shared/hooks/useSwipeTabs';
-import { useSellerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
+import type { SellerProfile } from '@/features/auth/types/authTypes';
 import { SellerProfileHero } from '../components/SellerProfileHero';
 import { pendingOverviewStatuses } from '../components/dashboard/dashboardUtils';
 import { useSellerDashboardData } from '../components/dashboard/hooks/useSellerDashboardData';
@@ -39,7 +40,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { seller: sellerProfile, isLoading: isAuthLoading, updateSellerProfile, logout } = useSellerAuth();
+  const { user: _globalUser, logout, updateProfile } = useGlobalAuth();
+  const sellerProfile = _globalUser?.role === 'seller' ? _globalUser.profile as SellerProfile : null;
+  const isAuthLoading = false; // globalAuth loading is handled by AppProtectedRoute
+  const updateSellerProfile = (updates: Partial<SellerProfile>) => updateProfile(updates, 'seller');
 
   // Drive the whole dashboard's accent from the seller's chosen shop theme
   // (sets --theme-accent / --theme-button-* CSS vars on :root). Read from the

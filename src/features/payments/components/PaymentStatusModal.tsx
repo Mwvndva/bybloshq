@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useGetOrderStatusMutation } from '@/features/buyer/hooks/queries/useOrderStatusQuery';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { formatCurrency } from '@/shared/utils/formatting';
-import { isNativeApp, APP_DOWNLOAD_URL } from '@/infrastructure/navigation/mobileApp';
+import { isNativeApp, APP_DOWNLOAD_URL, getDevicePlatform, getAndroidDeepLink } from '@/infrastructure/navigation/mobileApp';
 
 type ModalState = 'POLLING' | 'SUCCESS' | 'FAILED' | 'TIMEOUT';
 
@@ -37,7 +37,7 @@ export const PaymentStatusModal = ({
   const [attempts, setAttempts] = useState(0);
   const [failureReason, setFailureReason] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const { loginWithToken } = useBuyerAuth();
+  const { loginWithToken } = useGlobalAuth();
   const getOrderStatusMutation = useGetOrderStatusMutation();
   // Store the latest mutateAsync in a ref so the polling effect doesn't need it as a dep
   const getOrderStatusRef = useRef(getOrderStatusMutation.mutateAsync);
@@ -55,7 +55,7 @@ export const PaymentStatusModal = ({
 
   const handleAutoLogin = useCallback(async (token: string) => {
     try {
-      await loginWithToken(token);
+      await loginWithToken(token, 'buyer');
     } catch (err) {
       console.error('Auto-login failed:', err);
     }
@@ -141,11 +141,7 @@ export const PaymentStatusModal = ({
     };
   }, [isOpen, invoiceId, state, isGuest, onSuccess, handleAutoLogin]);
 
-  const serviceChargeAmount = Number(paymentSummary?.serviceCharge || 0);
-  const totalAmount = Number(paymentSummary?.totalAmount || 0);
-  const serviceChargeText = serviceChargeAmount > 0
-    ? `Your total${totalAmount > 0 ? ` of ${formatCurrency(totalAmount)}` : ''} includes a 2% Byblos service charge of ${formatCurrency(serviceChargeAmount)}.`
-    : 'Your total includes Byblos 2% service charge for protected checkout, receipts, and order tracking.';
+
 
   return (
     <Dialog
@@ -198,7 +194,7 @@ export const PaymentStatusModal = ({
                 </p>
               </div>
               <div className="mt-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] p-2.5">
-                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-white/60">{serviceChargeText}</p>
+                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-white/60">Protected checkout, instant receipts, and live order tracking.</p>
               </div>
             </>
           )}
@@ -215,25 +211,52 @@ export const PaymentStatusModal = ({
                 </p>
               )}
               <div className="mb-3 w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] p-2.5">
-                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-white/60">{serviceChargeText}</p>
+                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-white/60">Protected checkout, instant receipts, and live order tracking.</p>
               </div>
-              {isGuest && !isNativeApp() && (
+              {!isNativeApp() && (
                 <div className="mb-3 w-full rounded-xl border border-yellow-200 dark:border-yellow-400/20 bg-yellow-50 dark:bg-yellow-400/10 p-3 text-left">
-                  <p className="text-xs font-bold text-slate-950 dark:text-white">Your Byblos account is ready</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
-                    Log in anytime with{email ? <> <span className="font-semibold text-slate-900 dark:text-white">{email}</span></> : ' your email'} and the password you set to track this order.
-                  </p>
-                  <p className="mt-2 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
-                    Get the app for delivery updates and instant notifications.
-                  </p>
-                  <a
-                    href={APP_DOWNLOAD_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 dark:bg-white text-xs font-bold text-white dark:text-slate-950 transition-all hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.98]"
-                  >
-                    Get it on Google Play
-                  </a>
+                  {isGuest && (
+                    <>
+                      <p className="text-xs font-bold text-slate-950 dark:text-white">Your Byblos account is ready</p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
+                        Log in anytime with{email ? <> <span className="font-semibold text-slate-900 dark:text-white">{email}</span></> : ' your email'} to track this order.
+                      </p>
+                    </>
+                  )}
+
+                  {getDevicePlatform() === 'android' ? (
+                    <>
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
+                        Track live courier updates and get push notifications in the Byblos Android App.
+                      </p>
+                      <a
+                        href={getAndroidDeepLink(orderNumber)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2.5 flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 dark:bg-white text-xs font-bold text-white dark:text-slate-950 transition-all hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.98]"
+                      >
+                        Open App / Get on Google Play
+                      </a>
+                    </>
+                  ) : getDevicePlatform() === 'ios' ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
+                      Order updates will be sent via SMS & Email. Save your tracking link to check status anytime.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-700 dark:text-white/70">
+                        Get the Byblos Android app on your phone for live GPS courier tracking.
+                      </p>
+                      <a
+                        href={APP_DOWNLOAD_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2.5 flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 dark:bg-white text-xs font-bold text-white dark:text-slate-950 transition-all hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.98]"
+                      >
+                        Get it on Google Play
+                      </a>
+                    </>
+                  )}
                 </div>
               )}
               <div className="mt-2 w-full space-y-2">

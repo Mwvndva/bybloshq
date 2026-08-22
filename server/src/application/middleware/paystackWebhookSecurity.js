@@ -171,6 +171,39 @@ export const requirePaystackWebhookHmac = async (req, res, next) => {
         return res.status(400).json({ status: 'error', message: 'Invalid webhook event' });
     }
 
+    let redisClient = null;
+    try {
+        const { getRedisClient } = await import('../../shared/config/redis.js');
+        redisClient = getRedisClient();
+    } catch (e) {
+        redisClient = null;
+    }
+
+    if (redisClient) {
+        try {
+            const redisKey = `webhook:dedupe:${eventId}`;
+            const acquired = await redisClient.set(redisKey, 'processing', 'NX', 'EX', 86400); // 24-hour TTL
+            if (!acquired) {
+                const existingState = await redisClient.get(redisKey);
+                if (existingState === 'completed') {
+                    return res.status(200).json({ status: 'success', message: 'Webhook already processed' });
+                }
+                return res.status(409).json({ status: 'error', message: 'Webhook already processing' });
+            }
+
+            res.on('finish', () => {
+                const completed = res.statusCode < 500;
+                if (completed) {
+                    redisClient.setex(redisKey, 86400, 'completed').catch(() => {});
+                } else {
+                    redisClient.del(redisKey).catch(() => {});
+                }
+            });
+        } catch (redisErr) {
+            logger.warn('[PAYSTACK-WEBHOOK] Redis dedupe fallback to DB:', redisErr.message);
+        }
+    }
+
     try {
         const { rows: [claim] } = await pool.query(
             `WITH upsert AS (

@@ -42,7 +42,9 @@ export const logisticsProfileQueryOptions = queryOptions({
   queryKey: ['logistics', 'profile'],
   queryFn: async () => {
     const res = await apiClient.get('/logistics/me');
-    return res.data?.data?.partner;
+    const resBody = res.data;
+    const resData = resBody?.data;
+    return resData?.partner || resData?.user || resBody?.partner || resBody?.user || (resData?.id ? resData : null);
   },
   staleTime: 5 * 60 * 1000,
   gcTime: 30 * 60 * 1000,

@@ -16,6 +16,7 @@ import {
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { publicApiRateLimiter } from '../middleware/rateLimiting.js';
+import { enforceIdempotency } from '../middleware/idempotency.middleware.js';
 import {
   updateOrderStatusSchema,
   confirmReceiptSchema,
@@ -44,6 +45,7 @@ router.use(protect);
  */
 router.post(
   '/',
+  enforceIdempotency,
   createOrder
 );
 

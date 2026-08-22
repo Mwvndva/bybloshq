@@ -1,13 +1,14 @@
 import { pool } from '../../../infrastructure/database/database.js';
 import logger from '../../../shared/utils/logger.js';
 import { sendFcmV1, isFcmConfigured } from '../../../shared/config/fcm.js';
+import { sendEmail } from '../../../shared/utils/email.js';
 
 const VALID_CHANNELS = new Set(['in_app', 'push', 'email']);
 const VALID_PLATFORMS = new Set(['android', 'ios', 'web']);
 const VALID_ROLES = new Set(['buyer', 'seller', 'creator', 'admin', 'logistics']);
 
 function normalizeRole(role) {
-    const normalized = String(role || '').toLowerCase();
+    const normalized = String(role || '').toLowerCase().trim();
     return normalized === 'mzigo' ? 'logistics' : normalized;
 }
 
@@ -126,10 +127,22 @@ class NotificationService {
             });
         }
 
-        // Email stays behind its existing direct service for now. This facade
-        // gives new app flows a stable API while that sender is migrated.
         if (channels.includes('email')) {
-            results.email = { delivered: false, deferred: true };
+            const toEmail = notification.recipientEmail || notification.email;
+            if (toEmail) {
+                results.email = await sendEmail({
+                    to: toEmail,
+                    subject: notification.title,
+                    html: notification.emailHtml || `<p>${notification.body}</p>`,
+                    text: notification.body
+                }).then(res => ({ delivered: true, id: res?.id }))
+                  .catch(error => {
+                      logger.error('[NotificationService] Unified email dispatch failed', { error: error.message });
+                      return { delivered: false, error: error.message };
+                  });
+            } else {
+                results.email = { delivered: false, reason: 'missing_recipient_email' };
+            }
         }
 
         return results;
@@ -160,21 +173,30 @@ class NotificationService {
             Object.entries(data || {}).map(([key, value]) => [key, String(value ?? '')])
         );
 
+        const pushPromises = tokens.map(async (device) => {
+            const result = await sendFcmV1({ token: device.token, title, body, data: stringData });
+            return { device, result };
+        });
+
+        const pushResults = await Promise.allSettled(pushPromises);
         const responses = [];
         const invalidTokens = [];
-        for (const device of tokens) {
-            const result = await sendFcmV1({ token: device.token, title, body, data: stringData });
-            responses.push({ ok: result.ok, status: result.status });
 
-            if (!result.ok) {
-                logger.warn('[NotificationService] Push provider returned a non-success response', {
-                    recipientUserId,
-                    platform: device.platform,
-                    status: result.status,
-                    error: result.error
-                });
-                if (result.unregistered) {
-                    invalidTokens.push(device.token);
+        for (const item of pushResults) {
+            if (item.status === 'fulfilled') {
+                const { device, result } = item.value;
+                responses.push({ ok: result.ok, status: result.status });
+
+                if (!result.ok) {
+                    logger.warn('[NotificationService] Push provider returned a non-success response', {
+                        recipientUserId,
+                        platform: device.platform,
+                        status: result.status,
+                        error: result.error
+                    });
+                    if (result.unregistered) {
+                        invalidTokens.push(device.token);
+                    }
                 }
             }
         }
@@ -182,7 +204,8 @@ class NotificationService {
         if (invalidTokens.length > 0) {
             await pool.query(
                 `UPDATE notification_device_tokens
-                 SET is_active = FALSE
+                 SET is_active = FALSE,
+                     updated_at = NOW()
                  WHERE token = ANY($1::text[])`,
                 [invalidTokens]
             ).catch(error => logger.error('[NotificationService] Failed to deactivate invalid device tokens', {

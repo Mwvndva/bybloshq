@@ -1,4 +1,5 @@
 import { lazy, ComponentType } from 'react';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 
 /**
  * A robust version of React.lazy that handles chunk loading errors by forcing a page reload.
@@ -31,7 +32,7 @@ export const safeLazy = <T extends ComponentType<unknown>>(
                 error.message?.includes('Importing a module script failed') ||
                 error.message?.includes('Loading chunk');
 
-            if (isChunkError) {
+            if (isChunkError && !isNativeApp()) {
                 // Prevent infinite reload loops by checking session storage
                 const lastReload = sessionStorage.getItem('last_chunk_reload');
                 const now = Date.now();
@@ -39,14 +40,14 @@ export const safeLazy = <T extends ComponentType<unknown>>(
                 // Only auto-reload if we haven't reloaded in the last 10 seconds
                 if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
                     sessionStorage.setItem('last_chunk_reload', now.toString());
-                    console.warn('Chunk loading failed. Forcing page reload to get latest version...');
+                    console.warn('[safeLazy] Chunk loading failed. Refreshing web page...');
                     window.location.reload();
 
                     // Return a placeholder promise that never resolves/rejects 
                     // while the page is reloading to avoid further errors
                     return new Promise(() => { }) as Promise<{ default: T }>;
                 } else {
-                    console.error('Chunk loading failed repeatedly. Not reloading again to avoid loop.');
+                    console.error('[safeLazy] Chunk loading failed repeatedly. Not reloading again to avoid loop.');
                 }
             }
 

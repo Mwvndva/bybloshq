@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
+import type { BuyerProfile } from '@/features/auth/types/authTypes';
 import { useAsyncLock } from '@/shared/hooks/useAsyncLock';
 import type { ApiOrder } from '@/shared/types';
 import { isDigitalOrderItem } from '@/features/orders/utils/ordersSectionUtils';
@@ -39,7 +40,8 @@ const updateSellerClientCountInCache = (queryClient: ReturnType<typeof useQueryC
 };
 
 export function OrdersSectionContainer() {
-  const { user } = useBuyerAuth();
+  const { user: globalUser } = useGlobalAuth();
+  const user = globalUser?.role === 'buyer' ? globalUser.profile as BuyerProfile : null;
   const queryClient = useQueryClient();
   const { runWithLock } = useAsyncLock();
 

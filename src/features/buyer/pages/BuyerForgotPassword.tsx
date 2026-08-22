@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -10,7 +10,7 @@ import { Mail, ArrowLeft, Loader2, ShoppingBag } from 'lucide-react';
 
 export function BuyerForgotPassword() {
     const { toast } = useToast();
-    const { forgotPassword, isLoading } = useBuyerAuth();
+    const { forgotPassword, isLoading } = useGlobalAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
 
@@ -27,7 +27,7 @@ export function BuyerForgotPassword() {
         }
 
         try {
-            await forgotPassword(email);
+            await forgotPassword(email, 'buyer');
             navigate('/buyer/login', {
                 state: {
                     message: 'If an account exists with this email, you will receive a password reset link.'

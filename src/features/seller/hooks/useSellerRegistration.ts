@@ -17,12 +17,13 @@ interface SellerRegistrationProps {
   onSuccess?: () => void;
 }
 
-import { useSellerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 
 export function useSellerRegistration(onSuccess?: () => void) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { register } = useSellerAuth();
+  const { register } = useGlobalAuth();
+  const registerSeller = (data: import('@/features/auth/types/authTypes').SellerRegistrationData) => register(data, 'seller');
   const referralCode = searchParams.get('ref') || '';
 
   const [formData, setFormData] = useState<SellerRegistrationFormData>({
@@ -229,8 +230,8 @@ export function useSellerRegistration(onSuccess?: () => void) {
     setIsLoading(true);
 
     try {
-      // Use the auth context register for seller profile creation.
-      const result = await register({
+      // Use the unified auth system register for seller profile creation.
+      const result = await registerSeller({
         fullName: `${formData.firstName} ${formData.lastName}`.trim(),
         shopName: formData.shopName.trim(),
         email: formData.email,

@@ -6,29 +6,16 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToast } from '@/shared/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Mail, User, Phone, Lock, ArrowLeft, ShoppingBag, MapPin, Check, X, RefreshCw } from 'lucide-react';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { useBuyerResendVerificationMutation } from '@/features/buyer/hooks/mutations/useBuyerAuthMutations';
 import { checkPasswordStrength, type BuyerRegisterFormData } from '@/features/buyer/utils/buyerRegisterUtils';
 
 export function useBuyerRegister() {
+  const { register, isLoading } = useGlobalAuth();
   const { toast } = useToast();
-  const { register, isLoading } = useBuyerAuth();
+  const registerBuyer = (data: import('@/features/auth/types/authTypes').BuyerRegistrationData) => register(data, 'buyer');
   const navigate = useNavigate();
   const resendVerificationMutation = useBuyerResendVerificationMutation();
-
-  // Keep the standalone auth route aligned with the light app shell.
-  useEffect(() => {
-    const originalBodyStyle = document.body.style.cssText;
-    const originalHtmlStyle = document.documentElement.style.cssText;
-
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #f8f7f2; overflow-x: hidden;';
-
-    return () => {
-      document.body.style.cssText = originalBodyStyle;
-      document.documentElement.style.cssText = originalHtmlStyle;
-    };
-  }, []);
 
   const [formData, setFormData] = useState<BuyerRegisterFormData>({
     firstName: '',
@@ -159,7 +146,7 @@ export function useBuyerRegister() {
     }
 
     try {
-      const result = await register({
+      const result = await registerBuyer({
         fullName: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         mobilePayment: formData.mobilePayment,

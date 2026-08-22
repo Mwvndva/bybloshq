@@ -13,18 +13,25 @@ import OrderReadService from './orderRead.service.js';
 
 export class OrderService {
   static async calculateTotals(items, feesConfig = Fees) {
-    let subtotal = 0;
+    let subtotalCents = 0;
     const itemDetails = items.map(item => {
-      const price = Number(item.price);
+      const priceCents = Math.round(Number(item.price || 0) * 100);
       const qty = Number(item.quantity || 1);
-      subtotal += price * qty;
-      return { ...item, lineTotal: price * qty };
+      const lineTotalCents = priceCents * qty;
+      subtotalCents += lineTotalCents;
+      return { ...item, lineTotal: lineTotalCents / 100 };
     });
     const feeRate = feesConfig.PLATFORM_FEE_PERCENT || 0.05;
-    const platformFee = Math.round(subtotal * feeRate * 100) / 100;
-    const escrowAmount = subtotal;
-    const totalAmount = subtotal + platformFee;
-    return { subtotal, platformFee, escrowAmount, totalAmount, itemDetails };
+    const platformFeeCents = Math.round(subtotalCents * feeRate);
+    const escrowAmountCents = subtotalCents;
+    const totalAmountCents = subtotalCents + platformFeeCents;
+    return {
+      subtotal: subtotalCents / 100,
+      platformFee: platformFeeCents / 100,
+      escrowAmount: escrowAmountCents / 100,
+      totalAmount: totalAmountCents / 100,
+      itemDetails
+    };
   }
 
   static async updateOrderStatus(orderId, user, status) {
@@ -64,10 +71,15 @@ export class OrderService {
   }
 
   static async _generateOrderNumber(client = pool) {
+    try {
+      await client.query("CREATE SEQUENCE IF NOT EXISTS order_number_seq START WITH 100001");
+    } catch (e) {
+      // Ignored
+    }
     const res = await client.query("SELECT nextval('order_number_seq') as seq");
     const seq = res.rows[0].seq;
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    return `BYB-ORD-${dateStr}-${String(seq).padStart(6, '0')}`;
+    return `ORD-${dateStr}-${String(seq).padStart(6, '0')}`;
   }
 }
 

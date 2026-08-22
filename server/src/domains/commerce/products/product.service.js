@@ -23,10 +23,7 @@ class ProductService {
             throw new Error('Name, price, and description are required');
         }
 
-        const priceValue = Number.parseFloat(price);
-        if (!Number.isFinite(priceValue) || priceValue < Fees.PRODUCT_MIN_PRICE) {
-            throw new Error(`Minimum price must be KES ${Fees.PRODUCT_MIN_PRICE}`);
-        }
+        const priceValue = this.parseAndValidatePrice(price);
 
         if (is_digital && !digital_file_path) {
             throw new Error('Digital file is required for digital products');
@@ -154,10 +151,35 @@ class ProductService {
         const product = await ProductModel.create(null, productData); // Use default pool
         logger.info('Product created:', { id: product.id, sellerId });
 
-        // Invalidate cache
-        await cacheService.clearPattern("products:*");
+        // Invalidate cache targeting this product and seller
+        await ProductService.invalidateProductCache(product.id, sellerId, data.category_id || null);
 
         return product;
+    }
+
+    static async invalidateProductCache(productId, sellerId, categoryId = null) {
+        const keysToDelete = [
+            `products:item:${productId}`,
+            `products:seller:${sellerId}`
+        ];
+        if (categoryId) {
+            keysToDelete.push(`products:category:${categoryId}`);
+        }
+        await Promise.all(keysToDelete.map(key => cacheService.delete(key)));
+        logger.info(`[PRODUCT_CACHE] Invalidated targeted keys for product ${productId}`);
+    }
+
+    static parseAndValidatePrice(price) {
+        if (price === undefined || price === null) {
+            throw new Error('Price is required');
+        }
+        const num = Number.parseFloat(price);
+        if (!Number.isFinite(num) || num < Fees.PRODUCT_MIN_PRICE) {
+            throw new Error(`Minimum price must be KES ${Fees.PRODUCT_MIN_PRICE}`);
+        }
+        // Strict integer cent calculation
+        const cents = Math.round(num * 100);
+        return cents / 100;
     }
 
     static async getSellerProducts(sellerId) {
@@ -201,11 +223,7 @@ class ProductService {
             const updateFields = {};
             if (name !== undefined) updateFields.name = name;
             if (price !== undefined) {
-                const priceValue = Number.parseFloat(price);
-                if (!Number.isFinite(priceValue) || priceValue < Fees.PRODUCT_MIN_PRICE) {
-                    throw new Error(`Minimum price must be KES ${Fees.PRODUCT_MIN_PRICE}`);
-                }
-                updateFields.price = priceValue;
+                updateFields.price = ProductService.parseAndValidatePrice(price);
             }
             if (description !== undefined) updateFields.description = description;
             if (image_url !== undefined) updateFields.image_url = image_url;
@@ -284,8 +302,8 @@ class ProductService {
 
             await client.query('COMMIT');
 
-            // Invalidate cache
-            await cacheService.clearPattern("products:*");
+            // Targeted Invalidate cache
+            await ProductService.invalidateProductCache(productId, sellerId, data.category_id || null);
 
             return updatedProduct;
 
@@ -368,8 +386,8 @@ class ProductService {
             if (exists.seller_id !== sellerId) throw new Error('Unauthorized');
         }
 
-        // Invalidate cache
-        await cacheService.clearPattern("products:*");
+        // Targeted Invalidate cache
+        await ProductService.invalidateProductCache(productId, sellerId);
 
         return true;
     }

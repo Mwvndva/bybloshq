@@ -1,5 +1,5 @@
 import { useState, useRef, type CSSProperties, type MouseEvent } from 'react';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { Product, Seller } from '@/shared/types';
 import type { ApiSellerProduct, ApiProduct } from '@/shared/types/api/product';
 import { useWishlist } from '@/features/buyer/hooks/useWishlist';
@@ -22,11 +22,11 @@ export function useProductCheckout(product: Product, seller: Seller | undefined,
   const navigate = useNavigate();
 
   const wishlistContext = useWishlist();
-  const { isAuthenticated } = useBuyerAuth();
+  const { isAuthenticated } = useGlobalAuth();
 
-  const addToWishlist = wishlistContext.addToWishlist;
-  const isInWishlist = wishlistContext.isInWishlist;
-  const isWishlistLoading = wishlistContext.isLoading;
+  const addToWishlist = wishlistContext?.addToWishlist || (async () => {});
+  const isInWishlist = wishlistContext?.isInWishlist || (() => false);
+  const isWishlistLoading = wishlistContext?.isLoading || false;
 
   // Dialog state
 

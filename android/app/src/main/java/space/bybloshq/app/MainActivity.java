@@ -1,7 +1,8 @@
 package space.bybloshq.app;
 
 import android.os.Bundle;
-
+import android.webkit.CookieManager;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -10,13 +11,18 @@ public class MainActivity extends BridgeActivity {
         // Register the custom native share plugin before the bridge starts.
         registerPlugin(SocialSharePlugin.class);
         super.onCreate(savedInstanceState);
+
+        WebView webView = getBridge().getWebView();
+        if (webView != null) {
+            CookieManager.getInstance().setAcceptCookie(true);
+            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+        }
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        if (this.bridge != null && this.bridge.getWebView() != null) {
-            this.bridge.getWebView().setBackgroundColor(android.graphics.Color.TRANSPARENT);
-        }
+    public void onPause() {
+        super.onPause();
+        // Flush in-memory cookies to persistent storage when app goes to background
+        CookieManager.getInstance().flush();
     }
 }

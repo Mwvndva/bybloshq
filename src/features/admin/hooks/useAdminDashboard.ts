@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAdminAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useGetBuyerByIdMutation, useDeleteUserMutation, useDeleteCreatorMutation, useUpdateBuyerStatusMutation, useGetSellerByIdMutation, useUpdateSellerStatusMutation, useUpdateWithdrawalRequestStatusMutation } from '@/features/admin/hooks/mutations/useAdminMutations';
@@ -23,7 +23,7 @@ import type { DashboardAnalytics, MonthlyMetricsData, WithdrawalRequest, Financi
 
 export function useAdminDashboard() {
   // All hooks must be called unconditionally at the top level
-  const { isAuthenticated, loading: authLoading } = useAdminAuth();
+  const { isAuthenticated, isLoading: authLoading } = useGlobalAuth();
   const navigate = useNavigate();
 
   const getBuyerByIdMutation = useGetBuyerByIdMutation();

@@ -57,15 +57,39 @@ export function writeScopePref(scope: ThemeScope, pref: AppTheme): void {
  */
 export function useThemeScope(scope: ThemeScope): { theme: AppTheme; setTheme: (t: AppTheme) => void } {
   const [theme, setThemeState] = useState<AppTheme>(() => readScopePref(scope));
+  const [, setSystemTick] = useState(0);
 
   useEffect(() => {
     applyResolvedTheme(resolveTheme(theme));
-    if (theme !== 'system' || typeof window === 'undefined') return;
+
+    if (typeof window === 'undefined') return;
+
+    // Cross-tab theme sync handler
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === keyFor(scope) && isAppTheme(e.newValue)) {
+        setThemeState(e.newValue);
+        applyResolvedTheme(resolveTheme(e.newValue));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    if (theme !== 'system') {
+      return () => window.removeEventListener('storage', handleStorageChange);
+    }
+
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => applyResolvedTheme(mq.matches ? 'dark' : 'light');
+    const handler = () => {
+      applyResolvedTheme(mq.matches ? 'dark' : 'light');
+      setSystemTick((prev) => prev + 1);
+    };
     mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [theme]);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      mq.removeEventListener('change', handler);
+    };
+  }, [theme, scope]);
 
   const setTheme = useCallback((next: AppTheme) => {
     writeScopePref(scope, next);

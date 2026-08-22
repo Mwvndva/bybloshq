@@ -80,22 +80,33 @@ pool.on('error', (err) => {
 export const query = async (text, params) => {
   const start = Date.now();
   try {
-    logger.debug('Executing query:', { text, params });
-    const res = await pool.query(text, params);
+    const queryConfig = (typeof text === 'object' && text !== null) ? text : { text, values: params };
+    logger.debug('Executing query:', { text: queryConfig.text || text, name: queryConfig.name, params: queryConfig.values || params });
+    const res = await pool.query(queryConfig);
     const duration = Date.now() - start;
     logger.debug('Query executed successfully', {
-      text,
+      text: queryConfig.text || text,
+      name: queryConfig.name,
       duration: `${duration}ms`,
       rows: res.rowCount
     });
     return res;
   } catch (error) {
+    const duration = Date.now() - start;
+    const qText = typeof text === 'object' ? text?.text : text;
+    const qName = typeof text === 'object' ? text?.name : undefined;
+
+    error.queryText = qText;
+    error.queryDurationMs = duration;
+
     logger.error('Database query error:', {
       error: error.message,
       code: error.code,
       detail: error.detail,
-      query: text,
-      params
+      query: qText,
+      name: qName,
+      duration: `${duration}ms`,
+      params: (typeof text === 'object' ? text?.values : params)
     });
     throw error;
   }

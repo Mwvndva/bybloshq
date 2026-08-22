@@ -17,6 +17,7 @@ class PaymentController {
   async handlePaystackWebhook(req, res) {
     const webhookData = req.body;
     const data = webhookData.data || webhookData || {};
+    const security = req.webhookSecurity || {};
 
     logger.info('[PaymentController] Paystack webhook received', {
       event: webhookData.event,
@@ -24,37 +25,29 @@ class PaymentController {
       status: data.status,
     });
 
-    try {
-      await CorePaymentService.handlePaystackWebhook(webhookData, {
-        signature: req.headers['x-paystack-signature'],
-        rawBody: req.rawBody,
-        replayEventId: req.webhookSecurity?.replayEventId,
-        hmacVerified: req.webhookSecurity?.hmacVerified === true
-      });
-      logger.info('[PaymentController] Paystack webhook processed successfully', {
-        reference: data.reference
-      });
-      return res.status(200).json({ received: true });
-    } catch (error) {
-      logger.error('[PaymentController] Paystack webhook processing failed:', {
-        reference: data.reference,
-        error: error.message
-      });
-      if (
-        error.message?.includes('missing valid amount')
-        || error.message?.includes('Amount mismatch')
-        || error.message?.includes('amount mismatch')
-      ) {
-        return res.status(200).json({
-          received: true,
-          processed: false,
-          reason: 'verified_provider_payload_rejected'
+    // 1. Respond 200 OK immediately to Paystack within < 200ms
+    res.status(200).json({ status: 'success', message: 'Webhook received and enqueued' });
+
+    // 2. Process order completion asynchronously in background
+    setImmediate(async () => {
+      try {
+        await CorePaymentService.handlePaystackWebhook(webhookData, {
+          signature: req.headers['x-paystack-signature'],
+          rawBody: req.rawBody,
+          replayEventId: security.replayEventId,
+          hmacVerified: security.hmacVerified === true
+        });
+        logger.info('[PaymentController] Paystack webhook processed asynchronously', {
+          reference: data.reference
+        });
+      } catch (error) {
+        logger.error('[PAYSTACK_WEBHOOK_ASYNC] Error completing payment:', {
+          reference: data.reference,
+          eventId: security.replayEventId,
+          error: error.message
         });
       }
-
-      const statusCode = error.message?.includes('signature') ? 401 : 500;
-      return res.status(statusCode).json({ error: 'Webhook processing failed' });
-    }
+    });
   }
 
   /**

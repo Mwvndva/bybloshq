@@ -35,6 +35,9 @@ export function AppProtectedRoute({
             if (path.startsWith('/buyer')) return '/buyer/login';
             if (path.startsWith('/seller')) return '/seller/login';
             if (path.startsWith('/admin')) return '/admin/login';
+            if (path.startsWith('/creator')) return '/creator/login';
+            if (path.startsWith('/mzigo') || path.startsWith('/logistics')) return '/mzigo/login';
+            if (path.startsWith('/marketing')) return '/marketing/login';
             return '/buyer/login';
         };
 

@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWishlist } from '@/features/buyer/hooks/useWishlist';
-import { useBuyerAuth } from '@/features/auth/contexts';
+import { useGlobalAuth } from '@/features/auth/contexts';
+import type { BuyerProfile } from '@/features/auth/types/authTypes';
 import WishlistSection from '../components/WishlistSection';
 import SellersGrid from '@/features/shop/components/SellersGrid';
 import { BuyerBottomNav } from '../components/dashboard/BuyerBottomNav';
@@ -37,7 +38,9 @@ const SWIPE_SECTIONS = ['shop', 'shops', 'wishlist', 'orders'] as const;
 function BuyerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, updateBuyerProfile } = useBuyerAuth();
+  const { user: globalUser, logout, updateProfile } = useGlobalAuth();
+  const user = globalUser?.role === 'buyer' ? globalUser.profile as BuyerProfile : null;
+  const updateBuyerProfile = (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer');
   const { wishlist } = useWishlist();
   const { toast } = useToast();
   const { activeSection, setActiveSection, isProfileSidebarOpen, setIsProfileSidebarOpen } = useBuyerActiveSection();
@@ -72,7 +75,9 @@ function BuyerDashboard() {
   };
 
   // Get refund amount from user - Parse as float to ensure it's a number
-  const refundAmount = typeof user?.refunds === 'string' ? parseFloat(user.refunds) : (user?.refunds || 0);
+  const refundAmount = typeof (user as unknown as { refunds?: string | number })?.refunds === 'string'
+    ? parseFloat((user as unknown as { refunds: string }).refunds)
+    : ((user as unknown as { refunds?: number })?.refunds || 0);
 
 
 

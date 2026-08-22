@@ -320,6 +320,25 @@ class InventoryReservationService {
 
         return this.releaseInventory(client, items);
     }
+
+    static async reserveInventoryWithTTL(client, items, reservationId) {
+        const reservedCount = await this.reserveInventory(client, items);
+
+        // Store 15-minute TTL reservation key in Redis (900 seconds)
+        const reservationKey = `inventory:reservation:${reservationId}`;
+        try {
+            const { getRedisClient } = await import('../../../shared/config/redis.js');
+            const redisClient = getRedisClient();
+            if (redisClient) {
+                await redisClient.setex(reservationKey, 900, JSON.stringify({ items, status: 'RESERVED' }));
+            }
+        } catch (err) {
+            logger.warn('[INVENTORY_TTL] Failed to store Redis reservation TTL:', err.message);
+        }
+
+        logger.info(`[INVENTORY_TTL] Created 15-min reservation TTL for ID ${reservationId}`);
+        return reservedCount;
+    }
 }
 
 export default InventoryReservationService;

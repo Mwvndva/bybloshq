@@ -41,7 +41,7 @@ const mocks = vi.hoisted(() => {
     seller: {
       seller: {
         id: 9,
-        fullName: 'Ada Seller',
+        fullName: 'Ada Lovelace',
         shopName: 'AdaShop',
         email: 'seller@byblos.test',
         whatsappNumber: '0712345678',
@@ -50,6 +50,7 @@ const mocks = vi.hoisted(() => {
       logout: vi.fn(),
       updateSellerProfile: vi.fn(),
     },
+    currentRole: 'buyer',
   };
 
   return {
@@ -74,9 +75,16 @@ vi.mock('@/shared/hooks/use-toast', () => ({
 }));
 
 vi.mock('@/features/auth/contexts', () => ({
-  useBuyerAuth: () => mocks.auth.buyer,
-  useSellerAuth: () => mocks.auth.seller,
-  useGlobalAuth: () => ({ activeRole: 'buyer', roles: ['buyer'], switchRole: vi.fn(), isAuthenticated: true }),
+  useGlobalAuth: () => ({
+    activeRole: mocks.auth.currentRole,
+    roles: ['buyer', 'seller'],
+    user: mocks.auth.currentRole === 'seller'
+      ? { role: 'seller', profile: mocks.auth.seller.seller }
+      : { role: 'buyer', profile: mocks.auth.buyer.user },
+    isAuthenticated: true,
+    logout: mocks.auth.seller.logout,
+    updateProfile: vi.fn(),
+  }),
 }));
 
 vi.mock('@/features/auth/components/AccountSwitcher', () => ({
@@ -238,6 +246,7 @@ describe('dashboard render and cache behavior', () => {
   });
 
   it('seller dashboard reuses products, analytics, and orders cache across remounts', async () => {
+    mocks.auth.currentRole = 'seller';
     const queryClient = createTestQueryClient();
 
     const firstRender = renderWithProviders(<SellerDashboard />, queryClient, '/seller/dashboard');

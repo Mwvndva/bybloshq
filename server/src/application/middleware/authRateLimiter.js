@@ -3,40 +3,48 @@ import { RedisStore } from 'rate-limit-redis';
 import { getRedisClient } from '../../shared/config/redis.js';
 import logger from '../../shared/utils/logger.js';
 
+// In-memory store for progressive attempt tracking when Redis is unavailable
+const memoryAttempts = new Map();
+
+// Progressive lockout configuration
+const LOCKOUT_THRESHOLDS = [
+    { attempts: 10, lockMs: 15 * 60 * 1000, message: 'Account locked due to repeated failed attempts. Please try again in 15 minutes.' },
+    { attempts: 5, lockMs: 60 * 1000, message: 'Too many failed login attempts. Please try again in 1 minute.' }
+];
+
+const getDualKey = (req) => {
+    const email = (req.body?.email || '').trim().toLowerCase();
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown-ip';
+    return `auth:${ip}:${email}`;
+};
+
 const RATE_LIMIT_OPTIONS = {
-    windowMs: 5 * 60 * 1000,
+    windowMs: 15 * 60 * 1000,
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
-    message: {
-        status: 'fail',
-        message: 'Too many login attempts, please try again in 5 minutes',
-    },
-    keyGenerator: (req) => {
-        const email = req.body?.email || '';
-        return `auth:${req.ip}:${email}`;
-    },
+    keyGenerator: getDualKey,
     handler: (req, res) => {
-        logger.warn('[RATE-LIMIT] Auth rate limit exceeded', {
+        const key = getDualKey(req);
+        logger.warn('[RATE-LIMIT] Dual-key auth rate limit exceeded', {
+            key,
             ip: req.ip,
             email: req.body?.email,
             path: req.path
         });
         res.status(429).json({
             status: 'fail',
-            message: 'Too many login attempts, please try again in 5 minutes',
-            retryAfter: 300
+            message: 'Too many login attempts for this IP and account. Please try again in 15 minutes.',
+            retryAfter: 900
         });
     },
-    skip: () => process.env.NODE_ENV === 'development' &&
-        process.env.SKIP_AUTH_RATE_LIMIT === 'true',
+    skip: () => process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH_RATE_LIMIT === 'true',
 };
 
 // Always-available in-memory limiter (no external dependency).
 const memoryLimiter = rateLimit({ ...RATE_LIMIT_OPTIONS });
 
-// Redis-backed limiter for a shared counter across instances. Only used while
-// the Redis client is connected (see authLimiter below).
+// Redis-backed limiter for a shared counter across instances.
 const redisLimiter = rateLimit({
     ...RATE_LIMIT_OPTIONS,
     store: new RedisStore({
@@ -44,12 +52,16 @@ const redisLimiter = rateLimit({
     }),
 });
 
-// Fail-open auth limiter. A Redis outage must never take down authentication:
-// previously a closed Redis connection made every login throw
-// "Connection is closed" -> 500. Use Redis only while the client is ready, and
-// if a Redis command still fails mid-request, fall back to the in-memory
-// limiter instead of surfacing an error.
+/**
+ * Fail-open progressive auth rate limiter with IP + Email dual key.
+ * 5 failed attempts -> 1-minute lock
+ * 10+ failed attempts -> 15-minute lock
+ */
 export const authLimiter = (req, res, next) => {
+    if (process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH_RATE_LIMIT === 'true') {
+        return next();
+    }
+
     const client = getRedisClient();
     const redisReady = Boolean(client) && client.status === 'ready';
 

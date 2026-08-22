@@ -1,0 +1,113 @@
+{
+  "name": "byblos-backend",
+  "version": "1.0.0",
+  "description": "Backend for BYBLOS",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "start:worker": "node src/worker.js",
+    "dev": "nodemon -r dotenv/config src/index.js",
+    "build": "npm install",
+    "migrate": "node scripts/migrate.js",
+    "migrate:create": "node-pg-migrate create",
+    "seed": "node --experimental-json-modules -r dotenv/config scripts/seed-db.js",
+    "test": "node --import ./test/setup.js --test \"test/*.test.js\"",
+    "test:db": "node --import ./test/setup.js --test \"test/**/*.integration.test.js\"",
+    "db:migrate:test": "DOTENV_CONFIG_PATH=.env.test node scripts/migrate.js",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{js,ts,json,md}\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/byblos.git"
+  },
+  "keywords": [
+    "ecommerce",
+    "fashion",
+    "nodejs",
+    "express",
+    "postgresql"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/byblos/issues"
+  },
+  "homepage": "https://github.com/yourusername/byblos#readme",
+  "dependencies": {
+    "@types/uuid": "10.0.0",
+    "axios": "1.18.1",
+    "bcrypt": "6.0.0",
+    "canvas": "3.1.1",
+    "cloudinary": "2.10.0",
+    "compression": "1.8.1",
+    "cookie-parser": "1.4.7",
+    "cors": "2.8.5",
+    "dotenv": "16.5.0",
+    "ejs": "3.1.9",
+    "express": "4.21.2",
+    "express-rate-limit": "7.5.1",
+    "express-xss-sanitizer": "2.0.0",
+    "helmet": "8.1.0",
+    "hpp": "0.2.3",
+    "ioredis": "5.9.2",
+    "jsonwebtoken": "9.0.2",
+    "morgan": "1.10.0",
+    "multer": "2.2.0",
+    "node-cron": "4.2.1",
+    "node-pg-migrate": "6.2.2",
+    "nodemailer": "7.0.3",
+    "nodemailer-smtp-transport": "2.7.4",
+    "pg": "8.16.3",
+    "qrcode": "1.5.4",
+    "rate-limit-redis": "4.3.1",
+    "resend": "^6.20.0",
+    "uuid": "9.0.1",
+    "winston": "3.11.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.7",
+    "chai": "^5.2.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "mocha": "^11.5.0",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.2.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "printWidth": 100,
+    "trailingComma": "es5"
+  },
+  "eslintConfig": {
+    "extends": [
+      "eslint:recommended",
+      "plugin:import/recommended"
+    ],
+    "env": {
+      "node": true,
+      "es2021": true
+    },
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "ignorePatterns": [
+      "dist",
+      "node_modules"
+    ]
+  }
+}

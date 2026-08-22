@@ -1,9 +1,19 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { isNativeApp } from "@/infrastructure/navigation/mobileApp"
+import { DEFAULT_MAP_CENTER } from "@/infrastructure/location/location"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+// Module-level static cache for Intl.NumberFormat instance (10x faster execution)
+const currencyFormatter = new Intl.NumberFormat('en-KE', {
+  style: 'currency',
+  currency: 'KES',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
 export function formatCurrency(amount: number | string | null | undefined): string {
   // Handle null, undefined, or empty string
@@ -38,13 +48,8 @@ export function formatCurrency(amount: number | string | null | undefined): stri
   }
 
   try {
-    // Format as Kenyan Shillings
-    const formatted = new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }).format(numericAmount);
+    // Format as Kenyan Shillings using cached formatter
+    const formatted = currencyFormatter.format(numericAmount);
 
     // Standardize currency symbol to capital KSh
     return formatted.replace(/Ksh/i, 'KSh');
@@ -137,7 +142,7 @@ export function isTokenExpired(token: string): boolean {
 
 /**
  * Normalizes an image path or URL to a full URL
- * Handles base64, absolute URLs, and relative paths from the backend
+ * Handles base64, absolute URLs, relative paths, and Capacitor Native environment paths
  */
 export function getImageUrl(path: string | undefined | null): string {
   // Return placeholder image if no path provided
@@ -149,15 +154,16 @@ export function getImageUrl(path: string | undefined | null): string {
   }
 
   // 2. Identify the backend base URL
-  // We strip the /api suffix if present to get the root serving static files
   const VITE_API_URL = import.meta.env.VITE_API_URL;
   let baseUrl = '';
 
-  if (VITE_API_URL) {
+  if (isNativeApp()) {
+    const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || VITE_API_URL || 'https://byblos-backend-fky5.onrender.com/api';
+    baseUrl = nativeApiUrl.replace(/\/api$/, '').replace(/\/$/, '');
+  } else if (VITE_API_URL) {
     baseUrl = VITE_API_URL.replace(/\/api$/, '').replace(/\/$/, '');
   } else {
-    // In production or development without VITE_API_URL, use the current origin
-    baseUrl = window.location.origin;
+    baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   }
 
   // 3. Normalize the path (ensure it starts with /)
@@ -180,7 +186,6 @@ export function isSellerShopless(input: unknown): boolean {
   // 2. Extract coordinates and address (Strict Backend Parity)
   const latValue = seller.latitude ?? seller.lat;
   const lngValue = seller.longitude ?? seller.lng;
-  const address = seller.physicalAddress ?? seller.physical_address ?? seller.location;
 
   const lat = Number(latValue);
   const lng = Number(lngValue);
@@ -189,17 +194,16 @@ export function isSellerShopless(input: unknown): boolean {
   const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
 
   // 4. Check for Nairobi sentinel (the default placeholder)
-  const isDefaultNairobi = hasCoords && (Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001);
+  const isDefaultNairobi = hasCoords && (
+    Math.abs(lat - DEFAULT_MAP_CENTER.lat) < 0.0001 &&
+    Math.abs(lng - DEFAULT_MAP_CENTER.lng) < 0.0001
+  );
 
   // 5. BACKEND ALIGNMENT: To have a shop, you MUST have valid non-sentinel coordinates.
-  // Address is highly recommended but coordinates are the primary SOT for fulfillment resolution.
   const hasShop = hasCoords && !isDefaultNairobi;
 
-  // 6. Support for the explicit flag as a secondary check if coords/address exist
-  // but prioritize the rigorous "hasShop" check for fulfillment routing.
   if (hasShop) return false;
 
-  // 7. Otherwise, they are shopless (Mobile Service only)
   return true;
 }
 

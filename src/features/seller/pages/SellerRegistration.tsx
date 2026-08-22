@@ -19,7 +19,8 @@ interface SellerRegistrationProps {
   onSuccess?: () => void;
 }
 
-import { useSellerAuth } from '@/features/auth/contexts';
+
+
 
 const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const navigate = useNavigate();

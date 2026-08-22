@@ -28,6 +28,9 @@ export default async (app) => {
         await verifyRequiredIndexes();
     } catch (err) {
         logger.error('Database connection/verification failed:', err.message);
+        if (process.env.NODE_ENV === 'test') {
+            throw err;
+        }
         process.exit(1);
     }
 

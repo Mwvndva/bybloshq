@@ -5,9 +5,16 @@ import * as withdrawalRequestRepository from '../../payments/withdrawals/withdra
 import * as sellerRepository from '../../commerce/sellers/seller.repository.js';
 import payoutService from '../../payments/payouts/payout.service.js';
 import { getWithdrawalReservedAmount } from '../../../shared/utils/withdrawalUtils.js';
+import CacheService from '../../../shared/utils/cache.service.js';
 
 class AdminService {
   async getDashboardStats() {
+    const cacheKey = 'admin:dashboard:stats';
+    const cachedStats = await CacheService.get(cacheKey);
+    if (cachedStats) {
+      return cachedStats;
+    }
+
     // Parallel queries
     const queries = {
       sellers: 'SELECT COUNT(*) FROM sellers WHERE user_id IS NOT NULL',
@@ -87,7 +94,7 @@ class AdminService {
     }
 
     // Map to expected frontend keys
-    return {
+    const result = {
       totalSellers: stats.total_sellers,
       totalBuyers: stats.total_buyers,
       totalCreators: stats.total_creators,
@@ -103,6 +110,9 @@ class AdminService {
       pendingWithdrawals: stats.total_pendingWithdrawals,
       topShops
     };
+
+    await CacheService.set(cacheKey, result, 60);
+    return result;
   }
 
   async getAnalytics() {

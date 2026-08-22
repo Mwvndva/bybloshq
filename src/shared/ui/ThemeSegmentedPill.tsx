@@ -25,11 +25,23 @@ const SEGMENTS: { value: AppTheme; label: string; Icon: ComponentType<{ classNam
  */
 export function ThemeSegmentedPill({ value, onChange, showLabels = true, className }: ThemeSegmentedPillProps) {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
+
+    let targetValue: AppTheme = value;
     const index = SEGMENTS.findIndex((segment) => segment.value === value);
-    const delta = event.key === 'ArrowRight' ? 1 : SEGMENTS.length - 1;
-    onChange(SEGMENTS[(index + delta) % SEGMENTS.length].value);
+
+    if (event.key === 'Home') {
+      targetValue = SEGMENTS[0].value;
+    } else if (event.key === 'End') {
+      targetValue = SEGMENTS[SEGMENTS.length - 1].value;
+    } else if (event.key === 'ArrowRight') {
+      targetValue = SEGMENTS[(index + 1) % SEGMENTS.length].value;
+    } else if (event.key === 'ArrowLeft') {
+      targetValue = SEGMENTS[(index - 1 + SEGMENTS.length) % SEGMENTS.length].value;
+    }
+
+    onChange(targetValue);
   };
 
   return (

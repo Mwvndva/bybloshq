@@ -6,8 +6,10 @@ import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
  * android/app/src/main/java/co/ke/byblos/app/plugins/SocialSharePlugin.java).
  */
 export interface SocialSharePluginInterface {
-  shareToInstagramStories(options: { imageBase64: string }): Promise<void>;
-  shareToWhatsApp(options: { imageBase64: string; text?: string }): Promise<void>;
+  shareToInstagramStory(options: { pngBase64?: string; imageBase64?: string }): Promise<void>;
+  shareToInstagramStories(options: { pngBase64?: string; imageBase64?: string }): Promise<void>;
+  shareImage(options: { pngBase64?: string; imageBase64?: string; caption?: string; text?: string }): Promise<void>;
+  shareToWhatsApp(options: { pngBase64?: string; imageBase64?: string; caption?: string; text?: string }): Promise<void>;
 }
 
 const SocialShare = registerPlugin<SocialSharePluginInterface>('SocialShare');
@@ -16,7 +18,7 @@ export async function shareCardToInstagram(dataUrl: string): Promise<void> {
   const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
 
   if (isNativeApp()) {
-    await SocialShare.shareToInstagramStories({ imageBase64: base64 });
+    await SocialShare.shareToInstagramStories({ pngBase64: base64, imageBase64: base64 });
     return;
   }
 
@@ -34,7 +36,7 @@ export async function shareCardToWhatsApp(dataUrl: string): Promise<void> {
   const shareText = 'I just joined Byblos as a founder member. Every purchase is held safe until it shows up. Check it out at https://byblosafrica.site';
 
   if (isNativeApp()) {
-    await SocialShare.shareToWhatsApp({ imageBase64: base64, text: shareText });
+    await SocialShare.shareToWhatsApp({ pngBase64: base64, imageBase64: base64, caption: shareText, text: shareText });
     return;
   }
 

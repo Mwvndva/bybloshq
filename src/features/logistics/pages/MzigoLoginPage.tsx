@@ -1,14 +1,17 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { ArrowLeft, Lock, Mail, Truck } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
 
 const MzigoLoginPage = () => {
   const navigate = useNavigate();
   const { login, user } = useGlobalAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -19,96 +22,131 @@ const MzigoLoginPage = () => {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    let targetEmail = email?.trim().toLowerCase();
+    let targetPassword = password?.trim();
+
+    if (!targetEmail) {
+      const emailEl = document.querySelector<HTMLInputElement>('input[name="email"], input[type="email"]');
+      if (emailEl?.value) targetEmail = emailEl.value.trim().toLowerCase();
+    }
+    if (!targetPassword) {
+      const passEl = document.querySelector<HTMLInputElement>('input[name="password"], input[type="password"]');
+      if (passEl?.value) targetPassword = passEl.value;
+    }
+
+    if (!targetEmail || !targetPassword) {
+      toast.error('Please enter your email and password.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await login(email, password, 'logistics');
-      navigate('/mzigo/dashboard', { replace: true });
-    } catch (error: any) {
-      const message = !error?.response
+      await login(targetEmail, targetPassword, 'logistics');
+      // Navigation handled by useGlobalAuth().login() via getDashboardPath('logistics')
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      const message = !err?.response
         ? 'Connection error. Please check your network connection and try again.'
-        : error?.response?.data?.message || error?.message || 'Check the Mzigo credentials and try again.';
-      toast.error('Login failed', {
-        description: message,
-      });
+        : err?.response?.data?.message || err?.message || 'Check the Mzigo credentials and try again.';
+      toast.error('Login failed', { description: message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <main className="auth-page min-h-[100svh] overflow-x-hidden bg-[#f8f7f2] px-4 py-6 text-stone-950">
-      <button
-        type="button"
-        onClick={() => navigate('/')}
-        className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:border-stone-300 hover:text-stone-950"
-      >
-        <ArrowLeft size={16} />
-        Back
-      </button>
+    <main
+      className="min-h-[100svh] bg-[#090909] text-white"
+      style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}
+    >
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)]">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="relative flex h-16 items-center justify-between sm:h-20">
+            <div className="flex flex-1 items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="rounded-xl px-3 py-2 text-sm text-white/75 transition-all duration-200 hover:bg-yellow-100 hover:text-black"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                <span>Back</span>
+              </Button>
+            </div>
 
-      <section className="mx-auto flex min-h-[calc(100svh-96px)] max-w-md items-start py-6 sm:items-center sm:py-0">
+            <div className="absolute left-1/2 flex min-w-0 max-w-[46%] -translate-x-1/2 items-center justify-center gap-2 text-center sm:max-w-[50%]">
+              <Truck className="h-5 w-5 text-yellow-400 shrink-0" />
+              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Mzigo Ego</h1>
+            </div>
+
+            <div className="flex-1" aria-hidden="true" />
+          </div>
+        </div>
+      </header>
+
+      {/* Form */}
+      <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-md flex-col px-4 py-5 sm:min-h-[calc(100svh-5rem)]">
         <form
           onSubmit={handleSubmit}
-          className="w-full rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_22px_60px_rgba(17,17,17,0.09)] md:p-8"
+          className="my-auto w-full space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)]"
         >
-          <div className="mb-8 text-center">
-            <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-200 bg-yellow-100 text-black">
-              <Truck size={28} className="text-yellow-600" />
-            </span>
-            <h1 className="text-3xl font-semibold tracking-tight text-stone-950">Mzigo Ego</h1>
-            <p className="mt-2 text-sm text-stone-500">Door to door logistics dashboard.</p>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">Logistics</p>
+            <h2 className="text-3xl font-black tracking-tight">Welcome back.</h2>
+            <p className="text-sm font-medium leading-6 text-white/55">Door-to-door logistics dashboard.</p>
           </div>
 
-          <label className="mb-5 block">
-            <span className="mb-2 block text-sm font-medium text-stone-700">Email</span>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                autoComplete="email"
-                className="h-12 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-4 text-sm text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/15"
-                placeholder="mzigo@example.com"
-              />
-            </div>
-          </label>
+          <Input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            id="email"
+            name="email"
+            autoComplete="email"
+            placeholder="Email"
+            className="h-12 rounded-2xl border-white/10 bg-black/45"
+            required
+            disabled={isSubmitting}
+          />
 
-          <label className="mb-6 block">
-            <span className="mb-2 block text-sm font-medium text-stone-700">Password</span>
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                autoComplete="current-password"
-                className="h-12 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-4 text-sm text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/15"
-                placeholder="Enter password"
-              />
-            </div>
-          </label>
+          <div className="relative">
+            <Input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              name="password"
+              autoComplete="current-password"
+              placeholder="Password"
+              className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12"
+              required
+              disabled={isSubmitting}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/45 transition hover:bg-white/10 hover:text-white"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
 
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-yellow-400 px-4 text-sm font-semibold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-12 w-full rounded-2xl bg-yellow-400 font-black text-black hover:bg-yellow-300"
           >
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
-          </button>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
+          </Button>
         </form>
-      </section>
+      </div>
     </main>
   );
 };
 
 export default MzigoLoginPage;
-
-

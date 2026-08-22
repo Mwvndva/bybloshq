@@ -1,13 +1,71 @@
-import apiClient from '@/infrastructure/http/apiClient';
+import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import type { ApiOrder, OrderStatus } from '@/shared/types';
 import type { OrdersAnalytics, OrderQueryParams } from '../types';
+import { storage } from '@/infrastructure/storage/storage';
 
 const sellerApiInstance = apiClient;
 
 export const sellerOrdersApi = {
   async getOrders(params?: OrderQueryParams): Promise<ApiOrder[]> {
-    const response = await sellerApiInstance.get<{ data: ApiOrder[] }>('/sellers/orders', { params });
-    return response.data.data;
+    let responseBody: any = null;
+
+    try {
+      const response = await sellerApiInstance.get<any>('/sellers/orders', { params });
+      responseBody = response?.data !== undefined ? response.data : response;
+      if (typeof responseBody === 'string' && responseBody.trim()) {
+        try {
+          responseBody = JSON.parse(responseBody);
+        } catch {
+          /* ignore json parse error */
+        }
+      }
+    } catch {
+      /* ignore Axios error for fetch fallback */
+    }
+
+    if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
+      try {
+        const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
+        const csrfToken = await getFreshCsrfToken();
+        const queryString = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
+        const fetchRes = await fetch(`https://byblos-backend-fky5.onrender.com/api/sellers/orders${queryString}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+            'X-CSRF-Token': csrfToken || '',
+            'Cookie': `csrf-token-v2=${csrfToken}; _csrf=${csrfToken}`
+          },
+          credentials: 'include'
+        });
+        const textData = await fetchRes.text();
+        if (textData && typeof textData === 'string') {
+          try {
+            responseBody = JSON.parse(textData);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore fetch fallback error */
+      }
+    }
+
+    if (!responseBody || typeof responseBody !== 'object') {
+      return [];
+    }
+
+    const rawOrders = Array.isArray(responseBody)
+      ? responseBody
+      : (Array.isArray(responseBody?.data)
+          ? responseBody.data
+          : (Array.isArray(responseBody?.data?.orders)
+              ? responseBody.data.orders
+              : (Array.isArray(responseBody?.orders)
+                  ? responseBody.orders
+                  : [])));
+
+    return rawOrders;
   },
 
   async getOrder(orderId: string): Promise<ApiOrder> {

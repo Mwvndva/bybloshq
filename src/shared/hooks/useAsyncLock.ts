@@ -8,15 +8,15 @@ export function useAsyncLock() {
     const lockRef = useRef(false);
     const [isLocked, setIsLocked] = useState(false);
 
-    const runWithLock = useCallback(async (fn: () => Promise<void>) => {
+    const runWithLock = useCallback(async <T>(fn: () => Promise<T>): Promise<T | undefined> => {
         // Synchronous guard to prevent overlapping calls
-        if (lockRef.current) return;
+        if (lockRef.current) return undefined;
 
         lockRef.current = true;
         setIsLocked(true);
 
         try {
-            await fn();
+            return await fn();
         } finally {
             // Always release the lock, even if the function fails
             lockRef.current = false;

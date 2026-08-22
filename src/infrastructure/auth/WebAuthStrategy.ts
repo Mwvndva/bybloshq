@@ -12,6 +12,14 @@ export const getFreshCsrfToken = async (): Promise<string | null> => {
     const response = await axios.get(`${baseURL}/public/csrf-token`, { withCredentials: true });
     csrfTokenCache = (response as import('axios').AxiosResponse<{ data?: { csrfToken?: string } }>).data?.data?.csrfToken || null;
     lastFetchedAt = Date.now();
+    if (csrfTokenCache && typeof document !== 'undefined') {
+      try {
+        document.cookie = `csrf-token-v2=${csrfTokenCache}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `_csrf=${csrfTokenCache}; path=/; max-age=86400; SameSite=Lax`;
+      } catch {
+        /* ignore cookie write errors */
+      }
+    }
     return csrfTokenCache;
   } catch (error) {
     console.error('Failed to fetch CSRF token:', error);
@@ -42,7 +50,10 @@ export class WebAuthStrategy implements AuthStrategy {
     if (!token) {
       token = await getFreshCsrfToken();
     }
-    return token ? { 'X-CSRF-Token': token } : {};
+    return token ? {
+      'X-CSRF-Token': token,
+      'Cookie': `csrf-token-v2=${token}; _csrf=${token}`
+    } : {};
   }
 
   async handleUnauthorized(): Promise<boolean> {

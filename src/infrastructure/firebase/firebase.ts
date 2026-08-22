@@ -14,16 +14,26 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let analytics: Analytics | null = null;
 
-if (firebaseConfig.apiKey && typeof window !== "undefined") {
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+export const getFirebaseApp = (): FirebaseApp | null => {
+  if (!app && firebaseConfig.apiKey && typeof window !== "undefined") {
+    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  }
+  return app;
+};
 
-  isSupported().then((supported) => {
-    if (supported && app) {
-      analytics = getAnalytics(app);
+export const initFirebaseAnalytics = async (): Promise<Analytics | null> => {
+  const currentApp = getFirebaseApp();
+  if (!currentApp || analytics) return analytics;
+
+  try {
+    const supported = await isSupported();
+    if (supported) {
+      analytics = getAnalytics(currentApp);
     }
-  }).catch(() => {
-    // Ignore analytics unsupported environments (e.g., ad blockers, SSR context)
-  });
-}
+  } catch {
+    // Ignore analytics unsupported environments
+  }
+  return analytics;
+};
 
 export { app, analytics, firebaseConfig };

@@ -1,4 +1,25 @@
+import { v2 as cloudinary } from 'cloudinary';
 import { query } from '../../../infrastructure/database/database.js';
+import logger from '../../../shared/utils/logger.js';
+
+export async function generateSecureDownloadUrl(digitalFilePath, userId) {
+  if (!digitalFilePath) return null;
+  const expiresAt = Math.floor(Date.now() / 1000) + 900; // 15 minutes
+
+  try {
+    const signedUrl = cloudinary.utils.private_download_url(digitalFilePath, 'pdf', {
+      resource_type: 'raw',
+      type: 'authenticated',
+      expires_at: expiresAt
+    });
+
+    logger.info(`[DIGITAL_VAULT] Issued 15-min signed download link for user ${userId}`);
+    return signedUrl;
+  } catch (err) {
+    logger.warn(`[DIGITAL_VAULT] Cloudinary signed URL generation fallback for ${digitalFilePath}:`, err.message);
+    return digitalFilePath;
+  }
+}
 
 /**
  * Verifies that a buyer owns a paid digital product inside a specific
@@ -11,7 +32,7 @@ import { query } from '../../../infrastructure/database/database.js';
  * @param {number|string} input.orderId
  * @param {number|string} input.buyerId
  * @param {number|string} input.productId
- * @returns {Promise<{order_id: number, product_id: number, product_name: string, digital_file_path: string|null, digital_file_name: string|null}|undefined>}
+ * @returns {Promise<{order_id: number, product_id: number, product_name: string, digital_file_path: string|null, digital_file_name: string|null, download_url?: string|null}|undefined>}
  */
 export async function findVerifiedDigitalItem({ orderId, buyerId, productId }) {
   const sql = `
@@ -31,5 +52,11 @@ export async function findVerifiedDigitalItem({ orderId, buyerId, productId }) {
       AND (p.product_type = 'digital' OR p.is_digital = true)
   `;
   const { rows } = await query(sql, [orderId, buyerId, productId]);
-  return rows[0];
+  const item = rows[0];
+  if (!item) return undefined;
+
+  if (item.digital_file_path) {
+    item.download_url = await generateSecureDownloadUrl(item.digital_file_path, buyerId);
+  }
+  return item;
 }

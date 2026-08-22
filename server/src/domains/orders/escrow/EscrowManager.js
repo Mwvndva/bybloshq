@@ -160,8 +160,12 @@ class EscrowManager {
         return { success: true, alreadyReleased: false, availableAt };
     }
 
+    toCents(amount) {
+        return Math.round(Number(amount || 0) * 100);
+    }
+
     roundMoney(amount) {
-        return Math.round(Number(amount || 0) * 100) / 100;
+        return this.toCents(amount) / 100;
     }
 
     getOrderMetadata(order) {
@@ -185,22 +189,19 @@ class EscrowManager {
         );
 
         if (hasCheckoutPricing) {
-            const buyerDeliveryFee = this.roundMoney(metadata?.pricing?.buyer_delivery_fee || 0);
-            const retainedAmount = this.roundMoney(totalAmount - sellerPayoutAmount - buyerDeliveryFee);
+            const buyerDeliveryFeeCents = this.toCents(metadata?.pricing?.buyer_delivery_fee || 0);
+            const totalCents = this.toCents(totalAmount);
+            const sellerPayoutCents = this.toCents(sellerPayoutAmount);
+            const retainedCents = totalCents - sellerPayoutCents - buyerDeliveryFeeCents;
 
-            if (Number.isFinite(retainedAmount) && retainedAmount >= 0) {
-                return retainedAmount;
+            if (retainedCents >= 0) {
+                return retainedCents / 100;
             }
         }
 
-        return this.roundMoney(
-            Number.parseFloat(
-                order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount)
-            )
-        );
+        const feeVal = order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount);
+        return this.toCents(feeVal) / 100;
     }
 }
 
 export default new EscrowManager();
-
-

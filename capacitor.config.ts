@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'space.bybloshq.app',
   appName: 'Byblos',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
     androidScheme: 'https'
   },
@@ -16,7 +15,7 @@ const config: CapacitorConfig = {
       presentationOptions: ['badge', 'sound', 'alert']
     },
     SystemBars: {
-      insetsHandling: 'disable'
+      insetsHandling: 'css'
     }
   }
 };

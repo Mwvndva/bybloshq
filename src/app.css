@@ -17,7 +17,12 @@ body,
 }
 
 :root {
-    /* Byblos dark theme — pure black base, charcoal surfaces, yellow accent. */
+    /* ── Safe-area inset CSS variables (set by the browser from env()) ─────── */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    /* ── Byblos dark theme — pure black base, charcoal surfaces, yellow accent. */
     --byblos-bg: #000000;
     --byblos-surface: #0a0a0a;
     --byblos-surface-soft: #141414;
@@ -195,6 +200,35 @@ body,
 }
 
 @layer utilities {
+    /* ── Safe-area utility classes ─────────────────────────────────────────── */
+    .safe-top {
+        padding-top: var(--sat);
+    }
+
+    .safe-bottom {
+        padding-bottom: var(--sab);
+    }
+
+    .safe-left {
+        padding-left: var(--sal);
+    }
+
+    .safe-right {
+        padding-right: var(--sar);
+    }
+
+    .safe-x {
+        padding-left: var(--sal);
+        padding-right: var(--sar);
+    }
+
+    /* Auth pages: always dark background, always full safe-area coverage */
+    .auth-page {
+        min-height: 100svh;
+        min-height: calc(100svh + var(--sat) + var(--sab));
+        padding-bottom: var(--sab);
+    }
+
     .mobile-compact {
         @apply p-3 sm:p-4 md:p-5 lg:p-6;
     }

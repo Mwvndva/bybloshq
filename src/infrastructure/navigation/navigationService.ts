@@ -53,7 +53,7 @@ export function isAppNavigatorReady(): boolean {
  * back to a hard navigation for the early-boot edge case.
  */
 export function appNavigate(path: string, options?: NavigateOptions): boolean {
-  if (!appNavigator) return false;
+  if (!appNavigator || !path) return false;
   appNavigator(path, options);
   return true;
 }
@@ -64,11 +64,12 @@ export function appNavigate(path: string, options?: NavigateOptions): boolean {
  * reload, so native does not cold-reboot the WebView. Returns `false` when the
  * router is not mounted yet so the caller can hard-navigate as a last resort.
  */
-export function emitSessionExpired(redirectPath: string): boolean {
+export function emitSessionExpired(redirectPath: string = '/buyer/login'): boolean {
   if (!isAppNavigatorReady()) return false;
+  const targetPath = redirectPath && redirectPath.startsWith('/') ? redirectPath : '/buyer/login';
   globalThis.dispatchEvent(
     new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
-      detail: { redirectPath },
+      detail: { redirectPath: targetPath },
     }),
   );
   return true;

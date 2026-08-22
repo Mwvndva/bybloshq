@@ -6,16 +6,42 @@ import escrowManager from '../../domains/orders/escrow/EscrowManager.js';
 import InventoryReservationService from '../../domains/commerce/products/inventoryReservation.service.js';
 import OrderService from '../../domains/orders/order/OrderService.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import { AppError } from '../../shared/utils/errorHandler.js';
 
 export class CheckoutWorkflow {
   static async createOrder(orderData, externalClient = null) {
+    const { buyerId } = orderData;
+    const lockKey = `lock:checkout:${buyerId}`;
+
+    let redisClient = null;
+    try {
+      const { getRedisClient } = await import('../../shared/config/redis.js');
+      redisClient = getRedisClient();
+    } catch (e) {
+      redisClient = null;
+    }
+
+    if (redisClient) {
+      try {
+        const acquired = await redisClient.set(lockKey, '1', 'NX', 'EX', 10);
+        if (!acquired) {
+          throw new AppError('A checkout operation is already in progress. Please wait.', 429);
+        }
+      } catch (lockErr) {
+        if (lockErr.statusCode === 429 || lockErr.message?.includes('already in progress')) {
+          throw lockErr;
+        }
+        logger.warn('[CHECKOUT_LOCK] Redis lock check failed, proceeding:', lockErr.message);
+      }
+    }
+
     const isManaged = !externalClient;
     const client = externalClient || (await pool.connect());
 
     try {
       if (isManaged) await client.query('BEGIN');
 
-      const { buyerId, sellerId, items, shippingAddress, referralCode } = orderData;
+      const { sellerId, items, shippingAddress, referralCode } = orderData;
 
       // 1. Calculate Totals
       const { subtotal, platformFee, escrowAmount, totalAmount } = await OrderService.calculateTotals(items, Fees);
@@ -59,6 +85,9 @@ export class CheckoutWorkflow {
       throw err;
     } finally {
       if (isManaged) client.release();
+      if (redisClient) {
+        await redisClient.del(lockKey).catch(() => {});
+      }
     }
   }
 }

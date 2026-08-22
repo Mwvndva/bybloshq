@@ -1,0 +1,17 @@
+NODE_ENV=production
+PORT=8080
+
+# Database Configuration
+DB_HOST=postgresql://byblos-db-user:your-db-password@byblos-db:5432/byblos_db
+DB_PORT=5432
+DB_NAME=byblos_db
+DB_USER=byblos-db-user
+DB_PASSWORD=your-db-password
+
+# JWT Configuration
+JWT_SECRET=your-production-secret-key
+JWT_EXPIRES_IN=24h
+JWT_REFRESH_EXPIRES_IN=7d
+
+# CORS Configuration
+CORS_ORIGIN=https://your-frontend-domain.com

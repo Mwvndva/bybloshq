@@ -42,69 +42,53 @@ export default async (app) => {
         }
     }));
 
-    // 3. CORS Hardening
-    const rawAllowedOrigins = (process.env.ALLOWED_ORIGINS || '')
-        .split(',')
-        .map(o => o.trim().replace(/^["']|["']$/g, ''))
-        .filter(o => o !== '');
-
-    // Automatically include FRONTEND_URL if set
-    if (process.env.FRONTEND_URL) {
-        rawAllowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
-    }
-
-    const allowedOrigins = [...new Set(rawAllowedOrigins)];
-    logger.info(`🌐 Whitelisted origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'none (using defaults)'}`);
+    // 3. CORS Hardening with Pre-Calculated Origin Set
+    const buildOriginSet = (rawList) => {
+        const set = new Set();
+        for (const item of rawList) {
+            if (!item) continue;
+            const trimmed = String(item).trim().replace(/^["']|["']$/g, '').replace(/\/$/, '');
+            if (!trimmed) continue;
+            set.add(trimmed);
+            try {
+                const url = new URL(trimmed);
+                const host = url.hostname;
+                const port = url.port ? `:${url.port}` : '';
+                if (host.startsWith('www.')) {
+                    set.add(`${url.protocol}//${host.substring(4)}${port}`);
+                } else {
+                    set.add(`${url.protocol}//www.${host}${port}`);
+                }
+            } catch {
+                // Ignore non-URL origin strings
+            }
+        }
+        return set;
+    };
 
     const isLocal = process.env.NODE_ENV !== 'production';
-    const nativeAppOrigins = [
+    const allowedOriginSet = buildOriginSet([
+        ...(process.env.ALLOWED_ORIGINS || '').split(','),
+        process.env.FRONTEND_URL,
         'capacitor://localhost',
         'ionic://localhost',
-        'https://localhost'
-    ];
+        'https://localhost',
+        ...(isLocal ? [
+            'http://localhost:3000', 'http://127.0.0.1:3000',
+            'http://localhost:3001', 'http://127.0.0.1:3001',
+            'http://localhost:3002', 'http://127.0.0.1:3002',
+            'http://localhost:5173', 'http://127.0.0.1:5173'
+        ] : [])
+    ]);
 
-    const localOrigins = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:3001',
-        'http://127.0.0.1:3001',
-        'http://localhost:3002',
-        'http://127.0.0.1:3002',
-        'http://localhost:5173',
-        'http://127.0.0.1:5173'
-    ];
+    logger.info(`🌐 Whitelisted origins count: ${allowedOriginSet.size}`);
 
     const corsOptions = {
         origin: function (origin, callback) {
             // Allow requests with no origin (like mobile apps or curl)
             if (!origin) return callback(null, true);
 
-            // Dynamic check for allowed origins including www/non-www variants
-            const checkOrigin = (allowedList, currentOrigin) => {
-                if (allowedList.includes(currentOrigin)) return true;
-
-                // Check if adding/removing 'www.' makes it match
-                const url = new URL(currentOrigin);
-                const hostname = url.hostname;
-                const protocol = url.protocol;
-                const port = url.port ? `:${url.port}` : '';
-
-                if (hostname.startsWith('www.')) {
-                    const nonWwwOrigin = `${protocol}//${hostname.substring(4)}${port}`;
-                    if (allowedList.includes(nonWwwOrigin)) return true;
-                } else {
-                    const wwwOrigin = `${protocol}//www.${hostname}${port}`;
-                    if (allowedList.includes(wwwOrigin)) return true;
-                }
-                return false;
-            };
-
-            const isAllowed =
-                checkOrigin(allowedOrigins, origin) ||
-                checkOrigin(nativeAppOrigins, origin) ||
-                (isLocal && checkOrigin(localOrigins, origin));
-
-            if (isAllowed) return callback(null, true);
+            if (allowedOriginSet.has(origin)) return callback(null, true);
 
             logger.warn(`CORS blocked request from origin: ${origin}`);
             // Return 403 instead of 500 by marking error as operational
@@ -168,6 +152,23 @@ export default async (app) => {
             req.rawBody = buf;
         }
     }));
+
+    // Dedicated Body Parser Error Catching Middleware
+    app.use((err, req, res, next) => {
+        if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Invalid JSON payload syntax.'
+            });
+        }
+        if (err.type === 'entity.too.large') {
+            return res.status(413).json({
+                status: 'error',
+                message: 'Request payload exceeds maximum allowed size (2MB).'
+            });
+        }
+        next(err);
+    });
 
     app.use(express.urlencoded({ extended: true, limit: process.env.FORM_BODY_LIMIT || '2mb' }));
     app.use(cookieParser());
@@ -254,6 +255,16 @@ export default async (app) => {
             });
         } catch {
             res.status(200).send('OK');
+        }
+    });
+
+    app.get(['/health/readiness', '/api/health/readiness'], async (req, res) => {
+        try {
+            const { pool } = await import('../../infrastructure/database/database.js');
+            await pool.query('SELECT 1');
+            res.status(200).json({ status: 'ready', database: 'connected', timestamp: new Date().toISOString() });
+        } catch (error) {
+            res.status(503).json({ status: 'unhealthy', database: 'disconnected', error: error.message });
         }
     });
 
