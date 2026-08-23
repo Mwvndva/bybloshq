@@ -1,5 +1,5 @@
 import { ArrowLeft, CalendarClock, CheckCircle2, LogOut, PackageCheck, Radio, RefreshCw, Truck } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
@@ -50,7 +50,7 @@ const MzigoDashboardPage = () => {
   const broadcast = useCourierBroadcast(trackableIds, shareLocation);
 
   return (
-    <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white">
+    <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white" style={{ height: '100svh', overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } as React.CSSProperties}>
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 border-b border-white/10 bg-black px-4 pb-3 pt-safe-top backdrop-blur">
 

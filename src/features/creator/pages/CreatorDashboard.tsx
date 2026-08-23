@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, LogOut, Trophy, Wallet } from 'lucide-react';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
@@ -145,7 +145,7 @@ export default function CreatorDashboard() {
   };
 
   return (
-    <main className="dashboard-layout min-h-screen bg-[var(--byblos-bg,#000000)] px-4 py-6 text-slate-950 dark:text-white transition-colors duration-200">
+    <main className="dashboard-layout px-4 py-6 text-slate-950 dark:text-white transition-colors duration-200 bg-[var(--byblos-bg,#000000)]" style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh', height: '100svh', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
       <div className="space-y-5">
         <header className="flex items-center justify-between gap-3">
           <NotificationBell triggerClassName="text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10" />

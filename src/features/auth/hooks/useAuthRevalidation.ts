@@ -78,7 +78,13 @@ export function useAuthRevalidation({
 
     if (!currentRole || isPublicRoute(pathname)) {
       setIsLoading(false);
-      setInitializing(false);
+      // Do NOT call setInitializing(false) here on a public/root path.
+      // The async cold-start effect (below) will call setInitializing(false)
+      // once it has definitively determined whether a stored session exists.
+      // Calling it here would show the login screen before the restore check finishes.
+      if (!isNativeApp() || (pathname !== '/' && pathname !== '')) {
+        setInitializing(false);
+      }
       return;
     }
 
@@ -216,6 +222,7 @@ export function useAuthRevalidation({
         if (cancelled) return;
         if (!profileData) {
           await clearRoleSession(activeRole);
+          setInitializing(false);
           return;
         }
         setUser({
@@ -240,8 +247,11 @@ export function useAuthRevalidation({
           navigate(destinationPath, { replace: true });
         }
       } catch {
-        // Token invalid/expired — drop the marker and leave the user on the landing page.
+        // Token invalid/expired — drop the marker and show the landing page.
         if (!cancelled) await clearRoleSession(activeRole);
+      } finally {
+        // Always ungate rendering after the restore attempt completes.
+        if (!cancelled) setInitializing(false);
       }
     })();
     return () => {

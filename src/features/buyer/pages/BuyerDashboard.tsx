@@ -180,7 +180,7 @@ function BuyerDashboard() {
       display: 'flex', flexDirection: 'column',
       minHeight: '100svh',
       height: '100svh',
-      overflow: 'hidden',
+      overflowY: 'hidden',
     }}>
       <BuyerDashboardHeader />
       <BuyerDashboardSearch
@@ -199,7 +199,7 @@ function BuyerDashboard() {
         padding: 'clamp(10px, 4vw, 18px)',
         WebkitOverflowScrolling: 'touch',
         scrollBehavior: 'smooth',
-        overscrollBehavior: 'contain',
+        overscrollBehavior: 'none',
       }}
         onTouchStart={handleDashboardTouchStart}
         onTouchEnd={handleDashboardTouchEnd}
