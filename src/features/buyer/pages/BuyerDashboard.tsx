@@ -16,7 +16,7 @@ import SellersGrid from '@/features/shop/components/SellersGrid';
 import { BuyerBottomNav } from '../components/dashboard/BuyerBottomNav';
 import { BuyerDashboardHeader } from '../components/dashboard/BuyerDashboardHeader';
 import { BuyerDashboardSearch } from '../components/dashboard/BuyerDashboardSearch';
-import { BuyerProfileContent } from '../components/dashboard/BuyerProfileSheet';
+import { BuyerProfileSheet } from '../components/dashboard/BuyerProfileSheet';
 import { MyShopsSection } from '../components/dashboard/MyShopsSection';
 import { MembershipGate } from '@/features/membership/components/MembershipGate';
 import { useBuyerFollowedShops } from '../components/dashboard/hooks/useBuyerFollowedShops';
@@ -244,25 +244,23 @@ function BuyerDashboard() {
             </Suspense>
           </div>
         )}
-
-        {(activeSection === 'profile' || isProfileSidebarOpen) && (
-          <div className="mx-auto max-w-2xl space-y-4 pb-6">
-            <BuyerProfileContent
-              isEditingProfile={isEditingProfile}
-              isSavingProfile={isSavingProfile}
-              mobilePayment={mobilePayment}
-              refundAmount={user?.refunds || 0}
-              user={user}
-              whatsappNumber={whatsappNumber}
-              onLogout={handleLogout}
-              onMobilePaymentChange={setMobilePayment}
-              onSaveProfile={handleSaveProfile}
-              onToggleEdit={() => setIsEditingProfile(!isEditingProfile)}
-              onWhatsappNumberChange={setWhatsappNumber}
-            />
-          </div>
-        )}
       </div>
+
+      <BuyerProfileSheet
+        isEditingProfile={isEditingProfile}
+        isOpen={isProfileSidebarOpen}
+        isSavingProfile={isSavingProfile}
+        mobilePayment={mobilePayment}
+        refundAmount={user?.refunds || 0}
+        user={user}
+        whatsappNumber={whatsappNumber}
+        onLogout={handleLogout}
+        onMobilePaymentChange={setMobilePayment}
+        onOpenChange={handleProfileSidebarOpenChange}
+        onSaveProfile={handleSaveProfile}
+        onToggleEdit={() => setIsEditingProfile(!isEditingProfile)}
+        onWhatsappNumberChange={setWhatsappNumber}
+      />
 
       <BuyerBottomNav activeNav={activeNav} navItems={navItems} onSelect={setActiveTab} />
 

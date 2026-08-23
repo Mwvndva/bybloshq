@@ -200,9 +200,26 @@ export function BuyerProfileSheet(props: BuyerProfileSheetProps) {
     <Sheet open={props.isOpen} onOpenChange={props.onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-dvh w-full max-w-none transform-gpu flex-col overflow-hidden border-l border-slate-200 dark:border-white/10 bg-white dark:bg-black p-4 text-slate-950 dark:text-white shadow-2xl shadow-black/40 will-change-transform data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[430px]"
+        className="z-[100] flex h-dvh w-full max-w-none transform-gpu flex-col overflow-hidden border-l border-slate-200 dark:border-white/10 bg-white dark:bg-black p-0 text-slate-950 dark:text-white shadow-2xl shadow-black/60 will-change-transform sm:max-w-[430px]"
       >
-        <div className="flex-1 min-w-0 overflow-y-auto pt-2">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] px-5 py-4 text-left">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-bold text-slate-950 dark:text-white">Buyer Profile</h2>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-white/60">
+              Account settings, theme, and refunds
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => props.onOpenChange(false)}
+            className="rounded-full p-2 text-slate-500 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer"
+            aria-label="Close profile sidebar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 min-w-0 overflow-y-auto px-4 py-5 sm:px-5">
           <BuyerProfileContent {...props} />
         </div>
       </SheetContent>
