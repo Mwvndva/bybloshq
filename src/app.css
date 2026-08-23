@@ -5,6 +5,15 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+html {
+    font-size: 14px;
+}
+@media (min-width: 640px) {
+    html {
+        font-size: 15px;
+    }
+}
+
 html,
 body,
 #root {

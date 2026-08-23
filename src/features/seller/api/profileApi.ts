@@ -2,6 +2,7 @@
 import type { ApiSeller } from '@/shared/types/api/seller';
 import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import { storage } from '@/infrastructure/storage/storage';
+import { buildApiBaseUrl } from '@/infrastructure/http/apiBaseUrl';
 import type {
   ReferralDashboard,
   RegisterSellerInput,
@@ -142,7 +143,8 @@ export const sellerProfileApi = {
     if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
       try {
         const csrfToken = await getFreshCsrfToken();
-        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/login', {
+        const baseUrl = buildApiBaseUrl();
+        const fetchRes = await fetch(`${baseUrl}/sellers/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -278,7 +280,8 @@ export const sellerProfileApi = {
       try {
         const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
         const csrfToken = await getFreshCsrfToken();
-        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/profile', {
+        const baseUrl = buildApiBaseUrl();
+        const fetchRes = await fetch(`${baseUrl}/sellers/profile`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -363,7 +366,8 @@ export const sellerProfileApi = {
       try {
         const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
         const csrfToken = await getFreshCsrfToken();
-        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/analytics', {
+        const baseUrl = buildApiBaseUrl();
+        const fetchRes = await fetch(`${baseUrl}/sellers/analytics`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

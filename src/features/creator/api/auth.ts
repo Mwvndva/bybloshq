@@ -1,4 +1,5 @@
 import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
+import { buildApiBaseUrl } from '@/infrastructure/http/apiBaseUrl';
 
 export interface CreatorRegistrationPayload {
   token: string;
@@ -41,7 +42,8 @@ export const login = async (emailOrCredentials: string | { email: string; passwo
   if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
     try {
       const csrfToken = await getFreshCsrfToken();
-      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/creators/login', {
+      const baseUrl = buildApiBaseUrl();
+      const fetchRes = await fetch(`${baseUrl}/creators/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
