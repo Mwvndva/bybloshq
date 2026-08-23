@@ -106,7 +106,9 @@ export async function registerNativePushNotifications(
       const permission = await PushNotifications.requestPermissions();
       if (permission.receive !== 'granted') return;
 
-      await PushNotifications.register();
+      await PushNotifications.register().catch((err) => {
+        console.warn('[MobileNotifications] Push registration failed or unsupported on device', err);
+      });
     } catch (err) {
       console.warn('[MobileNotifications] Push registration exception', err);
     }
