@@ -158,7 +158,7 @@ export function getImageUrl(path: string | undefined | null): string {
   let baseUrl = '';
 
   if (isNativeApp()) {
-    const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || VITE_API_URL || 'https://byblos-backend-fky5.onrender.com/api';
+    const nativeApiUrl = import.meta.env.VITE_NATIVE_API_URL || (VITE_API_URL && /^https?:\/\//i.test(VITE_API_URL) ? VITE_API_URL : 'https://www.byblosafrica.site/api');
     baseUrl = nativeApiUrl.replace(/\/api$/, '').replace(/\/$/, '');
   } else if (VITE_API_URL) {
     baseUrl = VITE_API_URL.replace(/\/api$/, '').replace(/\/$/, '');
