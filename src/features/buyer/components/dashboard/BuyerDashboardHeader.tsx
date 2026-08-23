@@ -3,23 +3,20 @@ import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
 
 export function BuyerDashboardHeader() {
   return (
-    <div style={{
-      padding: '16px 18px 14px',
-      display: 'grid',
-      gridTemplateColumns: 'auto 1fr auto',
-      alignItems: 'center',
-      gap: 12,
-      flexShrink: 0,
-    }}>
-      <div style={{ justifySelf: 'start' }}>
-        <NotificationBell />
+    <header className="sticky top-0 z-50 bg-black pt-safe-top border-b border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+      <div className="w-full px-4 py-3 sm:px-6 sm:py-4">
+        <div className="grid grid-cols-[auto,1fr,auto] items-center gap-3">
+          <div className="justify-self-start">
+            <NotificationBell />
+          </div>
+          <span className="justify-self-center text-sm font-bold text-white tracking-tight sm:text-base">
+            Trusted Businesses
+          </span>
+          <div className="justify-self-end">
+            <AccountSwitcher />
+          </div>
+        </div>
       </div>
-      <span style={{ justifySelf: 'center', fontSize: 15, fontWeight: 700, color: 'var(--byblos-text, #ffffff)', letterSpacing: '-0.2px' }}>
-        Trusted Businesses
-      </span>
-      <div style={{ justifySelf: 'end' }}>
-        <AccountSwitcher />
-      </div>
-    </div>
+    </header>
   );
 }

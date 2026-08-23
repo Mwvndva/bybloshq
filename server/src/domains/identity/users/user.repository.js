@@ -124,16 +124,34 @@ export async function findLogisticsAuthProfile(userId) {
 }
 
 export async function findCrossRolesByUserId(userId) {
+  const userRes = await query({
+    text: `SELECT email FROM users WHERE id = $1`,
+    values: [userId]
+  });
+  const userEmail = userRes.rows[0]?.email ? userRes.rows[0].email.trim().toLowerCase() : null;
+
   const crossRoleQuery = {
-    name: 'find-cross-roles-by-user-id',
     text: `
       SELECT 
-        (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
-        (SELECT id FROM sellers WHERE user_id = $1 AND COALESCE(status, 'active') = 'active' LIMIT 1) as seller_id,
-        (SELECT id FROM creators WHERE user_id = $1 AND status = 'active' LIMIT 1) as creator_id
+        (SELECT id FROM buyers WHERE (user_id = $1 OR (LOWER(email) = $2 AND $2 IS NOT NULL)) AND (status = 'active' OR status IS NULL) ORDER BY user_id DESC NULLS LAST LIMIT 1) as buyer_id,
+        (SELECT id FROM sellers WHERE (user_id = $1 OR (LOWER(email) = $2 AND $2 IS NOT NULL)) AND COALESCE(status, 'active') = 'active' ORDER BY user_id DESC NULLS LAST LIMIT 1) as seller_id,
+        (SELECT id FROM creators WHERE (user_id = $1 OR (LOWER(email) = $2 AND $2 IS NOT NULL)) AND (status = 'active' OR status IS NULL) ORDER BY user_id DESC NULLS LAST LIMIT 1) as creator_id
     `,
-    values: [userId]
+    values: [userId, userEmail]
   };
   const { rows } = await query(crossRoleQuery);
-  return rows[0] || { buyer_id: null, seller_id: null, creator_id: null };
+  const cross = rows[0] || { buyer_id: null, seller_id: null, creator_id: null };
+
+  // Auto-link unlinked profile rows to this user_id
+  if (cross.buyer_id) {
+    query({ text: `UPDATE buyers SET user_id = $1 WHERE id = $2 AND user_id IS NULL`, values: [userId, cross.buyer_id] }).catch(() => {});
+  }
+  if (cross.seller_id) {
+    query({ text: `UPDATE sellers SET user_id = $1 WHERE id = $2 AND user_id IS NULL`, values: [userId, cross.seller_id] }).catch(() => {});
+  }
+  if (cross.creator_id) {
+    query({ text: `UPDATE creators SET user_id = $1 WHERE id = $2 AND user_id IS NULL`, values: [userId, cross.creator_id] }).catch(() => {});
+  }
+
+  return cross;
 }

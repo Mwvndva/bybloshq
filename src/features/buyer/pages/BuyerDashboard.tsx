@@ -197,6 +197,7 @@ function BuyerDashboard() {
         overflowY: 'auto',
         overflowX: 'hidden',
         padding: 'clamp(10px, 4vw, 18px)',
+        paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
         WebkitOverflowScrolling: 'touch',
         scrollBehavior: 'smooth',
         overscrollBehavior: 'none',
