@@ -8,29 +8,25 @@ import { query } from '../../../infrastructure/database/database.js';
 export async function findOverviewStats() {
   const sql = `
     SELECT
-      (SELECT COUNT(*)  FROM sellers WHERE is_active = true)                          AS total_sellers,
-      (SELECT COUNT(*)  FROM buyers  WHERE user_id IS NOT NULL)                       AS total_buyers,
-      (SELECT COUNT(*)  FROM products WHERE status = 'available')                       AS active_products,
-      (SELECT COALESCE(SUM(total_amount), 0)
-         FROM product_orders WHERE payment_status = 'completed')                      AS total_gmv,
-      (SELECT COALESCE(SUM(platform_fee_amount), 0)
-         FROM product_orders WHERE payment_status = 'completed')                      AS total_revenue,
-      (SELECT COUNT(*) FROM product_orders WHERE payment_status = 'completed')        AS completed_orders,
-      (SELECT COUNT(*) FROM product_orders WHERE status = 'CANCELLED')                AS cancelled_orders,
-      (SELECT COUNT(*) FROM product_orders)                                           AS total_orders,
-      (SELECT COUNT(*) FROM sellers
-         WHERE created_at >= date_trunc('month', CURRENT_DATE))                       AS new_sellers_this_month,
-      (SELECT COUNT(*) FROM buyers
-         WHERE created_at >= date_trunc('month', CURRENT_DATE))                       AS new_buyers_this_month,
-      (SELECT COALESCE(SUM(total_amount), 0) FROM product_orders
-         WHERE payment_status = 'completed'
-           AND paid_at >= date_trunc('month', CURRENT_DATE))                          AS gmv_this_month,
-      (SELECT COUNT(*) FROM wishlists)                                                AS total_wishlists,
-      (SELECT COALESCE(SUM(amount), 0) FROM refund_requests WHERE status = 'completed') AS total_refunded,
-      (SELECT COALESCE(SUM(reward_amount), 0) FROM referral_earnings_log)            AS total_referral_rewards
+      (SELECT COUNT(*) FROM sellers WHERE is_active = true) AS total_sellers,
+      (SELECT COUNT(*) FROM sellers WHERE is_active = false OR verification_status = 'pending') AS pending_sellers,
+      (SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL) AS total_buyers,
+      (SELECT CASE WHEN to_regclass('creators') IS NOT NULL THEN (SELECT COUNT(*) FROM creators) ELSE 0 END) AS total_creators,
+      (SELECT COUNT(*) FROM products WHERE status = 'available') AS active_products,
+      (SELECT COALESCE(SUM(total_amount), 0) FROM product_orders WHERE payment_status = 'completed') AS total_gmv,
+      (SELECT COALESCE(SUM(platform_fee_amount), 0) FROM product_orders WHERE payment_status = 'completed') AS total_revenue,
+      (SELECT COUNT(*) FROM product_orders WHERE payment_status = 'completed') AS completed_orders,
+      (SELECT COUNT(*) FROM product_orders WHERE status = 'CANCELLED') AS cancelled_orders,
+      (SELECT COUNT(*) FROM product_orders) AS total_orders,
+      (SELECT COUNT(*) FROM sellers WHERE created_at >= date_trunc('month', CURRENT_DATE)) AS new_sellers_this_month,
+      (SELECT COUNT(*) FROM buyers WHERE created_at >= date_trunc('month', CURRENT_DATE)) AS new_buyers_this_month,
+      (SELECT COALESCE(SUM(total_amount), 0) FROM product_orders WHERE payment_status = 'completed' AND paid_at >= date_trunc('month', CURRENT_DATE)) AS gmv_this_month,
+      (SELECT CASE WHEN to_regclass('wishlists') IS NOT NULL THEN (SELECT COUNT(*) FROM wishlists) ELSE 0 END) AS total_wishlists,
+      (SELECT CASE WHEN to_regclass('refund_requests') IS NOT NULL THEN (SELECT COALESCE(SUM(amount), 0) FROM refund_requests WHERE status = 'completed') ELSE 0 END) AS total_refunded,
+      (SELECT CASE WHEN to_regclass('referral_earnings_log') IS NOT NULL THEN (SELECT COALESCE(SUM(reward_amount), 0) FROM referral_earnings_log) ELSE 0 END) AS total_referral_rewards
   `;
   const { rows } = await query(sql);
-  return rows[0];
+  return rows[0] || {};
 }
 
 /**
@@ -345,14 +341,16 @@ export async function findMonthlyReferralRewards() {
 export async function findTopReferrers() {
   const sql = `
     SELECT
+      s.id,
       s.shop_name,
       s.location,
-      COUNT(DISTINCT rel.referred_seller_id) AS referrals_made,
+      COALESCE(COUNT(DISTINCT rel.referred_seller_id), 0) AS referrals_made,
       COALESCE(SUM(rel.reward_amount), 0)    AS total_earned
-    FROM referral_earnings_log rel
-    JOIN sellers s ON s.id = rel.referrer_seller_id
+    FROM sellers s
+    LEFT JOIN referral_earnings_log rel ON s.id = rel.referrer_seller_id
+    WHERE s.is_active = true
     GROUP BY s.id
-    ORDER BY total_earned DESC
+    ORDER BY total_earned DESC, referrals_made DESC
     LIMIT 10
   `;
   const { rows } = await query(sql);
