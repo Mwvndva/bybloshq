@@ -62,8 +62,7 @@ export async function login(credentials: { email: string; password: string }): P
   if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
     try {
       const csrfToken = await getFreshCsrfToken();
-      const baseUrl = buildApiBaseUrl();
-      const fetchRes = await fetch(`${baseUrl}/buyers/login`, {
+      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/buyers/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

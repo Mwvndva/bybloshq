@@ -20,10 +20,14 @@ export class AndroidAuthStrategy implements AuthStrategy {
 
     // 2. Fall back to the persisted active role (not a hardcoded list), so we
     //    never accidentally attach a stale token from a different account.
+    // 2. Fall back to active role token or unified BYBLOS_AUTH_KEYS.TOKEN
     if (!token) {
       const activeRole = await this.storageAdapter.getItem(BYBLOS_AUTH_KEYS.ACTIVE_ROLE);
       if (activeRole) {
         token = await this.storageAdapter.getItem(`${activeRole}Token`);
+      }
+      if (!token) {
+        token = await this.storageAdapter.getItem(BYBLOS_AUTH_KEYS.TOKEN);
       }
     }
 
@@ -31,13 +35,8 @@ export class AndroidAuthStrategy implements AuthStrategy {
   }
 
   async getCsrfHeader(): Promise<Record<string, string>> {
-    let token = getCachedCsrfToken();
-    if (!token) {
-      token = await getFreshCsrfToken();
-    }
-    return token ? {
-      'X-CSRF-Token': token
-    } : {};
+    // Native Android apps operate via Bearer tokens in device storage and are exempt from CSRF
+    return {};
   }
 
   async handleUnauthorized(role?: AppRole): Promise<boolean> {

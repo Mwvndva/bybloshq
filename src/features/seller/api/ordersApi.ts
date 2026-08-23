@@ -2,7 +2,6 @@ import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import type { ApiOrder, OrderStatus } from '@/shared/types';
 import type { OrdersAnalytics, OrderQueryParams } from '../types';
 import { storage } from '@/infrastructure/storage/storage';
-import { buildApiBaseUrl } from '@/infrastructure/http/apiBaseUrl';
 
 const sellerApiInstance = apiClient;
 
@@ -28,9 +27,8 @@ export const sellerOrdersApi = {
       try {
         const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
         const csrfToken = await getFreshCsrfToken();
-        const baseUrl = buildApiBaseUrl();
         const queryString = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
-        const fetchRes = await fetch(`${baseUrl}/sellers/orders${queryString}`, {
+        const fetchRes = await fetch(`https://byblos-backend-fky5.onrender.com/api/sellers/orders${queryString}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

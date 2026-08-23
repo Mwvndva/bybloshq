@@ -2,7 +2,6 @@ import { buyerApiInstance, ApiError } from './instance';
 import type { ApiOrder } from '@/shared/types';
 import { storage } from '@/infrastructure/storage/storage';
 import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
-import { buildApiBaseUrl } from '@/infrastructure/http/apiBaseUrl';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -31,8 +30,7 @@ export async function getOrders(): Promise<ApiOrder[]> {
     try {
       const token = (await storage.get('buyerToken')) || localStorage.getItem('buyerToken');
       const csrfToken = await getFreshCsrfToken();
-      const baseUrl = buildApiBaseUrl();
-      const fetchRes = await fetch(`${baseUrl}/orders/user`, {
+      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/orders/user', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
