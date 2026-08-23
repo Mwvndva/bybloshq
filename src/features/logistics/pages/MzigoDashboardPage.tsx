@@ -260,8 +260,8 @@ const MzigoDashboardPage = () => {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/40">
-        <CalendarClock size={14} className="mr-1 inline-block" />
+      <footer className="sticky bottom-0 z-20 border-t border-white/10 bg-black/95 px-4 py-3 text-center text-xs text-white/50 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.55)]">
+        <CalendarClock size={14} className="mr-1 inline-block text-yellow-400" />
         Every delivery has a 24 hour window.
       </footer>
     </main>
