@@ -4,27 +4,38 @@ import { buildApiBaseUrl } from '../http/apiBaseUrl';
 
 let csrfTokenCache: string | null = null;
 let lastFetchedAt: number = 0;
+let csrfFetchPromise: Promise<string | null> | null = null;
 const CSRF_TTL = 10 * 60 * 1000; // 10 minutes
 
 export const getFreshCsrfToken = async (): Promise<string | null> => {
-  try {
-    const baseURL = buildApiBaseUrl();
-    const response = await axios.get(`${baseURL}/public/csrf-token`, { withCredentials: true });
-    csrfTokenCache = (response as import('axios').AxiosResponse<{ data?: { csrfToken?: string } }>).data?.data?.csrfToken || null;
-    lastFetchedAt = Date.now();
-    if (csrfTokenCache && typeof document !== 'undefined') {
-      try {
-        document.cookie = `csrf-token-v2=${csrfTokenCache}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `_csrf=${csrfTokenCache}; path=/; max-age=86400; SameSite=Lax`;
-      } catch {
-        /* ignore cookie write errors */
-      }
-    }
-    return csrfTokenCache;
-  } catch (error) {
-    console.error('Failed to fetch CSRF token:', error);
-    return null;
+  if (csrfFetchPromise) {
+    return csrfFetchPromise;
   }
+
+  csrfFetchPromise = (async () => {
+    try {
+      const baseURL = buildApiBaseUrl();
+      const response = await axios.get(`${baseURL}/public/csrf-token`, { withCredentials: true });
+      csrfTokenCache = (response as import('axios').AxiosResponse<{ data?: { csrfToken?: string } }>).data?.data?.csrfToken || null;
+      lastFetchedAt = Date.now();
+      if (csrfTokenCache && typeof document !== 'undefined') {
+        try {
+          document.cookie = `csrf-token-v2=${csrfTokenCache}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `_csrf=${csrfTokenCache}; path=/; max-age=86400; SameSite=Lax`;
+        } catch {
+          /* ignore cookie write errors */
+        }
+      }
+      return csrfTokenCache;
+    } catch (error) {
+      console.error('Failed to fetch CSRF token:', error);
+      return null;
+    } finally {
+      csrfFetchPromise = null;
+    }
+  })();
+
+  return csrfFetchPromise;
 };
 
 export const getCachedCsrfToken = (): string | null => csrfTokenCache;
