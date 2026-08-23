@@ -208,7 +208,10 @@ export function useAuthRevalidation({
           activeRole = activeMatch.role;
         }
       }
-      if (!activeRole || cancelled) return;
+      if (!activeRole || cancelled) {
+        if (!cancelled) setInitializing(false);
+        return;
+      }
 
       let queryOpts;
       if (activeRole === 'buyer') queryOpts = buyerProfileQueryOptions;
@@ -254,8 +257,14 @@ export function useAuthRevalidation({
         if (!cancelled) setInitializing(false);
       }
     })();
+    // Safety fallback: ensure initializing is ungated after 3 seconds max
+    const safetyTimer = setTimeout(() => {
+      setInitializing(false);
+    }, 3000);
+
     return () => {
       cancelled = true;
+      clearTimeout(safetyTimer);
     };
     // Boot-only: run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
