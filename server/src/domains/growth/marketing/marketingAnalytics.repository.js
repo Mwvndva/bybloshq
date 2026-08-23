@@ -9,7 +9,7 @@ export async function findOverviewStats() {
   const sql = `
     SELECT
       (SELECT COUNT(*) FROM sellers WHERE is_active = true) AS total_sellers,
-      (SELECT COUNT(*) FROM sellers WHERE is_active = false OR verification_status = 'pending') AS pending_sellers,
+      (SELECT COUNT(*) FROM sellers WHERE is_active = false OR status = 'pending') AS pending_sellers,
       (SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL) AS total_buyers,
       (SELECT CASE WHEN to_regclass('creators') IS NOT NULL THEN (SELECT COUNT(*) FROM creators) ELSE 0 END) AS total_creators,
       (SELECT COUNT(*) FROM products WHERE status = 'available') AS active_products,

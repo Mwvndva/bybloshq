@@ -312,9 +312,28 @@ export const getProfile = async (req, res, next) => {
     const buyerLookupId = req.user.buyerId;
     let buyer = buyerLookupId ? await Buyer.findById(buyerLookupId) : null;
 
-    // Fallback: find by user_id (handles admin-who-is-also-buyer)
-    if (!buyer && (req.user.userId || req.user.id)) {
-      buyer = await Buyer.findByUserId(req.user.userId || req.user.id);
+    // Fallback: find by user_id
+    const userId = req.user.userId || req.user.id;
+    if (!buyer && userId) {
+      buyer = await Buyer.findByUserId(userId);
+    }
+
+    // If authenticated user lacks a buyer profile, auto-provision one seamlessly
+    if (!buyer && userId) {
+      const user = await User.findById(userId);
+      if (user) {
+        buyer = await Buyer.create({
+          fullName: user.full_name || user.email?.split('@')[0] || 'Buyer',
+          email: user.email,
+          mobilePayment: user.phone || '',
+          whatsappNumber: user.phone || '',
+          city: 'Nairobi',
+          location: 'Nairobi',
+          userId: user.id,
+          termsAccepted: true
+        });
+        logger.info(`[BUYER-PROFILE] Auto-provisioned buyer profile for user ${userId}`);
+      }
     }
 
     if (!buyer) {
