@@ -83,15 +83,25 @@ export default function MarketingDashboard() {
                 marketingApi.getReferrals(),
                 marketingApi.getActivity(20)
             ]);
-            setOverview(ov.data.data);
-            setGmvTrend(gmv.data.data);
-            setUserGrowth(ug.data.data);
-            setProductMix(pm.data.data);
-            setOrderFunnel(of_.data.data);
-            setGeography(geo.data.data);
-            setTopPerfs(tp.data.data);
-            setReferrals(ref.data.data);
-            setActivity(act.data.data);
+            const extractArray = (res: any) => {
+                const payload = res?.data?.data ?? res?.data;
+                return Array.isArray(payload) ? payload : [];
+            };
+
+            const extractObject = (res: any) => {
+                const payload = res?.data?.data ?? res?.data;
+                return payload && typeof payload === 'object' ? payload : null;
+            };
+
+            setOverview(extractObject(ov));
+            setGmvTrend(extractArray(gmv));
+            setUserGrowth(extractArray(ug));
+            setProductMix(extractArray(pm));
+            setOrderFunnel(extractArray(of_));
+            setGeography(extractArray(geo));
+            setTopPerfs(extractObject(tp));
+            setReferrals(extractObject(ref));
+            setActivity(extractArray(act));
         } catch (err) {
             setError('Failed to load dashboard data. Please refresh.');
         } finally {
@@ -225,7 +235,7 @@ export default function MarketingDashboard() {
 
             {/* Charts Section 2: Funnel & Mix */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                {productMix && (
+                {Array.isArray(productMix) && productMix.length > 0 && (
                     <ChartCard title="Product Mix" subtitle="Orders by category">
                         <ResponsiveContainer width="100%" height={260}>
                             <PieChart>
@@ -248,7 +258,7 @@ export default function MarketingDashboard() {
                     </ChartCard>
                 )}
 
-                {orderFunnel && (
+                {Array.isArray(orderFunnel) && orderFunnel.length > 0 && (
                     <ChartCard title="Order Conversion Funnel" subtitle="Visitor to delivery breakdown">
                         <ResponsiveContainer width="100%" height={260}>
                             <BarChart data={orderFunnel} layout="vertical">
@@ -262,7 +272,7 @@ export default function MarketingDashboard() {
                     </ChartCard>
                 )}
 
-                {geography && (
+                {Array.isArray(geography) && geography.length > 0 && (
                     <ChartCard title="Top Buyer Locations" subtitle="Geographic distribution">
                         <div className="space-y-3 pt-2">
                             {geography.map((item: any, i: number) => (
@@ -283,11 +293,11 @@ export default function MarketingDashboard() {
 
             {/* Section 3: Top Performers & Referrals */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                {topPerfs && (
+                {Array.isArray(topPerfs?.sellers) && topPerfs.sellers.length > 0 && (
                     <div className="bg-[#0A0A0A]/70 border border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-xl">
                         <SectionTitle title="Top Performing Shops" subtitle="Highest GMV sellers this month" />
                         <div className="divide-y divide-white/5">
-                            {topPerfs.sellers?.map((s: any, idx: number) => (
+                            {topPerfs.sellers.map((s: any, idx: number) => (
                                 <div key={s.id || idx} className="py-3 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-bold text-yellow-500 w-5">#{idx + 1}</span>
@@ -303,11 +313,11 @@ export default function MarketingDashboard() {
                     </div>
                 )}
 
-                {referrals && (
+                {Array.isArray(referrals?.creators) && referrals.creators.length > 0 && (
                     <div className="bg-[#0A0A0A]/70 border border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-xl">
                         <SectionTitle title="Creator Referrals" subtitle="Top performing growth ambassadors" />
                         <div className="divide-y divide-white/5">
-                            {referrals.creators?.map((c: any, idx: number) => (
+                            {referrals.creators.map((c: any, idx: number) => (
                                 <div key={c.id || idx} className="py-3 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-bold text-yellow-500 w-5">#{idx + 1}</span>

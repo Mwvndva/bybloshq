@@ -89,9 +89,8 @@ function ProfileDetail({
   );
 }
 
-export function BuyerProfileSheet({
+export function BuyerProfileContent({
   isEditingProfile,
-  isOpen,
   isSavingProfile,
   mobilePayment,
   refundAmount,
@@ -99,115 +98,112 @@ export function BuyerProfileSheet({
   whatsappNumber,
   onLogout,
   onMobilePaymentChange,
-  onOpenChange,
   onSaveProfile,
   onToggleEdit,
   onWhatsappNumberChange
-}: BuyerProfileSheetProps) {
+}: Omit<BuyerProfileSheetProps, 'isOpen' | 'onOpenChange'>) {
   const buyerUser = user as import("@/features/auth/types/authTypes").BuyerProfile | null;
-  const profileInitial = displayValue(buyerUser?.fullName || buyerUser?.email).slice(0, 1).toUpperCase();
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex h-dvh w-full max-w-none transform-gpu flex-col overflow-hidden border-l border-slate-200 dark:border-white/10 bg-white dark:bg-black p-0 text-slate-950 dark:text-white shadow-2xl shadow-black/40 will-change-transform data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[430px]"
-      >
-        <SheetHeader className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] px-5 py-5 pr-14 text-left">
-          <div className="min-w-0">
-            <SheetTitle className="truncate text-lg font-bold text-slate-950 dark:text-white">Buyer Profile</SheetTitle>
-            <SheetDescription className="mt-1 text-xs text-slate-600 dark:text-white/80">
-              Profile details, refund balance, theme settings, and account actions.
-            </SheetDescription>
+    <div className="w-full space-y-4">
+      {/* App Theme Picker Pill - Positioned Above Account Details */}
+      <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
+        <BuyerThemePillPicker />
+      </section>
+
+      {/* Account Details Section */}
+      <section className="space-y-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-950 dark:text-white">Account Details</h3>
+            <p className="mt-1 text-xs text-slate-600 dark:text-white/80">
+              {isEditingProfile ? 'Update your payment and WhatsApp numbers.' : 'Your saved buyer information.'}
+            </p>
           </div>
-        </SheetHeader>
-
-        <div className="flex-1 min-w-0 overflow-y-auto px-4 py-5 sm:px-5 space-y-4">
-          {/* App Theme Picker Pill - Positioned Above Account Details */}
-          <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
-            <BuyerThemePillPicker />
-          </section>
-
-          {/* Account Details Section */}
-          <section className="space-y-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-950 dark:text-white">Account Details</h3>
-                <p className="mt-1 text-xs text-slate-600 dark:text-white/80">
-                  {isEditingProfile ? 'Update your payment and WhatsApp numbers.' : 'Your saved buyer information.'}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={onToggleEdit}
-                variant="outline"
-                className="h-9 shrink-0 gap-2 border-slate-300 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 text-xs font-semibold text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10"
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                {isEditingProfile ? 'Cancel' : 'Edit'}
-              </Button>
-            </div>
-
-            <div className="grid gap-3">
-              <ProfileDetail icon={UserRound} label="Full name" value={buyerUser?.fullName} />
-              <ProfileDetail icon={Mail} label="Email address" value={buyerUser?.email} />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ProfileDetail icon={MapPin} label="City" value={buyerUser?.city} />
-                <ProfileDetail icon={MapPin} label="Area" value={buyerUser?.location} />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ProfileDetail
-                  icon={Phone}
-                  label="Mobile payment"
-                  value={mobilePayment}
-                  editable
-                  editing={isEditingProfile}
-                  placeholder="Mobile payment number"
-                  onChange={onMobilePaymentChange}
-                />
-                <ProfileDetail
-                  icon={MessageCircle}
-                  label="WhatsApp"
-                  value={whatsappNumber}
-                  editable
-                  editing={isEditingProfile}
-                  placeholder="WhatsApp number"
-                  onChange={onWhatsappNumberChange}
-                />
-              </div>
-            </div>
-
-            {isEditingProfile && (
-              <Button
-                onClick={onSaveProfile}
-                disabled={isSavingProfile}
-                className="h-10 w-full bg-[#F5C518] font-bold text-black hover:bg-yellow-300"
-              >
-                {isSavingProfile ? 'Saving...' : 'Save changes'}
-              </Button>
-            )}
-          </section>
-
-          <BuyerMembershipCard />
-
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <WalletCards className="h-4 w-4 text-[#F5C518]" />
-              <h3 className="text-sm font-bold text-slate-950 dark:text-white">Refunds</h3>
-            </div>
-            <RefundCard refundAmount={refundAmount} compact />
-          </section>
+          <Button
+            type="button"
+            onClick={onToggleEdit}
+            variant="outline"
+            className="h-9 shrink-0 gap-2 border-slate-300 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 text-xs font-semibold text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10"
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+            {isEditingProfile ? 'Cancel' : 'Edit'}
+          </Button>
         </div>
 
-        <div className="space-y-2 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black p-4">
+        <div className="grid gap-3">
+          <ProfileDetail icon={UserRound} label="Full name" value={buyerUser?.fullName} />
+          <ProfileDetail icon={Mail} label="Email address" value={buyerUser?.email} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ProfileDetail icon={MapPin} label="City" value={buyerUser?.city} />
+            <ProfileDetail icon={MapPin} label="Area" value={buyerUser?.location} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ProfileDetail
+              icon={Phone}
+              label="Mobile payment"
+              value={mobilePayment}
+              editable
+              editing={isEditingProfile}
+              placeholder="Mobile payment number"
+              onChange={onMobilePaymentChange}
+            />
+            <ProfileDetail
+              icon={MessageCircle}
+              label="WhatsApp"
+              value={whatsappNumber}
+              editable
+              editing={isEditingProfile}
+              placeholder="WhatsApp number"
+              onChange={onWhatsappNumberChange}
+            />
+          </div>
+        </div>
+
+        {isEditingProfile && (
           <Button
-            onClick={onLogout}
-            className="h-10 w-full justify-center gap-2 bg-red-600 font-bold text-white hover:bg-red-500"
+            onClick={onSaveProfile}
+            disabled={isSavingProfile}
+            className="h-10 w-full bg-[#F5C518] font-bold text-black hover:bg-yellow-300"
           >
-            <LogOut className="h-4 w-4" />
-            Logout
+            {isSavingProfile ? 'Saving...' : 'Save changes'}
           </Button>
-          <DeleteAccountButton deleteAccount={deleteBuyerAccount} onDeleted={onLogout} />
+        )}
+      </section>
+
+      <BuyerMembershipCard />
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <WalletCards className="h-4 w-4 text-[#F5C518]" />
+          <h3 className="text-sm font-bold text-slate-950 dark:text-white">Refunds</h3>
+        </div>
+        <RefundCard refundAmount={refundAmount} compact />
+      </section>
+
+      <div className="space-y-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black p-4">
+        <Button
+          onClick={onLogout}
+          className="h-10 w-full justify-center gap-2 bg-red-600 font-bold text-white hover:bg-red-500"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
+        <DeleteAccountButton deleteAccount={deleteBuyerAccount} onDeleted={onLogout} />
+      </div>
+    </div>
+  );
+}
+
+export function BuyerProfileSheet(props: BuyerProfileSheetProps) {
+  return (
+    <Sheet open={props.isOpen} onOpenChange={props.onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex h-dvh w-full max-w-none transform-gpu flex-col overflow-hidden border-l border-slate-200 dark:border-white/10 bg-white dark:bg-black p-4 text-slate-950 dark:text-white shadow-2xl shadow-black/40 will-change-transform data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:max-w-[430px]"
+      >
+        <div className="flex-1 min-w-0 overflow-y-auto pt-2">
+          <BuyerProfileContent {...props} />
         </div>
       </SheetContent>
     </Sheet>
