@@ -19,8 +19,10 @@ export const getRoleFromRoute = (pathname: string): UserRole | null => {
 export const isPublicRoute = (pathname: string): boolean => {
   if (!pathname || pathname === '/') return true;
 
-  const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/marketing'];
-  return publicPaths.some(path => pathname.includes(path));
+  if (pathname === '/marketing' || pathname === '/marketing/' || pathname === '/marketing/login') return true;
+
+  const publicSuffixes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  return publicSuffixes.some(path => pathname.endsWith(path) || pathname.includes(path + '/'));
 };
 
 export const requiresEmailVerification = (role: UserRole | null): boolean => {

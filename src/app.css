@@ -20,6 +20,9 @@ body,
     width: 100%;
     height: 100%;
     overflow-x: hidden;
+    overscroll-behavior: none !important;
+    overscroll-behavior-y: none !important;
+    overscroll-behavior-x: none !important;
     background: #000000;
     font-family: 'Nunito Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -438,6 +441,19 @@ body.android-native {
 .product-image-dialog button.absolute.right-4.top-4:hover {
     color: rgba(234, 179, 8, 1);
     background-color: rgba(250, 204, 21, 0.2);
+}
+
+.dashboard-layout,
+.seller-surface,
+.auth-page,
+.app-dark-surface,
+.mzigo-light-dashboard,
+.admin-light-dashboard,
+.marketing-light-dashboard,
+main {
+    overscroll-behavior: none !important;
+    overscroll-behavior-y: none !important;
+    overscroll-behavior-x: none !important;
 }
 
 .dashboard-layout {
