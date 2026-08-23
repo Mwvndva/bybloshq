@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { AuthStrategy, AuthPlatform, AppRole, StorageAdapter } from './types';
 import { buildApiBaseUrl } from '../http/apiBaseUrl';
+import { BYBLOS_AUTH_KEYS } from '../storage/storage';
 
 import { getFreshCsrfToken, getCachedCsrfToken } from './WebAuthStrategy';
 
@@ -11,15 +12,21 @@ export class AndroidAuthStrategy implements AuthStrategy {
 
   async getAuthHeaders(role?: AppRole): Promise<Record<string, string>> {
     let token: string | null = null;
+
+    // 1. Try the explicitly provided role first
     if (role) {
       token = await this.storageAdapter.getItem(`${role}Token`);
     }
+
+    // 2. Fall back to the persisted active role (not a hardcoded list), so we
+    //    never accidentally attach a stale token from a different account.
     if (!token) {
-      for (const r of ['buyer', 'seller', 'creator', 'admin', 'logistics', 'marketing']) {
-        token = await this.storageAdapter.getItem(`${r}Token`);
-        if (token) break;
+      const activeRole = await this.storageAdapter.getItem(BYBLOS_AUTH_KEYS.ACTIVE_ROLE);
+      if (activeRole) {
+        token = await this.storageAdapter.getItem(`${activeRole}Token`);
       }
     }
+
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 

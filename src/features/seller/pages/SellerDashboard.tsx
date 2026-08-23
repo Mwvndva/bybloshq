@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDeleteProductMutation, useUpdateProductMutation } from '@/features/seller/hooks/useSellerProducts';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -209,14 +209,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   }
 
   return (
-    <>
+    <div className="seller-surface flex flex-col" style={{ minHeight: '100svh', height: '100svh', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
       <SellerDashboardHeader sellerFirstName={sellerFirstName} />
 
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchCancel}
-        className="seller-surface mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6"
+        className="mx-auto w-full max-w-[1480px] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6"
         style={isNativeApp() ? { paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' } : undefined}
       >
         <div className="mb-6 sm:mb-7 md:mb-8">
@@ -274,7 +274,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           />
         )}
       </div>
-    </>
+    </div>
   );
 }
 
