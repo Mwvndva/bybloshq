@@ -7,12 +7,13 @@ import logger from '../../../shared/utils/logger.js';
 // admin-who-is-also-a-buyer edge case (mirrors buyer.controller.getProfile).
 const resolveBuyerId = async (req) => {
   let buyerId = req.user.buyerId;
-  if (!buyerId) {
-    const userId = req.user.userId || req.user.id;
-    if (userId) {
-      const buyer = await Buyer.findByUserId(userId);
-      buyerId = buyer?.id;
+  const userId = req.user.userId || req.user.id;
+  if (!buyerId && userId) {
+    let buyer = await Buyer.findByUserId(userId);
+    if (!buyer && req.user.email) {
+      buyer = await Buyer.findByEmail(req.user.email);
     }
+    buyerId = buyer?.id;
   }
   return buyerId;
 };
