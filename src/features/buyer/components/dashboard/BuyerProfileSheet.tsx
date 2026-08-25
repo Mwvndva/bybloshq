@@ -1,7 +1,7 @@
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards } from 'lucide-react';
+import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards, X } from 'lucide-react';
 import RefundCard from '../RefundCard';
 import { BuyerMembershipCard } from './BuyerMembershipCard';
 import { DeleteAccountButton } from '@/components/account/DeleteAccountButton';
