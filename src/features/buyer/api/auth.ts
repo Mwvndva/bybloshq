@@ -43,44 +43,13 @@ export interface RegisterData {
 }
 
 export async function login(credentials: { email: string; password: string }): Promise<LoginResponse> {
-  let responseBody: any = null;
-
-  try {
-    const response = await apiClient.post<any>('/buyers/login', credentials);
-    responseBody = response?.data !== undefined ? response.data : response;
-    if (typeof responseBody === 'string' && responseBody.trim()) {
-      try {
-        responseBody = JSON.parse(responseBody);
-      } catch {
-        /* ignore json parse error */
-      }
-    }
-  } catch {
-    /* ignore Axios error for fetch fallback */
-  }
-
-  if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
+  const response = await apiClient.post<any>('/buyers/login', credentials);
+  let responseBody = response?.data !== undefined ? response.data : response;
+  if (typeof responseBody === 'string' && responseBody.trim()) {
     try {
-      const csrfToken = await getFreshCsrfToken();
-      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/buyers/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken || ''
-        },
-        body: JSON.stringify(credentials),
-        credentials: 'include'
-      });
-      const textData = await fetchRes.text();
-      if (textData && typeof textData === 'string') {
-        try {
-          responseBody = JSON.parse(textData);
-        } catch {
-          /* ignore */
-        }
-      }
+      responseBody = JSON.parse(responseBody);
     } catch {
-      /* ignore fetch fallback error */
+      /* ignore json parse error */
     }
   }
 
@@ -102,12 +71,6 @@ export async function login(credentials: { email: string; password: string }): P
   }
 
   delete buyerApiInstance.defaults.headers.common['Authorization'];
-
-  try {
-    await getFreshCsrfToken();
-  } catch {
-    /* ignore post-login CSRF refresh errors */
-  }
 
   return { buyer: transformBuyer(rawBuyer), token, refreshToken };
 }

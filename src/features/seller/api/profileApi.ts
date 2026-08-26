@@ -1,7 +1,6 @@
 
 import type { ApiSeller } from '@/shared/types/api/seller';
 import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
-import { storage } from '@/infrastructure/storage/storage';
 import type {
   ReferralDashboard,
   RegisterSellerInput,
@@ -123,45 +122,13 @@ export const deleteSellerAccount = () => sellerApiInstance.delete('/sellers/acco
 
 export const sellerProfileApi = {
   login: async (credentials: { email: string; password: string }): Promise<{ seller: ApiSeller; token?: string; refreshToken?: string }> => {
-    let responseBody: any = null;
-
-    try {
-      const response = await sellerApiInstance.post<any>('/sellers/login', credentials);
-      responseBody = response?.data !== undefined ? response.data : response;
-      if (typeof responseBody === 'string' && responseBody.trim()) {
-        try {
-          responseBody = JSON.parse(responseBody);
-        } catch {
-          /* ignore json parse error */
-        }
-      }
-    } catch {
-      /* ignore Axios error to allow fetch fallback */
-    }
-
-    if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
+    const response = await sellerApiInstance.post<any>('/sellers/login', credentials);
+    let responseBody = response?.data !== undefined ? response.data : response;
+    if (typeof responseBody === 'string' && responseBody.trim()) {
       try {
-        const csrfToken = await getFreshCsrfToken();
-        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken || '',
-
-          },
-          body: JSON.stringify(credentials),
-          credentials: 'include'
-        });
-        const textData = await fetchRes.text();
-        if (textData && typeof textData === 'string') {
-          try {
-            responseBody = JSON.parse(textData);
-          } catch {
-            /* ignore */
-          }
-        }
+        responseBody = JSON.parse(responseBody);
       } catch {
-        /* ignore fetch fallback error */
+        /* ignore json parse error */
       }
     }
 
@@ -180,12 +147,6 @@ export const sellerProfileApi = {
 
     if (!rawSeller) {
       throw new Error(responseBody.message || 'Login response incomplete: missing seller profile details.');
-    }
-
-    try {
-      await getFreshCsrfToken();
-    } catch {
-      /* ignore post-login CSRF refresh errors */
     }
 
     return { seller: transformSeller(rawSeller), token, refreshToken };
@@ -258,46 +219,13 @@ export const sellerProfileApi = {
   },
 
   getProfile: async (): Promise<ApiSeller> => {
-    let bodyData: any = null;
-
-    try {
-      const response = await sellerApiInstance.get<any>('/sellers/profile');
-      bodyData = response?.data !== undefined ? response.data : response;
-      if (typeof bodyData === 'string' && bodyData.trim()) {
-        try {
-          bodyData = JSON.parse(bodyData);
-        } catch {
-          /* ignore json parse error */
-        }
-      }
-    } catch {
-      /* ignore Axios error for fetch fallback */
-    }
-
-    if (!bodyData || typeof bodyData !== 'object' || bodyData.status === 'error') {
+    const response = await sellerApiInstance.get<any>('/sellers/profile');
+    let bodyData = response?.data !== undefined ? response.data : response;
+    if (typeof bodyData === 'string' && bodyData.trim()) {
       try {
-        const token = await storage.get('sellerToken');
-        const csrfToken = await getFreshCsrfToken();
-        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/profile', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
-            'X-CSRF-Token': csrfToken || '',
-
-          },
-          credentials: 'include'
-        });
-        const textData = await fetchRes.text();
-        if (textData && typeof textData === 'string') {
-          try {
-            bodyData = JSON.parse(textData);
-          } catch {
-            /* ignore */
-          }
-        }
+        bodyData = JSON.parse(bodyData);
       } catch {
-        /* ignore fetch fallback error */
+        /* ignore json parse error */
       }
     }
 
@@ -343,46 +271,13 @@ export const sellerProfileApi = {
   },
 
   getAnalytics: async (): Promise<SellerAnalytics> => {
-    let bodyData: any = null;
-
-    try {
-      const response = await sellerApiInstance.get<any>('/sellers/analytics');
-      bodyData = response?.data !== undefined ? response.data : response;
-      if (typeof bodyData === 'string' && bodyData.trim()) {
-        try {
-          bodyData = JSON.parse(bodyData);
-        } catch {
-          /* ignore json parse error */
-        }
-      }
-    } catch {
-      /* ignore Axios error for fetch fallback */
-    }
-
-    if (!bodyData || typeof bodyData !== 'object' || bodyData.status === 'error') {
+    const response = await sellerApiInstance.get<any>('/sellers/analytics');
+    let bodyData = response?.data !== undefined ? response.data : response;
+    if (typeof bodyData === 'string' && bodyData.trim()) {
       try {
-        const token = await storage.get('sellerToken');
-        const csrfToken = await getFreshCsrfToken();
-        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/analytics', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
-            'X-CSRF-Token': csrfToken || '',
-
-          },
-          credentials: 'include'
-        });
-        const textData = await fetchRes.text();
-        if (textData && typeof textData === 'string') {
-          try {
-            bodyData = JSON.parse(textData);
-          } catch {
-            /* ignore */
-          }
-        }
+        bodyData = JSON.parse(bodyData);
       } catch {
-        /* ignore fetch fallback error */
+        /* ignore json parse error */
       }
     }
 
