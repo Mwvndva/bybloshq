@@ -5,7 +5,7 @@ import User from '../users/user.model.js';
 import * as SellerModel from '../../commerce/sellers/seller.model.js';
 import Buyer from '../../commerce/buyers/buyer.model.js';
 import { signToken } from '../../../shared/utils/jwt.js';
-import { sendPasswordResetEmail } from '../../../shared/utils/email.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../../../shared/utils/email.js';
 import { pool } from '../../../infrastructure/database/database.js';
 import PendingRegistration from '../../../shared/utils/pendingRegistration.model.js';
 import ReferralService from '../../growth/referrals/referral.service.js';
@@ -53,7 +53,6 @@ class AuthService {
 
             await PendingRegistration.updateToken(normalizedEmail, hashedToken, expiresAt);
 
-            const { sendVerificationEmail } = await import('../shared/utils/email.js');
             sendVerificationEmail(normalizedEmail, rawToken, target.role).catch(err =>
                 logger.error('[AUTH] Failed to resend pending verification email:', err.message)
             );
@@ -347,7 +346,6 @@ class AuthService {
         });
 
         // 3. Send verification email (non-blocking)
-        const { sendVerificationEmail } = await import('../shared/utils/email.js');
         sendVerificationEmail(normalizedEmail, rawToken, type).catch(err => {
             logger.error('[AUTH] Failed to send registration verification email:', {
                 email: normalizedEmail,
@@ -438,7 +436,6 @@ class AuthService {
         await User.setEmailVerificationToken(email, hashedToken, expires)
 
         // Send raw token in the email link — backend hashes it on verification
-        const { sendVerificationEmail } = await import('../shared/utils/email.js')
         await sendVerificationEmail(email, rawToken, userType)
 
         return true
@@ -607,7 +604,6 @@ class AuthService {
 
             // Use the original role from registration for the link to ensure consistency
             const linkRole = pending.role || userType;
-            const { sendVerificationEmail } = await import('../shared/utils/email.js');
             await sendVerificationEmail(normalizedEmail, rawToken, linkRole);
         }
 
