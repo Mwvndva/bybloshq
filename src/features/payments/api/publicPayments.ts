@@ -1,4 +1,4 @@
-import { publicApi } from '@/features/shop/api/instance';
+import apiClient from '@/infrastructure/http/apiClient';
 
 export async function pollPaymentStatus(reference: string, maxAttempts: number = 30): Promise<unknown> {
   const attempts = 0;
@@ -9,7 +9,7 @@ export async function pollPaymentStatus(reference: string, maxAttempts: number =
     const checkStatus = async () => {
       try {
         currentAttempts++;
-        const response = await publicApi.get(`payments/status/${reference}`);
+        const response = await apiClient.get(`payments/status/${reference}`);
         const responseData = response.data as Record<string, unknown>;
         const status = typeof responseData.status === 'string' ? responseData.status.toLowerCase() : '';
 

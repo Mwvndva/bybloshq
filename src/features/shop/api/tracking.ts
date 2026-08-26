@@ -1,4 +1,4 @@
-import { publicApi } from './instance';
+import apiClient from '@/infrastructure/http/apiClient';
 
 export interface PublicTrackingLeg {
   type: 'pickup' | 'delivery';
@@ -40,7 +40,7 @@ export interface PublicTrackingData {
 }
 
 export async function fetchPublicTracking(token: string) {
-  const response = await publicApi.get(`/tracking/${encodeURIComponent(token)}`);
+  const response = await apiClient.get<{ data?: PublicTrackingData }>(`/tracking/${encodeURIComponent(token)}`);
   return response.data?.data as PublicTrackingData;
 }
 
