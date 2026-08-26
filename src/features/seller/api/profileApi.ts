@@ -276,7 +276,7 @@ export const sellerProfileApi = {
 
     if (!bodyData || typeof bodyData !== 'object' || bodyData.status === 'error') {
       try {
-        const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
+        const token = await storage.get('sellerToken');
         const csrfToken = await getFreshCsrfToken();
         const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/profile', {
           method: 'GET',
@@ -361,7 +361,7 @@ export const sellerProfileApi = {
 
     if (!bodyData || typeof bodyData !== 'object' || bodyData.status === 'error') {
       try {
-        const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
+        const token = await storage.get('sellerToken');
         const csrfToken = await getFreshCsrfToken();
         const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/analytics', {
           method: 'GET',

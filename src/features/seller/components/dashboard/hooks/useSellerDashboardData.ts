@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { sellerApi } from '@/features/seller/api';
+import { storage } from '@/infrastructure/storage/storage';
 import { normalizeSellerAnalytics } from '../dashboardUtils';
 import { sellerDashboardQueryKeys } from '../queryKeys';
 import type { AnalyticsData } from '../types';
@@ -37,7 +38,7 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
     const e = err as { response?: { status?: number; data?: { message?: string } } };
 
     if (e.response?.status === 401) {
-      localStorage.removeItem('sellerToken');
+      void storage.remove('sellerToken');
       toast({
         title: 'Session expired',
         description: 'Please log in again to continue',

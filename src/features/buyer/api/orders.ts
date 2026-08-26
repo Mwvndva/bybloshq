@@ -28,7 +28,7 @@ export async function getOrders(): Promise<ApiOrder[]> {
 
   if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
     try {
-      const token = (await storage.get('buyerToken')) || localStorage.getItem('buyerToken');
+      const token = await storage.get('buyerToken');
       const csrfToken = await getFreshCsrfToken();
       const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/orders/user', {
         method: 'GET',
