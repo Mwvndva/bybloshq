@@ -1,5 +1,6 @@
 import cacheService from '../../shared/utils/cache.service.js';
 import paymentService from '../../domains/payments/payments/payment.service.js';
+import CorePaymentService from '../../domains/payments/payments/CorePaymentService.js';
 import * as publicCatalogRepository from '../../domains/commerce/repositories/publicCatalog.repository.js';
 import * as sellerRepository from '../../domains/commerce/sellers/seller.repository.js';
 import * as publicOrderStatusRepository from '../../domains/orders/repositories/publicOrderStatus.repository.js';
@@ -65,7 +66,6 @@ async function syncPendingPaymentFromProvider(row) {
     const normalizedStatus = String(providerStatus.status || '').toLowerCase();
 
     if (PAYMENT_SUCCESS_STATUSES.has(normalizedStatus) || PAYMENT_FAILURE_STATUSES.has(normalizedStatus)) {
-      const { default: CorePaymentService } = await import('../core/CorePaymentService.js');
       await CorePaymentService.completeVerifiedPayment({
         paymentId: row.payment_id,
         reference,
