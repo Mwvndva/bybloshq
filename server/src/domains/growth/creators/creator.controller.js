@@ -1,6 +1,7 @@
 import CreatorService from './creator.service.js';
 import AuthService from '../../identity/auth/auth.service.js';
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
+import tokenBlacklist from '../../identity/tokens/tokenBlacklist.service.js';
 import { sanitizeWithdrawalRequest } from '../../../shared/utils/sanitize.js';
 import { setAuthCookie } from '../../../shared/utils/cookie.utils.js';
 import { getTokenFromRequest, verifyToken } from '../../../shared/utils/jwt.js';
@@ -140,7 +141,6 @@ export const logout = async (req, res) => {
   if (token) {
     try {
       const decoded = verifyToken(token);
-      const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
       await tokenBlacklist.addToken(token, decoded.exp);
     } catch (err) {
       logger.debug('[CREATOR_LOGOUT] Could not blacklist token:', err.message);

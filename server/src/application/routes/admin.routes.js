@@ -5,6 +5,7 @@ import * as adminController from '../../domains/identity/admin/admin.controller.
 import { protect, hasPermission } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
 import { getTokenFromRequest, verifyToken } from '../../shared/utils/jwt.js';
+import tokenBlacklist from '../../domains/identity/tokens/tokenBlacklist.service.js';
 import logger from '../../shared/utils/logger.js';
 
 const router = express.Router();
@@ -18,7 +19,6 @@ router.post('/logout', async (req, res) => {
     if (token) {
         try {
             const decoded = verifyToken(token);
-            const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
             await tokenBlacklist.addToken(token, decoded.exp);
         } catch (err) {
             // Token may be invalid/expired — that's fine, just clear cookies

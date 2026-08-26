@@ -30,6 +30,7 @@ import { normalizeProviderAmount, normalizeProviderPaymentStatus } from '../../.
 import { normalizePaystackChargePayload } from '../../../shared/utils/paystackPaymentNormalizer.js';
 import { releaseOrderReservations } from '../../../shared/utils/reservationRelease.js';
 import { PaymentStatus } from '../../../shared/constants/enums.js';
+import withdrawalService from '../withdrawals/withdrawal.service.js';
 
 const FULFILLABLE_ORDER_STATUSES = new Set(['CREATED', 'RESERVED', 'HELD', 'PAYMENT_PENDING', 'PENDING']);
 const PAID_TERMINAL_ORDER_STATUSES = new Set([
@@ -251,46 +252,11 @@ function requireValidWebhookSignature(signature, rawBody) {
 const CorePaymentService = {
 
     /**
-     * Core-owned product checkout initiation boundary.
-     *
-     * Phase 1/2 centralization note:
-     * - Controllers keep calling PaymentService for compatibility.
-     * - PaymentService.initiateProductPayment delegates here.
-     * - The current implementation lives in PaymentLifecycleService as
-     *   initiateProductPaymentLegacy until helper dependencies are moved into
-     *   focused Core collaborators without changing money behavior.
+     * Legacy product payment initiation.
+     * Direct invocation via CorePaymentService is disabled. Use CheckoutWorkflow or PaymentService.
      */
     async initiateProductPayment(normalizedOrder) {
-        const orderId = normalizedOrder.orderId || normalizedOrder.service?.id || normalizedOrder.id;
-        const lockKey = orderId ? `lock:payment:initiate:${orderId}` : null;
-
-        let redisClient = null;
-        if (lockKey) {
-            try {
-                const { getRedisClient } = await import('../../../shared/config/redis.js');
-                redisClient = getRedisClient();
-            } catch (e) {
-                redisClient = null;
-            }
-        }
-
-        if (redisClient && lockKey) {
-            const acquired = await redisClient.set(lockKey, '1', 'NX', 'EX', 15);
-            if (!acquired) {
-                const err = new Error('Payment processing is already in progress for this order.');
-                /** @type {any} */ (err).statusCode = 429;
-                throw err;
-            }
-        }
-
-        try {
-            const { default: paymentLifecycleService } = await import('../services/paymentLifecycle.service.js');
-            return await paymentLifecycleService.initiateProductPaymentLegacy(normalizedOrder);
-        } finally {
-            if (redisClient && lockKey) {
-                await redisClient.del(lockKey).catch(() => {});
-            }
-        }
+        throw new Error('CorePaymentService.initiateProductPayment is disabled. Use CheckoutWorkflow.createOrder or PaymentService for product payment initiation.');
     },
 
     async initiatePayment(paymentData) {
@@ -731,7 +697,6 @@ const CorePaymentService = {
      * NO-TOUCH: Fully delegated to legacy withdrawal service.
      */
     async initiateWithdrawal(params) {
-        const { default: withdrawalService } = await import('../services/withdrawal.service.js');
         const result = await withdrawalService.createWithdrawalRequest(params);
 
         // P1-3 FIX: Withdrawal is only INITIATED here, not COMPLETED.
@@ -755,7 +720,6 @@ const CorePaymentService = {
      * NO-TOUCH: Fully delegated to legacy withdrawal service.
      */
     async handlePayoutCallback(callbackData) {
-        const { default: withdrawalService } = await import('../services/withdrawal.service.js');
         return withdrawalService.updateStatusWithSideEffects(
             callbackData.requestId,
             callbackData.newStatus,

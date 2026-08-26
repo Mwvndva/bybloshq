@@ -11,6 +11,7 @@ import { generateRefreshToken } from '../../../shared/utils/refreshToken.js';
 import OrderModel from "../../orders/order/order.model.js";
 import { OrderStatus } from "../../../shared/constants/enums.js";
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
+import tokenBlacklist from '../../identity/tokens/tokenBlacklist.service.js';
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res, next) => {
@@ -67,7 +68,6 @@ export const logout = async (req, res) => {
   if (token) {
     try {
       const decoded = verifyToken(token);
-      const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
       await tokenBlacklist.addToken(token, decoded.exp);
     } catch (err) {
       // Token may be invalid/expired — that's fine, just clear cookies

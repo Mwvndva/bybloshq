@@ -4,6 +4,7 @@ import { signToken } from '../../../shared/utils/jwt.js';
 import User from '../../identity/users/user.model.js';
 import { pool } from '../../../infrastructure/database/database.js';
 import ProfileProvisioningService from '../../identity/users/profileProvisioning.service.js';
+import CacheService from '../../../shared/utils/cache.service.js';
 
 class BuyerService {
     static async register(data) {
@@ -115,7 +116,6 @@ class BuyerService {
             await client.query('COMMIT');
 
             try {
-                const CacheService = (await import('./cache.service.js')).default;
                 await CacheService.delete(`user:${lockedUser.id}:cross-roles`);
             } catch (cacheErr) {
                 logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
