@@ -432,7 +432,6 @@ class AdminService {
         }
 
         try {
-          const CacheService = (await import('../../../application/services/cache.service.js')).default;
           await CacheService.delete(`user:${userId}:cross-roles`);
         } catch (cacheError) {
           logger.warn('[ADMIN_DELETE_CREATOR] Failed to invalidate cross-role cache:', cacheError.message);

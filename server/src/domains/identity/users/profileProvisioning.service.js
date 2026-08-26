@@ -3,10 +3,10 @@ import * as SellerModel from '../../commerce/sellers/seller.model.js';
 import User from './user.model.js';
 import { pool } from '../../../infrastructure/database/database.js';
 import logger from '../../../shared/utils/logger.js';
+import CacheService from '../../../shared/utils/cache.service.js';
 
 async function invalidateCrossRoleCache(userId) {
     try {
-        const CacheService = (await import('./cache.service.js')).default;
         await CacheService.delete(`user:${userId}:cross-roles`);
     } catch (cacheErr) {
         logger.warn('[PROFILE_PROVISIONING] Failed to invalidate cross-role cache:', cacheErr.message);
