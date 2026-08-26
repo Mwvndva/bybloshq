@@ -40,10 +40,11 @@ export function logisticsHeaders() {
 
 export async function clearLogisticsSession() {
   void unregisterNativePushNotifications('logistics', { headers: logisticsHeaders() }).catch(() => undefined);
-  sessionStorage.removeItem(LOGISTICS_ACTIVE_KEY);
-  sessionStorage.removeItem(LOGISTICS_PARTNER_KEY);
-  localStorage.removeItem('mzigoLogisticsToken');
-  localStorage.removeItem('mzigoLogisticsPartner');
+  await storage.remove(LOGISTICS_ACTIVE_KEY);
+  await storage.remove(LOGISTICS_PARTNER_KEY);
+  await storage.remove('mzigoLogisticsToken');
+  await storage.remove('mzigoLogisticsPartner');
+  await storage.remove('logisticsSessionActive');
   if (isNativeApp()) {
     await storage.remove('logisticsToken');
     await storage.remove('logisticsRefreshToken');
@@ -55,11 +56,9 @@ export async function clearLogisticsSession() {
   }
 }
 
-function setLogisticsSession(partner: LogisticsPartner) {
-  sessionStorage.setItem(LOGISTICS_ACTIVE_KEY, 'true');
-  sessionStorage.setItem(LOGISTICS_PARTNER_KEY, JSON.stringify(partner));
-  localStorage.setItem(LOGISTICS_ACTIVE_KEY, 'true');
-  localStorage.setItem(LOGISTICS_PARTNER_KEY, JSON.stringify(partner));
+export function setLogisticsSession(partner: LogisticsPartner) {
+  void storage.set(LOGISTICS_ACTIVE_KEY, 'true');
+  void storage.set(LOGISTICS_PARTNER_KEY, JSON.stringify(partner));
 }
 
 

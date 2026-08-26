@@ -74,7 +74,7 @@ export const sellerProductsApi = {
 
     if (!bodyData || typeof bodyData !== 'object') {
       try {
-        const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
+        const token = await storage.get('sellerToken');
         const csrfToken = await getFreshCsrfToken();
         const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/products', {
           method: 'GET',

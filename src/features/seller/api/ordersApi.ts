@@ -25,7 +25,7 @@ export const sellerOrdersApi = {
 
     if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
       try {
-        const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
+        const token = await storage.get('sellerToken');
         const csrfToken = await getFreshCsrfToken();
         const queryString = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
         const fetchRes = await fetch(`https://byblos-backend-fky5.onrender.com/api/sellers/orders${queryString}`, {

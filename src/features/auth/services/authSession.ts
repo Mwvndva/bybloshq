@@ -51,7 +51,6 @@ export const enforceSingleActiveRole = async (activeRole: UserRole): Promise<voi
     await storage.remove(getSessionKey(role));
     await storage.remove(`${role}Token`);
     await storage.remove(`${role}RefreshToken`);
-    try { localStorage.removeItem(getSessionKey(role)); } catch { /* ignore */ }
   }
 
   if (tokensToRevoke.length > 0) {

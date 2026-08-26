@@ -10,6 +10,7 @@ import {
     SESSION_EXPIRED_EVENT,
     type SessionExpiredDetail,
 } from '@/infrastructure/navigation/navigationService';
+import { storage } from '@/infrastructure/storage/storage';
 
 export { GlobalAuthContext } from './authContextObjects';
 
@@ -60,10 +61,8 @@ export function AuthCoreProvider({ children }: { children: ReactNode }) {
         const handleSessionExpired = (event: Event) => {
             const detail = (event as CustomEvent<SessionExpiredDetail>).detail;
             const redirectPath = detail?.redirectPath ?? '/buyer/login';
-            try {
-                localStorage.removeItem('byblos_auth_checked');
-                localStorage.removeItem('byblos_user_role');
-            } catch { /* ignore storage errors */ }
+            void storage.remove('byblos_auth_checked');
+            void storage.remove('byblos_user_role');
             setUser(null);
             navigate(redirectPath, { replace: true });
         };
