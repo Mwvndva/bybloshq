@@ -70,8 +70,6 @@ export async function login(credentials: { email: string; password: string }): P
     throw new Error(responseBody.message || 'Unable to load buyer account details. Please try again.');
   }
 
-  delete buyerApiInstance.defaults.headers.common['Authorization'];
-
   return { buyer: transformBuyer(rawBuyer), token, refreshToken };
 }
 
