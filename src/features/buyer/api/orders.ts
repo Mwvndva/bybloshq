@@ -1,7 +1,5 @@
 import { buyerApiInstance, ApiError } from './instance';
 import type { ApiOrder } from '@/shared/types';
-import { storage } from '@/infrastructure/storage/storage';
-import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -10,45 +8,13 @@ interface ApiResponse<T> {
 }
 
 export async function getOrders(): Promise<ApiOrder[]> {
-  let responseBody: any = null;
-
-  try {
-    const response = await buyerApiInstance.get<any>('/orders/user');
-    responseBody = response?.data !== undefined ? response.data : response;
-    if (typeof responseBody === 'string' && responseBody.trim()) {
-      try {
-        responseBody = JSON.parse(responseBody);
-      } catch {
-        /* ignore json parse error */
-      }
-    }
-  } catch {
-    /* ignore Axios error for fetch fallback */
-  }
-
-  if (!responseBody || typeof responseBody !== 'object' || responseBody.status === 'error' || responseBody.status === 'fail') {
+  const response = await buyerApiInstance.get<any>('/orders/user');
+  let responseBody = response?.data !== undefined ? response.data : response;
+  if (typeof responseBody === 'string' && responseBody.trim()) {
     try {
-      const token = await storage.get('buyerToken');
-      const csrfToken = await getFreshCsrfToken();
-      const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/orders/user', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-          'X-CSRF-Token': csrfToken || ''
-        },
-        credentials: 'include'
-      });
-      const textData = await fetchRes.text();
-      if (textData && typeof textData === 'string') {
-        try {
-          responseBody = JSON.parse(textData);
-        } catch {
-          /* ignore */
-        }
-      }
+      responseBody = JSON.parse(responseBody);
     } catch {
-      /* ignore fetch fallback error */
+      /* ignore json parse error */
     }
   }
 
