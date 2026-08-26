@@ -176,7 +176,8 @@ function BuyerDashboard() {
 
 
   return (
-    <div className="page-enter dashboard-layout min-w-0 overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200" style={{
+    <div className="page-enter dashboard-layout relative min-w-0 overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200" style={{
+      position: 'relative',
       display: 'flex', flexDirection: 'column',
       minHeight: '100svh',
       height: '100svh',
