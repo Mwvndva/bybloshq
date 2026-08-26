@@ -10,6 +10,7 @@ import { useAcceptShopRequestMutation } from '@/features/creator/hooks/mutations
 import { useCreatorWithdrawalMutation } from '@/features/creator/hooks/mutations/useCreatorWithdrawalMutation';
 import { useDenyShopRequestMutation } from '@/features/creator/hooks/mutations/useDenyShopRequestMutation';
 import { useCreatorLogoutMutation } from '@/features/creator/hooks/mutations/useCreatorAuthMutations';
+import { clearRoleSession } from '@/features/auth/services/authSession';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { copyLinkedTextToClipboard } from '@/shared/utils/shopLinks';
@@ -60,7 +61,7 @@ export default function CreatorDashboard() {
     } catch {
       // The local session should still end if the network request fails.
     } finally {
-      localStorage.removeItem('creatorSessionActive');
+      await clearRoleSession('creator');
       navigate('/creator/login', { replace: true });
     }
   };

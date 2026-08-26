@@ -1,4 +1,4 @@
-import { publicApi } from './instance';
+import apiClient from '@/infrastructure/http/apiClient';
 import { transformSeller, type ApiPublicSeller } from '../utils/sellerTransforms';
 import { transformProduct, type ApiProduct } from '../utils/productTransforms';
 
@@ -11,7 +11,7 @@ export async function searchSellers(filters: { city: string; location?: string }
       params.append('location', filters.location);
     }
 
-    const response = await publicApi.get(`sellers/search?${params.toString()}`);
+    const response = await apiClient.get(`sellers/search?${params.toString()}`);
 
     let sellersData: unknown[] = [];
     const responseData = response.data;
@@ -33,7 +33,7 @@ export async function searchSellers(filters: { city: string; location?: string }
 
 export async function searchProducts(query: string, filters: Record<string, unknown> = {}): Promise<ApiProduct[]> {
   try {
-    const response = await publicApi.get('public/products/search', {
+    const response = await apiClient.get('public/products/search', {
       params: { q: query, ...filters }
     });
 

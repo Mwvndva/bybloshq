@@ -38,8 +38,6 @@ export const clearActiveRole = async (): Promise<void> => {
  * 5. Records active role under byblos.auth.active_role.
  */
 export const enforceSingleActiveRole = async (activeRole: UserRole): Promise<void> => {
-  await authStorage.purgeLegacyAndInactiveKeys(activeRole);
-
   const tokensToRevoke: string[] = [];
 
   for (const role of ALL_ROLES) {
@@ -48,10 +46,15 @@ export const enforceSingleActiveRole = async (activeRole: UserRole): Promise<voi
     if (oldToken && typeof oldToken === 'string') {
       tokensToRevoke.push(oldToken);
     }
+  }
+
+  await authStorage.purgeLegacyAndInactiveKeys(activeRole);
+
+  for (const role of ALL_ROLES) {
+    if (role === activeRole) continue;
     await storage.remove(getSessionKey(role));
     await storage.remove(`${role}Token`);
     await storage.remove(`${role}RefreshToken`);
-    try { localStorage.removeItem(getSessionKey(role)); } catch { /* ignore */ }
   }
 
   if (tokensToRevoke.length > 0) {

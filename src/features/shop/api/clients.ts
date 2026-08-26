@@ -1,8 +1,8 @@
-import { publicApi } from './instance';
+import apiClient from '@/infrastructure/http/apiClient';
 
 export async function becomeClient(sellerId: string): Promise<unknown> {
   try {
-    const response = await publicApi.post(`buyers/sellers/${sellerId}/become-client`);
+    const response = await apiClient.post(`buyers/sellers/${sellerId}/become-client`);
     return response.data;
   } catch (error) {
     console.error('Error becoming client:', error);
