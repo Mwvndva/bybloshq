@@ -1,6 +1,6 @@
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards, X } from 'lucide-react';
 import RefundCard from '../RefundCard';
 import { BuyerMembershipCard } from './BuyerMembershipCard';
@@ -197,32 +197,29 @@ export function BuyerProfileContent({
 
 export function BuyerProfileSheet(props: BuyerProfileSheetProps) {
   return (
-    <Sheet open={props.isOpen} onOpenChange={props.onOpenChange}>
-      <SheetContent
-        side="right"
-        className="z-[100] flex h-dvh w-full max-w-none transform-gpu flex-col overflow-hidden border-l border-slate-200 dark:border-white/10 bg-white dark:bg-black p-0 text-slate-950 dark:text-white shadow-2xl shadow-black/60 will-change-transform sm:max-w-[430px]"
+    <DialogPrimitive.Root open={props.isOpen} onOpenChange={props.onOpenChange}>
+      <DialogPrimitive.Overlay
+        className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm transition-all duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+      />
+      <DialogPrimitive.Content
+        className="absolute inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-[430px] transform-gpu flex-col overflow-hidden border-l border-white/10 bg-black text-white shadow-2xl shadow-black/80 will-change-transform transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-400 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
       >
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] px-5 py-4 text-left">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-bold text-slate-950 dark:text-white">Buyer Profile</h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-white/60">
-              Account settings, theme, and refunds
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => props.onOpenChange(false)}
-            className="rounded-full p-2 text-slate-500 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer"
-            aria-label="Close profile sidebar"
+        <DialogPrimitive.Title className="sr-only">Buyer Profile</DialogPrimitive.Title>
+        <DialogPrimitive.Description className="sr-only">Account settings, theme preferences, and refunds</DialogPrimitive.Description>
+
+        <div className="flex items-center justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-1">
+          <DialogPrimitive.Close
+            className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
+            aria-label="Close profile drawer"
           >
             <X className="h-5 w-5" />
-          </button>
+          </DialogPrimitive.Close>
         </div>
 
-        <div className="flex-1 min-w-0 overflow-y-auto px-4 py-5 sm:px-5">
+        <div className="flex-1 min-w-0 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-1 sm:px-5">
           <BuyerProfileContent {...props} />
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Root>
   );
 }
