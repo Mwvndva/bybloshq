@@ -207,7 +207,7 @@ export function BuyerProfileSheet(props: BuyerProfileSheetProps) {
         <DialogPrimitive.Title className="sr-only">Buyer Profile</DialogPrimitive.Title>
         <DialogPrimitive.Description className="sr-only">Account settings, theme preferences, and refunds</DialogPrimitive.Description>
 
-        <div className="flex items-center justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-1">
+        <div className="flex items-center justify-end px-4 pt-3 pb-1">
           <DialogPrimitive.Close
             className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
             aria-label="Close profile drawer"
@@ -216,7 +216,7 @@ export function BuyerProfileSheet(props: BuyerProfileSheetProps) {
           </DialogPrimitive.Close>
         </div>
 
-        <div className="flex-1 min-w-0 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-1 sm:px-5">
+        <div className="flex-1 min-w-0 overflow-y-auto px-4 pb-6 pt-1 sm:px-5">
           <BuyerProfileContent {...props} />
         </div>
       </DialogPrimitive.Content>
