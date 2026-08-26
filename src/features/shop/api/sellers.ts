@@ -1,9 +1,10 @@
-import { publicApi, SellerListResponse } from './instance';
+import apiClient from '@/infrastructure/http/apiClient';
+import type { SellerListResponse } from './types';
 import { transformSeller, type ApiPublicSeller } from '../utils/sellerTransforms';
 
 export async function getSellersPage(params: { page?: number; limit?: number } = {}): Promise<SellerListResponse> {
   try {
-    const response = await publicApi.get('public/sellers/active', { params });
+    const response = await apiClient.get('public/sellers/active', { params });
     let sellersData: unknown[] = [];
     const responseData = response.data as Record<string, unknown>;
 
@@ -64,14 +65,14 @@ export async function getSellers(): Promise<ApiPublicSeller[]> {
 }
 
 export async function knockSeller(sellerId: string | number): Promise<{ sellerId: number; knockCount: number }> {
-  const response = await publicApi.post(`public/sellers/${sellerId}/knock`);
+  const response = await apiClient.post(`public/sellers/${sellerId}/knock`);
   const responseData = response.data as Record<string, unknown>;
   return (responseData?.data as { sellerId: number; knockCount: number } | undefined) || { sellerId: Number(sellerId), knockCount: 0 };
 }
 
 export async function getSellerInfo(sellerId: string): Promise<ApiPublicSeller | null> {
   try {
-    const response = await publicApi.get(`sellers/${sellerId}`);
+    const response = await apiClient.get(`sellers/${sellerId}`);
     const responseData = response.data as Record<string, unknown>;
     const sellerData = responseData.seller || responseData;
     return sellerData ? transformSeller(sellerData) : null;
