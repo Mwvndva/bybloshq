@@ -1,6 +1,5 @@
-import apiClient, { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
+import apiClient from '@/infrastructure/http/apiClient';
 import type { ApiSellerProduct } from '@/shared/types/api/product';
-import { storage } from '@/infrastructure/storage/storage';
 
 const sellerApiInstance = apiClient;
 
@@ -56,45 +55,13 @@ export const sellerProductsApi = {
   },
 
   getProducts: async (): Promise<ApiSellerProduct[]> => {
-    let bodyData: any = null;
-
-    try {
-      const response = await sellerApiInstance.get<any>('/sellers/products');
-      bodyData = response?.data !== undefined ? response.data : response;
-      if (typeof bodyData === 'string' && bodyData.trim()) {
-        try {
-          bodyData = JSON.parse(bodyData);
-        } catch {
-          /* ignore json parse error */
-        }
-      }
-    } catch {
-      /* ignore Axios error for fetch fallback */
-    }
-
-    if (!bodyData || typeof bodyData !== 'object') {
+    const response = await sellerApiInstance.get<any>('/sellers/products');
+    let bodyData = response?.data !== undefined ? response.data : response;
+    if (typeof bodyData === 'string' && bodyData.trim()) {
       try {
-        const token = (await storage.get('sellerToken')) || localStorage.getItem('sellerToken');
-        const csrfToken = await getFreshCsrfToken();
-        const fetchRes = await fetch('https://byblos-backend-fky5.onrender.com/api/sellers/products', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
-            'X-CSRF-Token': csrfToken || ''
-          },
-          credentials: 'include'
-        });
-        const textData = await fetchRes.text();
-        if (textData && typeof textData === 'string') {
-          try {
-            bodyData = JSON.parse(textData);
-          } catch {
-            /* ignore */
-          }
-        }
+        bodyData = JSON.parse(bodyData);
       } catch {
-        /* ignore fetch fallback error */
+        /* ignore json parse error */
       }
     }
 

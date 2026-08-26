@@ -1,5 +1,4 @@
-import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
-import { api, ApiError, setCsrfTokenCache } from './instance';
+import { api, ApiError } from './instance';
 
 export async function login(credentials: { email?: string; password?: string; pin?: string }) {
   try {
@@ -8,11 +7,6 @@ export async function login(credentials: { email?: string; password?: string; pi
       : { pin: credentials.pin };
 
     const response = await api.post('/admin/login', payload);
-
-    if (response.data?.status === 'success') {
-      const token = await getFreshCsrfToken();
-      setCsrfTokenCache(token);
-    }
 
     return response.data;
   } catch (error) {

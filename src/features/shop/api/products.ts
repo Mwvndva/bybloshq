@@ -1,9 +1,10 @@
-import { publicApi, ProductListResponse } from './instance';
+import apiClient from '@/infrastructure/http/apiClient';
+import type { ProductListResponse } from './types';
 import { transformProduct, type ApiProduct } from '../utils/productTransforms';
 
 export async function getProductsPage(filters: { city?: string; location?: string; aesthetic?: string; page?: number; limit?: number } = {}): Promise<ProductListResponse> {
   try {
-    const response = await publicApi.get('public/products', { params: filters });
+    const response = await apiClient.get('public/products', { params: filters });
     const responseData = response.data as Record<string, unknown>;
     let productsData: unknown[] = [];
 
@@ -58,7 +59,7 @@ export async function getProducts(filters: { city?: string; location?: string; a
 
 export async function getProduct(id: string): Promise<ApiProduct | null> {
   try {
-    const response = await publicApi.get(`public/products/${id}`);
+    const response = await apiClient.get(`public/products/${id}`);
     const responseData = response.data as Record<string, unknown>;
     const productData = responseData.product || responseData;
     return productData ? transformProduct(productData) : null;
@@ -69,7 +70,7 @@ export async function getProduct(id: string): Promise<ApiProduct | null> {
 
 export async function getFeaturedProducts(limit: number = 8): Promise<ApiProduct[]> {
   try {
-    const response = await publicApi.get(`public/products/featured?limit=${limit}`);
+    const response = await apiClient.get(`public/products/featured?limit=${limit}`);
     let productsData: unknown[] = [];
     const responseData = response.data as Record<string, unknown>;
 
@@ -91,7 +92,7 @@ export async function getFeaturedProducts(limit: number = 8): Promise<ApiProduct
 
 export async function getProductsByLocation(location: string): Promise<ApiProduct[]> {
   try {
-    const response = await publicApi.get('public/products', {
+    const response = await apiClient.get('public/products', {
       params: { location }
     });
 
