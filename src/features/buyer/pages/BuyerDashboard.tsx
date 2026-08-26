@@ -176,92 +176,100 @@ function BuyerDashboard() {
 
 
   return (
-    <div className="page-enter dashboard-layout relative min-w-0 overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200" style={{
-      position: 'relative',
+    <div className="page-enter dashboard-layout min-w-0 overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200" style={{
       display: 'flex', flexDirection: 'column',
       minHeight: '100svh',
       height: '100svh',
       overflowY: 'hidden',
     }}>
       <BuyerDashboardHeader />
-      <BuyerDashboardSearch
-        activeSection={activeSection}
-        productSearchQuery={searchQuery}
-        shopsSearchQuery={shopsSearchQuery}
-        onProductSearchChange={setSearchQuery}
-        onShopsSearchChange={setShopsSearchQuery}
-      />
 
-      {/* Main Content Area */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        padding: 'clamp(10px, 4vw, 18px)',
-        paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
-        WebkitOverflowScrolling: 'touch',
-        scrollBehavior: 'smooth',
-        overscrollBehavior: 'none',
-      }}
-        onTouchStart={handleDashboardTouchStart}
-        onTouchEnd={handleDashboardTouchEnd}
-        onTouchCancel={handleDashboardTouchCancel}
+      {/* Dashboard Body: establishes positioning context for drawer and overlay immediately below header */}
+      <div
+        className="relative flex-1 min-h-0 flex flex-col overflow-hidden"
+        style={{
+          marginBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))',
+        }}
       >
-        {activeSection === 'shop' && (
-          <>
-            <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
-          </>
-        )}
+        <BuyerDashboardSearch
+          activeSection={activeSection}
+          productSearchQuery={searchQuery}
+          shopsSearchQuery={shopsSearchQuery}
+          onProductSearchChange={setSearchQuery}
+          onShopsSearchChange={setShopsSearchQuery}
+        />
 
-        {activeSection === 'shops' && (
-          <MyShopsSection
-            filteredCount={followedShops.filteredShops.length}
-            isLoadingShops={followedShops.isLoadingShops}
-            mobileTab={myShopsMobileTab}
-            onClickCountChange={followedShops.handleShopClickCountChange}
-            onMobileTabChange={setMyShopsMobileTab}
-            onUnfollowShop={followedShops.handleUnfollowShop}
-            searchQuery={shopsSearchQuery}
-            shopGroups={followedShops.shopGroups}
-            shopsCount={followedShops.shops.length}
-            unfollowingShopId={followedShops.unfollowingShopId}
-          />
-        )}
+        {/* Main Content Area */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: 'clamp(10px, 4vw, 18px)',
+          paddingBottom: '1rem',
+          WebkitOverflowScrolling: 'touch',
+          scrollBehavior: 'smooth',
+          overscrollBehavior: 'none',
+        }}
+          onTouchStart={handleDashboardTouchStart}
+          onTouchEnd={handleDashboardTouchEnd}
+          onTouchCancel={handleDashboardTouchCancel}
+        >
+          {activeSection === 'shop' && (
+            <>
+              <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
+            </>
+          )}
 
-        {activeSection === 'wishlist' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm font-bold text-slate-950 dark:text-white">Wishlist</span>
-              <span className="text-xs font-semibold text-slate-500 dark:text-white/50">{wishlist.length} items</span>
+          {activeSection === 'shops' && (
+            <MyShopsSection
+              filteredCount={followedShops.filteredShops.length}
+              isLoadingShops={followedShops.isLoadingShops}
+              mobileTab={myShopsMobileTab}
+              onClickCountChange={followedShops.handleShopClickCountChange}
+              onMobileTabChange={setMyShopsMobileTab}
+              onUnfollowShop={followedShops.handleUnfollowShop}
+              searchQuery={shopsSearchQuery}
+              shopGroups={followedShops.shopGroups}
+              shopsCount={followedShops.shops.length}
+              unfollowingShopId={followedShops.unfollowingShopId}
+            />
+          )}
+
+          {activeSection === 'wishlist' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs sm:text-sm font-bold text-slate-950 dark:text-white">Wishlist</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-white/50">{wishlist.length} items</span>
+              </div>
+              <WishlistSection />
             </div>
-            <WishlistSection />
-          </div>
-        )}
+          )}
 
-        {activeSection === 'orders' && (
-          <div className="space-y-4">
-            <Suspense fallback={<RouteFallback message="Loading orders..." />}>
-              <OrdersSection />
-            </Suspense>
-          </div>
-        )}
+          {activeSection === 'orders' && (
+            <div className="space-y-4">
+              <Suspense fallback={<RouteFallback message="Loading orders..." />}>
+                <OrdersSection />
+              </Suspense>
+            </div>
+          )}
+        </div>
+
+        <BuyerProfileSheet
+          isEditingProfile={isEditingProfile}
+          isOpen={isProfileSidebarOpen}
+          isSavingProfile={isSavingProfile}
+          mobilePayment={mobilePayment}
+          refundAmount={user?.refunds || 0}
+          user={user}
+          whatsappNumber={whatsappNumber}
+          onLogout={handleLogout}
+          onMobilePaymentChange={setMobilePayment}
+          onOpenChange={handleProfileSidebarOpenChange}
+          onSaveProfile={handleSaveProfile}
+          onToggleEdit={() => setIsEditingProfile(!isEditingProfile)}
+          onWhatsappNumberChange={setWhatsappNumber}
+        />
       </div>
-
-      <BuyerProfileSheet
-        isEditingProfile={isEditingProfile}
-        isOpen={isProfileSidebarOpen}
-        isSavingProfile={isSavingProfile}
-        mobilePayment={mobilePayment}
-        refundAmount={user?.refunds || 0}
-        user={user}
-        whatsappNumber={whatsappNumber}
-        onLogout={handleLogout}
-        onMobilePaymentChange={setMobilePayment}
-        onOpenChange={handleProfileSidebarOpenChange}
-        onSaveProfile={handleSaveProfile}
-        onToggleEdit={() => setIsEditingProfile(!isEditingProfile)}
-        onWhatsappNumberChange={setWhatsappNumber}
-      />
 
       <BuyerBottomNav activeNav={activeNav} navItems={navItems} onSelect={setActiveTab} />
 
