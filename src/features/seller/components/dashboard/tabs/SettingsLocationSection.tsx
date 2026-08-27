@@ -1,5 +1,6 @@
 import { Edit, Loader2, Trash2 } from 'lucide-react';
 import ShopLocationPicker from '@/shared/components/ShopLocationPicker';
+import { Button } from '@/shared/ui/button';
 import type { SellerSettingsFormData } from '../types';
 import type { LocationCoordinates } from '@/infrastructure/location/location';
 import { SectionHeader } from './settingsTab.parts';
@@ -17,41 +18,78 @@ interface SettingsLocationSectionProps {
   getLocations: () => string[];
   handleShopLocationChange: (address: string, coordinates: LocationCoordinates | null) => void;
   isSaving: boolean;
+  onSave?: () => Promise<void>;
+  onCancel?: () => void;
 }
 
-export function SettingsLocationSection({ isEditing, toggleEdit, sellerProfile, handleDeleteLocation, isDeletingLocation, formData, handleCityChange, cities, handleLocationChange, getLocations, handleShopLocationChange, isSaving }: SettingsLocationSectionProps) {
+export function SettingsLocationSection({
+  isEditing,
+  toggleEdit,
+  sellerProfile,
+  handleDeleteLocation,
+  isDeletingLocation,
+  formData,
+  handleCityChange,
+  cities,
+  handleLocationChange,
+  getLocations,
+  handleShopLocationChange,
+  isSaving,
+  onSave,
+  onCancel
+}: SettingsLocationSectionProps) {
+  const headerAction = isEditing ? (
+    <div className="flex items-center gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={onCancel || toggleEdit}
+        disabled={isSaving}
+        className="h-8 rounded-lg border-white/15 bg-white/5 text-xs font-bold text-white hover:bg-white/10"
+      >
+        Cancel
+      </Button>
+      {onSave && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={onSave}
+          disabled={isSaving}
+          className="h-8 rounded-lg bg-[var(--theme-button-bg,#f5c518)] text-xs font-black text-[var(--theme-button-text,#000000)] hover:opacity-90 shadow-md"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      )}
+    </div>
+  ) : (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={toggleEdit}
+      className="h-8 gap-1.5 rounded-lg border-white/15 bg-white/5 text-xs font-bold text-white hover:bg-white/10"
+    >
+      <Edit className="h-3.5 w-3.5 text-yellow-400" />
+      Edit Location
+    </Button>
+  );
+
   return (
-      <section className="seller-card p-4 sm:p-5 lg:p-6">
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <SectionHeader title="Location Settings" description="Set where buyers collect orders from your physical shop." />
-              {!isEditing && (
-                <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-auto">
-                  <button
-                    onClick={toggleEdit}
-                    className="text-xs sm:text-sm text-[var(--theme-accent,#f5c518)] hover:opacity-80 font-medium flex items-center justify-center gap-1"
-                  >
-                    <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    Edit Location
-                  </button>
-                  {(sellerProfile?.physicalAddress || sellerProfile?.latitude || sellerProfile?.longitude) && (
-                    <button
-                      type="button"
-                      onClick={handleDeleteLocation}
-                      disabled={isDeletingLocation}
-                      className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {isDeletingLocation ? (
-                        <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      )}
-                      Delete Location
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+    <section className="seller-card p-4 sm:p-5 lg:p-6">
+      <div className="space-y-3 sm:space-y-4">
+        <SectionHeader
+          title="Location Settings"
+          description="Set where buyers collect orders from your physical shop."
+          action={headerAction}
+        />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="seller-card-soft p-4">

@@ -66,59 +66,82 @@ export function WithdrawalsTab({
         <p className="text-white/60 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className={cardClass}>
-          <div className="flex h-full flex-col justify-between gap-4">
-            <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-white">Ready to Withdraw</h3>
-              <p className="text-white/55 text-[10px] sm:text-xs font-medium mt-0.5">Money you can send to M-Pesa now.</p>
+      {/* ── Primary Hero Balance ────────────────────────────────────────── */}
+      <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-white/10 bg-[#0a0a0a] shadow-[0_12px_35px_rgba(0,0,0,0.45)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white/50">Ready to Withdraw</h3>
             </div>
-            <p className="text-lg sm:text-xl md:text-2xl font-black text-emerald-400">
+            <p className="mt-1 text-2xl sm:text-3xl md:text-4xl font-black text-emerald-400 tracking-tight tabular-nums">
               {formatKes(balance)}
             </p>
+            <p className="mt-0.5 text-xs text-white/60 font-medium">Available to send to M-Pesa immediately</p>
           </div>
-        </div>
 
-        <div className={cardClass}>
-          <div className="flex h-full flex-col justify-between gap-4">
-            <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-white">Preparing for Withdrawal</h3>
-              <p className="text-white/55 text-[10px] sm:text-xs font-medium mt-0.5">Paid orders being prepared before they can be withdrawn.</p>
+          {!showWithdrawalForm && (
+            <div className="w-full sm:w-auto shrink-0">
+              <Button
+                onClick={() => setShowWithdrawalForm(true)}
+                className="gap-2 shadow-lg px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-xs sm:text-sm w-full sm:w-auto h-11 sm:h-12"
+                style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
+                disabled={balance < MIN_WITHDRAWAL_AMOUNT}
+              >
+                <Wallet className="h-4 w-4" />
+                Request Withdrawal
+              </Button>
             </div>
-            <div>
-              <p className="text-lg sm:text-xl md:text-2xl font-black" style={{ color: 'var(--theme-accent, #f5c518)' }}>
-                {formatKes(pendingSettlementBalance)}
-              </p>
-              <p className="mt-1 text-[10px] font-semibold text-white/45">Next: {nextSettlementLabel}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className={cardClass}>
-          <div className="flex h-full flex-col justify-between gap-4">
-            <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-white">Being Sent to You</h3>
-              <p className="text-white/55 text-[10px] sm:text-xs font-medium mt-0.5">Money already removed from your balance while M-Pesa transfer is processing.</p>
-            </div>
-            <p className="text-lg sm:text-xl md:text-2xl font-black text-white">
-              {formatKes(withdrawalReservedBalance)}
-            </p>
-          </div>
-        </div>
-
-        <div className={cardClass}>
-          <div className="flex h-full flex-col justify-between gap-4">
-            <div>
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-white">Held for Refunds</h3>
-              <p className="text-white/55 text-[10px] sm:text-xs font-medium mt-0.5">Money kept aside for approved buyer refunds before it can be withdrawn.</p>
-            </div>
-            <p className="text-lg sm:text-xl md:text-2xl font-black text-white">
-              {formatKes(refundReservedBalance)}
-            </p>
-          </div>
+          )}
         </div>
       </div>
 
+      {/* ── Supporting Compact Balances ─────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+        <div className="rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-white/10 bg-[#0a0a0a] shadow-sm flex flex-col justify-between min-w-0">
+          <div>
+            <h4 className="text-[10px] sm:text-xs font-bold text-white/50 uppercase tracking-wider truncate" title="Preparing for Withdrawal">
+              Preparing
+            </h4>
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-base md:text-xl font-black truncate tabular-nums" style={{ color: 'var(--theme-accent, #f5c518)' }}>
+              {formatKes(pendingSettlementBalance)}
+            </p>
+          </div>
+          <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-white/40 truncate" title={`Next: ${nextSettlementLabel}`}>
+            Next: {nextSettlementLabel}
+          </p>
+        </div>
+
+        <div className="rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-white/10 bg-[#0a0a0a] shadow-sm flex flex-col justify-between min-w-0">
+          <div>
+            <h4 className="text-[10px] sm:text-xs font-bold text-white/50 uppercase tracking-wider truncate" title="Being Sent to You">
+              In Transit
+            </h4>
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-base md:text-xl font-black text-white truncate tabular-nums">
+              {formatKes(withdrawalReservedBalance)}
+            </p>
+          </div>
+          <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-white/40 truncate">
+            Processing
+          </p>
+        </div>
+
+        <div className="rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-white/10 bg-[#0a0a0a] shadow-sm flex flex-col justify-between min-w-0">
+          <div>
+            <h4 className="text-[10px] sm:text-xs font-bold text-white/50 uppercase tracking-wider truncate" title="Held for Refunds">
+              Held for Refunds
+            </h4>
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-base md:text-xl font-black text-white truncate tabular-nums">
+              {formatKes(refundReservedBalance)}
+            </p>
+          </div>
+          <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-white/40 truncate">
+            Dispute hold
+          </p>
+        </div>
+      </div>
+
+      {/* ── Fee Information ─────────────────────────────────────────────── */}
       <div className="rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
         <div className="rounded-full border p-0.5 sm:p-1 mt-0.5 flex-shrink-0" style={{ borderColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.35)', backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.15)' }}>
           <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
@@ -138,17 +161,20 @@ export function WithdrawalsTab({
         </div>
       </div>
 
-      <WithdrawalRequestForm
-        balance={balance}
-        showWithdrawalForm={showWithdrawalForm}
-        setShowWithdrawalForm={setShowWithdrawalForm}
-        handleWithdrawalRequest={handleWithdrawalRequest}
-        withdrawalForm={withdrawalForm}
-        setWithdrawalForm={setWithdrawalForm}
-        isRequestingWithdrawal={isRequestingWithdrawal}
-        withdrawalFee={withdrawalFee}
-        totalDeducted={totalDeducted}
-      />
+      {/* ── Withdrawal Form ─────────────────────────────────────────────── */}
+      {showWithdrawalForm && (
+        <WithdrawalRequestForm
+          balance={balance}
+          showWithdrawalForm={showWithdrawalForm}
+          setShowWithdrawalForm={setShowWithdrawalForm}
+          handleWithdrawalRequest={handleWithdrawalRequest}
+          withdrawalForm={withdrawalForm}
+          setWithdrawalForm={setWithdrawalForm}
+          isRequestingWithdrawal={isRequestingWithdrawal}
+          withdrawalFee={withdrawalFee}
+          totalDeducted={totalDeducted}
+        />
+      )}
 
       <div className="rounded-2xl sm:rounded-3xl p-3 sm:p-6 md:p-8 border border-white/10 bg-[#0a0a0a] shadow-[0_12px_35px_rgba(0,0,0,0.45)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">

@@ -171,15 +171,10 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
     <div className="flex h-full min-h-0 flex-col overflow-hidden text-slate-950 dark:text-white">
       {/* Header with Progress Bar */}
       <div className="shrink-0 space-y-3 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] sm:space-y-4 sm:px-6 sm:pt-6 sm:pb-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center pr-8">
           <div>
             <span className="text-[10px] font-black uppercase text-yellow-600 dark:text-yellow-400 tracking-widest bg-yellow-400/20 px-2 py-1 rounded">Step {step} of 4</span>
           </div>
-          {onClose && (
-            <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-slate-200 dark:hover:bg-white/10">
-              <X className="h-5 w-5 text-slate-700 dark:text-white" />
-            </button>
-          )}
         </div>
         <div className="flex gap-2">
           {[1, 2, 3, 4].map(s => (

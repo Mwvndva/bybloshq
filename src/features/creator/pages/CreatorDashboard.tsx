@@ -13,7 +13,7 @@ import { useCreatorLogoutMutation } from '@/features/creator/hooks/mutations/use
 import { clearRoleSession } from '@/features/auth/services/authSession';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { copyLinkedTextToClipboard } from '@/shared/utils/shopLinks';
+import { copyLinkedTextToClipboard, resolveShareOrigin } from '@/shared/utils/shopLinks';
 import { money, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS, getWithdrawalFee, getErrorMessage,
   type AnalysisPeriod, type ApiError, type CreatorProfile, type ShopRequest, type LinkedShop,
   type AnalysisRow, type WithdrawalRow, type LeaderboardRow, type DashboardData, type ReferralData } from '@/features/creator/utils/creatorDashboardUtils';
@@ -129,7 +129,7 @@ export default function CreatorDashboard() {
   }
 
   const creator = dashboard?.creator || {};
-  const referralLink = `${window.location.origin}/seller/register?ref=${referral?.referralCode || ''}`;
+  const referralLink = `${resolveShareOrigin()}/seller/register?ref=${referral?.referralCode || ''}`;
   const requestedAmount = Number(withdrawalAmount || 0);
   const withdrawalFee = getWithdrawalFee(requestedAmount);
   const totalDeduction = requestedAmount >= MIN_WITHDRAWAL_AMOUNT ? requestedAmount + withdrawalFee : 0;

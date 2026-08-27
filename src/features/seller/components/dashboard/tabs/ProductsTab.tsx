@@ -53,13 +53,14 @@ export function ProductsTab({
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="inset-0 max-h-none max-w-none translate-x-0 translate-y-0 rounded-none border-none bg-transparent p-0 shadow-none focus-visible:outline-none sm:left-1/2 sm:top-1/2 sm:h-[min(84dvh,640px)] sm:w-[min(88vw,520px)] sm:translate-x-[-50%] sm:translate-y-[-50%]">
-              <div className="product-modal-light flex h-full min-h-0 flex-col overflow-hidden rounded-none border-x border-y border-white/10 bg-[#0a0a0a] shadow-2xl sm:rounded-[2rem] sm:border">
+            <DialogContent className="w-[92vw] max-w-lg sm:max-w-[540px] max-h-[85dvh] sm:h-[min(84dvh,640px)] p-0 overflow-hidden border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] rounded-3xl sm:rounded-[2rem] shadow-2xl [&>button]:z-30">
+              <div className="product-modal-light flex h-full min-h-0 flex-col overflow-hidden">
                 <AddProductForm
                   onSuccess={() => {
                     fetchProducts();
                     setIsAddProductModalOpen(false);
                   }}
+                  onClose={() => setIsAddProductModalOpen(false)}
                 />
               </div>
             </DialogContent>
