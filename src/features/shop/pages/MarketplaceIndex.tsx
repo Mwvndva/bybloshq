@@ -2,7 +2,7 @@ import HeroSection from '@/features/shop/components/HeroSection';
 import Footer from '@/shared/components/Footer';
 import { Button } from '@/shared/ui/button';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
-import { getLogisticsToken } from '@/features/logistics/api';
+import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
 import { Link, Navigate } from 'react-router-dom';
 
 const NativeAppHome = () => (
@@ -57,14 +57,14 @@ const NativeAppHome = () => (
 );
 
 const IndexPage = () => {
+  const { user } = useGlobalAuth();
+
   const handleExploreClick = () => {
     // This can be left empty or can scroll to content if needed
   };
 
-  // A logged-in Mzigo Ego courier should land straight on their deliveries
-  // instead of the consumer home screen. Logging out (which clears this token)
-  // returns them to /mzigo/login.
-  if (getLogisticsToken()) {
+  // An authenticated Mzigo Ego courier lands straight on their deliveries.
+  if (user?.role === 'logistics' && user.isAuthenticated) {
     return <Navigate to="/mzigo/dashboard" replace />;
   }
 

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { classifyApiError } from '@/shared/utils/errorClassification';
 
 const MzigoLoginPage = () => {
   const navigate = useNavigate();
@@ -46,11 +47,12 @@ const MzigoLoginPage = () => {
       await login(targetEmail, targetPassword, 'logistics');
       // Navigation handled by useGlobalAuth().login() via getDashboardPath('logistics')
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } }; message?: string };
-      const message = !err?.response
-        ? 'Connection error. Please check your network connection and try again.'
-        : err?.response?.data?.message || err?.message || 'Check the Mzigo credentials and try again.';
-      toast.error('Login failed', { description: message });
+      const classified = classifyApiError(error, 'Check your Mzigo credentials and try again.');
+      // useAuthActions already displays the error toast with id: logistics-login-failed.
+      // If needed as fallback:
+      if (!document.querySelector('[data-sonner-toast]')) {
+        toast.error('Login failed', { description: classified.message });
+      }
     } finally {
       setIsSubmitting(false);
     }

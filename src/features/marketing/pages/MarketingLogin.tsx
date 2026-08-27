@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart3, Loader2, Lock, Mail } from 'lucide-react';
 import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
 import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
+import { classifyApiError } from '@/shared/utils/errorClassification';
 
 export default function MarketingLogin() {
     const navigate = useNavigate();
@@ -25,12 +26,8 @@ export default function MarketingLogin() {
             await login(email, password, 'marketing');
             navigate('/admin/marketing');
         } catch (err: unknown) {
-            const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
-            if (!errorObj.response) {
-                setError('Connection error. Please check your network connection and try again.');
-            } else {
-                setError(errorObj.response?.data?.message || errorObj.message || 'Invalid email or password');
-            }
+            const classified = classifyApiError(err, 'Invalid email or password');
+            setError(classified.message);
         } finally {
             setLoading(false);
         }
