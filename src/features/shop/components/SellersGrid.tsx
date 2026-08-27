@@ -18,22 +18,22 @@ const SellerGridSkeleton = () => (
         {Array.from({ length: 12 }).map((_, index) => (
             <div
                 key={index}
-                className="h-[184px] overflow-hidden rounded-2xl border border-stone-200 bg-white p-3 shadow-sm"
+                className="h-[184px] overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-3 shadow-sm dark:shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-colors duration-200"
             >
                 <div className="mb-3 flex items-start gap-3">
-                    <div className="h-14 w-14 animate-pulse rounded-2xl bg-slate-200 dark:bg-zinc-800" />
+                    <div className="h-14 w-14 animate-pulse rounded-2xl bg-slate-200 dark:bg-[#232323]" />
                     <div className="flex-1 space-y-2">
-                        <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-zinc-800" />
-                        <div className="h-3 w-full animate-pulse rounded bg-slate-200 dark:bg-zinc-800" />
-                        <div className="h-3 w-4/5 animate-pulse rounded bg-slate-200 dark:bg-zinc-800" />
+                        <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-[#232323]" />
+                        <div className="h-3 w-full animate-pulse rounded bg-slate-200 dark:bg-[#232323]" />
+                        <div className="h-3 w-4/5 animate-pulse rounded bg-slate-200 dark:bg-[#232323]" />
                     </div>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
-                    <div className="h-12 animate-pulse rounded-xl bg-slate-200 dark:bg-zinc-800" />
-                    <div className="h-12 animate-pulse rounded-xl bg-slate-200 dark:bg-zinc-800" />
-                    <div className="h-12 animate-pulse rounded-xl bg-slate-200 dark:bg-zinc-800" />
+                    <div className="h-12 animate-pulse rounded-xl bg-slate-200 dark:bg-[#232323]" />
+                    <div className="h-12 animate-pulse rounded-xl bg-slate-200 dark:bg-[#232323]" />
+                    <div className="h-12 animate-pulse rounded-xl bg-slate-200 dark:bg-[#232323]" />
                 </div>
-                <div className="mt-3 h-9 animate-pulse rounded-xl bg-slate-200 dark:bg-zinc-800" />
+                <div className="mt-3 h-9 animate-pulse rounded-xl bg-slate-200 dark:bg-[#232323]" />
             </div>
         ))}
     </div>

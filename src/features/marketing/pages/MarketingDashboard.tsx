@@ -12,13 +12,9 @@ import { ChartCard } from '../components/ChartCard';
 import { SectionTitle } from '../components/SectionTitle';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
-const COLORS = ['#F5C842', '#E5E5E5', '#737373', '#D4D4D4', '#F59E0B', '#A3A3A3', '#E7E5DF', '#525252'];
+import { useAppTheme } from '@/shared/hooks/useAppTheme';
 
-const CHART_THEME = {
-    grid: '#262626',
-    axis: '#9CA3AF',
-    tooltip: { bg: '#0A0A0A', border: 'rgba(255,255,255,0.1)', text: '#F5F5F5' }
-};
+const COLORS = ['#F5C842', '#E5E5E5', '#737373', '#D4D4D4', '#F59E0B', '#A3A3A3', '#E7E5DF', '#525252'];
 
 interface TooltipPayload {
     name: string;
@@ -37,10 +33,10 @@ interface CustomTooltipProps {
 const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }: CustomTooltipProps) => {
     if (!active || !payload?.length) return null;
     return (
-        <div className="bg-[#0A0A0A] border border-white/10 rounded-lg p-3 text-xs shadow-xl">
-            <p className="text-gray-400 mb-2 font-medium">{label}</p>
+        <div className="bg-white dark:bg-[#0A0A0A] border border-black/10 dark:border-white/10 rounded-lg p-3 text-xs shadow-xl text-slate-900 dark:text-white">
+            <p className="text-slate-500 dark:text-gray-400 mb-2 font-medium">{label}</p>
             {payload.map((entry) => (
-                <p key={entry.name} style={{ color: entry.color }} className="mb-0.5">
+                <p key={entry.name} style={{ color: entry.color }} className="mb-0.5 font-medium">
                     {entry.name}: <span className="font-bold">{prefix}{Number(entry.value).toLocaleString()}{suffix}</span>
                 </p>
             ))}
@@ -50,6 +46,16 @@ const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }: Cus
 
 export default function MarketingDashboard() {
     const navigate = useNavigate();
+    const { theme } = useAppTheme();
+    const isLight = theme === 'light' || (theme === 'system' && typeof window !== 'undefined' && !window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+    const chartTheme = {
+        grid: isLight ? 'rgba(0, 0, 0, 0.08)' : '#262626',
+        axis: isLight ? '#64748b' : '#9CA3AF',
+        tooltip: isLight
+            ? { bg: '#ffffff', border: 'rgba(0,0,0,0.1)', text: '#0f172a' }
+            : { bg: '#0A0A0A', border: 'rgba(255,255,255,0.1)', text: '#F5F5F5' }
+    };
     const { user: globalUser, logout } = useGlobalAuth();
     const [period, setPeriod] = useState<number>(12);
     const [loading, setLoading] = useState<boolean>(true);
@@ -208,9 +214,9 @@ export default function MarketingDashboard() {
                                     <stop offset="95%" stopColor="#F5C842" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
-                            <XAxis dataKey="month" stroke={CHART_THEME.axis} tick={{ fontSize: 11 }} />
-                            <YAxis stroke={CHART_THEME.axis} tick={{ fontSize: 11 }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                            <XAxis dataKey="month" stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
+                            <YAxis stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
                             <Tooltip content={<CustomTooltip prefix="KSh " />} />
                             <Area type="monotone" dataKey="gmvKsh" name="GMV" stroke="#F5C842" fillOpacity={1} fill="url(#gmvGrad)" strokeWidth={2} />
                         </AreaChart>
@@ -220,9 +226,9 @@ export default function MarketingDashboard() {
                 <ChartCard title="User Acquisition" subtitle="New buyer, seller, and creator signups">
                     <ResponsiveContainer width="100%" height={280}>
                         <BarChart data={userGrowth}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
-                            <XAxis dataKey="month" stroke={CHART_THEME.axis} tick={{ fontSize: 11 }} />
-                            <YAxis stroke={CHART_THEME.axis} tick={{ fontSize: 11 }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                            <XAxis dataKey="month" stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
+                            <YAxis stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
                             <Tooltip content={<CustomTooltip />} />
                             <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                             <Bar dataKey="buyers" name="Buyers" fill="#F5C842" radius={[4, 4, 0, 0]} />
@@ -262,9 +268,9 @@ export default function MarketingDashboard() {
                     <ChartCard title="Order Conversion Funnel" subtitle="Visitor to delivery breakdown">
                         <ResponsiveContainer width="100%" height={260}>
                             <BarChart data={orderFunnel} layout="vertical">
-                                <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
-                                <XAxis type="number" stroke={CHART_THEME.axis} tick={{ fontSize: 11 }} />
-                                <YAxis dataKey="stage" type="category" stroke={CHART_THEME.axis} tick={{ fontSize: 11 }} width={90} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                                <XAxis type="number" stroke={chartTheme.axis} tick={{ fontSize: 11 }} />
+                                <YAxis dataKey="stage" type="category" stroke={chartTheme.axis} tick={{ fontSize: 11 }} width={90} />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Bar dataKey="count" name="Count" fill="#F5C842" radius={[0, 4, 4, 0]} />
                             </BarChart>

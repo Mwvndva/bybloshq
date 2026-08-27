@@ -16,13 +16,66 @@
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#000000" id="theme-color-meta" />
+  <script>
+    (function () {
+      try {
+        var path = window.location.pathname || '';
+        var scope = 'default';
+        if (path.indexOf('/seller') === 0) scope = 'seller';
+        else if (path.indexOf('/creator') === 0) scope = 'creator';
+        else if (path.indexOf('/buyer') === 0) scope = 'buyer';
+        else if (path.indexOf('/shop') === 0) scope = 'shop';
+
+        var key = 'byblos-theme-' + scope;
+        var pref = localStorage.getItem(key);
+        if (!pref && scope === 'creator') pref = localStorage.getItem('byblos-theme-ambassador');
+        if (!pref) pref = localStorage.getItem('byblos-app-theme') || localStorage.getItem('byblos-theme-default') || 'system';
+
+        var isDark = true;
+        if (pref === 'light') {
+          isDark = false;
+        } else if (pref === 'dark') {
+          isDark = true;
+        } else if (window.matchMedia) {
+          isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+
+        var resolved = isDark ? 'dark' : 'light';
+        var doc = document.documentElement;
+        doc.setAttribute('data-theme', resolved);
+        if (isDark) {
+          doc.classList.add('dark');
+          doc.classList.remove('light');
+        } else {
+          doc.classList.add('light');
+          doc.classList.remove('dark');
+        }
+        var meta = document.getElementById('theme-color-meta');
+        if (meta) meta.setAttribute('content', isDark ? '#000000' : '#f5f4f0');
+      } catch (e) {}
+    })();
+  </script>
   <style>
     html,
     body {
-      background-color: #000000;
       margin: 0;
       padding: 0;
+      background-color: #000000;
+    }
+    html[data-theme="light"],
+    html[data-theme="light"] body,
+    html.light,
+    html.light body {
+      background-color: #f5f4f0 !important;
+      color: #0f0f0e !important;
+    }
+    html[data-theme="dark"],
+    html[data-theme="dark"] body,
+    html.dark,
+    html.dark body {
+      background-color: #000000 !important;
+      color: #f5f5f5 !important;
     }
   </style>
 

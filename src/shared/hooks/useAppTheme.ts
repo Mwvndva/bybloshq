@@ -24,6 +24,11 @@ export function applyResolvedTheme(resolved: 'light' | 'dark'): void {
   el.setAttribute('data-theme', resolved);
   el.classList.toggle('dark', resolved === 'dark');
   el.classList.toggle('light', resolved === 'light');
+
+  const metaThemeColor = document.getElementById('theme-color-meta') || document.querySelector('meta[name="theme-color"]');
+  if (metaThemeColor) {
+    metaThemeColor.setAttribute('content', resolved === 'light' ? '#f5f4f0' : '#000000');
+  }
 }
 
 function isAppTheme(v: unknown): v is AppTheme {
