@@ -147,7 +147,7 @@ export default function CreatorDashboard() {
 
   return (
     <main className="dashboard-layout text-slate-950 dark:text-white transition-colors duration-200 bg-[var(--byblos-bg,#000000)]" style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh', height: '100svh', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-      <header className="sticky top-0 z-50 bg-black pt-safe-top border-b border-white/10 px-4 py-3 sm:px-6 shadow-[0_8px_30px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-50 bg-[var(--byblos-bg,#000000)]/90 backdrop-blur-md pt-safe-top border-b border-black/[0.08] dark:border-white/10 px-4 py-3 sm:px-6 shadow-sm dark:shadow-none flex items-center justify-between gap-3 transition-colors duration-200">
         <NotificationBell triggerClassName="text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10" />
         <div className="flex items-center gap-2">
           <ThemeSegmentedPill value={theme} onChange={setTheme} showLabels={false} />

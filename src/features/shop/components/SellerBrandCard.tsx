@@ -97,9 +97,10 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
     const navigate = useNavigate();
     const knockSellerMutation = useKnockSellerMutation();
     const shopName = seller.shopName || seller.shop_name || 'Shop';
+    const shopIdentifier = seller.slug || shopName;
     const shopLink = isBuyer
-        ? `/buyer/shop/${encodeURIComponent(shopName)}`
-        : `/${encodeURIComponent(shopName)}`;
+        ? `/buyer/shop/${encodeURIComponent(shopIdentifier)}`
+        : `/${encodeURIComponent(shopIdentifier)}`;
     const avatarUrl = String(seller.avatarUrl || (seller as unknown as Record<string, unknown>).avatar_url || '');
     const [avatarFailed, setAvatarFailed] = useState(false);
     const [knockCount, setKnockCount] = useState(getNumber(seller.knockCount, seller.knock_count));
