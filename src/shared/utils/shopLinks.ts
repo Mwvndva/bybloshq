@@ -20,7 +20,7 @@ const isShareableOrigin = (origin: string) =>
  * wins; otherwise use the current one on the web, but never leak the in-app
  * localhost host — fall back to the canonical public site there.
  */
-const resolveShareOrigin = (origin?: string) => {
+export const resolveShareOrigin = (origin?: string) => {
   if (origin) return origin;
   const current = window.location.origin;
   if (isNativeApp() || !isShareableOrigin(current)) return PUBLIC_WEB_ORIGIN;

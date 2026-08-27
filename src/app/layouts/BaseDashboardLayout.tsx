@@ -5,6 +5,7 @@ import { LogOut, ArrowLeft, Menu, X } from 'lucide-react';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { cn } from '@/shared/utils/formatting';
 import { useGlobalAuth, UserRole } from '@/features/auth/contexts';
+import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 
 // ============================================================================
 // TYPES
@@ -56,6 +57,14 @@ export function BaseDashboardLayout({
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
     React.useEffect(() => {
+        if (!sidebarOpen) return;
+        return registerModalDismiss(() => {
+            setSidebarOpen(false);
+            return true;
+        });
+    }, [sidebarOpen]);
+
+    React.useEffect(() => {
         document.body.classList.add('dashboard-active');
         return () => {
             document.body.classList.remove('dashboard-active');
@@ -98,7 +107,7 @@ export function BaseDashboardLayout({
                     {/* Mobile sidebar overlay */}
                     {sidebarOpen && (
                         <div
-                            className="fixed inset-0 bg-slate-950/30 backdrop-blur-sm z-40 lg:hidden"
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] lg:hidden"
                             onClick={() => setSidebarOpen(false)}
                             aria-hidden="true"
                         />
@@ -107,7 +116,7 @@ export function BaseDashboardLayout({
                     {/* Sidebar */}
                     <aside
                         className={cn(
-                            'fixed lg:sticky top-0 left-0 h-[100svh] w-64 bg-white/95 backdrop-blur-md border-r border-slate-200 z-50 transition-transform duration-300 ease-in-out',
+                            'fixed lg:sticky top-0 left-0 h-[100svh] w-64 bg-white/95 backdrop-blur-md border-r border-slate-200 z-[101] lg:z-10 transition-transform duration-300 ease-in-out',
                             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                         )}
                         aria-label={`${role} sidebar navigation`}

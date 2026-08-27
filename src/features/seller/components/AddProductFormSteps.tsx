@@ -88,7 +88,7 @@ export const AddProductFormSteps = ({
             <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/10 text-slate-950 dark:text-white rounded-xl">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="z-[100] rounded-xl border-slate-200 dark:border-yellow-400/40 bg-white dark:bg-zinc-950 text-slate-950 dark:text-white shadow-2xl">
+            <SelectContent className="rounded-xl border-slate-200 dark:border-yellow-400/40 bg-white dark:bg-zinc-950 text-slate-950 dark:text-white shadow-2xl">
               {aestheticCategories.map(c => (
                 <SelectItem
                   key={c.id}
@@ -280,7 +280,7 @@ export const AddProductFormSteps = ({
                     <SelectTrigger className="h-11 bg-white dark:bg-white/5 border-slate-300 dark:border-white/10 text-slate-950 dark:text-white rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="z-[100] rounded-xl border-slate-200 dark:border-yellow-400/40 bg-white dark:bg-zinc-950 text-slate-950 dark:text-white shadow-2xl">
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-yellow-400/40 bg-white dark:bg-zinc-950 text-slate-950 dark:text-white shadow-2xl">
                       {[1, 2, 3, 4, 5].map(day => (
                         <SelectItem key={day} value={String(day)} className="text-slate-900 dark:text-white focus:bg-yellow-400 focus:text-black">
                           {day} {day === 1 ? 'day' : 'days'}
@@ -312,7 +312,7 @@ export const AddProductFormSteps = ({
                     <SelectTrigger className="h-11 bg-white dark:bg-white/5 border-slate-300 dark:border-white/10 text-slate-950 dark:text-white rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="z-[100] rounded-xl border-slate-200 dark:border-yellow-400/40 bg-white dark:bg-zinc-950 text-slate-950 dark:text-white shadow-2xl">
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-yellow-400/40 bg-white dark:bg-zinc-950 text-slate-950 dark:text-white shadow-2xl">
                       {[7, 14, 21, 30].map(day => (
                         <SelectItem key={day} value={String(day)} className="text-slate-900 dark:text-white focus:bg-yellow-400 focus:text-black">
                           {day} days

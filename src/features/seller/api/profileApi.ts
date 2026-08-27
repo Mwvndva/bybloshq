@@ -364,13 +364,6 @@ export const sellerProfileApi = {
     return response.data.data;
   },
 
-  async uploadBanner(bannerImage: string): Promise<{ bannerUrl: string }> {
-    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/sellers/upload-banner', { bannerImage }, {
-      timeout: 2 * 60 * 1000,
-    });
-    return response.data.data;
-  },
-
   async uploadBusinessPhoto(businessPhoto: string): Promise<{ businessPhotoUrl: string; avatarUrl: string }> {
     const response = await sellerApiInstance.post<{ data: { businessPhotoUrl: string; avatarUrl: string } }>('/sellers/upload-business-photo', { businessPhoto }, {
       timeout: 2 * 60 * 1000,

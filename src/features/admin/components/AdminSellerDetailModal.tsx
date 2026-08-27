@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { AdminSellerRecentOrders } from './AdminSellerRecentOrders';
 import { format } from 'date-fns';
 import { Activity, ArrowUpRight, Calendar, DollarSign, Facebook, Globe, Heart, Instagram, Loader2, Mail, MapPin, Music2, Package, Percent, ShoppingBag, ShoppingCart, Store, TrendingUp, User, UserCircle, Users2, X } from 'lucide-react';
+import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 
 export interface SellerDetail {
   shop_name?: string;
@@ -48,6 +50,14 @@ interface AdminSellerDetailModalProps {
 }
 
 export function AdminSellerDetailModal({ seller, isLoading, onClose, safeFormatDate, inspectionSessionId }: AdminSellerDetailModalProps) {
+  useEffect(() => {
+    if (!seller) return;
+    return registerModalDismiss(() => {
+      onClose();
+      return true;
+    });
+  }, [seller, onClose]);
+
   if (!seller) return null;
   return (
                 <div

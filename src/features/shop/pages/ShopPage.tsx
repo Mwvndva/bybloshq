@@ -22,8 +22,6 @@ const ShopPage = () => {
     filteredProducts,
     searchQuery,
     setSearchQuery,
-    bannerLoadFailed,
-    setBannerLoadFailed,
     avatarLoadFailed,
     setAvatarLoadFailed,
     sellerInitials,
@@ -79,20 +77,18 @@ const ShopPage = () => {
       <SEOHead
         title={sellerInfo?.shopName || sellerInfo?.fullName || 'Shop'}
         description={sellerInfo?.bio || `Shop ${sellerInfo?.shopName || 'products'} on Byblos. Browse quality items and order securely.`}
-        image={sellerInfo?.avatarUrl ? getImageUrl(sellerInfo.avatarUrl) : sellerInfo?.bannerImage ? getImageUrl(sellerInfo.bannerImage) : undefined}
+        image={sellerInfo?.avatarUrl ? getImageUrl(sellerInfo.avatarUrl) : undefined}
       />
       {/* Light/Dark/System theme picker — top-right, small, no border touching */}
       <ShopPageThemePicker theme={shopPageTheme} onThemeChange={setShopPageTheme} />
       <ShopHero
         sellerInfo={sellerInfo}
-        bannerLoadFailed={bannerLoadFailed}
-        setBannerLoadFailed={setBannerLoadFailed}
         showSellerAvatar={showSellerAvatar}
         setAvatarLoadFailed={setAvatarLoadFailed}
         sellerInitials={sellerInitials}
       />
       {/* Products */}
-      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 pt-12 pb-6 sm:pt-20 sm:pb-8 lg:px-8">
+      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 pt-2 pb-6 sm:pt-4 sm:pb-8 lg:px-8">
         <div className="mb-8">
           <div className="relative max-w-md mx-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -147,7 +143,7 @@ const ShopPage = () => {
                     phone: sellerInfo.phone || '',
                     whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
                     shopName: sellerInfo.shopName || '',
-                    bannerUrl: sellerInfo.bannerImage || '',
+                    bannerUrl: '',
                     location: sellerInfo.location || '',
                     // New physical shop fields
                     hasPhysicalShop: !!sellerInfo.physicalAddress,
@@ -168,7 +164,7 @@ const ShopPage = () => {
                   phone: sellerInfo.phone || '',
                   whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
                   shopName: sellerInfo.shopName || '',
-                  bannerUrl: sellerInfo.bannerImage || '',
+                  bannerUrl: '',
                   location: sellerInfo.location || '',
                   city: sellerInfo.city || '',
                   // New physical shop fields

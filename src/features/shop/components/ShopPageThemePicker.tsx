@@ -27,7 +27,7 @@ interface ShopPageThemePickerProps {
  */
 export function ShopPageThemePicker({ theme, onThemeChange }: ShopPageThemePickerProps) {
   return (
-    <div className="dark fixed right-3 top-3 z-30 rounded-full bg-black/40 p-0.5 shadow-lg backdrop-blur-md sm:right-6 sm:top-6">
+    <div className="dark fixed right-3 top-[calc(0.75rem+var(--sat,0px))] z-30 rounded-full bg-black/40 p-0.5 shadow-lg backdrop-blur-md sm:right-6 sm:top-6">
       <ThemeSegmentedPill value={theme} onChange={onThemeChange} showLabels={false} />
     </div>
   );

@@ -1,10 +1,13 @@
 import { Input } from '@/shared/ui/input';
 
-export function SectionHeader({ title, description }: { title: string; description: string }) {
+export function SectionHeader({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
-    <div>
-      <h3 className="text-base font-black tracking-tight text-white sm:text-lg">{title}</h3>
-      <p className="mt-1 seller-subtext">{description}</p>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h3 className="text-base font-black tracking-tight text-white sm:text-lg">{title}</h3>
+        <p className="mt-1 seller-subtext">{description}</p>
+      </div>
+      {action && <div className="self-start sm:self-auto shrink-0">{action}</div>}
     </div>
   );
 }
