@@ -19,7 +19,7 @@ interface BuyerBottomNavProps {
 export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/95 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.55)] transition-colors duration-200"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--byblos-border,rgba(255,255,255,0.1))] bg-[var(--byblos-surface,#000000)]/95 backdrop-blur transition-colors duration-200"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       aria-label="Buyer navigation"
     >
@@ -35,9 +35,9 @@ export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNav
             >
               <item.Icon
                 size={18}
-                className={isActive ? 'text-[#F5C518]' : 'text-white/50 transition-colors'}
+                className={isActive ? 'text-[#F5C518]' : 'text-slate-500 dark:text-white/50 transition-colors'}
               />
-              <span className={`text-[10px] font-semibold transition-colors ${isActive ? 'text-[#F5C518] font-bold' : 'text-white/50'}`}>
+              <span className={`text-[10px] font-semibold transition-colors ${isActive ? 'text-[#F5C518] font-bold' : 'text-slate-500 dark:text-white/50'}`}>
                 {item.label}
               </span>
               {item.badge && (

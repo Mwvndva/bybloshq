@@ -25,6 +25,8 @@ import { useBuyerActiveSection } from '../components/dashboard/hooks/useBuyerAct
 import { useBuyerProfileForm } from '../components/dashboard/hooks/useBuyerProfileForm';
 import { useBuyerOrdersNotification } from '../components/dashboard/hooks/useBuyerOrdersNotification';
 import { useThemeScope } from '@/shared/hooks/useAppTheme';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
+import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 
 import { LoadingScreen as RouteFallback } from '@/shared/components/LoadingScreen';
 
@@ -130,7 +132,17 @@ function BuyerDashboard() {
         profileCloseNavigationTimerRef.current = null;
       }, PROFILE_CLOSE_NAV_DELAY_MS);
     }
-  }, [location.pathname, location.search, navigate]);
+  }, [location.pathname, location.search, navigate, setIsProfileSidebarOpen, setIsEditingProfile]);
+
+  // Hook profile sidebar dismissal into Android back stack
+  useEffect(() => {
+    if (!isNativeApp() || !isProfileSidebarOpen) return;
+
+    return registerModalDismiss(() => {
+      handleProfileSidebarOpenChange(false);
+      return true;
+    });
+  }, [isProfileSidebarOpen, handleProfileSidebarOpenChange]);
 
 
   const navItems = [

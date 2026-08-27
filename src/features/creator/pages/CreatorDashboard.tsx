@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, LogOut, Trophy, Wallet } from 'lucide-react';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
@@ -14,6 +14,8 @@ import { clearRoleSession } from '@/features/auth/services/authSession';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { copyLinkedTextToClipboard, resolveShareOrigin } from '@/shared/utils/shopLinks';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
+import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 import { money, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS, getWithdrawalFee, getErrorMessage,
   type AnalysisPeriod, type ApiError, type CreatorProfile, type ShopRequest, type LinkedShop,
   type AnalysisRow, type WithdrawalRow, type LeaderboardRow, type DashboardData, type ReferralData } from '@/features/creator/utils/creatorDashboardUtils';
@@ -33,6 +35,15 @@ export default function CreatorDashboard() {
   const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
   const withdrawRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useThemeScope('creator');
+
+  // Dismiss active dialog on Android back
+  useEffect(() => {
+    if (!isNativeApp() || respondingRequestId === null) return;
+    return registerModalDismiss(() => {
+      setRespondingRequestId(null);
+      return true;
+    });
+  }, [respondingRequestId]);
 
   const dashboardQuery = useCreatorDashboardQuery(analysisPeriod);
   const referralQuery = useCreatorReferralDashboardQuery();
