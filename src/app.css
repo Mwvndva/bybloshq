@@ -475,24 +475,8 @@ main {
     color: var(--byblos-text);
 }
 
-body.dashboard-active .seller-tab-selected,
-body.dashboard-active .seller-tab-selected * {
+body.dashboard-active .seller-tab-selected {
     color: #000000 !important;
-}
-
-body.dashboard-active .withdrawal-minimum-note,
-body.dashboard-active .withdrawal-minimum-note * {
-    color: #000000 !important;
-}
-
-body.dashboard-active .withdrawal-fee-summary,
-body.dashboard-active .withdrawal-fee-summary * {
-    color: #111111 !important;
-}
-
-body.dashboard-active .seller-service-charge-notice,
-body.dashboard-active .seller-service-charge-notice * {
-    color: #111111 !important;
 }
 
 .product-modal-light,
@@ -613,24 +597,8 @@ body.dashboard-active .seller-service-charge-notice * {
     color: var(--byblos-text);
 }
 
-body.dashboard-active .seller-tab-selected,
-body.dashboard-active .seller-tab-selected * {
+body.dashboard-active .seller-tab-selected {
     color: #000000 !important;
-}
-
-body.dashboard-active .withdrawal-minimum-note,
-body.dashboard-active .withdrawal-minimum-note * {
-    color: #000000 !important;
-}
-
-body.dashboard-active .withdrawal-fee-summary,
-body.dashboard-active .withdrawal-fee-summary * {
-    color: #111111 !important;
-}
-
-body.dashboard-active .seller-service-charge-notice,
-body.dashboard-active .seller-service-charge-notice * {
-    color: #111111 !important;
 }
 
 .auth-page,

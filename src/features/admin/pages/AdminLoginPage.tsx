@@ -47,17 +47,17 @@ export const AdminLoginPage = () => {
   };
 
   return (
-    <div className="auth-page flex min-h-[100svh] items-start justify-center overflow-x-hidden bg-[#f8f7f2] px-4 py-6 text-stone-950 sm:items-center sm:p-6">
+    <div className="auth-page flex min-h-[100svh] items-start justify-center overflow-x-hidden bg-[var(--byblos-bg,#000000)] px-4 py-6 text-[var(--byblos-text,#f5f5f5)] sm:items-center sm:p-6 transition-colors duration-200">
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
-        <Card className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-[0_22px_60px_rgba(17,17,17,0.09)]">
+        <Card className="overflow-hidden rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-xl dark:shadow-[0_22px_60px_rgba(0,0,0,0.45)]">
           <CardHeader className="px-6 pb-7 pt-10 text-center md:px-10">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-200 bg-yellow-100 text-black">
-              <Shield className="h-8 w-8 text-yellow-600" />
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-500/30 bg-yellow-500/15 text-yellow-500">
+              <Shield className="h-8 w-8 text-yellow-500 dark:text-yellow-400" />
             </div>
-            <CardTitle className="text-3xl font-semibold tracking-tight text-stone-950">
+            <CardTitle className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
               Admin Access
             </CardTitle>
-            <CardDescription className="mt-2 text-sm text-stone-500">
+            <CardDescription className="mt-2 text-sm text-slate-500 dark:text-white/50">
               Sign in to manage Byblos operations.
             </CardDescription>
           </CardHeader>
@@ -65,17 +65,17 @@ export const AdminLoginPage = () => {
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-5 px-6 md:px-10">
               {localError && (
-                <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-300">
                   {localError}
                 </div>
               )}
 
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-stone-700">
+                <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-white/80">
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-white/40" />
                   <Input
                     id="email"
                     name="email"
@@ -85,17 +85,17 @@ export const AdminLoginPage = () => {
                     placeholder="admin@byblos.hq"
                     required
                     autoComplete="email"
-                    className="h-12 rounded-2xl border-stone-200 bg-white pl-11 text-stone-950 placeholder:text-stone-400 focus:border-yellow-400 focus:ring-yellow-400/20"
+                    className="h-12 rounded-2xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/45 pl-11 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400/20"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-stone-700">
+                <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-white/80">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-white/40" />
                   <Input
                     id="password"
                     name="password"
@@ -105,7 +105,7 @@ export const AdminLoginPage = () => {
                     placeholder="Enter password"
                     required
                     autoComplete="current-password"
-                    className="h-12 rounded-2xl border-stone-200 bg-white pl-11 text-stone-950 placeholder:text-stone-400 focus:border-yellow-400 focus:ring-yellow-400/20"
+                    className="h-12 rounded-2xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/45 pl-11 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400/20"
                   />
                 </div>
               </div>
@@ -130,7 +130,7 @@ export const AdminLoginPage = () => {
           </form>
         </Card>
 
-        <p className="mt-6 text-center text-xs text-stone-500">
+        <p className="mt-6 text-center text-xs text-slate-500 dark:text-white/40">
           Protected access for approved Byblos administrators.
         </p>
       </div>
