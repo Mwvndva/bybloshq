@@ -178,6 +178,7 @@ class CreatorService {
     const { rows } = await pool.query(
       `SELECT sci.*,
               s.shop_name,
+              s.slug,
               c.first_name,
               c.last_name,
               scl.code,
@@ -198,7 +199,8 @@ class CreatorService {
 
   static decorateInvite(invite) {
     const baseUrl = process.env.FRONTEND_URL || '';
-    const shopPath = invite.code ? `/${invite.shop_name || ''}?creator=${invite.code}` : null;
+    const slug = invite.slug || invite.shop_name || '';
+    const shopPath = invite.code ? `/${slug}?creator=${invite.code}` : null;
     return {
       id: invite.id,
       email: invite.email,
@@ -799,6 +801,7 @@ class CreatorService {
               scl.status,
               scl.click_count,
               s.shop_name,
+              s.slug,
               s.full_name AS seller_name,
               COUNT(ce.id) AS sales_count,
               COALESCE(SUM(ce.amount), 0) AS earnings
@@ -807,7 +810,7 @@ class CreatorService {
        LEFT JOIN creator_earnings ce ON ce.seller_creator_link_id = scl.id
        WHERE scl.creator_id = $1
          AND scl.status = 'active'
-       GROUP BY scl.id, s.shop_name, s.full_name
+       GROUP BY scl.id, s.shop_name, s.slug, s.full_name
        ORDER BY scl.created_at DESC`,
       [creatorId]
     );
