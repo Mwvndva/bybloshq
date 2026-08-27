@@ -18,6 +18,7 @@ export interface ApiPublicSeller {
   socialMedia?: Record<string, string>;
   shopName?: string;
   shop_name?: string;
+  slug?: string | null;
   createdAt: string;
   created_at?: string;
   updatedAt?: string;
@@ -43,6 +44,7 @@ export interface ApiSeller {
   full_name?: string;
   shopName: string;
   shop_name?: string;
+  slug?: string | null;
   email: string;
   phone: string;
   whatsappNumber: string;

@@ -214,6 +214,7 @@ export const sanitizePublicSeller = (seller) => {
     return {
         id: sellerObj.id || sellerObj.seller_id,
         shopName: sellerObj.shopName || sellerObj.shop_name || '',
+        slug: sellerObj.slug || null,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
         avatarUrl: sellerObj.avatarUrl || sellerObj.avatar_url,
         bio: sellerObj.bio,
