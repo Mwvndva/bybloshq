@@ -24,6 +24,7 @@ import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { useShopAccentOnly } from '@/shared/hooks/useShopTheme';
 import { useSellerProfileQuery } from '@/features/seller/hooks/useSellerProfile';
 import { useThemeScope } from '@/shared/hooks/useAppTheme';
+import { registerSubNavigation, registerModalDismiss } from '@/shared/utils/modalBackHandler';
 import type { Theme } from '@/shared/types';
 import type { SellerDashboardProps, SellerTabId } from '../components/dashboard/types';
 
@@ -59,6 +60,26 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     localStorage.getItem('seller_last_viewed_orders')
   );
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+
+  // Hook non-root tab navigation into native Android back stack
+  useEffect(() => {
+    if (!isNativeApp() || activeTab === 'overview') return;
+
+    return registerSubNavigation(() => {
+      setActiveTab('overview');
+      return true;
+    });
+  }, [activeTab]);
+
+  // Hook add product modal dismiss into native Android back stack
+  useEffect(() => {
+    if (!isNativeApp() || !isAddProductModalOpen) return;
+
+    return registerModalDismiss(() => {
+      setIsAddProductModalOpen(false);
+      return true;
+    });
+  }, [isAddProductModalOpen]);
 
   const sellerFirstName = useMemo(
     () => sellerProfile?.fullName?.trim().split(/\s+/)[0] || sellerProfile?.shopName?.trim().split(/\s+/)[0] || 'Seller',
