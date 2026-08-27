@@ -272,7 +272,7 @@ const NewAdminDashboard = () => {
 
             {/* Refunds Tab */}
             <TabsContent value="refunds" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
+              <div className="bg-white/80 dark:bg-[#0A0A0A]/40 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-[2.5rem] p-8 shadow-xl dark:shadow-2xl">
                 <RefundRequestsPage />
               </div>
             </TabsContent>

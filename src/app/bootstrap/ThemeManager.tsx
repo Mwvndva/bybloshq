@@ -19,7 +19,7 @@ const SCOPE_READY: Record<ThemeScope, boolean> = {
   buyer: true,
   creator: true,
   seller: true,
-  shop: false,
+  shop: true,
 };
 
 function scopeForPath(pathname: string): ThemeScope {
@@ -32,12 +32,6 @@ function scopeForPath(pathname: string): ThemeScope {
 
 function applyForPath(pathname: string): void {
   const scope = scopeForPath(pathname);
-  if (!SCOPE_READY[scope]) {
-    // Seller is hardcoded dark until Stage B; shop keeps its accent-driven look
-    // until Stage C (leave <html> as-is).
-    if (scope === 'seller') applyResolvedTheme('dark');
-    return;
-  }
   applyResolvedTheme(resolveTheme(readScopePref(scope)));
 }
 

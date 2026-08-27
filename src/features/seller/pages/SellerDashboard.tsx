@@ -23,7 +23,7 @@ import { copyLinkedTextToClipboard, getShopUrl, getShopUsername } from '@/shared
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { useShopAccentOnly } from '@/shared/hooks/useShopTheme';
 import { useSellerProfileQuery } from '@/features/seller/hooks/useSellerProfile';
-import { useAppTheme } from '@/shared/hooks/useAppTheme';
+import { useThemeScope } from '@/shared/hooks/useAppTheme';
 import type { Theme } from '@/shared/types';
 import type { SellerDashboardProps, SellerTabId } from '../components/dashboard/types';
 
@@ -36,7 +36,7 @@ const SELLER_TABS_ORDER: readonly SellerTabId[] = [
 ];
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
-  useAppTheme();
+  useThemeScope('seller');
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
