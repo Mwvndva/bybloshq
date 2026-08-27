@@ -50,7 +50,7 @@ const MzigoDashboardPage = () => {
   const broadcast = useCourierBroadcast(trackableIds, shareLocation);
 
   return (
-    <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white" style={{ height: '100svh', overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } as React.CSSProperties}>
+    <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white" style={{ height: '100svh', overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(4rem + var(--sab, 16px))' } as React.CSSProperties}>
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 border-b border-white/10 bg-black px-4 pb-3 pt-safe-top backdrop-blur">
 
@@ -260,7 +260,10 @@ const MzigoDashboardPage = () => {
         </div>
       </section>
 
-      <footer className="sticky bottom-0 z-20 border-t border-white/10 bg-black/95 px-4 py-3 text-center text-xs text-white/50 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.55)]">
+      <footer
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/95 px-4 py-3 text-center text-xs text-white/50 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.55)] transition-colors duration-200"
+        style={{ paddingBottom: 'var(--sab, 16px)' }}
+      >
         <CalendarClock size={14} className="mr-1 inline-block text-yellow-400" />
         Every delivery has a 24 hour window.
       </footer>

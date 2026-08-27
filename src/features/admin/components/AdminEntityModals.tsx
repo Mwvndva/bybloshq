@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { AdminSellerDetailModal, type SellerDetail } from './AdminSellerDetailModal';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { format } from 'date-fns';
 import { Loader2, UserCircle, X } from 'lucide-react';
+import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 
 
 interface AdminEntityModalsProps {
@@ -41,6 +43,14 @@ export function AdminEntityModals({
 }: AdminEntityModalsProps) {
   const seller = selectedSeller as SellerDetail | null;
   const buyer = selectedBuyer as BuyerDetail | null;
+
+  useEffect(() => {
+    if (!buyer) return;
+    return registerModalDismiss(() => {
+      closeBuyerModal();
+      return true;
+    });
+  }, [buyer, closeBuyerModal]);
   return (
     <>
             {/* Modals Layer */}

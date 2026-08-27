@@ -198,28 +198,30 @@ export function BuyerProfileContent({
 export function BuyerProfileSheet(props: BuyerProfileSheetProps) {
   return (
     <DialogPrimitive.Root open={props.isOpen} onOpenChange={props.onOpenChange}>
-      <DialogPrimitive.Overlay
-        className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm transition-all duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-      />
-      <DialogPrimitive.Content
-        className="absolute inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-[430px] transform-gpu flex-col overflow-hidden border-l border-white/10 bg-black text-white shadow-2xl shadow-black/80 will-change-transform transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-400 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
-      >
-        <DialogPrimitive.Title className="sr-only">Buyer Profile</DialogPrimitive.Title>
-        <DialogPrimitive.Description className="sr-only">Account settings, theme preferences, and refunds</DialogPrimitive.Description>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm transition-all duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        />
+        <DialogPrimitive.Content
+          className="fixed inset-y-0 right-0 z-[101] flex h-full w-full sm:max-w-[430px] transform-gpu flex-col overflow-hidden border-l border-white/10 bg-black text-white shadow-2xl shadow-black/80 will-change-transform transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-400 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+        >
+          <DialogPrimitive.Title className="sr-only">Buyer Profile</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">Account settings, theme preferences, and refunds</DialogPrimitive.Description>
 
-        <div className="flex items-center justify-end px-4 pt-3 pb-1">
-          <DialogPrimitive.Close
-            className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
-            aria-label="Close profile drawer"
-          >
-            <X className="h-5 w-5" />
-          </DialogPrimitive.Close>
-        </div>
+          <div className="flex items-center justify-end px-4 pt-3 pb-1">
+            <DialogPrimitive.Close
+              className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
+              aria-label="Close profile drawer"
+            >
+              <X className="h-5 w-5" />
+            </DialogPrimitive.Close>
+          </div>
 
-        <div className="flex-1 min-w-0 overflow-y-auto px-4 pb-6 pt-1 sm:px-5">
-          <BuyerProfileContent {...props} />
-        </div>
-      </DialogPrimitive.Content>
+          <div className="flex-1 min-w-0 overflow-y-auto px-4 pb-6 pt-1 sm:px-5">
+            <BuyerProfileContent {...props} />
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }

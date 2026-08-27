@@ -18,7 +18,6 @@ export function useShopPage() {
   const [sellerInfo, setSellerInfo] = useState<ShopSeller | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
 
   const { isAuthenticated } = useGlobalAuth();
 
@@ -74,7 +73,6 @@ export function useShopPage() {
       phone: seller.phone || '',
       whatsappNumber: seller.whatsappNumber || seller.phone || '',
       email: seller.email || '',
-      bannerImage: seller.bannerImage || seller.banner_image || '',
       city: seller.city,
       location: seller.location,
       theme: (seller.theme as Theme) || 'default',
@@ -93,23 +91,25 @@ export function useShopPage() {
 
     setSellerInfo(sellerData);
     setAvatarLoadFailed(false);
-    setBannerLoadFailed(false);
 
     // Store seller's saved theme for accent/button colouring
     setSellerTheme((sellerData.theme as Theme) || 'default');
 
     if (sellerProducts) {
-      const availableProducts = (sellerProducts as ApiSellerProduct[])
-        .map(p => ({
-          ...p,
-          sellerId: p.sellerId || '',
-          isSold: p.isSold || false,
-          status: p.status || 'available',
-          createdAt: p.createdAt || new Date().toISOString(),
-          updatedAt: p.updatedAt || new Date().toISOString(),
-          aesthetic: isAesthetic((p as unknown as Record<string, unknown>).aesthetic as string) ? ((p as unknown as Record<string, unknown>).aesthetic as import("@/shared/types").Aesthetic) : 'all',
-          seller: sellerData
-        } as unknown as ShopProduct))
+      const availableProducts: ShopProduct[] = (sellerProducts as ApiSellerProduct[])
+        .map((p) => {
+          const pObj = p as unknown as Record<string, unknown>;
+          return {
+            ...p,
+            sellerId: p.sellerId || '',
+            isSold: Boolean(p.isSold ?? p.status === 'sold'),
+            status: p.status || (p.isSold ? 'sold' : 'available'),
+            createdAt: p.createdAt || new Date().toISOString(),
+            updatedAt: p.updatedAt || new Date().toISOString(),
+            aesthetic: isAesthetic(pObj.aesthetic as string) ? (pObj.aesthetic as import("@/shared/types").Aesthetic) : 'all',
+            seller: sellerData
+          } as unknown as ShopProduct;
+        })
         .filter(p => !p.isSold && p.status !== 'sold');
 
       setProducts(availableProducts);
@@ -153,8 +153,6 @@ export function useShopPage() {
     filteredProducts,
     searchQuery,
     setSearchQuery,
-    bannerLoadFailed,
-    setBannerLoadFailed,
     avatarLoadFailed,
     setAvatarLoadFailed,
     sellerInitials,

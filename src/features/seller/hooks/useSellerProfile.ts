@@ -48,16 +48,6 @@ export function useUpdateThemeMutation() {
   });
 }
 
-export function useUploadBannerMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (base64Image: string) => sellerApi.uploadBanner(base64Image),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['seller-profile'] });
-    },
-  });
-}
-
 export function useUploadBusinessPhotoMutation() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -11,12 +11,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       position="top-right"
+      offset="calc(var(--sat, 0px) + 64px)"
+      mobileOffset="calc(var(--sat, 0px) + 64px)"
       expand={false}
       richColors
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-white dark:group-[.toaster]:bg-[#0d0d0d] group-[.toaster]:text-slate-950 dark:group-[.toaster]:text-white group-[.toaster]:border-slate-200 dark:group-[.toaster]:border-white/10 group-[.toaster]:shadow-2xl sm:min-w-[340px] min-w-[90vw] sm:max-w-[400px] max-w-[95vw] border rounded-2xl transition-colors duration-200",
+            "group toast group-[.toaster]:bg-white dark:group-[.toaster]:bg-[#0d0d0d] group-[.toaster]:text-slate-950 dark:group-[.toaster]:text-white group-[.toaster]:border-slate-200 dark:group-[.toaster]:border-white/10 group-[.toaster]:shadow-2xl w-full sm:w-[356px] max-w-full sm:max-w-[400px] border rounded-2xl transition-colors duration-200",
           description: "group-[.toast]:text-slate-600 dark:group-[.toast]:text-white/60 text-sm",
           actionButton:
             "group-[.toast]:bg-yellow-400 group-[.toast]:text-slate-950 font-bold",
