@@ -104,7 +104,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const handleCopyShopLink = useCallback(async () => {
     if (!sellerProfile?.shopName) return;
 
-    const shopUrl = getShopUrl(sellerProfile.shopName);
+    const canonicalSlug = sellerProfile?.slug || (liveSellerProfile as unknown as typeof sellerProfile)?.slug || sellerProfile?.shopName;
+    const shopUrl = getShopUrl(canonicalSlug);
     const shopUsername = getShopUsername(sellerProfile.shopName);
     try {
       const copyMode = await copyLinkedTextToClipboard(shopUsername, shopUrl);
@@ -121,7 +122,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         variant: 'destructive',
       });
     }
-  }, [sellerProfile?.shopName, toast]);
+  }, [sellerProfile?.shopName, sellerProfile?.slug, liveSellerProfile, toast]);
 
   const handleSelectTab = useCallback((tab: SellerTabId) => {
     setActiveTab(tab);

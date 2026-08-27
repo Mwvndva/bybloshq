@@ -61,7 +61,7 @@ export function SettingsTab({
   const [isEditingContacts, setIsEditingContacts] = useState(false);
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const previewShopUsername = getShopUsername(formData.shopName);
-  const previewShopUrl = getShopUrl(formData.shopName);
+  const previewShopUrl = getShopUrl(sellerProfile?.slug || formData.shopName);
   const { theme, setTheme } = useThemeScope('seller');
 
   const contactsHeaderAction = isEditingContacts ? (

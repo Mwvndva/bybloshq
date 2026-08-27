@@ -152,7 +152,7 @@ export function AdminSellerDetailModal({ seller, isLoading, onClose, safeFormatD
                                     Public Shop Link
                                   </span>
                                   <a
-                                    href={`https://byblosafrica.site/${seller.slug || seller.shop_name?.toLowerCase()}`}
+                                    href={`https://byblosafrica.site/${encodeURIComponent(seller.slug || seller.shop_name?.toLowerCase() || '')}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="block p-3 rounded-xl bg-white/5 border border-white/10 text-blue-400 font-bold text-xs truncate hover:bg-blue-500/10 hover:border-blue-500/20 transition-all flex items-center justify-between group/link"

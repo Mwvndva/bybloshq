@@ -36,18 +36,18 @@ const escapeHtml = (value: string) => {
     .replace(/'/g, '&#39;');
 };
 
-export const getShopUrl = (shopName?: string | null, origin?: string) => {
-  const username = getShopUsername(shopName);
-  if (!username) return '';
-  return `${resolveShareOrigin(origin).replace(/\/$/, '')}/${encodeURIComponent(username)}`;
+export const getShopUrl = (slug?: string | null, origin?: string) => {
+  const cleanSlug = String(slug || '').trim();
+  if (!cleanSlug) return '';
+  return `${resolveShareOrigin(origin).replace(/\/$/, '')}/${encodeURIComponent(cleanSlug)}`;
 };
 
 export const getCreatorShopUrl = (
-  shopName?: string | null,
+  slug?: string | null,
   creatorCode?: string | null,
   origin?: string
 ) => {
-  const shopUrl = getShopUrl(shopName, origin);
+  const shopUrl = getShopUrl(slug, origin);
   if (!shopUrl) return '';
   if (!creatorCode) return shopUrl;
   return `${shopUrl}?creator=${encodeURIComponent(creatorCode)}`;
