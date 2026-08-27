@@ -112,6 +112,7 @@ export const sanitizeSeller = (seller) => {
         id: s.id,
         fullName: s.fullName || s.full_name || '',
         shopName: s.shopName || s.shop_name || '',
+        slug: s.slug || null,
         email: s.email,
         whatsappNumber: s.whatsappNumber || s.whatsapp_number || s.phone || '',
         city: s.city,

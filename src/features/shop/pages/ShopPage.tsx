@@ -33,14 +33,17 @@ const ShopPage = () => {
 
   if (isLoading) {
     return (
-      <div className={cn('min-h-screen flex items-center justify-center', resolvedShopTheme === 'dark' ? 'dark bg-[#0a0a0a]' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100')}>
+      <div
+        className="shop-page-root min-h-screen flex items-center justify-center bg-[var(--byblos-bg,#f5f4f0)] text-[var(--byblos-text,#0f0f0e)] transition-colors duration-300"
+        data-shop-theme={resolvedShopTheme}
+      >
         <div className="text-center space-y-6 p-8">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
             <Loader2 className="h-12 w-12 text-yellow-600 animate-spin" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-black dark:text-white mb-3">Loading Shop</h3>
-            <p className="text-gray-600 dark:text-white/60 text-lg font-medium">Please wait while we fetch the shop details...</p>
+            <h3 className="text-2xl font-black text-[var(--byblos-text)] mb-3">Loading Shop</h3>
+            <p className="text-[var(--byblos-muted)] text-lg font-medium">Please wait while we fetch the shop details...</p>
           </div>
         </div>
       </div>
@@ -49,17 +52,20 @@ const ShopPage = () => {
 
   if (error) {
     return (
-      <div className={cn('min-h-screen flex items-center justify-center p-4', resolvedShopTheme === 'dark' ? 'dark bg-[#0a0a0a]' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100')}>
+      <div
+        className="shop-page-root min-h-screen flex items-center justify-center p-4 bg-[var(--byblos-bg,#f5f4f0)] text-[var(--byblos-text,#0f0f0e)] transition-colors duration-300"
+        data-shop-theme={resolvedShopTheme}
+      >
         <div className="text-center space-y-6 p-8">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
             <Store className="h-12 w-12 text-red-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-black dark:text-white mb-3">Error Loading Shop</h2>
-            <p className="text-gray-600 dark:text-white/60 text-lg font-medium mb-6">{error}</p>
+            <h2 className="text-2xl font-black text-[var(--byblos-text)] mb-3">Error Loading Shop</h2>
+            <p className="text-[var(--byblos-muted)] text-lg font-medium mb-6">{error}</p>
             <Button
               asChild
-              className="bg-yellow-300 hover:bg-yellow-400 text-black shadow-lg px-8 py-3 rounded-xl font-semibold transition-colors duration-200"
+              className="bg-yellow-400 hover:bg-yellow-300 text-black shadow-lg px-8 py-3 rounded-xl font-bold transition-colors duration-200"
             >
               <Link to="/">Return to Home</Link>
             </Button>
@@ -93,7 +99,7 @@ const ShopPage = () => {
           <div className="relative max-w-md mx-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg
-                className={`h-5 w-5 ${themeClasses.textColor === 'text-white' ? 'text-white/70' : 'text-gray-300'}`}
+                className="h-5 w-5 text-[var(--byblos-muted)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -196,15 +202,12 @@ const ShopPage = () => {
             </div>
           </div>
         ) : (
-          <div className={`text-center py-16 ${themeClasses.cardBg} backdrop-blur-sm rounded-3xl p-8 shadow-lg border ${themeClasses.borderColor}/50`}>
-            <Package className={`h-16 w-16 mx-auto ${themeClasses.textColor === 'text-white' ? 'text-white/60' : 'text-gray-300'
-              } mb-4`} />
-            <h3 className={`text-xl font-bold ${themeClasses.textColor === 'text-white' ? 'text-white' : 'text-gray-800'
-              } mb-2`}>
+          <div className="shop-products-card text-center py-16 rounded-3xl p-8 transition-all duration-300 border border-[var(--byblos-border)]">
+            <Package className="h-16 w-16 mx-auto text-[var(--byblos-muted)] mb-4" />
+            <h3 className="text-xl font-bold text-[var(--byblos-text)] mb-2">
               No products found
             </h3>
-            <p className={`${themeClasses.textColor === 'text-white' ? 'text-white/80' : 'text-gray-600'
-              } mb-6`}>
+            <p className="text-[var(--byblos-muted)] text-sm mb-6">
               {searchQuery
                 ? 'No products match your search. Try different keywords.'
                 : 'This shop currently has no products available.'}
@@ -212,10 +215,7 @@ const ShopPage = () => {
             {searchQuery && (
               <Button
                 variant="outline"
-                className={`${themeClasses.borderColor} ${themeClasses.textColor === 'text-white'
-                  ? 'text-white border-white/30 hover:bg-white/10'
-                  : 'hover:bg-gray-100'
-                  }`}
+                className="border-[var(--byblos-border)] text-[var(--byblos-text)] hover:bg-[var(--byblos-surface-soft)] transition-colors"
                 onClick={() => setSearchQuery('')}
               >
                 Clear search

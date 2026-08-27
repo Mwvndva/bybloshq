@@ -48,8 +48,8 @@ export default function CreatorResetPassword() {
   };
 
   return (
-    <main className="auth-page min-h-screen bg-[#090909] text-white">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md pt-safe-top">
+    <main className="auth-page min-h-screen bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200">
+      <header className="sticky top-0 z-30 border-b border-black/[0.08] dark:border-white/10 bg-[var(--byblos-bg,#000000)]/90 backdrop-blur-md pt-safe-top transition-colors duration-200">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="relative flex h-16 items-center justify-between sm:h-20">
             <Button
@@ -57,13 +57,13 @@ export default function CreatorResetPassword() {
               variant="ghost"
               size="sm"
               onClick={() => navigate('/creator/login')}
-              className="rounded-xl px-3 py-2 text-sm text-white/75 transition-all duration-200 hover:bg-yellow-100 hover:text-black"
+              className="rounded-xl px-3 py-2 text-sm text-slate-700 dark:text-white/75 transition-all duration-200 hover:bg-yellow-400 hover:text-black"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               <span>Back</span>
             </Button>
             <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Creator Portal</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Creator Portal</h1>
             </div>
             <div className="flex-1" aria-hidden="true" />
           </div>
@@ -73,14 +73,14 @@ export default function CreatorResetPassword() {
       <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-md flex-col px-4 py-5 sm:min-h-[calc(100svh-5rem)]">
         <form
           onSubmit={handleSubmit}
-          className="my-auto w-full space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)]"
+          className="my-auto w-full space-y-5 rounded-[2rem] border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)] transition-colors duration-200"
         >
           <div className="space-y-2">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-400/15">
-              <Lock className="h-6 w-6 text-yellow-300" />
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-500/15 dark:bg-yellow-400/15">
+              <Lock className="h-6 w-6 text-yellow-600 dark:text-yellow-300" />
             </span>
-            <h1 className="text-3xl font-black tracking-tight">Set a new password</h1>
-            <p className="text-sm font-medium leading-6 text-white/55">Choose a strong password for your creator account.</p>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Set a new password</h1>
+            <p className="text-sm font-medium leading-6 text-slate-600 dark:text-white/55">Choose a strong password for your creator account.</p>
           </div>
 
           <div className="relative">
@@ -92,13 +92,13 @@ export default function CreatorResetPassword() {
               onChange={(event) => setPassword(event.target.value)}
               type={showPassword ? 'text' : 'password'}
               placeholder="New password"
-              className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12"
+              className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 pr-12"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/45 transition hover:bg-white/10 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 dark:text-white/45 transition hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -113,7 +113,7 @@ export default function CreatorResetPassword() {
             onChange={(event) => setConfirm(event.target.value)}
             type={showPassword ? 'text' : 'password'}
             placeholder="Confirm password"
-            className="h-12 rounded-2xl border-white/10 bg-black/45"
+            className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400"
             required
           />
 
@@ -139,7 +139,7 @@ export default function CreatorResetPassword() {
 
 function Requirement({ met, label }: { met: boolean; label: string }) {
   return (
-    <span className={met ? 'flex items-center gap-1 text-emerald-400' : 'flex items-center gap-1 text-white/45'}>
+    <span className={met ? 'flex items-center gap-1 text-emerald-600 dark:text-emerald-400' : 'flex items-center gap-1 text-slate-400 dark:text-white/45'}>
       {met ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
       {label}
     </span>
