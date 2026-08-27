@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Loader2, Shield, Lock, Mail } from 'lucide-react';
+import { classifyApiError } from '@/shared/utils/errorClassification';
 
 export const AdminLoginPage = () => {
   const [email, setEmail] = useState('');
@@ -37,12 +38,8 @@ export const AdminLoginPage = () => {
       await login(email, password, 'admin');
       navigate('/admin/dashboard');
     } catch (err: unknown) {
-      const reqErr = err as { response?: unknown; message?: string };
-      if (!reqErr?.response) {
-        setLocalError('Connection error. Please check your network connection and try again.');
-      } else {
-        setLocalError(reqErr.message || 'Invalid email or password');
-      }
+      const classified = classifyApiError(err, 'Invalid email or password');
+      setLocalError(classified.message);
     }
   };
 

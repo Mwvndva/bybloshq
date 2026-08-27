@@ -7,6 +7,7 @@ import { useGlobalAuth } from '@/features/auth/contexts';
 import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import { VerifyEmailModal } from '@/features/auth/components/VerifyEmailModal';
 import { toast } from 'sonner';
+import { classifyApiError } from '@/shared/utils/errorClassification';
 
 export function BuyerLogin() {
   const [email, setEmail] = useState('');
@@ -57,10 +58,9 @@ export function BuyerLogin() {
       await login(targetEmail, targetPassword, 'buyer');
       // Navigation handled by useGlobalAuth().login() via getDashboardPath('buyer')
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string; code?: string; email?: string } }; message?: string };
-      const apiError = err?.response?.data;
-      if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED') {
-        setUnverifiedEmail(apiError.email || targetEmail);
+      const classified = classifyApiError(error);
+      if (classified.code === 'PENDING_VERIFICATION' || classified.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(classified.email || targetEmail);
         setIsVerifyModalOpen(true);
         return;
       }

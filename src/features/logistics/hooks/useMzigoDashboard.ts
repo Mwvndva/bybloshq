@@ -7,7 +7,6 @@ import {
   fetchLogisticsMe,
   fetchLogisticsRequests,
   getStoredLogisticsPartner,
-  isLogisticsSessionActive,
   LogisticsLegType,
   LogisticsSort,
   LogisticsStatusUpdate,
@@ -26,7 +25,7 @@ export function useMzigoDashboard() {
 
   useEffect(() => {
     const isLogistics = globalUser?.role === 'logistics' && globalUser.isAuthenticated;
-    if (!isLogistics && !isLogisticsSessionActive()) {
+    if (!isLogistics) {
       navigate('/mzigo/login', { replace: true });
     }
   }, [navigate, globalUser]);
