@@ -10,12 +10,13 @@ const query = (text, params) => pool.query(text, params);
 
 export const createSeller = async (sellerData, externalClient = null) => {
   const { fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId = null, termsAccepted = false } = sellerData;
+  const slug = shopName ? String(shopName).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : null;
 
   const result = await (externalClient || pool).query(
-    `INSERT INTO sellers (full_name, shop_name, email, whatsapp_number, city, location, physical_address, latitude, longitude, user_id, terms_accepted, terms_accepted_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CASE WHEN $11 = true THEN NOW() ELSE NULL END)
+    `INSERT INTO sellers (full_name, shop_name, slug, email, whatsapp_number, city, location, physical_address, latitude, longitude, user_id, terms_accepted, terms_accepted_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CASE WHEN $12 = true THEN NOW() ELSE NULL END)
      RETURNING *`,
-    [fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId, termsAccepted]
+    [fullName, shopName, slug, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId, termsAccepted]
   );
   return toCamelCase(result.rows[0]);
 };
@@ -45,6 +46,7 @@ export const findSellerByUserId = async (userId) => {
       user_id AS "userId",
       full_name AS "fullName", 
       shop_name AS "shopName", 
+      slug,
       email, 
       whatsapp_number AS "whatsappNumber", 
       city,
@@ -73,13 +75,21 @@ export const findSellerByUserId = async (userId) => {
 };
 
 export const findSellerByShopName = async (shopName) => {
-  logger.debug('Executing findSellerByShopName query', { shopName: shopName?.replace(/[\n\r]/g, '') });
+  if (!shopName || typeof shopName !== 'string') return null;
+  const rawInput = shopName.trim();
+  if (!rawInput) return null;
+
+  logger.debug('Executing findSellerByShopName query', { shopName: rawInput.replace(/[\n\r]/g, '') });
+
+  const slugified = rawInput.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const unslugified = rawInput.replace(/-/g, ' ');
 
   const queryText = `
     SELECT 
       id, 
       full_name AS "fullName", 
       shop_name AS "shopName", 
+      slug,
       email, 
       whatsapp_number AS "whatsappNumber", 
       city, 
@@ -101,12 +111,23 @@ export const findSellerByShopName = async (shopName) => {
       client_count AS "clientCount",
       created_at AS "createdAt"
     FROM sellers 
-    WHERE slug = $1 OR shop_name = $1
+    WHERE COALESCE(status, 'active') = 'active'
+      AND (
+        LOWER(TRIM(shop_name)) = LOWER(TRIM($1))
+        OR (slug IS NOT NULL AND LOWER(TRIM(slug)) = LOWER(TRIM($1)))
+        OR (slug IS NOT NULL AND LOWER(TRIM(slug)) = LOWER(TRIM($2)))
+        OR LOWER(TRIM(shop_name)) = LOWER(TRIM($3))
+      )
+    ORDER BY 
+      CASE 
+        WHEN LOWER(TRIM(shop_name)) = LOWER(TRIM($1)) THEN 1
+        WHEN slug IS NOT NULL AND LOWER(TRIM(slug)) = LOWER(TRIM($1)) THEN 2
+        ELSE 3
+      END
+    LIMIT 1
   `;
 
-  // SQL Query log removed for security/cleanliness
-
-  const result = await query(queryText, [shopName.toLowerCase()]);
+  const result = await query(queryText, [rawInput, slugified, unslugified]);
 
   logger.debug('Query result details', {
     rowCount: result.rowCount,
@@ -447,6 +468,7 @@ export const findSellersByUserId = async (userId, options = {}) => {
       s.id, 
       s.full_name AS "fullName", 
       s.shop_name AS "shopName", 
+      s.slug,
       s.city, 
       s.location, 
       s.physical_address AS "physicalAddress",

@@ -45,6 +45,7 @@ export async function findActiveWithStats({ limit, offset }) {
       s.id,
       s.full_name,
       s.shop_name,
+      s.slug,
       s.banner_image,
       s.avatar_url,
       s.bio,
