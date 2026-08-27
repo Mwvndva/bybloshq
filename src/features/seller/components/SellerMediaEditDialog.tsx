@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { ImageIcon, Loader2, Trash2, UploadCloud } from 'lucide-react';
+import { Loader2, Trash2, UploadCloud } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { toast } from '@/shared/hooks/use-toast';
 import { getImageUrl } from '@/shared/utils/formatting';
-import { useUploadBannerMutation, useUploadBusinessPhotoMutation } from '@/features/seller/hooks/useSellerProfile';
+import { useUploadBusinessPhotoMutation } from '@/features/seller/hooks/useSellerProfile';
 
 interface SellerMediaEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   avatarUrl?: string;
-  bannerUrl?: string;
   fallbackInitial: string;
 }
 
@@ -26,13 +25,11 @@ const previewSrc = (url?: string | null) => {
   return url.startsWith('blob:') || url.startsWith('data:') ? url : getImageUrl(url);
 };
 
-export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, bannerUrl, fallbackInitial }: SellerMediaEditDialogProps) {
+export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, fallbackInitial }: SellerMediaEditDialogProps) {
   const photoMutation = useUploadBusinessPhotoMutation();
-  const bannerMutation = useUploadBannerMutation();
-  const [busy, setBusy] = useState<null | 'photo' | 'banner'>(null);
+  const [busy, setBusy] = useState<null | 'photo'>(null);
 
   const runUpload = async (
-    which: 'photo' | 'banner',
     file: File | null,
     maxMb: number,
     upload: (b64: string) => Promise<unknown>,
@@ -47,7 +44,7 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, bannerUrl
       toast({ title: 'File too large', description: `Maximum ${label.toLowerCase()} size is ${maxMb}MB.`, variant: 'destructive' });
       return;
     }
-    setBusy(which);
+    setBusy('photo');
     try {
       const b64 = await fileToBase64(file);
       await upload(b64);
@@ -61,11 +58,10 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, bannerUrl
   };
 
   const runRemove = async (
-    which: 'photo' | 'banner',
     upload: (b64: string) => Promise<unknown>,
     label: string
   ) => {
-    setBusy(which);
+    setBusy('photo');
     try {
       await upload('');
       toast({ title: `${label} removed` });
@@ -78,14 +74,13 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, bannerUrl
   };
 
   const photoPreview = previewSrc(avatarUrl);
-  const bannerPreview = previewSrc(bannerUrl);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] max-w-sm sm:max-w-[380px] border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] text-slate-950 dark:text-white">
         <DialogHeader>
-          <DialogTitle className="text-slate-950 dark:text-white font-bold">Edit photo & banner</DialogTitle>
-          <DialogDescription className="text-slate-600 dark:text-white/55 font-medium">Update how your shop looks to buyers.</DialogDescription>
+          <DialogTitle className="text-slate-950 dark:text-white font-bold">Edit Business Photo</DialogTitle>
+          <DialogDescription className="text-slate-600 dark:text-white/55 font-medium">Update how your shop logo/photo looks to buyers.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -120,7 +115,7 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, bannerUrl
                     accept="image/*"
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                     disabled={busy === 'photo'}
-                    onChange={(e) => { const f = e.target.files?.[0] || null; e.target.value = ''; runUpload('photo', f, 5, (b) => photoMutation.mutateAsync(b), 'Business photo'); }}
+                    onChange={(e) => { const f = e.target.files?.[0] || null; e.target.value = ''; runUpload(f, 5, (b) => photoMutation.mutateAsync(b), 'Business photo'); }}
                   />
                   {busy === 'photo' ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="mr-1.5 h-3.5 w-3.5" />}
                   Upload
@@ -131,57 +126,12 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, bannerUrl
                     variant="outline"
                     className="h-8 border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
                     disabled={busy === 'photo'}
-                    onClick={() => runRemove('photo', (b) => photoMutation.mutateAsync(b), 'Business photo')}
+                    onClick={() => runRemove((b) => photoMutation.mutateAsync(b), 'Business photo')}
                   >
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove
                   </Button>
                 )}
               </div>
-            </div>
-          </div>
-
-          <div className="h-px w-full bg-white/10" />
-
-          {/* Banner */}
-          <div>
-            <p className="text-sm font-black text-white">Banner</p>
-            <div className="mt-2 h-24 w-full overflow-hidden rounded-xl border border-white/10 bg-[#141414]">
-              {bannerPreview ? (
-                <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-white/40">
-                  <ImageIcon className="h-6 w-6" />
-                </div>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                className="relative h-8 font-bold"
-                style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
-                disabled={busy === 'banner'}
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  disabled={busy === 'banner'}
-                  onChange={(e) => { const f = e.target.files?.[0] || null; e.target.value = ''; runUpload('banner', f, 50, (b) => bannerMutation.mutateAsync(b), 'Banner'); }}
-                />
-                {busy === 'banner' ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="mr-1.5 h-3.5 w-3.5" />}
-                Upload
-              </Button>
-              {bannerUrl && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
-                  disabled={busy === 'banner'}
-                  onClick={() => runRemove('banner', (b) => bannerMutation.mutateAsync(b), 'Banner')}
-                >
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove
-                </Button>
-              )}
             </div>
           </div>
         </div>

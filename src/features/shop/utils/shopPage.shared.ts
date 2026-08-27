@@ -1,14 +1,5 @@
-import { type CSSProperties } from 'react';
 import type { Product, Seller, Aesthetic } from '@/shared/types';
 import type { Theme } from '@/shared/hooks/useShopTheme';
-
-export const SHOP_DEFAULT_BANNER_STYLE: CSSProperties = {
-  background: [
-    'radial-gradient(circle at 18% 18%, rgba(var(--theme-accent-rgb), 0.28), transparent 28%)',
-    'radial-gradient(circle at 82% 32%, rgba(var(--theme-accent-rgb), 0.18), transparent 30%)',
-    'linear-gradient(135deg, var(--theme-bg-color) 0%, var(--theme-card-bg) 52%, var(--theme-accent) 100%)'
-  ].join(', ')
-};
 
 // Type guard to check if a string is a valid Aesthetic
 export function isAesthetic(value: string): value is Aesthetic {
@@ -46,7 +37,6 @@ export interface ShopProduct extends Omit<BaseProduct, 'seller'> {
 
 // Shop-specific seller type that extends the base Seller type
 export interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
-  bannerImage?: string;
   theme?: Theme;
   city?: string;
   instagramLink?: string;
@@ -57,3 +47,4 @@ export interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
   avatarUrl?: string;
   avatar_url?: string;
 }
+

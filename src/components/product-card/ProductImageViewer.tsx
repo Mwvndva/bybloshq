@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { IconButton } from '@/shared/ui/icon-button';
 import { getImageUrl } from '@/shared/utils/formatting';
+import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 
 interface ProductImageViewerProps {
   images: string[];
@@ -39,12 +40,17 @@ export function ProductImageViewer({
   }, [activeIndex, hasMultipleImages, images.length, onActiveIndexChange, onClose]);
 
   useEffect(() => {
+    const unregister = registerModalDismiss(() => {
+      onClose();
+      return true;
+    });
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
+      unregister();
       document.body.style.overflow = originalOverflow;
     };
-  }, []);
+  }, [onClose]);
 
   if (!activeImage) return null;
 

@@ -5,16 +5,12 @@ import { deleteSellerAccount } from '@/features/seller/api/profileApi';
 import type { Theme } from '@/features/seller/api';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Textarea } from '@/shared/ui/textarea';
-import { BannerUpload } from '../../BannerUpload';
-import { BusinessPhotoUpload } from '../../BusinessPhotoUpload';
 import { ThemeSelector } from '../../ThemeSelector';
 import { getSellerInitials } from '../dashboardUtils';
 import { getShopUrl, getShopUsername } from '@/shared/utils/shopLinks';
 import type { SellerSettingsFormData } from '../types';
 import { SellerAmbassadorInvites } from './SellerAmbassadorInvites';
 import { SectionHeader, SocialInput } from './settingsTab.parts';
-import { SettingsBusinessProfileSection } from './SettingsBusinessProfileSection';
 import { SettingsLocationSection } from './SettingsLocationSection';
 import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
 import { useThemeScope } from '@/shared/hooks/useAppTheme';
@@ -62,62 +58,68 @@ export function SettingsTab({
   onLogout,
   toggleEdit
 }: SettingsTabProps) {
+  const [isEditingContacts, setIsEditingContacts] = useState(false);
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
   const previewShopUsername = getShopUsername(formData.shopName);
   const previewShopUrl = getShopUrl(formData.shopName);
   const { theme, setTheme } = useThemeScope('seller');
 
+  const contactsHeaderAction = isEditingContacts ? (
+    <div className="flex items-center gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setFormData(prev => ({
+            ...prev,
+            whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || '',
+            instagramLink: sellerProfile?.instagramLink || '',
+            tiktokLink: sellerProfile?.tiktokLink || '',
+            facebookLink: sellerProfile?.facebookLink || ''
+          }));
+          setIsEditingContacts(false);
+        }}
+        disabled={isSaving}
+        className="h-8 rounded-lg border-white/15 bg-white/5 text-xs font-bold text-white hover:bg-white/10"
+      >
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        onClick={async () => {
+          await handleSaveProfile();
+          setIsEditingContacts(false);
+        }}
+        disabled={isSaving}
+        className="h-8 rounded-lg bg-[var(--theme-button-bg,#f5c518)] text-xs font-black text-[var(--theme-button-text,#000000)] hover:opacity-90 shadow-md"
+      >
+        {isSaving ? (
+          <>
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          'Save Changes'
+        )}
+      </Button>
+    </div>
+  ) : (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={() => setIsEditingContacts(true)}
+      className="h-8 gap-1.5 rounded-lg border-white/15 bg-white/5 text-xs font-bold text-white hover:bg-white/10"
+    >
+      <Edit className="h-3.5 w-3.5 text-yellow-400" />
+      Edit Contacts
+    </Button>
+  );
+
   return (
     <div className="w-full space-y-5 sm:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="seller-eyebrow">Settings</p>
-          <h2 className="mt-1 seller-heading sm:text-3xl">Shop controls</h2>
-          <p className="mt-1 max-w-2xl seller-subtext">
-            Keep your public shop details, appearance, contacts, and pickup location current.
-          </p>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          {isEditing ? (
-            <>
-              <Button
-                variant="outline"
-                onClick={toggleEdit}
-                disabled={isSaving}
-                className="h-10 w-full border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveProfile}
-                disabled={isSaving}
-                className="h-10 w-full bg-[var(--theme-button-bg,#f5c518)] font-black text-[var(--theme-button-text,#000000)] hover:opacity-90 sm:w-auto"
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </>
-          ) : (
-            <Button
-              onClick={toggleEdit}
-              className="h-10 w-full bg-[var(--theme-button-bg,#f5c518)] font-black text-[var(--theme-button-text,#000000)] hover:opacity-90 sm:w-auto"
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Profile
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <SettingsBusinessProfileSection
-        sellerProfile={sellerProfile}
-        isEditing={isEditing}
-        formData={formData}
-        setFormData={setFormData}
-        shopNameAvailable={shopNameAvailable}
-        isCheckingShopName={isCheckingShopName}
-        previewShopUsername={previewShopUsername}
-        previewShopUrl={previewShopUrl}
-      />
-
       {/* Dashboard theme (light / dark / system) — seller-scoped */}
       <section className="seller-card p-4 sm:p-5 lg:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -137,66 +139,72 @@ export function SettingsTab({
         />
       </section>
 
+      {/* Contact & Socials */}
       <section className="seller-card p-4 sm:p-5 lg:p-6">
-        <SectionHeader title="Contact & Socials" description="Where buyers can identify and reach your business." />
+        <SectionHeader
+          title="Contact & Socials"
+          description="Where buyers can identify and reach your business."
+          action={contactsHeaderAction}
+        />
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="seller-card-soft p-4">
-              <p className="seller-label mb-1">Email</p>
-              <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.email || 'Not set'}>
-                {sellerProfile?.email || 'Not set'}
+          <div className="seller-card-soft p-4">
+            <p className="seller-label mb-1">Email</p>
+            <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.email || 'Not set'}>
+              {sellerProfile?.email || 'Not set'}
+            </p>
+          </div>
+
+          <div className="seller-card-soft p-4">
+            <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-1">WhatsApp Number</p>
+            {isEditingContacts ? (
+              <Input
+                name="whatsappNumber"
+                value={formData.whatsappNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
+                placeholder="e.g. 0712345678"
+                className="seller-field text-xs"
+              />
+            ) : (
+              <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
+                {sellerProfile?.whatsappNumber || sellerProfile?.phone || 'Not set'}
               </p>
-            </div>
+            )}
+          </div>
 
-            <div className="seller-card-soft p-4">
-              <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-1">WhatsApp Number</p>
-              {isEditing ? (
-                <Input
-                  name="whatsappNumber"
-                  value={formData.whatsappNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
-                  placeholder="e.g. 0712345678"
-                  className="seller-field text-xs"
-                />
-              ) : (
-                <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
-                  {sellerProfile?.whatsappNumber || sellerProfile?.phone || 'Not set'}
-                </p>
-              )}
-            </div>
-
-            <SocialInput
-              isEditing={isEditing}
-              label="Instagram Link"
-              value={formData.instagramLink}
-              displayValue={sellerProfile?.instagramLink}
-              placeholder="https://instagram.com/yourshop"
-              onChange={(value) => setFormData(prev => ({ ...prev, instagramLink: value }))}
-              iconPath={<><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></>}
-            />
-            <SocialInput
-              isEditing={isEditing}
-              label="TikTok Link"
-              value={formData.tiktokLink}
-              displayValue={sellerProfile?.tiktokLink}
-              placeholder="https://tiktok.com/@yourshop"
-              onChange={(value) => setFormData(prev => ({ ...prev, tiktokLink: value }))}
-              iconPath={<path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>}
-            />
-            <SocialInput
-              isEditing={isEditing}
-              label="Facebook Link"
-              value={formData.facebookLink}
-              displayValue={sellerProfile?.facebookLink}
-              placeholder="https://facebook.com/yourshop"
-              onChange={(value) => setFormData(prev => ({ ...prev, facebookLink: value }))}
-              iconPath={<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>}
-            />
+          <SocialInput
+            isEditing={isEditingContacts}
+            label="Instagram Link"
+            value={formData.instagramLink}
+            displayValue={sellerProfile?.instagramLink}
+            placeholder="https://instagram.com/yourshop"
+            onChange={(value) => setFormData(prev => ({ ...prev, instagramLink: value }))}
+            iconPath={<><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></>}
+          />
+          <SocialInput
+            isEditing={isEditingContacts}
+            label="TikTok Link"
+            value={formData.tiktokLink}
+            displayValue={sellerProfile?.tiktokLink}
+            placeholder="https://tiktok.com/@yourshop"
+            onChange={(value) => setFormData(prev => ({ ...prev, tiktokLink: value }))}
+            iconPath={<path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>}
+          />
+          <SocialInput
+            isEditing={isEditingContacts}
+            label="Facebook Link"
+            value={formData.facebookLink}
+            displayValue={sellerProfile?.facebookLink}
+            placeholder="https://facebook.com/yourshop"
+            onChange={(value) => setFormData(prev => ({ ...prev, facebookLink: value }))}
+            iconPath={<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>}
+          />
         </div>
       </section>
 
+      {/* Location Settings */}
       <SettingsLocationSection
-        isEditing={isEditing}
-        toggleEdit={toggleEdit}
+        isEditing={isEditingLocation}
+        toggleEdit={() => setIsEditingLocation(prev => !prev)}
         sellerProfile={sellerProfile}
         handleDeleteLocation={handleDeleteLocation}
         isDeletingLocation={isDeletingLocation}
@@ -207,6 +215,21 @@ export function SettingsTab({
         getLocations={getLocations}
         handleShopLocationChange={handleShopLocationChange}
         isSaving={isSaving}
+        onSave={async () => {
+          await handleSaveProfile();
+          setIsEditingLocation(false);
+        }}
+        onCancel={() => {
+          setFormData(prev => ({
+            ...prev,
+            city: sellerProfile?.city || '',
+            location: sellerProfile?.location || '',
+            physicalAddress: sellerProfile?.physicalAddress || '',
+            latitude: sellerProfile?.latitude || null,
+            longitude: sellerProfile?.longitude || null
+          }));
+          setIsEditingLocation(false);
+        }}
       />
 
       <SellerAmbassadorInvites formData={formData} setFormData={setFormData} isEditing={isEditing} toggleEdit={toggleEdit} />

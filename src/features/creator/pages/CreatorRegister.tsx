@@ -6,6 +6,7 @@ import { useCreatorRegisterMutation } from '@/features/creator/hooks/mutations/u
 import { useCreatorInviteQuery } from '@/features/creator/hooks/queries/useCreatorInviteQuery';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 
 import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
 
@@ -96,6 +97,14 @@ export default function CreatorRegister() {
   const passwordsMatch = form.password.length > 0 && form.password === form.confirmPassword;
 
   const registerMutation = useCreatorRegisterMutation();
+
+  useEffect(() => {
+    if (!existingAccountPrompt) return;
+    return registerModalDismiss(() => {
+      setExistingAccountPrompt(false);
+      return true;
+    });
+  }, [existingAccountPrompt]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -293,7 +302,7 @@ export default function CreatorRegister() {
       </div>
 
       {existingAccountPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="relative max-w-md w-full rounded-3xl border border-white/10 bg-[#121212] p-6 sm:p-8 text-center space-y-4 shadow-2xl">
             <button
               type="button"

@@ -103,7 +103,6 @@ export function SellerReminders({ sellerProfile, totalProducts, onSelectTab }: S
     const eligible = isOlderThan24h(sellerProfile?.createdAt);
     const missing: string[] = [];
     if (!sellerProfile?.avatarUrl) missing.push('business photo');
-    if (!sellerProfile?.bannerImage) missing.push('banner');
     if (!sellerProfile?.bio?.trim()) missing.push('bio');
 
     const label =
@@ -118,7 +117,7 @@ export function SellerReminders({ sellerProfile, totalProducts, onSelectTab }: S
       missingLabel: label,
       showProducts: eligible && totalProducts <= 0 && !dismissed.products,
     };
-  }, [sellerProfile?.createdAt, sellerProfile?.avatarUrl, sellerProfile?.bannerImage, sellerProfile?.bio, totalProducts, dismissed]);
+  }, [sellerProfile?.createdAt, sellerProfile?.avatarUrl, sellerProfile?.bio, totalProducts, dismissed]);
 
   if (!showProfile && !showProducts) return null;
 
