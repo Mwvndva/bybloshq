@@ -22,6 +22,7 @@ export type ShopRequest = { id: number; shop_name?: string; seller_name?: string
 export type LinkedShop = {
   id: number;
   shop_name?: string;
+  slug?: string;
   code?: string;
   commission_rate?: number | string;
   sales_count?: number | string;

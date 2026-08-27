@@ -25,6 +25,7 @@ export interface BuyerProfile extends BaseUser {
 export interface SellerProfile extends BaseUser {
   fullName: string;
   shopName: string;
+  slug?: string;
   phone: string;
   whatsappNumber: string;
   city?: string;

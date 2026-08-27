@@ -29,6 +29,7 @@ export const transformSeller = (data: unknown): ApiSeller => {
     id: Number(seller.id),
     fullName: str(seller.fullName || seller.full_name),
     shopName: str(seller.shopName || seller.shop_name),
+    slug: str(seller.slug) || undefined,
     email: str(seller.email),
     phone: str(seller.phone || seller.whatsapp_number),
     whatsappNumber: str(seller.whatsapp_number || seller.whatsappNumber || seller.phone),

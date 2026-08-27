@@ -100,7 +100,7 @@ const VerifyEmail = () => {
     };
 
     return (
-        <div className="auth-page min-h-screen bg-[#f8f7f2] flex items-center justify-center p-4 relative overflow-hidden"
+        <div className="auth-page min-h-screen bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-200"
             style={{
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
@@ -109,13 +109,13 @@ const VerifyEmail = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
-                className="max-w-md w-full bg-white border border-stone-200 p-8 rounded-3xl shadow-[0_18px_45px_rgba(17,17,17,0.08)] relative z-10 text-center"
+                className="max-w-md w-full bg-white dark:bg-[#0a0a0a] border border-black/[0.08] dark:border-white/10 p-8 rounded-3xl shadow-[0_18px_45px_rgba(17,17,17,0.08)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)] relative z-10 text-center transition-colors duration-200"
             >
                 <div className="mb-8 flex justify-center">
                     {status === 'loading' && (
-                        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center relative">
+                        <div className="w-20 h-20 bg-yellow-400/20 rounded-full flex items-center justify-center relative">
                             <Loader2 className="w-10 h-10 text-yellow-500 animate-spin" />
-                            <div className="absolute inset-0 rounded-full border-2 border-yellow-200" />
+                            <div className="absolute inset-0 rounded-full border-2 border-yellow-400/30" />
                         </div>
                     )}
                     {status === 'success' && (
@@ -123,9 +123,9 @@ const VerifyEmail = () => {
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: "spring", damping: 12 }}
-                            className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center"
+                            className="w-20 h-20 bg-emerald-500/15 rounded-full flex items-center justify-center"
                         >
-                            <CheckCircle className="w-12 h-12 text-green-500" />
+                            <CheckCircle className="w-12 h-12 text-emerald-500" />
                         </motion.div>
                     )}
                     {status === 'error' && (
@@ -133,7 +133,7 @@ const VerifyEmail = () => {
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: "spring", damping: 12 }}
-                            className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center"
+                            className="w-20 h-20 bg-red-500/15 rounded-full flex items-center justify-center"
                         >
                             <XCircle className="w-12 h-12 text-red-500" />
                         </motion.div>
@@ -143,20 +143,20 @@ const VerifyEmail = () => {
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: "spring", damping: 12 }}
-                            className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center"
+                            className="w-20 h-20 bg-yellow-400/20 rounded-full flex items-center justify-center"
                         >
-                            <Mail className="w-12 h-12 text-yellow-600" />
+                            <Mail className="w-12 h-12 text-yellow-500 dark:text-yellow-400" />
                         </motion.div>
                     )}
                 </div>
 
-                <h1 className="text-3xl font-semibold text-stone-950 mb-4 tracking-tight">
+                <h1 className="text-3xl font-semibold text-slate-900 dark:text-white mb-4 tracking-tight">
                     {status === 'loading' ? 'Verifying Account' :
                         status === 'success' ? 'Verification Success' :
                             status === 'check-email' ? 'Action Required' : 'Verification Issue'}
                 </h1>
 
-                <p className="text-stone-600 text-lg mb-8 leading-relaxed">
+                <p className="text-slate-600 dark:text-white/60 text-lg mb-8 leading-relaxed">
                     {message}
                 </p>
 
@@ -166,7 +166,7 @@ const VerifyEmail = () => {
                             onClick={handleBackToLogin}
                             className={`w-full h-12 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${status === 'success' || status === 'check-email'
                                 ? 'bg-yellow-400 text-black hover:bg-yellow-300'
-                                : 'bg-white text-stone-950 hover:bg-stone-50 border border-stone-200'
+                                : 'bg-slate-100 dark:bg-white/[0.05] text-slate-950 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10'
                                 }`}
                         >
                             {status === 'success' || status === 'check-email' ? 'Go to Login' : 'Try Again'}
@@ -179,7 +179,7 @@ const VerifyEmail = () => {
                             onClick={handleResend}
                             disabled={resending}
                             variant="ghost"
-                            className="w-full text-stone-700 hover:text-black hover:bg-yellow-50"
+                            className="w-full text-slate-700 dark:text-white/75 hover:text-black dark:hover:text-white hover:bg-yellow-400 dark:hover:bg-yellow-400/20"
                         >
                             {resending ? (
                                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -190,7 +190,7 @@ const VerifyEmail = () => {
 
                     <button
                         onClick={() => navigate('/')}
-                        className="text-stone-500 hover:text-stone-950 transition-colors text-sm font-medium"
+                        className="text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors text-sm font-medium"
                     >
                         Back to Homepage
                     </button>

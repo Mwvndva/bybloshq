@@ -18,7 +18,7 @@ export function CreatorLinkedShops({ shops, onCopy }: CreatorLinkedShopsProps) {
             Accept a shop request to get your first shareable link.
           </div>
         ) : shops.map((shop) => {
-          const link = getCreatorShopUrl(shop.shop_name, shop.code);
+          const link = getCreatorShopUrl(shop.slug || shop.shop_name, shop.code);
           const shopUsername = getShopUsername(shop.shop_name);
           return (
             <div key={shop.id} className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 p-4 text-slate-950 dark:text-white">

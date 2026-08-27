@@ -99,13 +99,9 @@ export function ResetPasswordPage() {
     }
   }, [token, toast]);
 
-  // Handle body background
+  // Clean up component unmount
   useEffect(() => {
-    const originalBodyStyle = document.body.style.cssText;
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    return () => {
-      document.body.style.cssText = originalBodyStyle;
-    };
+    return () => {};
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,20 +148,20 @@ export function ResetPasswordPage() {
 
   if (!isValidToken) {
     return (
-      <div className="auth-page min-h-screen flex items-center justify-center p-4 bg-black">
-        <div className="w-full max-w-md rounded-2xl border border-white/15 p-6 bg-white/5 backdrop-blur-md shadow-xl">
+      <div className="auth-page min-h-screen flex items-center justify-center p-4 bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200">
+        <div className="w-full max-w-md rounded-2xl border border-black/[0.08] dark:border-white/15 p-6 bg-white dark:bg-[#0a0a0a] shadow-xl transition-colors duration-200">
           <div className="text-center mb-6">
             <div className="w-12 h-12 mx-auto mb-3 bg-red-500/20 rounded-xl flex items-center justify-center border border-red-500/30">
               <Lock className="h-6 w-6 text-red-500" />
             </div>
-            <h1 className="text-xl font-semibold text-slate-950 mb-1">Invalid or Expired Link</h1>
-            <p className="text-sm text-gray-400">The password reset link is invalid or has expired.</p>
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">Invalid or Expired Link</h1>
+            <p className="text-sm text-slate-600 dark:text-gray-400">The password reset link is invalid or has expired.</p>
           </div>
           <div className="space-y-3">
-            <Button className="w-full bg-yellow-500 text-black hover:bg-yellow-600 rounded-xl" onClick={() => navigate('/seller/login', { state: { openForgotPassword: true } })}>
+            <Button className="w-full bg-yellow-400 text-black hover:bg-yellow-300 font-bold rounded-xl" onClick={() => navigate('/seller/login', { state: { openForgotPassword: true } })}>
               Request New Reset Link
             </Button>
-            <Button variant="ghost" className="w-full text-slate-500 hover:text-slate-950 hover:bg-slate-100" onClick={() => navigate('/seller/login')}>
+            <Button variant="ghost" className="w-full text-slate-700 dark:text-white/75 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10" onClick={() => navigate('/seller/login')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
             </Button>
           </div>
@@ -177,18 +173,18 @@ export function ResetPasswordPage() {
   const strength = checkPasswordStrength(password);
 
   return (
-    <div className="auth-page min-h-screen w-full bg-black flex flex-col relative" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="auth-page min-h-screen w-full bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] flex flex-col relative transition-colors duration-200" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
-      <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30 pt-safe-top">
+      <header className="bg-[var(--byblos-bg,#000000)]/90 backdrop-blur-md border-b border-black/[0.08] dark:border-white/15 sticky top-0 z-30 pt-safe-top transition-colors duration-200">
         <div className="w-full px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/seller/login')} className="text-white hover:text-black hover:bg-yellow-400 rounded-xl">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/seller/login')} className="text-slate-700 dark:text-white hover:text-black hover:bg-yellow-400 rounded-xl">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
               <ShieldCheck className="h-4 w-4 text-slate-950" />
             </div>
-            <h1 className="text-xl font-black text-slate-950 tracking-tight">Security Center</h1>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Security Center</h1>
           </div>
           <div className="w-20" /> {/* Spacer */}
         </div>
@@ -196,18 +192,18 @@ export function ResetPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center py-8 px-4">
         <div className="w-full max-w-[400px]">
-          <div className="rounded-2xl border border-white/15 shadow-xl p-6 bg-white/5 backdrop-blur-md">
+          <div className="rounded-2xl border border-black/[0.08] dark:border-white/15 shadow-xl p-6 bg-white dark:bg-[#0a0a0a] transition-colors duration-200">
             <div className="text-center mb-6">
-              <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Lock className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 mx-auto mb-3 bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg">
+                <Lock className="h-6 w-6 text-black" />
               </div>
-              <h1 className="text-xl font-semibold text-white mb-1">Reset Password</h1>
-              <p className="text-sm text-gray-400">Set a strong new password for your account</p>
+              <h1 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">Reset Password</h1>
+              <p className="text-sm text-slate-600 dark:text-gray-400">Set a strong new password for your account</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="password">New Password</Label>
+                <Label htmlFor="password" className="text-slate-900 dark:text-white font-medium">New Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -218,9 +214,9 @@ export function ResetPasswordPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="New Password"
                     required
-                    className="pl-4 pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                    className="pl-4 pr-11 h-11 rounded-xl bg-slate-50 dark:bg-black/45 border-slate-300 dark:border-white/10 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   />
-                  <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onClick={() => setShowPassword(!showPassword)}>
+                  <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-colors" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -228,8 +224,8 @@ export function ResetPasswordPage() {
 
               {/* Password Requirements */}
               {password && (
-                <div className="mt-2 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                  <p className="text-[10px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">Security Requirements:</p>
+                <div className="mt-2 p-3 bg-slate-100 dark:bg-black/30 rounded-xl border border-black/[0.08] dark:border-white/10 transition-colors duration-200">
+                  <p className="text-[10px] font-semibold text-slate-500 dark:text-gray-400 mb-2 uppercase tracking-wider">Security Requirements:</p>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: "8+ chars", met: strength.minLength },
@@ -240,14 +236,14 @@ export function ResetPasswordPage() {
                       <div key={index} className="flex items-center space-x-2">
                         {req.met ? (
                           <div className="bg-green-500/20 p-0.5 rounded-full">
-                            <Check className="h-2.5 w-2.5 text-green-400" />
+                            <Check className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
                           </div>
                         ) : (
-                          <div className="bg-gray-700 p-0.5 rounded-full">
-                            <X className="h-2.5 w-2.5 text-gray-400" />
+                          <div className="bg-slate-300 dark:bg-gray-700 p-0.5 rounded-full">
+                            <X className="h-2.5 w-2.5 text-slate-500 dark:text-gray-400" />
                           </div>
                         )}
-                        <span className={`text-[10px] ${req.met ? 'text-green-400 font-medium' : 'text-gray-400'}`}>{req.label}</span>
+                        <span className={`text-[10px] ${req.met ? 'text-green-600 dark:text-green-400 font-medium' : 'text-slate-600 dark:text-gray-400'}`}>{req.label}</span>
                       </div>
                     ))}
                   </div>
@@ -255,7 +251,7 @@ export function ResetPasswordPage() {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-slate-900 dark:text-white font-medium">Confirm Password</Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
@@ -266,9 +262,9 @@ export function ResetPasswordPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
                     required
-                    className="pl-4 pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                    className="pl-4 pr-11 h-11 rounded-xl bg-slate-50 dark:bg-black/45 border-slate-300 dark:border-white/10 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   />
-                  <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-colors" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -276,7 +272,7 @@ export function ResetPasswordPage() {
 
               {passwordError && <p className="text-[11px] text-red-500 font-medium px-1 leading-tight">{passwordError}</p>}
 
-              <Button type="submit" disabled={isLoading} variant="gradient" className="w-full h-11 mt-4">
+              <Button type="submit" disabled={isLoading} className="w-full h-11 mt-4 rounded-xl bg-yellow-400 font-black text-black hover:bg-yellow-300 transition">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

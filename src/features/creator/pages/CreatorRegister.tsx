@@ -151,10 +151,10 @@ export default function CreatorRegister() {
   // If a token was provided in the URL, validate it first
   if (token && inviteLoading) {
     return (
-      <main className="auth-page min-h-screen bg-[#090909] text-white flex items-center justify-center px-4">
-        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 shadow-xl">
+      <main className="auth-page min-h-screen bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] flex items-center justify-center px-4 transition-colors duration-200">
+        <div className="flex items-center gap-3 rounded-full border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#0a0a0a] px-5 py-3 shadow-xl">
           <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
-          <span className="text-sm font-semibold text-white/80">Validating invite link...</span>
+          <span className="text-sm font-semibold text-slate-800 dark:text-white/80">Validating invite link...</span>
         </div>
       </main>
     );
@@ -165,13 +165,13 @@ export default function CreatorRegister() {
     const errorMsg = getErrorMessage(inviteError, 'This creator invite link is missing or has expired.');
     const isAlreadyUsed = errorMsg.toLowerCase().includes('already been used') || errorMsg.toLowerCase().includes('already used');
     return (
-      <main className="auth-page min-h-screen bg-[#090909] text-white flex items-center justify-center px-4">
-        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center space-y-4 shadow-2xl">
+      <main className="auth-page min-h-screen bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] flex items-center justify-center px-4 transition-colors duration-200">
+        <div className="max-w-md w-full rounded-3xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-8 text-center space-y-4 shadow-2xl">
           <div className="text-4xl">{isAlreadyUsed ? '✅' : '🔗'}</div>
-          <h1 className="text-xl font-black tracking-tight">
+          <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
             {isAlreadyUsed ? 'Invite Already Used' : 'Invalid invite link'}
           </h1>
-          <p className="text-sm text-white/55 leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-white/55 leading-relaxed">
             {isAlreadyUsed
               ? 'This creator invite has already been redeemed. If you have already created your account, please log in.'
               : 'This creator invite link is missing or has expired. Please ask the seller to resend your invite, then open the link from the email.'}
@@ -189,8 +189,8 @@ export default function CreatorRegister() {
   }
 
   return (
-    <main className="auth-page byblos-light-page min-h-screen bg-[#090909] text-white">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md pt-safe-top">
+    <main className="auth-page min-h-screen bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#ffffff)] transition-colors duration-200">
+      <header className="sticky top-0 z-30 border-b border-black/[0.08] dark:border-white/10 bg-[var(--byblos-bg,#000000)]/90 backdrop-blur-md pt-safe-top transition-colors duration-200">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="relative flex h-16 items-center justify-between sm:h-20">
             <div className="flex flex-1 items-center gap-2">
@@ -199,7 +199,7 @@ export default function CreatorRegister() {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/')}
-                className="rounded-xl px-3 py-2 text-sm text-white/75 transition-all duration-200 hover:bg-yellow-100 hover:text-black"
+                className="rounded-xl px-3 py-2 text-sm text-slate-700 dark:text-white/75 transition-all duration-200 hover:bg-yellow-400 hover:text-black"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 <span>Back</span>
@@ -207,7 +207,7 @@ export default function CreatorRegister() {
             </div>
 
             <div className="absolute left-1/2 flex min-w-0 max-w-[46%] -translate-x-1/2 items-center justify-center text-center sm:max-w-[50%]">
-              <h1 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">Creator Portal</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Creator Portal</h1>
             </div>
 
             <div className="flex-1" aria-hidden="true" />
@@ -218,20 +218,20 @@ export default function CreatorRegister() {
       <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-5xl flex-col px-4 py-5 sm:min-h-[calc(100svh-5rem)]">
         <div className="grid flex-1 items-center gap-6 py-6 lg:grid-cols-[0.85fr_1.15fr]">
         <section className="space-y-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-300">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500 dark:text-yellow-300">
             {token ? 'Creator invite' : 'Byblos creators'}
           </p>
-          <h1 className="text-4xl font-black tracking-tight sm:text-5xl">Earn when your audience buys safely.</h1>
-          <p className="text-sm font-medium leading-6 text-white/55">
+          <h1 className="text-4xl font-black tracking-tight sm:text-5xl text-slate-900 dark:text-white">Earn when your audience buys safely.</h1>
+          <p className="text-sm font-medium leading-6 text-slate-600 dark:text-white/55">
             {invite
               ? `${invite.shopName} invited you to sell through Byblos.`
               : 'Create a creator account, invite sellers with your link, and earn when their products sell.'}
           </p>
         </section>
 
-        <form onSubmit={handleSubmit} className="grid gap-3 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.38)] sm:grid-cols-2">
-          <Input value={form.firstName} onChange={(e) => updateForm('firstName', e.target.value)} placeholder="First name" className="h-12 rounded-2xl border-white/10 bg-black/45" required />
-          <Input value={form.lastName} onChange={(e) => updateForm('lastName', e.target.value)} placeholder="Last name" className="h-12 rounded-2xl border-white/10 bg-black/45" required />
+        <form onSubmit={handleSubmit} className="grid gap-3 rounded-[2rem] border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)] sm:grid-cols-2 transition-colors duration-200">
+          <Input value={form.firstName} onChange={(e) => updateForm('firstName', e.target.value)} placeholder="First name" className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400" required />
+          <Input value={form.lastName} onChange={(e) => updateForm('lastName', e.target.value)} placeholder="Last name" className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400" required />
           <Input
             value={form.email}
             readOnly={Boolean(token)}
@@ -241,36 +241,36 @@ export default function CreatorRegister() {
             name="email"
             autoComplete="email"
             placeholder="Email"
-            className="h-12 rounded-2xl border-white/10 bg-black/45 text-white/70 sm:col-span-2"
+            className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white/70 placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 sm:col-span-2"
             required
           />
-          <Input value={form.mpesaNumber} onChange={(e) => updateForm('mpesaNumber', e.target.value)} placeholder="M-Pesa number" className="h-12 rounded-2xl border-white/10 bg-black/45 sm:col-span-2" required />
-          <Input value={form.whatsappNumber} onChange={(e) => updateForm('whatsappNumber', e.target.value)} placeholder="WhatsApp number" className="h-12 rounded-2xl border-white/10 bg-black/45 sm:col-span-2" required />
+          <Input value={form.mpesaNumber} onChange={(e) => updateForm('mpesaNumber', e.target.value)} placeholder="M-Pesa number" className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 sm:col-span-2" required />
+          <Input value={form.whatsappNumber} onChange={(e) => updateForm('whatsappNumber', e.target.value)} placeholder="WhatsApp number" className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 sm:col-span-2" required />
           <div className="relative sm:col-span-2">
-            <Input value={form.password} onChange={(e) => updateForm('password', e.target.value)} type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="Password" className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12" required />
+            <Input value={form.password} onChange={(e) => updateForm('password', e.target.value)} type={showPassword ? 'text' : 'password'} id="password" name="password" autoComplete="new-password" placeholder="Password" className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 pr-12" required />
             <button
               type="button"
               onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/45 transition hover:bg-white/10 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 dark:text-white/45 transition hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           <div className="relative sm:col-span-2">
-            <Input value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)} type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" className="h-12 rounded-2xl border-white/10 bg-black/45 pr-12" required />
+            <Input value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)} type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="Confirm password" className="h-12 rounded-2xl border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/45 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 pr-12" required />
             <button
               type="button"
               onClick={() => setShowConfirmPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/45 transition hover:bg-white/10 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 dark:text-white/45 transition hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
               aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
             >
               {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           {form.password && (
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-3 sm:col-span-2">
-              <p className="mb-2 text-xs font-black uppercase tracking-wide text-white/50">Password checklist</p>
+            <div className="rounded-2xl border border-black/[0.08] dark:border-white/10 bg-slate-100 dark:bg-black/30 p-3 sm:col-span-2 transition-colors duration-200">
+              <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500 dark:text-white/50">Password checklist</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {[
                   { label: '8+ characters', met: passwordStrength.minLength },
@@ -280,10 +280,10 @@ export default function CreatorRegister() {
                   { label: 'Passwords match', met: passwordsMatch }
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2 text-xs font-bold">
-                    <span className={`rounded-full p-0.5 ${item.met ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-white/35'}`}>
+                    <span className={`rounded-full p-0.5 ${item.met ? 'bg-green-500/20 text-green-500 dark:text-green-300' : 'bg-slate-300 dark:bg-white/10 text-slate-400 dark:text-white/35'}`}>
                       {item.met ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                     </span>
-                    <span className={item.met ? 'text-green-300' : 'text-white/45'}>{item.label}</span>
+                    <span className={item.met ? 'text-green-600 dark:text-green-300' : 'text-slate-600 dark:text-white/45'}>{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -293,7 +293,7 @@ export default function CreatorRegister() {
             <Button disabled={loading || !passwordsMatch} className="h-12 rounded-2xl bg-yellow-400 font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create creator account'}
             </Button>
-            <Link to="/creator/login" className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black text-white transition hover:bg-white/10">
+            <Link to="/creator/login" className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.08] dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] px-4 text-sm font-black text-slate-900 dark:text-white transition hover:bg-slate-200 dark:hover:bg-white/10">
               Creator login
             </Link>
           </div>
@@ -301,27 +301,19 @@ export default function CreatorRegister() {
         </div>
       </div>
 
+      {/* Already registered prompt modal */}
       {existingAccountPrompt && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="relative max-w-md w-full rounded-3xl border border-white/10 bg-[#121212] p-6 sm:p-8 text-center space-y-4 shadow-2xl">
-            <button
-              type="button"
-              onClick={() => setExistingAccountPrompt(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full text-white/50 hover:bg-white/10 hover:text-white transition"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-400/10 text-2xl text-yellow-400">
-              👤
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-3xl border border-black/[0.08] dark:border-white/15 bg-white dark:bg-[#0a0a0a] text-slate-950 dark:text-white p-6 shadow-2xl space-y-4 transition-colors duration-200">
+            <div className="w-12 h-12 rounded-2xl bg-yellow-400/20 text-yellow-500 dark:text-yellow-400 flex items-center justify-center text-2xl font-black">
+              !
             </div>
 
-            <h2 className="text-xl font-black tracking-tight text-white">
+            <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
               You already have a Byblos account
             </h2>
 
-            <p className="text-sm text-white/70 leading-relaxed">
+            <p className="text-sm text-slate-600 dark:text-white/70 leading-relaxed">
               Log in with your existing account, then add Creator access from your account switcher.
             </p>
 
@@ -354,7 +346,7 @@ export default function CreatorRegister() {
                   <Button
                     type="button"
                     onClick={() => navigate('/seller/login')}
-                    className="h-11 flex-1 rounded-xl border border-yellow-400/40 bg-yellow-400/10 font-bold text-yellow-300 hover:bg-yellow-400/20 transition"
+                    className="h-11 flex-1 rounded-xl border border-yellow-400/40 bg-yellow-400/10 font-bold text-yellow-600 dark:text-yellow-300 hover:bg-yellow-400/20 transition"
                   >
                     Seller Login
                   </Button>
@@ -364,7 +356,7 @@ export default function CreatorRegister() {
                 type="button"
                 variant="outline"
                 onClick={() => setExistingAccountPrompt(false)}
-                className="h-11 rounded-xl border-white/15 bg-white/[0.05] text-white hover:bg-white/10 transition"
+                className="h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-100 dark:bg-white/[0.05] text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition"
               >
                 Dismiss
               </Button>
@@ -375,5 +367,3 @@ export default function CreatorRegister() {
     </main>
   );
 }
-
-
