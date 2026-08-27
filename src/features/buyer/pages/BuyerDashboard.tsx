@@ -24,7 +24,7 @@ import { useSwipeTabs } from '@/shared/hooks/useSwipeTabs';
 import { useBuyerActiveSection } from '../components/dashboard/hooks/useBuyerActiveSection';
 import { useBuyerProfileForm } from '../components/dashboard/hooks/useBuyerProfileForm';
 import { useBuyerOrdersNotification } from '../components/dashboard/hooks/useBuyerOrdersNotification';
-
+import { useThemeScope } from '@/shared/hooks/useAppTheme';
 
 import { LoadingScreen as RouteFallback } from '@/shared/components/LoadingScreen';
 
@@ -36,6 +36,7 @@ const SWIPE_SECTIONS = ['shop', 'shops', 'wishlist', 'orders'] as const;
 
 // Main dashboard component
 function BuyerDashboard() {
+  useThemeScope('buyer');
   const navigate = useNavigate();
   const location = useLocation();
   const { user: globalUser, logout, updateProfile } = useGlobalAuth();

@@ -13,7 +13,7 @@ import { useCourierBroadcast } from '../hooks/useCourierBroadcast';
 // Buttons are always yellow (primary) or outlined-white (secondary), never a
 // dark fill, so every action reads clearly on the black theme.
 const BTN_PRIMARY = 'bg-yellow-400 text-black font-semibold hover:bg-yellow-300';
-const BTN_SECONDARY = 'border border-white/15 bg-white/[0.05] text-white hover:bg-white/10';
+const BTN_SECONDARY = 'border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.05] text-slate-800 dark:text-white hover:bg-black/[0.08] dark:hover:bg-white/10';
 
 const MzigoDashboardPage = () => {
   const navigate = useNavigate();
@@ -50,9 +50,9 @@ const MzigoDashboardPage = () => {
   const broadcast = useCourierBroadcast(trackableIds, shareLocation);
 
   return (
-    <main className="min-h-[100svh] overflow-x-hidden bg-[#050505] text-white" style={{ height: '100svh', overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(4rem + var(--sab, 16px))' } as React.CSSProperties}>
+    <main className="dashboard-layout mzigo-light-dashboard min-h-[100svh] overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#f5f5f5)] transition-colors duration-200" style={{ height: '100svh', overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(4rem + var(--sab, 16px))' } as React.CSSProperties}>
       {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-black px-4 pb-3 pt-safe-top backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-black/10 dark:border-white/10 bg-white/80 dark:bg-black/80 px-4 pb-3 pt-safe-top backdrop-blur">
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="flex justify-start">
@@ -69,9 +69,9 @@ const MzigoDashboardPage = () => {
           </div>
 
           <div className="text-center">
-            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-yellow-400">Mzigo Ego</p>
-            <h1 className="text-lg font-black tracking-tight text-white sm:text-xl">Deliveries</h1>
-            <p className="text-[11px] text-white/50">{partner?.name || 'Logistics partner'}</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-yellow-500 dark:text-yellow-400">Mzigo Ego</p>
+            <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white sm:text-xl">Deliveries</h1>
+            <p className="text-[11px] text-slate-500 dark:text-white/50">{partner?.name || 'Logistics partner'}</p>
           </div>
 
           <div className="flex justify-end">
@@ -84,38 +84,38 @@ const MzigoDashboardPage = () => {
         <MzigoActivityPanel />
 
         {/* ── Overview stats flex strip ────────────────────────── */}
-        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
-          <div className="flex items-center gap-2 rounded-xl border border-yellow-400/25 bg-yellow-400/[0.08] px-3 py-1.5 text-xs">
-            <Truck size={14} className="text-yellow-400" />
-            <span className="font-medium text-white/70">To do:</span>
-            <span className="font-black text-yellow-300">{activeCount}</span>
+        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-2.5 shadow-sm">
+          <div className="flex items-center gap-2 rounded-xl border border-yellow-500/25 bg-yellow-500/[0.08] px-3 py-1.5 text-xs">
+            <Truck size={14} className="text-yellow-500 dark:text-yellow-400" />
+            <span className="font-medium text-slate-700 dark:text-white/70">To do:</span>
+            <span className="font-black text-yellow-600 dark:text-yellow-300">{activeCount}</span>
           </div>
 
           <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${
-            overdueCount > 0 ? 'border-red-400/30 bg-red-400/10' : 'border-white/10 bg-white/[0.02]'
+            overdueCount > 0 ? 'border-red-400/30 bg-red-400/10' : 'border-black/10 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]'
           }`}>
-            <CalendarClock size={14} className={overdueCount > 0 ? 'text-red-400' : 'text-white/40'} />
-            <span className="font-medium text-white/70">Late:</span>
-            <span className={`font-black ${overdueCount > 0 ? 'text-red-300' : 'text-white'}`}>{overdueCount}</span>
+            <CalendarClock size={14} className={overdueCount > 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-400 dark:text-white/40'} />
+            <span className="font-medium text-slate-700 dark:text-white/70">Late:</span>
+            <span className={`font-black ${overdueCount > 0 ? 'text-red-500 dark:text-red-300' : 'text-slate-900 dark:text-white'}`}>{overdueCount}</span>
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.08] px-3 py-1.5 text-xs">
-            <CheckCircle2 size={14} className="text-emerald-400" />
-            <span className="font-medium text-white/70">Done:</span>
-            <span className="font-black text-emerald-300">{done.length}</span>
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-1.5 text-xs">
+            <CheckCircle2 size={14} className="text-emerald-500 dark:text-emerald-400" />
+            <span className="font-medium text-slate-700 dark:text-white/70">Done:</span>
+            <span className="font-black text-emerald-600 dark:text-emerald-300">{done.length}</span>
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs">
-            <PackageCheck size={14} className="text-white/40" />
-            <span className="font-medium text-white/70">All:</span>
-            <span className="font-black text-white">{dashboard?.count || 0}</span>
+          <div className="flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] px-3 py-1.5 text-xs">
+            <PackageCheck size={14} className="text-slate-400 dark:text-white/40" />
+            <span className="font-medium text-slate-700 dark:text-white/70">All:</span>
+            <span className="font-black text-slate-900 dark:text-white">{dashboard?.count || 0}</span>
           </div>
         </div>
 
         {/* ── Sort & Live Location controls ───────────────────── */}
-        <div className="mb-6 flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center">
+        <div className="mb-6 flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 shadow-sm sm:flex-row sm:items-center">
           <div>
-            <p className="text-xs text-white/60">Finished deliveries move to Done below.</p>
+            <p className="text-xs text-slate-600 dark:text-white/60">Finished deliveries move to Done below.</p>
 
             {/* Live location sharing — lets buyers/sellers watch active deliveries. */}
             <button
@@ -124,20 +124,20 @@ const MzigoDashboardPage = () => {
               aria-pressed={shareLocation}
               className={`mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                 shareLocation
-                  ? 'border border-yellow-400/40 bg-yellow-400/15 text-yellow-200'
-                  : 'border border-white/15 bg-white/[0.05] text-white/80 hover:bg-white/10'
+                  ? 'border border-yellow-500/40 bg-yellow-500/15 text-yellow-700 dark:text-yellow-200'
+                  : 'border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.05] text-slate-800 dark:text-white/80 hover:bg-black/[0.08] dark:hover:bg-white/10'
               }`}
             >
-              <Radio size={13} className={shareLocation && broadcast.active ? 'animate-pulse' : ''} />
+              <Radio size={13} className={shareLocation && broadcast.active ? 'animate-pulse text-yellow-500 dark:text-yellow-400' : ''} />
               {shareLocation
                 ? `Sharing live location (${trackableIds.length})`
                 : 'Share my live location'}
             </button>
             {shareLocation && broadcast.error && (
-              <p className="mt-1 text-[11px] text-red-300">{broadcast.error}</p>
+              <p className="mt-1 text-[11px] text-red-500 dark:text-red-300">{broadcast.error}</p>
             )}
             {shareLocation && !broadcast.error && trackableIds.length === 0 && (
-              <p className="mt-1 text-[11px] text-white/40">
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-white/40">
                 Starts automatically once a delivery is picked up or out for delivery.
               </p>
             )}
@@ -173,7 +173,7 @@ const MzigoDashboardPage = () => {
         {requestsQuery.isLoading ? (
           <div className="grid gap-4 lg:grid-cols-3">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="h-64 animate-pulse rounded-2xl border border-white/10 bg-white/[0.03]" />
+              <div key={item} className="h-64 animate-pulse rounded-2xl border border-black/10 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03]" />
             ))}
           </div>
         ) : (
@@ -181,8 +181,8 @@ const MzigoDashboardPage = () => {
             <section>
               <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-bold text-white">To do</h2>
-                  <p className="text-sm text-white/50">Deliveries still on the move, most urgent first.</p>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">To do</h2>
+                  <p className="text-sm text-slate-500 dark:text-white/50">Deliveries still on the move, most urgent first.</p>
                 </div>
                 <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-black">
                   {todo.length} {todo.length === 1 ? 'delivery' : 'deliveries'}
@@ -190,7 +190,7 @@ const MzigoDashboardPage = () => {
               </div>
 
               {todo.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/50">
+                <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6 text-sm text-slate-500 dark:text-white/50 shadow-sm">
                   Nothing to do right now. New deliveries appear here automatically.
                 </div>
               ) : (
@@ -199,7 +199,7 @@ const MzigoDashboardPage = () => {
                     <RequestCard
                       key={request.id}
                       request={request}
-                      tone="border-white/10 bg-white/[0.03]"
+                      tone="border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] shadow-sm"
                       now={now}
                       onStatusUpdate={handleStatusUpdate}
                       updatingStatusKey={updatingStatusKey}
@@ -212,16 +212,16 @@ const MzigoDashboardPage = () => {
             <section>
               <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-bold text-white">Done</h2>
-                  <p className="text-sm text-white/50">Completed deliveries, kept for your records.</p>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Done</h2>
+                  <p className="text-sm text-slate-500 dark:text-white/50">Completed deliveries, kept for your records.</p>
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white">
+                <span className="rounded-full border border-black/10 dark:border-white/10 bg-slate-100 dark:bg-white/10 px-3 py-1 text-xs font-bold text-slate-800 dark:text-white">
                   {done.length} {done.length === 1 ? 'delivery' : 'deliveries'}
                 </span>
               </div>
 
               {done.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/50">
+                <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6 text-sm text-slate-500 dark:text-white/50 shadow-sm">
                   No completed deliveries yet.
                 </div>
               ) : (
@@ -230,7 +230,7 @@ const MzigoDashboardPage = () => {
                     <RequestCard
                       key={request.id}
                       request={request}
-                      tone="border-emerald-400/20 bg-white/[0.02]"
+                      tone="border-emerald-500/20 bg-emerald-50/30 dark:bg-white/[0.02] shadow-sm"
                       now={now}
                       onStatusUpdate={handleStatusUpdate}
                       updatingStatusKey={updatingStatusKey}
@@ -246,13 +246,13 @@ const MzigoDashboardPage = () => {
 
       {/* ── Account ──────────────────────────────────────────── */}
       <section className="w-full px-4 pb-6 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-white/50">Account</p>
-          <p className="mt-1 text-sm text-white/60">Sign out of your logistics workspace on this device.</p>
+        <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-white/50">Account</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-white/60">Sign out of your logistics workspace on this device.</p>
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-3 inline-flex items-center gap-2 rounded-full border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-400/20"
+            className="mt-3 inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-300 transition hover:bg-red-500/20"
           >
             <LogOut size={16} />
             Logout
@@ -261,10 +261,10 @@ const MzigoDashboardPage = () => {
       </section>
 
       <footer
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/95 px-4 py-3 text-center text-xs text-white/50 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.55)] transition-colors duration-200"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-black/10 dark:border-white/10 bg-white/95 dark:bg-black/95 px-4 py-3 text-center text-xs text-slate-500 dark:text-white/50 backdrop-blur shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.55)] transition-colors duration-200"
         style={{ paddingBottom: 'var(--sab, 16px)' }}
       >
-        <CalendarClock size={14} className="mr-1 inline-block text-yellow-400" />
+        <CalendarClock size={14} className="mr-1 inline-block text-yellow-500 dark:text-yellow-400" />
         Every delivery has a 24 hour window.
       </footer>
     </main>
