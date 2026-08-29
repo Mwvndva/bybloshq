@@ -90,6 +90,39 @@ By default the test setup stubs Redis so unit tests need no daemon. To exercise
 a real Redis in an integration test, set `USE_REAL_REDIS=true` and point
 `REDIS_URL` at the test container.
 
+## Paystack (payment testing)
+
+Payments run against Paystack's real **test-mode** sandbox
+(`PAYSTACK_BASE_URL=https://api.paystack.co`). Put your own test-mode keys in
+`server/.env.test` (gitignored — never commit them):
+
+```
+PAYSTACK_SECRET_KEY=sk_test_...
+PAYSTACK_PUBLIC_KEY=pk_test_...
+```
+
+The checkout uses Paystack's charge (STK-push) flow plus status polling
+(`GET /api/payments/status/:reference`); the authoritative payment update
+arrives via a **webhook**, so that's what you configure for testing.
+
+**Webhook URL** — the backend receives events at:
+
+```
+POST /api/webhooks/paystack
+```
+
+It is HMAC-verified with `PAYSTACK_SECRET_KEY` (optionally IP-filtered via
+`PAYSTACK_WEBHOOK_IPS`; leave unset locally). Paystack's servers must reach it,
+so `localhost` won't do — expose the backend (port 3003) with a tunnel:
+
+```bash
+ngrok http 3003
+```
+
+Then set Dashboard → Settings → API Keys & Webhooks (Test mode) → **Webhook URL**
+to `https://<subdomain>.ngrok-free.app/api/webhooks/paystack` (or, on a deployed
+backend, `https://<backend-host>/api/webhooks/paystack`).
+
 ## End-to-end (Playwright)
 
 E2E specs live in `e2e/`. Playwright's `webServer` builds and serves the
