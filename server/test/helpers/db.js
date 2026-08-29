@@ -22,7 +22,7 @@ export async function assertTablesExist(tables) {
   for (const table of tables) {
     assert.ok(
       found.has(table),
-      `expected table "${table}" to exist — run \`npm run db:migrate:test\` against the test DB`
+      `expected table "${table}" to exist — run \`npm run db:test:setup\` to provision the test schema`
     );
   }
 }
