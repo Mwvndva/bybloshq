@@ -115,6 +115,28 @@ export default defineConfig(({ command, mode }) => {
       environment: 'jsdom',
       setupFiles: ['./vitest.setup.ts'],
       globals: false,
+      coverage: {
+        provider: 'v8',
+        reporter: ['text-summary', 'html', 'lcov'],
+        reportsDirectory: './coverage',
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: [
+          'src/**/*.{test,spec}.{ts,tsx}',
+          'src/**/*.integration.test.{ts,tsx}',
+          'src/test/**',
+          'src/**/*.d.ts',
+          'src/main.tsx',
+          'src/vite-env.d.ts',
+        ],
+        // Starting floor — set just below current coverage and ratcheted up
+        // as the suite grows. `npm run test:coverage` fails below these.
+        thresholds: {
+          lines: 14,
+          functions: 18,
+          branches: 45,
+          statements: 14,
+        },
+      },
     },
   };
 });
