@@ -47,7 +47,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15-alpine
+        image: postgres:17-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -117,8 +117,11 @@ jobs:
           EMAIL_FROM_NAME=Byblos Test
           EOF
 
-      - name: Run database migrations against the test DB
-        run: npm run db:migrate:test
+      # The repo's incremental migrations can't build from an empty DB, so the
+      # test schema is provisioned from the committed snapshot (server/test/
+      # schema.sql). db:test:setup creates the DB if needed, then applies it.
+      - name: Provision test schema
+        run: npm run db:test:setup
 
       - name: Run unit/contract tests
         run: npm test

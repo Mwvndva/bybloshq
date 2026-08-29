@@ -1,11 +1,10 @@
 // Template database-integration test. Proves the integration pipeline end to
-// end: a migrated test Postgres is reachable, core tables exist, and reads/
-// writes are transactional with rollback isolation. Copy this shape for real
-// repository tests (insert via a repository, assert, rollback).
+// end: the provisioned test Postgres is reachable, core tables exist, and
+// reads/writes are transactional with rollback isolation. Copy this shape for
+// real repository tests (insert via a repository, assert, rollback).
 //
-// Requires the test DB to be up and migrated:
-//   docker compose -f ../docker-compose.test.yml up -d --wait
-//   npm run db:migrate:test
+// Requires the test DB to exist and have the schema loaded:
+//   npm run db:test:setup        # create DB + apply server/test/schema.sql
 //   npm run test:integration
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
@@ -21,7 +20,7 @@ describe('Database integration (test DB)', () => {
     assert.strictEqual(rows[0].ok, 1);
   });
 
-  it('has core tables from migrations', async () => {
+  it('has core tables from the schema snapshot', async () => {
     await assertTablesExist(['users', 'products', 'sellers', 'buyers', 'product_orders', 'payments']);
   });
 

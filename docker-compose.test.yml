@@ -8,7 +8,7 @@
 #   docker compose -f docker-compose.test.yml down -v
 services:
   postgres-test:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: byblos-postgres-test
     environment:
       POSTGRES_DB: byblos_test

@@ -47,15 +47,38 @@ npm run test:setup-env   # copies .env.test.example -> .env.test (never overwrit
 
 ### Running integration tests locally
 
-Integration tests need a migrated Postgres. Bring up the ephemeral test stack
-(Docker), migrate it, then run:
+Integration tests need a Postgres with the schema loaded. The schema is
+provisioned from a committed snapshot (`server/test/schema.sql`), **not** from
+the incremental migrations — the repo's migration history cannot build from an
+empty database (early migrations reference tables created later, and the
+migrate bootstrap only fires on an already-populated DB). Provisioning is a
+single, reliable schema load instead.
+
+Point `server/.env.test` at any reachable Postgres (`DB_*`), then:
 
 ```bash
 cd server
-npm run db:test:up        # postgres:15 on :3001, redis:7 on :6380 (tmpfs, docker-compose.test.yml)
-npm run db:migrate:test   # apply migrations to the test DB
+npm run db:test:setup      # create DB if missing + apply server/test/schema.sql
 npm run test:integration
-npm run db:test:down       # tear down + wipe volumes
+```
+
+Useful DB scripts:
+
+| Script | What it does |
+| --- | --- |
+| `db:test:create` | `CREATE DATABASE` if it doesn't exist (guarded to `*test*` names) |
+| `db:test:schema` | apply `test/schema.sql` into the test DB |
+| `db:test:setup` | `db:test:create` + `db:test:schema` |
+| `db:test:reset` | drop + recreate + re-apply schema (clean slate) |
+| `db:test:up` / `db:test:down` | ephemeral Postgres/Redis via Docker (`docker-compose.test.yml`) — only if Docker is installed |
+
+If you use the Docker stack, run `db:test:up` first, then `db:test:setup`.
+
+**Regenerating the schema snapshot** — when the production schema changes:
+
+```bash
+pg_dump --schema-only --no-owner --no-privileges --no-comments \
+        -d <your-dev-db> -f server/test/schema.sql
 ```
 
 `test/helpers/db.js` provides the shared pool plus `assertTablesExist` and
@@ -79,7 +102,8 @@ npm run test:e2e
 
 Auth-flow specs are gated on credentials from the environment and are skipped
 unless those are provided. For full-stack E2E, start the backend
-(`cd server && npm start` against a migrated test DB) before running Playwright.
+(`cd server && npm start` against a test DB provisioned with `db:test:setup`)
+before running Playwright.
 
 ## CI
 
@@ -88,5 +112,6 @@ unless those are provided. For full-stack E2E, start the backend
 - **frontend** — `npm ci` + `npm run test:coverage`, uploads the coverage
   report as an artifact.
 - **backend** — spins up `postgres:15` and `redis:7` service containers, writes
-  a CI `.env.test` pointed at them, migrates the test DB, then runs the unit and
+  a CI `.env.test` pointed at them, provisions the test schema from
+  `server/test/schema.sql` (`db:test:setup`), then runs the unit and
   integration suites.
