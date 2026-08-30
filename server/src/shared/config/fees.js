@@ -27,7 +27,9 @@ const Fees = {
             return 0;
         }
 
-        return Math.ceil(parsedAmount * this.PRODUCT_SERVICE_CHARGE_RATE * 100) / 100;
+        // Buyer service charge is ceil(subtotal × 2%) rounded UP to a whole KES
+        // (authoritative Byblos rule): e.g. 999 → ceil(19.98) = 20.
+        return Math.ceil(parsedAmount * this.PRODUCT_SERVICE_CHARGE_RATE);
     }
 };
 
