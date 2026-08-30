@@ -681,15 +681,15 @@ class Order {
   static async updateStatusWithReason(client, orderId, status, reason) {
     const updateOrderQuery = `
       UPDATE product_orders 
-      SET 
-        status = $1,
+      SET
+        status = $1::text,
         metadata = jsonb_set(
-          COALESCE(metadata, '{}'::jsonb), 
-          '{cancellation_reason}', 
+          COALESCE(metadata, '{}'::jsonb),
+          '{cancellation_reason}',
           $2::jsonb,
           true
         ),
-        cancelled_at = CASE WHEN $1::order_status = 'CANCELLED'::order_status AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END,
+        cancelled_at = CASE WHEN $1::text = 'CANCELLED' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END,
         updated_at = NOW()
       WHERE id = $3
       RETURNING *
