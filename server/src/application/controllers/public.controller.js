@@ -26,19 +26,6 @@ function parseJson(value, fallback = {}) {
   }
 }
 
-function extractPublicPaymentFailureReason(row) {
-  const paymentMetadata = parseJson(row.payment_metadata);
-  const orderMetadata = parseJson(row.order_metadata);
-  return paymentMetadata.failure_reason
-    || paymentMetadata.provider_payload?.gateway_response
-    || paymentMetadata.provider_payload?.message
-    || paymentMetadata.provider_payload?.display_text
-    || paymentMetadata.completion_blocked?.provider_payload?.gateway_response
-    || orderMetadata.payment_failure?.provider_status
-    || orderMetadata.payment_failure?.source
-    || null;
-}
-
 async function syncPendingPaymentFromProvider(row) {
   const paymentStatus = String(row.payment_record_status || row.payment_status || '').toLowerCase();
   if (!row.payment_id || paymentStatus !== 'pending') {

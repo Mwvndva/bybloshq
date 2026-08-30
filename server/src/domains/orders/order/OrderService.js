@@ -12,28 +12,6 @@ import InventoryReservationService from '../../commerce/products/inventoryReserv
 import OrderReadService from './orderRead.service.js';
 
 export class OrderService {
-  static async calculateTotals(items, feesConfig = Fees) {
-    let subtotalCents = 0;
-    const itemDetails = items.map(item => {
-      const priceCents = Math.round(Number(item.price || 0) * 100);
-      const qty = Number(item.quantity || 1);
-      const lineTotalCents = priceCents * qty;
-      subtotalCents += lineTotalCents;
-      return { ...item, lineTotal: lineTotalCents / 100 };
-    });
-    const feeRate = feesConfig.PLATFORM_FEE_PERCENT || 0.05;
-    const platformFeeCents = Math.round(subtotalCents * feeRate);
-    const escrowAmountCents = subtotalCents;
-    const totalAmountCents = subtotalCents + platformFeeCents;
-    return {
-      subtotal: subtotalCents / 100,
-      platformFee: platformFeeCents / 100,
-      escrowAmount: escrowAmountCents / 100,
-      totalAmount: totalAmountCents / 100,
-      itemDetails
-    };
-  }
-
   static async updateOrderStatus(orderId, user, status) {
     const client = await pool.connect();
     try {
