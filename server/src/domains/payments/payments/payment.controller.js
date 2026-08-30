@@ -25,29 +25,29 @@ class PaymentController {
       status: data.status,
     });
 
-    // 1. Respond 200 OK immediately to Paystack within < 200ms
-    res.status(200).json({ status: 'success', message: 'Webhook received and enqueued' });
-
-    // 2. Process order completion asynchronously in background
-    setImmediate(async () => {
-      try {
-        await CorePaymentService.handlePaystackWebhook(webhookData, {
-          signature: req.headers['x-paystack-signature'],
-          rawBody: req.rawBody,
-          replayEventId: security.replayEventId,
-          hmacVerified: security.hmacVerified === true
-        });
-        logger.info('[PaymentController] Paystack webhook processed asynchronously', {
-          reference: data.reference
-        });
-      } catch (error) {
-        logger.error('[PAYSTACK_WEBHOOK_ASYNC] Error completing payment:', {
-          reference: data.reference,
-          eventId: security.replayEventId,
-          error: error.message
-        });
-      }
-    });
+    // Process the webhook BEFORE acknowledging. Acking 200 first and processing
+    // in setImmediate meant a failed completion (DB/transient error) was only
+    // logged — Paystack, already 200'd, never retried, so a charged buyer's order
+    // could be permanently stranded in `pending` (and the replay-dedupe key was
+    // marked completed off the already-sent 200, swallowing any retry). Paystack's
+    // timeout budget comfortably covers a single settlement transaction.
+    try {
+      await CorePaymentService.handlePaystackWebhook(webhookData, {
+        signature: req.headers['x-paystack-signature'],
+        rawBody: req.rawBody,
+        replayEventId: security.replayEventId,
+        hmacVerified: security.hmacVerified === true
+      });
+      return res.status(200).json({ status: 'success', message: 'Webhook processed' });
+    } catch (error) {
+      logger.error('[PAYSTACK_WEBHOOK] Error completing payment:', {
+        reference: data.reference,
+        eventId: security.replayEventId,
+        error: error.message
+      });
+      // Return 5xx so Paystack retries; never silently strand a paid order.
+      return res.status(500).json({ status: 'error', message: 'Webhook processing failed' });
+    }
   }
 
   /**
