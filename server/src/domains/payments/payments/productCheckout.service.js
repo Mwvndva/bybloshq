@@ -35,6 +35,15 @@ function wantsDoorDelivery(metadata = {}) {
   );
 }
 
+// A 4xx from the provider means the request reached Paystack and was explicitly
+// rejected (the charge did NOT initiate) → safe to mark the order failed.
+// Network/timeout/5xx (no response) is ambiguous → leave the payment pending for
+// the webhook/cron to settle, never falsely fail.
+function isExplicitProviderFailure(err) {
+  const code = err && err.statusCode;
+  return typeof code === 'number' && code >= 400 && code < 500;
+}
+
 function extractDeliveryLocation(metadata = {}, location = {}) {
   const d = metadata.delivery || {};
   const loc = d.location || location || {};
@@ -317,11 +326,34 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
       paymentResult: result,
     };
   } catch (gwErr) {
-    // Provider outcome is ambiguous (the charge may or may not have reached
-    // Paystack). Leave the payment PENDING — the signed webhook (resolving by
-    // api_ref) settles it if it succeeded. Never mark paid or falsely failed
-    // here. Explicit-failure handling is added in the failure-path phase.
-    logger.error('[CHECKOUT] Gateway initiation error; leaving payment pending', {
+    // Explicit provider rejection (4xx): the charge did not initiate → fail the
+    // order/payment so the buyer can retry cleanly.
+    if (isExplicitProviderFailure(gwErr)) {
+      logger.warn('[CHECKOUT] Provider explicitly rejected the charge; marking failed', {
+        orderId: order.id,
+        paymentId: payment.id,
+        statusCode: gwErr.statusCode,
+        error: gwErr.message,
+      });
+      await pool.query(`UPDATE payments SET status = 'failed', updated_at = NOW() WHERE id = $1`, [payment.id]);
+      await pool.query(
+        `UPDATE product_orders SET status = 'FAILED', payment_status = 'failed', updated_at = NOW() WHERE id = $1`,
+        [order.id]
+      );
+      return {
+        success: false,
+        failed: true,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        paymentId: payment.id,
+        paymentResult: { status: 'failed', message: gwErr.message },
+      };
+    }
+
+    // Ambiguous outcome (network/timeout/5xx): the charge may or may not have
+    // reached Paystack. Leave the payment PENDING — the signed webhook (resolving
+    // by api_ref) settles it if it succeeded. Never mark paid or falsely failed.
+    logger.error('[CHECKOUT] Gateway initiation ambiguous; leaving payment pending', {
       orderId: order.id,
       paymentId: payment.id,
       apiRef,
