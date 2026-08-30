@@ -585,7 +585,12 @@ class CreatorService {
     const link = rows[0];
     if (!link || link.creator_status !== 'active') return null;
 
-    const baseAmount = Math.max(roundMoney(productSubtotal - Number(Fees.PLATFORM_COMMISSION_AMOUNT || 0)), 0);
+    // Creator commission base is the FULL product subtotal (authoritative Byblos
+    // rule): commission is computed before the KES 10 Byblos seller fee, never
+    // from subtotal - 10. Rate comes from the active seller/creator agreement
+    // (seller_creator_links.commission_rate); DEFAULT_CREATOR_COMMISSION_RATE is
+    // the fallback only.
+    const baseAmount = Math.max(roundMoney(productSubtotal), 0);
     const rate = Number(link.commission_rate || DEFAULT_CREATOR_COMMISSION_RATE);
     const commissionAmount = roundMoney(baseAmount * rate);
 

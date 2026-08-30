@@ -252,11 +252,13 @@ function requireValidWebhookSignature(signature, rawBody) {
 const CorePaymentService = {
 
     /**
-     * Legacy product payment initiation.
-     * Direct invocation via CorePaymentService is disabled. Use CheckoutWorkflow or PaymentService.
+     * Product payment initiation. Delegates to the focused ProductCheckoutService
+     * orchestrator (validate → derive authoritative fields → create order+payment
+     * atomically → charge → let the signed webhook settle). Never marks PAID here.
      */
     async initiateProductPayment(normalizedOrder) {
-        throw new Error('CorePaymentService.initiateProductPayment is disabled. Use CheckoutWorkflow.createOrder or PaymentService for product payment initiation.');
+        const { initiateProductPayment } = await import('./productCheckout.service.js');
+        return initiateProductPayment(normalizedOrder);
     },
 
     async initiatePayment(paymentData) {
