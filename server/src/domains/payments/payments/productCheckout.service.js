@@ -137,6 +137,49 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   const isService = productType === 'service';
   const isPhysical = !isDigital && !isService;
 
+  // Custom / imported products: status and SLA are derived from the AUTHORITATIVE
+  // product row, never from client metadata (a client cannot fabricate custom/
+  // import status to extend the seller's fulfillment deadline). Buyer-supplied
+  // customization instructions are validated as required for custom products.
+  const isCustomProduct = isPhysical && product.is_custom_product === true;
+  const isImportedProduct = isPhysical && product.is_imported_product === true;
+  if (isCustomProduct && isImportedProduct) {
+    throw new Error('Product cannot be both custom and imported.');
+  }
+  const customInstructions = String(
+    metadata.customization_instructions || metadata.custom_instructions || metadata.buyer_instructions || ''
+  ).trim();
+  let preHandoffSla = null;
+  if (isCustomProduct) {
+    const productionDays = Number.parseInt(product.production_days, 10);
+    if (!Number.isInteger(productionDays) || productionDays < 1 || productionDays > 5) {
+      throw new Error('Custom product is misconfigured. Please contact the seller.');
+    }
+    if (!customInstructions) {
+      throw new Error('Customization instructions are required for this custom product.');
+    }
+    preHandoffSla = {
+      type: 'custom_production',
+      production_days: productionDays,
+      customization_prompt: product.customization_prompt || 'Describe your customization',
+      buyer_instructions: customInstructions,
+      delivery_starts_after_seller_handoff: true,
+      source_product_id: product.id,
+    };
+  } else if (isImportedProduct) {
+    const importDays = Number.parseInt(product.import_days, 10);
+    if (![7, 14, 21, 30].includes(importDays)) {
+      throw new Error('Imported product is misconfigured. Please contact the seller.');
+    }
+    preHandoffSla = {
+      type: 'import_waiting',
+      import_days: importDays,
+      note: product.import_note || 'Imported item. Delivery starts after seller handoff.',
+      delivery_starts_after_seller_handoff: true,
+      source_product_id: product.id,
+    };
+  }
+
   // Delivery (buyer-paid door delivery, physical only).
   const door = wantsDoorDelivery(metadata);
   let deliveryQuote = null;
@@ -214,6 +257,18 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
       product_id: service.id,
       product_type: product.product_type,
       is_digital: product.is_digital,
+      // Server-derived (overrides any client-supplied custom_product/pre_handoff_sla).
+      pre_handoff_sla: preHandoffSla,
+      custom_product: isCustomProduct
+        ? {
+            is_custom_product: true,
+            production_days: preHandoffSla.production_days,
+            customization_prompt: preHandoffSla.customization_prompt,
+            buyer_instructions: preHandoffSla.buyer_instructions,
+            delivery_starts_after_seller_handoff: true,
+            source_product_id: product.id,
+          }
+        : null,
       pricing: {
         product_subtotal: fin.subtotal,
         buyer_delivery_fee: fin.deliveryFee,
@@ -244,6 +299,7 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
       status: OrderStatus.PAYMENT_PENDING,
       payment_status: 'pending',
       service_requirements: null,
+      pre_handoff_sla: preHandoffSla,
       fulfillment_type: fulfillmentType,
       delivery_location: door ? extractDeliveryLocation(metadata, location) : null,
       order_type: orderType,
