@@ -105,6 +105,15 @@ export class OrderService {
     return OrderService._buyerComplete(orderId, buyerId, 'Buyer collected order');
   }
 
+  // Cancellation delegates to the (previously orphaned) OrderCancellationService,
+  // which cancels on product_orders and refunds the buyer when already paid.
+  // order.controller cancelOrder/sellerCancelOrder call OrderService.cancelOrder,
+  // which was missing after the refactor (runtime TypeError → cancellation broken).
+  static async cancelOrder(orderId, reason = null) {
+    const { default: OrderCancellationService } = await import('./orderCancellation.service.js');
+    return OrderCancellationService.cancelOrder(orderId, reason);
+  }
+
   static async _emitOrderUpdate(orderId, oldStatus, newStatus, notes, source) {
     try {
       eventBus.emit(AppEvents.ORDER_UPDATED, { orderId, oldStatus, newStatus, notes, source });
