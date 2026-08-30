@@ -194,8 +194,20 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   let deliveryFee = 0;
   if (door) {
     if (!isPhysical) throw new Error('Door delivery is only available for physical products.');
-    deliveryQuote = LogisticsQuoteService.quoteBuyerDoorDelivery(extractDeliveryLocation(metadata, location));
-    deliveryFee = roundMoney(deliveryQuote.feeAmount);
+    const buyerLoc = extractDeliveryLocation(metadata, location);
+    // Validate coordinates server-side. Door delivery requires real, in-region
+    // (Kenya bbox) coordinates; this blocks the fee-gaming trick of submitting a
+    // distant address with coordinates set at/near the hub to get a ~0 fee.
+    const lat = Number(buyerLoc.lat);
+    const lng = Number(buyerLoc.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -5 || lat > 5 || lng < 33 || lng > 42) {
+      throw new Error('Door delivery coordinates are required.');
+    }
+    deliveryQuote = LogisticsQuoteService.quoteBuyerDoorDelivery(buyerLoc);
+    // Floor the fee at the base (1 km) rate so a near-hub coordinate cannot yield
+    // a ~0 delivery fee that the platform/logistics would have to absorb.
+    const minFee = roundMoney(Number(deliveryQuote.rateKesPerKm) || 0);
+    deliveryFee = Math.max(roundMoney(deliveryQuote.feeAmount), minFee);
   }
 
   // Creator attribution: rate from the seller/creator agreement; commission on
