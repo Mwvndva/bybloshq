@@ -55,7 +55,14 @@ class PaymentController {
    */
   async initiateProductPayment(req, res) {
     try {
-      logger.info('[PaymentController] Incoming Payment Request: ' + JSON.stringify(req.body));
+      // Never log the full body — it contains buyer PII (email, phone, address).
+      logger.info('[PaymentController] Incoming Payment Request', {
+        productId: req.body?.productId,
+        quantity: req.body?.quantity,
+        hasEmail: !!req.body?.email,
+        hasPhone: !!(req.body?.phone || req.body?.mobilePayment),
+        doorDelivery: !!(req.body?.delivery?.doorDelivery || req.body?.delivery?.door_delivery),
+      });
       const checkoutToken = req.headers['idempotency-key']
         || req.headers['x-checkout-token']
         || req.body.checkout_token

@@ -130,7 +130,15 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   // 2. Secure server-side pricing.
   const quantity = Math.max(1, Number.parseInt(service.quantity || 1, 10));
   const dbPrice = Number.parseFloat(product.price || 0);
+  // Guard against corrupt/non-numeric price: roundMoney(NaN) coerces to 0, which
+  // would make the product effectively free. Fail loudly instead of charging 0.
+  if (!Number.isFinite(dbPrice) || dbPrice <= 0) {
+    throw new Error('Invalid order amount after secure calculation');
+  }
   const subtotal = roundMoney(dbPrice * quantity);
+  if (!(subtotal > 0)) {
+    throw new Error('Invalid order amount after secure calculation');
+  }
 
   const productType = String(product.product_type || '').toLowerCase();
   const isDigital = product.is_digital === true || productType === 'digital';
@@ -372,7 +380,7 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
 
     await client.query('COMMIT');
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch((rbErr) => logger.error('[CHECKOUT] Rollback failed', { error: rbErr.message }));
     throw err;
   } finally {
     client.release();
