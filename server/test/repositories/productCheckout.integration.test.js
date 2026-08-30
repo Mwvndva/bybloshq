@@ -45,7 +45,7 @@ describe('ProductCheckoutService.initiateProductPayment (integration)', () => {
   before(async () => {
     const s = await pool.query(
       `INSERT INTO sellers (full_name, email, whatsapp_number, shop_name, status)
-       VALUES ('Test Seller', 'seller@byblos.test', '0700000000', 'Test Shop', 'active') RETURNING id`
+       VALUES ('Test Seller', 'seller@byblos.test', '0700000000', 'Shop-4c6fff', 'active') RETURNING id`
     );
     sellerId = s.rows[0].id;
     const p = await pool.query(
@@ -65,7 +65,6 @@ describe('ProductCheckoutService.initiateProductPayment (integration)', () => {
     }
     if (productId) await pool.query(`DELETE FROM products WHERE id = $1`, [productId]).catch(() => {});
     if (sellerId) await pool.query(`DELETE FROM sellers WHERE id = $1`, [sellerId]).catch(() => {});
-    await pool.end();
   });
 
   it('creates order + payment with authoritative amounts (no creator, physical)', async () => {

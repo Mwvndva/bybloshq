@@ -12,7 +12,7 @@ import { pool, assertTablesExist, withRollback, closePool } from '../helpers/db.
 
 describe('Database integration (test DB)', () => {
   after(async () => {
-    await closePool();
+    /* pool shared across files; force-exit handles teardown */
   });
 
   it('connects to the test database', async () => {

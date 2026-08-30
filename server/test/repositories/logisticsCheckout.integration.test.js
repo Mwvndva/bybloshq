@@ -41,7 +41,7 @@ describe('door delivery / logistics (integration)', () => {
     });
     const s = await pool.query(
       `INSERT INTO sellers (full_name, email, whatsapp_number, shop_name, status)
-       VALUES ('Seller','seller@byblos.test','0700000000','Shop','active') RETURNING id`
+       VALUES ('Seller','seller@byblos.test','0700000000','Shop-d712e8','active') RETURNING id`
     );
     sellerId = s.rows[0].id;
     const p = await pool.query(
@@ -61,7 +61,6 @@ describe('door delivery / logistics (integration)', () => {
     }
     await pool.query('DELETE FROM products WHERE id=$1', [productId]).catch(() => {});
     await pool.query('DELETE FROM sellers WHERE id=$1', [sellerId]).catch(() => {});
-    await pool.end();
   });
 
   it('door delivery: fee added to buyer total only; payout & platform fee unchanged; COURIER + logistics request', async () => {
