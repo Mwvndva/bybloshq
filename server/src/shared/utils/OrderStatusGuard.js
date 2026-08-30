@@ -100,46 +100,7 @@ export const assertValidTransition = (currentStatus, targetStatus, orderId = 'un
     return true;
 };
 
-export const transitionOrderStatus = async (client, orderId, targetStatus, actorId = null, reason = '') => {
-    let currentStatus;
-    try {
-        const { rows } = await client.query('SELECT status FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
-        currentStatus = rows[0]?.status;
-    } catch {
-        // Fallback if table name is product_orders
-    }
-
-    if (!currentStatus) {
-        try {
-            const { rows } = await client.query('SELECT status FROM product_orders WHERE id = $1 FOR UPDATE', [orderId]);
-            currentStatus = rows[0]?.status;
-        } catch {
-            // Ignored
-        }
-    }
-
-    if (currentStatus) {
-        assertValidTransition(currentStatus, targetStatus, orderId);
-    }
-
-    await client.query('UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2', [targetStatus, orderId]).catch(() => {});
-    await client.query('UPDATE product_orders SET status = $1, updated_at = NOW() WHERE id = $2', [targetStatus, orderId]).catch(() => {});
-
-    try {
-        await client.query(
-            `INSERT INTO order_status_history (order_id, from_status, to_status, actor_id, reason, created_at)
-             VALUES ($1, $2, $3, $4, $5, NOW())`,
-            [orderId, currentStatus || 'UNKNOWN', targetStatus, actorId || null, reason || '']
-        );
-    } catch (auditErr) {
-        logger.warn(`[ORDER_FSM] Failed writing order_status_history for ${orderId}:`, auditErr.message);
-    }
-
-    logger.info(`[ORDER_FSM] Order ${orderId} transitioned: ${currentStatus || 'UNKNOWN'} -> ${targetStatus} by User ${actorId}`);
-};
-
 export default {
     assertValidTransition,
-    transitionOrderStatus,
     OrderStatus
 };
