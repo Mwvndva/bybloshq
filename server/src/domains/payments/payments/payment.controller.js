@@ -81,9 +81,21 @@ class PaymentController {
 
       const result = await paymentService.initiateProductPayment(normalizedOrder);
 
+      // Do not report an explicitly-rejected charge as success (the buyer must
+      // not be told "check your phone" for a payment that was declined).
+      if (result && result.failed) {
+        return res.status(402).json({
+          status: 'failed',
+          message: 'Payment could not be initiated. Please try again.',
+          data: result
+        });
+      }
+
       res.status(200).json({
         status: 'success',
-        message: 'Product payment initiated. Check your phone.',
+        message: result && result.pending
+          ? 'Payment request received; awaiting confirmation.'
+          : 'Product payment initiated. Check your phone.',
         data: result
       });
     } catch (error) {
@@ -100,7 +112,8 @@ class PaymentController {
         'Door delivery address is required.',
         'Door delivery coordinates are required.',
         'Invalid order amount after secure calculation',
-        'Product not available'
+        'Product not available',
+        'Insufficient stock available'
       ];
       const statusCode = clientErrorMessages.includes(error.message) ? 400 : 500;
 
@@ -140,10 +153,23 @@ class PaymentController {
     try {
       const { paymentId } = req.params;
       const result = await paymentService.checkPaymentStatus(paymentId);
+      // This endpoint is PUBLIC (guest checkout polls it). Never return the full
+      // payment row — that leaks buyer PII (email/phone/receipts/raw provider
+      // payload). Expose only a minimal, non-sensitive status projection.
+      const meta = result && typeof result.metadata === 'object' ? result.metadata : {};
+      const safe = result
+        ? {
+            status: result.status ?? null,
+            orderNumber: meta.order_number ?? result.invoice_id ?? null,
+            amount: result.amount ?? null,
+            currency: result.currency ?? 'KES',
+            reference: result.provider_reference ?? result.api_ref ?? null,
+          }
+        : null;
       res.status(200).json({
         status: 'success',
         message: 'Payment status retrieved successfully',
-        data: result
+        data: safe
       });
     } catch (error) {
       logger.error('[PaymentController] Payment status check failed:', error);
