@@ -39,7 +39,7 @@ describe('settlement + payout (integration)', () => {
 
     const s = await pool.query(
       `INSERT INTO sellers (full_name, email, whatsapp_number, shop_name, status)
-       VALUES ('Seller','seller@byblos.test','0700000000','Shop','active') RETURNING id`
+       VALUES ('Seller','seller@byblos.test','0700000000','Shop-fa961a','active') RETURNING id`
     );
     sellerId = s.rows[0].id;
     const p = await pool.query(
@@ -60,7 +60,6 @@ describe('settlement + payout (integration)', () => {
     }
     await pool.query('DELETE FROM products WHERE id=$1', [productId]).catch(() => {});
     await pool.query('DELETE FROM sellers WHERE id=$1', [sellerId]).catch(() => {});
-    await pool.end();
   });
 
   it('verified settlement moves the order PAYMENT_PENDING → PAID', async () => {

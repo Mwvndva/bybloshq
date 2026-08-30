@@ -34,7 +34,7 @@ describe('creator attribution + earnings (integration)', () => {
   before(async () => {
     const s = await pool.query(
       `INSERT INTO sellers (full_name, email, whatsapp_number, shop_name, status)
-       VALUES ('Seller','seller@byblos.test','0700000000','Shop','active') RETURNING id`
+       VALUES ('Seller','seller@byblos.test','0700000000','Shop-583fba','active') RETURNING id`
     );
     sellerId = s.rows[0].id;
     const p = await pool.query(
@@ -65,7 +65,6 @@ describe('creator attribution + earnings (integration)', () => {
     await pool.query(`DELETE FROM creators WHERE id=$1`, [creatorId]).catch(() => {});
     await pool.query(`DELETE FROM products WHERE id=$1`, [productId]).catch(() => {});
     await pool.query(`DELETE FROM sellers WHERE id=$1`, [sellerId]).catch(() => {});
-    await pool.end();
   });
 
   it('creator @5% agreement: commission 49.95, payout 939.05, platform 30, buyer 1019', async () => {

@@ -33,7 +33,7 @@ describe('order fulfillment lifecycle (integration, real methods)', () => {
 
   before(async () => {
     await pool.query('ALTER TABLE product_orders DISABLE TRIGGER update_order_status_history_trigger').catch(() => {});
-    sellerId = (await pool.query(`INSERT INTO sellers (full_name,email,whatsapp_number,shop_name,status) VALUES ('S','s@byblos.test','07','Shop','active') RETURNING id`)).rows[0].id;
+    sellerId = (await pool.query(`INSERT INTO sellers (full_name,email,whatsapp_number,shop_name,status) VALUES ('S','s@byblos.test','07','Shop-61ffdf','active') RETURNING id`)).rows[0].id;
     physicalId = (await pool.query(`INSERT INTO products (seller_id,name,price,product_type,is_digital,status) VALUES ($1,'Phys',999,'physical',false,'available') RETURNING id`, [sellerId])).rows[0].id;
     serviceId = (await pool.query(`INSERT INTO products (seller_id,name,price,product_type,is_digital,status) VALUES ($1,'Svc',999,'service',false,'available') RETURNING id`, [sellerId])).rows[0].id;
     buyerId = (await pool.query(`INSERT INTO buyers (full_name,email,mobile_payment) VALUES ('Buyer','b@byblos.test','0712345678') RETURNING id`)).rows[0].id;
@@ -49,7 +49,6 @@ describe('order fulfillment lifecycle (integration, real methods)', () => {
     await pool.query('DELETE FROM buyers WHERE id=$1', [buyerId]).catch(() => {});
     await pool.query('DELETE FROM products WHERE id=ANY($1)', [[physicalId, serviceId]]).catch(() => {});
     await pool.query('DELETE FROM sellers WHERE id=$1', [sellerId]).catch(() => {});
-    await pool.end();
   });
 
   it('collection/pickup: PAID → AWAITING_SELLER_ACTION → READY_FOR_BUYER → (buyer collects) COMPLETED → payout', async () => {
