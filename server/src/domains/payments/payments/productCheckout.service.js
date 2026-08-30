@@ -84,8 +84,13 @@ async function findExistingByToken(token) {
   );
   const row = rows[0];
   if (!row) return null;
+  // Reflect the real payment state on replay — never report a failed prior
+  // attempt as success.
+  const pstatus = String(row.payment_status || '').toLowerCase();
+  const failed = pstatus === 'failed' || pstatus === 'cancelled';
   return {
-    success: true,
+    success: !failed,
+    failed,
     idempotent: true,
     orderId: row.order_id,
     orderNumber: row.order_number,
@@ -185,6 +190,24 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   let apiRef;
   try {
     await client.query('BEGIN');
+
+    // Inventory reservation for stock-tracked products: atomically reserve the
+    // ordered quantity, failing if insufficient stock remains. Prevents concurrent
+    // oversell (two buyers cannot both take the last unit). Released on explicit
+    // provider failure below.
+    if (product.track_inventory === true) {
+      const reserved = await client.query(
+        `UPDATE products
+            SET reserved_quantity = COALESCE(reserved_quantity, 0) + $2, updated_at = NOW()
+          WHERE id = $1
+            AND (COALESCE(quantity, 0) - COALESCE(reserved_quantity, 0)) >= $2
+          RETURNING id`,
+        [service.id, quantity]
+      );
+      if (reserved.rows.length === 0) {
+        throw new Error('Insufficient stock available');
+      }
+    }
 
     const orderMetadata = {
       ...metadata,
@@ -340,6 +363,13 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
         `UPDATE product_orders SET status = 'FAILED', payment_status = 'failed', updated_at = NOW() WHERE id = $1`,
         [order.id]
       );
+      // Release the reserved stock so a declined charge doesn't hold inventory.
+      if (product.track_inventory === true) {
+        await pool.query(
+          `UPDATE products SET reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $2, 0), updated_at = NOW() WHERE id = $1`,
+          [service.id, quantity]
+        ).catch((e) => logger.error('[CHECKOUT] Failed to release reserved stock', { productId: service.id, error: e.message }));
+      }
       return {
         success: false,
         failed: true,
