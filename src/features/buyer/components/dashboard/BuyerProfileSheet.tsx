@@ -1,7 +1,6 @@
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards, X } from 'lucide-react';
+import { Edit3, LogOut, Mail, MapPin, MessageCircle, Phone, UserRound, WalletCards } from 'lucide-react';
 import RefundCard from '../RefundCard';
 import { BuyerMembershipCard } from './BuyerMembershipCard';
 import { DeleteAccountButton } from '@/components/account/DeleteAccountButton';
@@ -9,9 +8,8 @@ import { deleteBuyerAccount } from '@/features/buyer/api/profile';
 import { useThemeScope } from '@/shared/hooks/useAppTheme';
 import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
 
-interface BuyerProfileSheetProps {
+interface BuyerProfileContentProps {
   isEditingProfile: boolean;
-  isOpen: boolean;
   isSavingProfile: boolean;
   mobilePayment: string;
   refundAmount: number;
@@ -19,7 +17,6 @@ interface BuyerProfileSheetProps {
   whatsappNumber: string;
   onLogout: () => void;
   onMobilePaymentChange: (value: string) => void;
-  onOpenChange: (open: boolean) => void;
   onSaveProfile: () => void;
   onToggleEdit: () => void;
   onWhatsappNumberChange: (value: string) => void;
@@ -101,7 +98,7 @@ export function BuyerProfileContent({
   onSaveProfile,
   onToggleEdit,
   onWhatsappNumberChange
-}: Omit<BuyerProfileSheetProps, 'isOpen' | 'onOpenChange'>) {
+}: BuyerProfileContentProps) {
   const buyerUser = user as import("@/features/auth/types/authTypes").BuyerProfile | null;
 
   return (
@@ -192,36 +189,5 @@ export function BuyerProfileContent({
         <DeleteAccountButton deleteAccount={deleteBuyerAccount} onDeleted={onLogout} />
       </div>
     </div>
-  );
-}
-
-export function BuyerProfileSheet(props: BuyerProfileSheetProps) {
-  return (
-    <DialogPrimitive.Root open={props.isOpen} onOpenChange={props.onOpenChange}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay
-          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm transition-all duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-        />
-        <DialogPrimitive.Content
-          className="fixed inset-y-0 right-0 z-[101] flex h-full w-full sm:max-w-[430px] transform-gpu flex-col overflow-hidden border-l border-white/10 bg-black text-white shadow-2xl shadow-black/80 will-change-transform transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-400 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
-        >
-          <DialogPrimitive.Title className="sr-only">Buyer Profile</DialogPrimitive.Title>
-          <DialogPrimitive.Description className="sr-only">Account settings, theme preferences, and refunds</DialogPrimitive.Description>
-
-          <div className="flex items-center justify-end px-4 pt-3 pb-1">
-            <DialogPrimitive.Close
-              className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
-              aria-label="Close profile drawer"
-            >
-              <X className="h-5 w-5" />
-            </DialogPrimitive.Close>
-          </div>
-
-          <div className="flex-1 min-w-0 overflow-y-auto px-4 pb-6 pt-1 sm:px-5">
-            <BuyerProfileContent {...props} />
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
   );
 }
