@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
-type BuyerSection = 'shop' | 'shops' | 'wishlist' | 'orders' | 'profile';
+type BuyerSection = 'shop' | 'notifications' | 'wishlist' | 'orders' | 'profile';
 
 interface BuyerNavItem {
   key: BuyerSection;

@@ -52,6 +52,8 @@ export async function findActiveWithStats({ limit, offset }) {
       s.physical_address,
       s.latitude,
       s.longitude,
+      s.instagram_link AS "instagramLink",
+      s.tiktok_link AS "tiktokLink",
       s.created_at,
       COALESCE(k.knock_count, 0) AS knock_count,
       COUNT(*) OVER() AS total_count,

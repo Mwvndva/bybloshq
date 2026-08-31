@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useToast } from '@/shared/hooks/use-toast';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/features/orders/components/OrdersSectionContainer'));
 import {
   Heart, User,
-  Users, Store, Package
+  Store, ShoppingBag, Bell
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useWishlist } from '@/features/buyer/hooks/useWishlist';
 import { useGlobalAuth } from '@/features/auth/contexts';
 import type { BuyerProfile } from '@/features/auth/types/authTypes';
@@ -16,61 +16,41 @@ import SellersGrid from '@/features/shop/components/SellersGrid';
 import { BuyerBottomNav } from '../components/dashboard/BuyerBottomNav';
 import { BuyerDashboardHeader } from '../components/dashboard/BuyerDashboardHeader';
 import { BuyerDashboardSearch } from '../components/dashboard/BuyerDashboardSearch';
-import { BuyerProfileSheet } from '../components/dashboard/BuyerProfileSheet';
-import { MyShopsSection } from '../components/dashboard/MyShopsSection';
+import { BuyerProfileContent } from '../components/dashboard/BuyerProfileSheet';
+import { NotificationList } from '@/features/notifications/components/NotificationList';
 import { MembershipGate } from '@/features/membership/components/MembershipGate';
-import { useBuyerFollowedShops } from '../components/dashboard/hooks/useBuyerFollowedShops';
 import { useSwipeTabs } from '@/shared/hooks/useSwipeTabs';
 import { useBuyerActiveSection } from '../components/dashboard/hooks/useBuyerActiveSection';
 import { useBuyerProfileForm } from '../components/dashboard/hooks/useBuyerProfileForm';
 import { useBuyerOrdersNotification } from '../components/dashboard/hooks/useBuyerOrdersNotification';
 import { useThemeScope } from '@/shared/hooks/useAppTheme';
-import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
-import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
 
 import { LoadingScreen as RouteFallback } from '@/shared/components/LoadingScreen';
 
-type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
+type DashboardSection = 'shop' | 'notifications' | 'wishlist' | 'orders';
 type BuyerSection = DashboardSection | 'profile';
 
-const PROFILE_CLOSE_NAV_DELAY_MS = 180;
-const SWIPE_SECTIONS = ['shop', 'shops', 'wishlist', 'orders'] as const;
+const SWIPE_SECTIONS = ['shop', 'wishlist', 'orders', 'notifications'] as const;
 
 // Main dashboard component
 function BuyerDashboard() {
   useThemeScope('buyer');
   const navigate = useNavigate();
-  const location = useLocation();
   const { user: globalUser, logout, updateProfile } = useGlobalAuth();
   const user = globalUser?.role === 'buyer' ? globalUser.profile as BuyerProfile : null;
   const updateBuyerProfile = (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer');
   const { wishlist } = useWishlist();
   const { toast } = useToast();
-  const { activeSection, setActiveSection, isProfileSidebarOpen, setIsProfileSidebarOpen } = useBuyerActiveSection();
-  const profileCloseNavigationTimerRef = useRef<number | null>(null);
+  const { activeSection } = useBuyerActiveSection();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCity] = useState<string>(''); // Default to empty (all cities)
-  const [filterArea, setFilterArea] = useState<string>('');
   const {
     isEditingProfile, setIsEditingProfile,
     mobilePayment, setMobilePayment,
     whatsappNumber, setWhatsappNumber,
     isSavingProfile, handleSaveProfile,
   } = useBuyerProfileForm();
-  const [shopsSearchQuery, setShopsSearchQuery] = useState('');
-  const [myShopsMobileTab, setMyShopsMobileTab] = useState<'online' | 'physical'>('online');
-  const followedShops = useBuyerFollowedShops(shopsSearchQuery, activeSection === 'shops');
-
   const { hasUnreadOrders, markOrdersViewed } = useBuyerOrdersNotification(!!user);
-
-  // Removed auto-filter by user location - now shows all products by default
-  // Users can manually select their city/location if they want to filter
-
-  // Log when filter values change
-  useEffect(() => {
-    console.log('Filters updated:', { filterCity, filterArea });
-  }, [filterCity, filterArea]);
 
   const handleLogout = () => {
     logout();
@@ -105,71 +85,27 @@ function BuyerDashboard() {
     };
   }, []);
 
-  const handleProfileSidebarOpenChange = useCallback((open: boolean) => {
-    if (profileCloseNavigationTimerRef.current !== null) {
-      window.clearTimeout(profileCloseNavigationTimerRef.current);
-      profileCloseNavigationTimerRef.current = null;
-    }
-
-    setIsProfileSidebarOpen(open);
-
-    if (open) {
-      if (location.pathname !== '/buyer/profile') {
-        navigate('/buyer/profile', { replace: true });
-      }
-      return;
-    }
-
-    setIsEditingProfile(false);
-    const queryParams = new URLSearchParams(location.search);
-    if (
-      location.pathname === '/buyer/profile' ||
-      queryParams.get('section') === 'profile' ||
-      queryParams.get('tab') === 'profile'
-    ) {
-      profileCloseNavigationTimerRef.current = window.setTimeout(() => {
-        navigate('/buyer/dashboard', { replace: true });
-        profileCloseNavigationTimerRef.current = null;
-      }, PROFILE_CLOSE_NAV_DELAY_MS);
-    }
-  }, [location.pathname, location.search, navigate, setIsProfileSidebarOpen, setIsEditingProfile]);
-
-  // Hook profile sidebar dismissal into Android back stack
-  useEffect(() => {
-    if (!isNativeApp() || !isProfileSidebarOpen) return;
-
-    return registerModalDismiss(() => {
-      handleProfileSidebarOpenChange(false);
-      return true;
-    });
-  }, [isProfileSidebarOpen, handleProfileSidebarOpenChange]);
-
-
   const navItems = [
     { key: 'shop', label: 'Shops', Icon: Store, path: '/buyer/dashboard' },
-    { key: 'shops', label: 'My Shops', Icon: Users, path: '/buyer/shops' },
     { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },
-    { key: 'orders', label: 'Orders', Icon: Package, path: '/buyer/orders', badge: hasUnreadOrders },
+    { key: 'orders', label: 'Orders', Icon: ShoppingBag, path: '/buyer/orders', badge: hasUnreadOrders },
+    { key: 'notifications', label: 'Alerts', Icon: Bell, path: '/buyer/notifications' },
     { key: 'profile', label: 'Profile', Icon: User, path: '/buyer/profile' },
   ] as const;
 
-  const activeNav = isProfileSidebarOpen ? 'profile' : (activeSection === 'shop' ? 'shop' : activeSection);
+  const activeNav = activeSection;
 
   const setActiveTab = (key: BuyerSection) => {
     const pathMap = {
       shop: 'dashboard',
-      shops: 'shops',
+      notifications: 'notifications',
       orders: 'orders',
       wishlist: 'wishlist',
       profile: 'profile'
     };
-    if (key === 'profile') {
-      setIsProfileSidebarOpen(true);
-      navigate('/buyer/profile');
-      return;
+    if (key !== 'profile') {
+      setIsEditingProfile(false);
     }
-    setIsProfileSidebarOpen(false);
-    setIsEditingProfile(false);
     navigate(`/buyer/${pathMap[key]}`);
     if (key === 'orders') {
       markOrdersViewed();
@@ -184,7 +120,7 @@ function BuyerDashboard() {
     tabs: SWIPE_SECTIONS,
     activeTab: activeSection,
     onChange: setActiveTab,
-    disabled: isProfileSidebarOpen,
+    disabled: activeSection === 'profile',
   });
 
 
@@ -207,9 +143,7 @@ function BuyerDashboard() {
         <BuyerDashboardSearch
           activeSection={activeSection}
           productSearchQuery={searchQuery}
-          shopsSearchQuery={shopsSearchQuery}
           onProductSearchChange={setSearchQuery}
-          onShopsSearchChange={setShopsSearchQuery}
         />
 
         {/* Main Content Area */}
@@ -229,23 +163,18 @@ function BuyerDashboard() {
         >
           {activeSection === 'shop' && (
             <>
-              <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
+              <SellersGrid filterCity="" filterArea="" searchQuery={searchQuery} isBuyer={true} />
             </>
           )}
 
-          {activeSection === 'shops' && (
-            <MyShopsSection
-              filteredCount={followedShops.filteredShops.length}
-              isLoadingShops={followedShops.isLoadingShops}
-              mobileTab={myShopsMobileTab}
-              onClickCountChange={followedShops.handleShopClickCountChange}
-              onMobileTabChange={setMyShopsMobileTab}
-              onUnfollowShop={followedShops.handleUnfollowShop}
-              searchQuery={shopsSearchQuery}
-              shopGroups={followedShops.shopGroups}
-              shopsCount={followedShops.shops.length}
-              unfollowingShopId={followedShops.unfollowingShopId}
-            />
+          {activeSection === 'notifications' && (
+            <div className="mx-auto w-full max-w-[760px]">
+              <NotificationList
+                variant="default"
+                scrollClassName=""
+                className="overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm dark:shadow-[0_8px_25px_rgba(0,0,0,0.45)]"
+              />
+            </div>
           )}
 
           {activeSection === 'wishlist' && (
@@ -265,23 +194,25 @@ function BuyerDashboard() {
               </Suspense>
             </div>
           )}
-        </div>
 
-        <BuyerProfileSheet
-          isEditingProfile={isEditingProfile}
-          isOpen={isProfileSidebarOpen}
-          isSavingProfile={isSavingProfile}
-          mobilePayment={mobilePayment}
-          refundAmount={user?.refunds || 0}
-          user={user}
-          whatsappNumber={whatsappNumber}
-          onLogout={handleLogout}
-          onMobilePaymentChange={setMobilePayment}
-          onOpenChange={handleProfileSidebarOpenChange}
-          onSaveProfile={handleSaveProfile}
-          onToggleEdit={() => setIsEditingProfile(!isEditingProfile)}
-          onWhatsappNumberChange={setWhatsappNumber}
-        />
+          {activeSection === 'profile' && (
+            <div className="mx-auto w-full max-w-[560px]">
+              <BuyerProfileContent
+                isEditingProfile={isEditingProfile}
+                isSavingProfile={isSavingProfile}
+                mobilePayment={mobilePayment}
+                refundAmount={user?.refunds || 0}
+                user={user}
+                whatsappNumber={whatsappNumber}
+                onLogout={handleLogout}
+                onMobilePaymentChange={setMobilePayment}
+                onSaveProfile={handleSaveProfile}
+                onToggleEdit={() => setIsEditingProfile(!isEditingProfile)}
+                onWhatsappNumberChange={setWhatsappNumber}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <BuyerBottomNav activeNav={activeNav} navItems={navItems} onSelect={setActiveTab} />
