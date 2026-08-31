@@ -54,14 +54,6 @@ import * as sellerController from '../../domains/commerce/sellers/seller.control
 // Wishlist routes
 router.use('/wishlist', wishlistRoutes);
 
-// Get followed shops
-router.get('/shops', sellerController.getBuyerShops);
-
-// Follow a seller
-router.post('/sellers/:sellerId/become-client', validate(V.becomeClient), sellerController.handleBecomeClient);
-
-// Unfollow a seller
-router.post('/sellers/:sellerId/leave-client', validate(V.leaveClient), sellerController.handleLeaveClient);
 
 
 

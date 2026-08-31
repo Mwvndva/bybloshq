@@ -14,7 +14,8 @@ export function useOrderStatusQuery(orderNumber: string, enabled = true) {
 
 export function useGetOrderStatusMutation() {
   return useMutation({
-    mutationFn: (orderNumber: string) => buyerApi.getOrderStatus(orderNumber),
+    mutationFn: ({ orderNumber, clientCheckoutToken }: { orderNumber: string; clientCheckoutToken?: string | null }) =>
+      buyerApi.getOrderStatus(orderNumber, clientCheckoutToken),
   });
 }
 

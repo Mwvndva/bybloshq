@@ -307,8 +307,8 @@ class CreatorService {
     if (email !== normalizeEmail(invite.email)) {
       throw new Error('Use the email address that received the invite.');
     }
-    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber || !data.whatsappNumber) {
-      throw new Error('First name, last name, M-Pesa number, WhatsApp number, and password are required.');
+    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber) {
+      throw new Error('First name, last name, M-Pesa number, and password are required.');
     }
     if (data.password !== data.confirmPassword) {
       throw new Error('Passwords do not match.');
@@ -371,7 +371,7 @@ class CreatorService {
           String(data.lastName).trim(),
           email,
           String(data.mpesaNumber).trim(),
-          String(data.whatsappNumber).trim(),
+          data.whatsappNumber ? String(data.whatsappNumber).trim() : null,
           referredBy?.id || null
         ]
       );
@@ -427,8 +427,8 @@ class CreatorService {
     if (!email || !email.includes('@')) {
       throw new Error('Enter a valid email address.');
     }
-    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber || !data.whatsappNumber) {
-      throw new Error('First name, last name, email, M-Pesa number, WhatsApp number, and password are required.');
+    if (!data.firstName || !data.lastName || !data.password || !data.mpesaNumber) {
+      throw new Error('First name, last name, email, M-Pesa number, and password are required.');
     }
     if (data.password !== data.confirmPassword) {
       throw new Error('Passwords do not match.');
@@ -490,7 +490,7 @@ class CreatorService {
           String(data.lastName).trim(),
           email,
           String(data.mpesaNumber).trim(),
-          String(data.whatsappNumber).trim(),
+          data.whatsappNumber ? String(data.whatsappNumber).trim() : null,
           referredBy?.id || null
         ]
       );

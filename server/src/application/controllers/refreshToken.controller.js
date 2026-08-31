@@ -14,7 +14,7 @@ export const refreshToken = async (req, res, next) => {
     }
 
     // Generate new access token (plus a rolling refresh token)
-    const { accessToken, refreshToken: newRefreshToken, user } = refreshAccessToken(tokenString);
+    const { accessToken, refreshToken: newRefreshToken, user } = await refreshAccessToken(tokenString);
 
     // Set updated HttpOnly jwt access cookie for Web browser sessions
     setAuthCookie(res, accessToken);

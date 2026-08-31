@@ -118,25 +118,6 @@ export async function findProductTypeMix() {
 }
 
 /**
- * Top 8 aesthetic categories by product count.
- *
- * @returns {Promise<Array<{aesthetic: string, product_count: string}>>}
- */
-export async function findAestheticMix() {
-  const sql = `
-    SELECT
-      COALESCE(aesthetic, 'uncategorised') AS aesthetic,
-      COUNT(*) AS product_count
-    FROM products
-    GROUP BY aesthetic
-    ORDER BY product_count DESC
-    LIMIT 8
-  `;
-  const { rows } = await query(sql);
-  return rows;
-}
-
-/**
  * Order count + total value grouped by order status.
  *
  * @returns {Promise<Array<{status: string, count: string, total_value: string}>>}
@@ -150,24 +131,6 @@ export async function findOrderStatusFunnel() {
     FROM product_orders
     GROUP BY status
     ORDER BY count DESC
-  `;
-  const { rows } = await query(sql);
-  return rows;
-}
-
-/**
- * Order count + total value grouped by payment status.
- *
- * @returns {Promise<Array<{payment_status: string, count: string, total_value: string}>>}
- */
-export async function findPaymentStatusFunnel() {
-  const sql = `
-    SELECT
-      payment_status,
-      COUNT(*) AS count,
-      COALESCE(SUM(total_amount), 0) AS total_value
-    FROM product_orders
-    GROUP BY payment_status
   `;
   const { rows } = await query(sql);
   return rows;
@@ -193,49 +156,6 @@ export async function findBuyerLocations() {
 }
 
 /**
- * Top 10 cities by active seller count, with GMV (from sellers.total_sales).
- *
- * @returns {Promise<Array<{location: string, seller_count: string, location_gmv: string}>>}
- */
-export async function findSellerLocations() {
-  const sql = `
-    SELECT
-      COALESCE(NULLIF(TRIM(city), ''), 'Unknown City') AS location,
-      COUNT(*) AS seller_count,
-      COALESCE(SUM(total_sales), 0) AS location_gmv
-    FROM sellers
-    WHERE is_active = true
-    GROUP BY 1
-    ORDER BY seller_count DESC
-    LIMIT 10
-  `;
-  const { rows } = await query(sql);
-  return rows;
-}
-
-/**
- * Top 10 cities by GMV (from completed orders, joined to the seller's city).
- *
- * @returns {Promise<Array<{location: string, gmv: string, order_count: string}>>}
- */
-export async function findGmvLocations() {
-  const sql = `
-    SELECT
-      COALESCE(NULLIF(TRIM(s.city), ''), 'Unknown City') AS location,
-      COALESCE(SUM(o.total_amount), 0) AS gmv,
-      COUNT(o.id) AS order_count
-    FROM product_orders o
-    JOIN sellers s ON o.seller_id = s.id
-    WHERE o.payment_status = 'completed'
-    GROUP BY 1
-    ORDER BY gmv DESC
-    LIMIT 10
-  `;
-  const { rows } = await query(sql);
-  return rows;
-}
-
-/**
  * Top 10 active sellers by total_sales.
  *
  * @returns {Promise<Array<object>>}
@@ -247,7 +167,6 @@ export async function findTopSellers() {
       s.shop_name,
       s.location,
       s.total_sales,
-      s.client_count,
       COUNT(DISTINCT o.id) AS order_count
     FROM sellers s
     LEFT JOIN product_orders o ON o.seller_id = s.id AND o.payment_status = 'completed'
@@ -255,79 +174,6 @@ export async function findTopSellers() {
     GROUP BY s.id
     ORDER BY s.total_sales DESC
     LIMIT 10
-  `;
-  const { rows } = await query(sql);
-  return rows;
-}
-
-/**
- * Top 10 products by completed-order revenue.
- *
- * @returns {Promise<Array<object>>}
- */
-export async function findTopProducts() {
-  const sql = `
-    SELECT
-      p.id,
-      p.name,
-      p.product_type,
-      p.aesthetic,
-      COALESCE(SUM(oi.subtotal), 0) AS total_revenue,
-      COALESCE(SUM(oi.quantity), 0) AS units_sold
-    FROM products p
-    JOIN order_items oi ON oi.product_id = p.id
-    JOIN product_orders po ON oi.order_id = po.id AND po.payment_status = 'completed'
-    GROUP BY p.id
-    ORDER BY total_revenue DESC
-    LIMIT 10
-  `;
-  const { rows } = await query(sql);
-  return rows;
-}
-
-/**
- * Top 10 products by wishlist count.
- *
- * @returns {Promise<Array<object>>}
- */
-export async function findTopWishlisted() {
-  const sql = `
-    SELECT
-      p.id,
-      p.name,
-      p.product_type,
-      p.price,
-      COUNT(w.id) AS wishlist_count
-    FROM products p
-    JOIN wishlists w ON w.product_id = p.id
-    GROUP BY p.id
-    ORDER BY wishlist_count DESC
-    LIMIT 10
-  `;
-  const { rows } = await query(sql);
-  return rows;
-}
-
-/**
- * Last 12 months of referral rewards rollup (active referrers, pair
- * count, total rewards, referred GMV).
- *
- * @returns {Promise<Array<object>>}
- */
-export async function findMonthlyReferralRewards() {
-  const sql = `
-    SELECT
-      period_year,
-      period_month,
-      TO_CHAR(TO_DATE(period_month::text, 'MM'), 'Mon') || ' ' || period_year AS label,
-      COUNT(DISTINCT referrer_seller_id) AS active_referrers,
-      COUNT(*) AS referral_pairs,
-      COALESCE(SUM(reward_amount), 0) AS total_rewards,
-      COALESCE(SUM(referred_gmv), 0)  AS referred_gmv
-    FROM referral_earnings_log
-    GROUP BY period_year, period_month
-    ORDER BY period_year DESC, period_month DESC
-    LIMIT 12
   `;
   const { rows } = await query(sql);
   return rows;
@@ -355,23 +201,6 @@ export async function findTopReferrers() {
   `;
   const { rows } = await query(sql);
   return rows;
-}
-
-/**
- * Platform-level referral status: sellers with codes, sellers acquired
- * via referral.
- *
- * @returns {Promise<{sellers_with_codes: string, referred_sellers: string}>}
- */
-export async function findReferralStats() {
-  const sql = `
-    SELECT
-      COUNT(*) FILTER (WHERE referral_code IS NOT NULL) AS sellers_with_codes,
-      COUNT(*) FILTER (WHERE referred_by_seller_id IS NOT NULL) AS referred_sellers
-    FROM sellers
-  `;
-  const { rows } = await query(sql);
-  return rows[0];
 }
 
 /**

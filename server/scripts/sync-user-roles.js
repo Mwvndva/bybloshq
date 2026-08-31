@@ -1,5 +1,5 @@
 
-import { pool } from '../src/config/database.js';
+import { pool } from '../src/infrastructure/database/database.js';
 
 async function syncRoles() {
     console.log('🔄 Starting User Roles Sync...');

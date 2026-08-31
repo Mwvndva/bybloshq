@@ -8,6 +8,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # API-only role: cron jobs, outbox replay, and withdrawal retry run in the
+      # dedicated worker service below — NOT here. This prevents the web dyno (and
+      # any horizontally-scaled replicas) from double-executing scheduled jobs.
+      - key: BYBLOS_PROCESS_ROLE
+        value: api
       - key: PORT
         value: 10000
       - key: DB_HOST
@@ -46,6 +51,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # The single process that owns all scheduled/background jobs. Keep this
+      # service at exactly one instance so non-advisory-locked crons run once.
+      - key: BYBLOS_PROCESS_ROLE
+        value: worker
       - key: DB_HOST
         fromDatabase:
           name: byblos
