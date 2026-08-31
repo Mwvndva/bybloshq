@@ -80,6 +80,7 @@ publicRouter.post(
 // Check payment status (public)
 publicRouter.get(
   '/status/:invoiceId',
+  paymentRateLimiter,
   validate(checkStatusSchema),
   (req, res, next) => {
     // Map invoiceId to paymentId for backward compatibility

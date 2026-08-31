@@ -51,6 +51,7 @@ export function useProductCheckout(product: Product, seller: Seller | undefined,
     invoiceId: string | null;
     isGuest: boolean;
     email?: string;
+    checkoutToken?: string | null;
     paymentSummary?: {
       productAmount?: number;
       deliveryFee?: number;
@@ -518,6 +519,7 @@ export function useProductCheckout(product: Product, seller: Seller | undefined,
             invoiceId: String(orderNumber || orderId),
             isGuest: !isAuthenticated,
             email: buyerDetails.email,
+            checkoutToken: checkoutToken,
             paymentSummary: {
               productAmount: Number(product.price || 0),
               deliveryFee: paymentDeliveryFeeEstimate,

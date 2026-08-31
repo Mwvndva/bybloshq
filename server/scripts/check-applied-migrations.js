@@ -1,4 +1,4 @@
-import { pool } from '../src/config/database.js';
+import { pool } from '../src/infrastructure/database/database.js';
 
 async function checkAppliedMigrations() {
   const client = await pool.connect();

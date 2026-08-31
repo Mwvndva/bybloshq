@@ -25,29 +25,29 @@ class PaymentController {
       status: data.status,
     });
 
-    // 1. Respond 200 OK immediately to Paystack within < 200ms
-    res.status(200).json({ status: 'success', message: 'Webhook received and enqueued' });
-
-    // 2. Process order completion asynchronously in background
-    setImmediate(async () => {
-      try {
-        await CorePaymentService.handlePaystackWebhook(webhookData, {
-          signature: req.headers['x-paystack-signature'],
-          rawBody: req.rawBody,
-          replayEventId: security.replayEventId,
-          hmacVerified: security.hmacVerified === true
-        });
-        logger.info('[PaymentController] Paystack webhook processed asynchronously', {
-          reference: data.reference
-        });
-      } catch (error) {
-        logger.error('[PAYSTACK_WEBHOOK_ASYNC] Error completing payment:', {
-          reference: data.reference,
-          eventId: security.replayEventId,
-          error: error.message
-        });
-      }
-    });
+    // Process the webhook BEFORE acknowledging. Acking 200 first and processing
+    // in setImmediate meant a failed completion (DB/transient error) was only
+    // logged — Paystack, already 200'd, never retried, so a charged buyer's order
+    // could be permanently stranded in `pending` (and the replay-dedupe key was
+    // marked completed off the already-sent 200, swallowing any retry). Paystack's
+    // timeout budget comfortably covers a single settlement transaction.
+    try {
+      await CorePaymentService.handlePaystackWebhook(webhookData, {
+        signature: req.headers['x-paystack-signature'],
+        rawBody: req.rawBody,
+        replayEventId: security.replayEventId,
+        hmacVerified: security.hmacVerified === true
+      });
+      return res.status(200).json({ status: 'success', message: 'Webhook processed' });
+    } catch (error) {
+      logger.error('[PAYSTACK_WEBHOOK] Error completing payment:', {
+        reference: data.reference,
+        eventId: security.replayEventId,
+        error: error.message
+      });
+      // Return 5xx so Paystack retries; never silently strand a paid order.
+      return res.status(500).json({ status: 'error', message: 'Webhook processing failed' });
+    }
   }
 
   /**
@@ -55,7 +55,14 @@ class PaymentController {
    */
   async initiateProductPayment(req, res) {
     try {
-      logger.info('[PaymentController] Incoming Payment Request: ' + JSON.stringify(req.body));
+      // Never log the full body — it contains buyer PII (email, phone, address).
+      logger.info('[PaymentController] Incoming Payment Request', {
+        productId: req.body?.productId,
+        quantity: req.body?.quantity,
+        hasEmail: !!req.body?.email,
+        hasPhone: !!(req.body?.phone || req.body?.mobilePayment),
+        doorDelivery: !!(req.body?.delivery?.doorDelivery || req.body?.delivery?.door_delivery),
+      });
       const checkoutToken = req.headers['idempotency-key']
         || req.headers['x-checkout-token']
         || req.body.checkout_token
@@ -81,9 +88,21 @@ class PaymentController {
 
       const result = await paymentService.initiateProductPayment(normalizedOrder);
 
+      // Do not report an explicitly-rejected charge as success (the buyer must
+      // not be told "check your phone" for a payment that was declined).
+      if (result && result.failed) {
+        return res.status(402).json({
+          status: 'failed',
+          message: 'Payment could not be initiated. Please try again.',
+          data: result
+        });
+      }
+
       res.status(200).json({
         status: 'success',
-        message: 'Product payment initiated. Check your phone.',
+        message: result && result.pending
+          ? 'Payment request received; awaiting confirmation.'
+          : 'Product payment initiated. Check your phone.',
         data: result
       });
     } catch (error) {
@@ -100,7 +119,8 @@ class PaymentController {
         'Door delivery address is required.',
         'Door delivery coordinates are required.',
         'Invalid order amount after secure calculation',
-        'Product not available'
+        'Product not available',
+        'Insufficient stock available'
       ];
       const statusCode = clientErrorMessages.includes(error.message) ? 400 : 500;
 
@@ -140,10 +160,23 @@ class PaymentController {
     try {
       const { paymentId } = req.params;
       const result = await paymentService.checkPaymentStatus(paymentId);
+      // This endpoint is PUBLIC (guest checkout polls it). Never return the full
+      // payment row — that leaks buyer PII (email/phone/receipts/raw provider
+      // payload). Expose only a minimal, non-sensitive status projection.
+      const meta = result && typeof result.metadata === 'object' ? result.metadata : {};
+      const safe = result
+        ? {
+            status: result.status ?? null,
+            orderNumber: meta.order_number ?? result.invoice_id ?? null,
+            amount: result.amount ?? null,
+            currency: result.currency ?? 'KES',
+            reference: result.provider_reference ?? result.api_ref ?? null,
+          }
+        : null;
       res.status(200).json({
         status: 'success',
         message: 'Payment status retrieved successfully',
-        data: result
+        data: safe
       });
     } catch (error) {
       logger.error('[PaymentController] Payment status check failed:', error);
