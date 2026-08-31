@@ -1,15 +1,17 @@
-import HeroSection from '@/features/shop/components/HeroSection';
-import Footer from '@/shared/components/Footer';
 import { Button } from '@/shared/ui/button';
 import { AddBusinessCard } from '@/features/shop/components/AddBusinessCard';
-import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
 import { Link, Navigate } from 'react-router-dom';
 
-const NativeAppHome = () => (
+/**
+ * The single Byblos landing screen, shared by web and the Android app: a centred
+ * logo that is itself the buyer entry point, with a contextual "add business"
+ * card emerging from the bottom. Delivery partners and creators get discreet
+ * corner entries.
+ */
+const LandingHome = () => (
   <div className="relative flex min-h-[100svh] items-center justify-center bg-[var(--byblos-bg,#000000)] px-6 py-10 text-[var(--byblos-text,#f5f5f5)] selection:bg-yellow-300 selection:text-black transition-colors duration-200">
-    {/* Mzigo Ego delivery partners get a discreet entry, mirroring the
-        Creator pill — the logo itself is the button. */}
+    {/* Mzigo Ego delivery partners get a discreet entry — the logo is the button. */}
     <Link to="/mzigo/login" className="absolute left-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))]" aria-label="Mzigo Ego delivery partner login">
       <Button className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] p-0 shadow-sm hover:bg-black/[0.08] dark:hover:bg-white/10">
         <img src="/mzigo-ego.png" alt="Mzigo Ego" className="h-6 w-6 object-contain" />
@@ -21,6 +23,7 @@ const NativeAppHome = () => (
         Creator
       </Button>
     </Link>
+
     <main className="flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)] pb-28">
       {/* The centre logo is the buyer entry point — tapping it opens buyer login. */}
       <Link
@@ -56,30 +59,12 @@ const NativeAppHome = () => (
 const IndexPage = () => {
   const { user } = useGlobalAuth();
 
-  const handleExploreClick = () => {
-    // This can be left empty or can scroll to content if needed
-  };
-
   // An authenticated Mzigo Ego courier lands straight on their deliveries.
   if (user?.role === 'logistics' && user.isAuthenticated) {
     return <Navigate to="/mzigo/dashboard" replace />;
   }
 
-  if (isNativeApp()) {
-    return <NativeAppHome />;
-  }
-
-  return (
-    <div className="min-h-screen bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#f5f5f5)] flex flex-col selection:bg-yellow-300 selection:text-black transition-colors duration-200">
-      <main className="flex-grow">
-        <HeroSection
-          onExploreClick={handleExploreClick}
-        />
-      </main>
-
-      <Footer />
-    </div>
-  );
+  return <LandingHome />;
 };
 
 export default IndexPage;
