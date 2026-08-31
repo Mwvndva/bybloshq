@@ -4,6 +4,7 @@ import { MapPin, Store, UserMinus } from 'lucide-react';
 import { cn, getImageUrl } from '@/shared/utils/formatting';
 import { useKnockSellerMutation } from '@/features/shop/hooks/useShopQueries';
 import type { ApiPublicSeller } from '@/shared/types/api/seller';
+import { socialUrl, coordsMapUrl } from '../utils/socialLinks';
 import instagramLogo from '@/assets/social/instagram.png';
 import tiktokLogo from '@/assets/social/tiktok.png';
 
@@ -23,23 +24,6 @@ const getNumber = (...values: unknown[]) => {
         if (Number.isFinite(parsed)) return parsed;
     }
     return 0;
-};
-
-const hasValidCoordinate = (latitude?: number, longitude?: number) => {
-    const lat = Number(latitude);
-    const lng = Number(longitude);
-    return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
-};
-
-/** Normalise a stored handle/URL into an openable social link. */
-const socialUrl = (kind: 'instagram' | 'tiktok', value?: string | null) => {
-    const raw = (value || '').trim();
-    if (!raw) return null;
-    if (/^https?:\/\//i.test(raw)) return raw;
-    const handle = raw.replace(/^@/, '');
-    return kind === 'instagram'
-        ? `https://instagram.com/${handle}`
-        : `https://www.tiktok.com/@${handle}`;
 };
 
 const getThemePalette = (theme?: string) => {
@@ -72,8 +56,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
 
     const instagramHref = socialUrl('instagram', seller.instagramLink);
     const tiktokHref = socialUrl('tiktok', seller.tiktokLink);
-    const hasCoords = hasValidCoordinate(seller.latitude, seller.longitude);
-    const mapHref = hasCoords ? `https://www.google.com/maps?q=${seller.latitude},${seller.longitude}` : null;
+    const mapHref = coordsMapUrl(seller.latitude, seller.longitude);
 
     useEffect(() => {
         setKnockCount(getNumber(seller.knockCount, seller.knock_count));

@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Link2, Pencil, TrendingUp, Users } from 'lucide-react';
+import { Link2, Pencil, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/shared/utils/formatting';
 import type { SellerProfile } from '@/features/auth/types/authTypes';
 import { SellerMediaEditDialog } from './SellerMediaEditDialog';
 
 interface SellerProfileHeroProps {
   sellerProfile: SellerProfile;
-  followers: number;
   sales: number;
   shopUsername?: string | null;
   onCopyShopLink?: () => void | Promise<void>;
@@ -16,9 +15,9 @@ interface SellerProfileHeroProps {
 /**
  * Shop identity hero for the seller dashboard: compact accent header,
  * the business profile photo centered in a circular frame with a pencil
- * edit overlay, a "Shop link" action, the shop name, bio, and follower / sales stats.
+ * edit overlay, a "Shop link" action, the shop name, bio, and the sales stat.
  */
-export function SellerProfileHero({ sellerProfile, followers, sales, shopUsername, onCopyShopLink, canEdit }: SellerProfileHeroProps) {
+export function SellerProfileHero({ sellerProfile, sales, shopUsername, onCopyShopLink, canEdit }: SellerProfileHeroProps) {
   const [isEditingMedia, setIsEditingMedia] = useState(false);
   const shopName = sellerProfile?.shopName?.trim() || 'Your shop';
   const avatar = sellerProfile?.avatarUrl;
@@ -96,15 +95,8 @@ export function SellerProfileHero({ sellerProfile, followers, sales, shopUsernam
           </p>
         )}
 
-        {/* Followers (left) + Sales (right) */}
-        <div className="mt-4 grid w-full max-w-md grid-cols-2 gap-3">
-          <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-            <Users className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-            <div className="text-center">
-              <p className="text-lg font-black leading-none text-white">{Number(followers || 0).toLocaleString()}</p>
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-white/50">Followers</p>
-            </div>
-          </div>
+        {/* Sales */}
+        <div className="mt-4 w-full max-w-md">
           <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
             <TrendingUp className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-accent, #f5c518)' }} />
             <div className="text-center">
