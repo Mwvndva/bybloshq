@@ -6,7 +6,6 @@ import {
     getLogisticsMe,
     loginLogisticsPartner,
     logoutLogisticsPartner,
-    postLogisticsLocation,
     updateLogisticsLegStatus
 } from '../../domains/logistics/logistics.controller.js';
 import { protectLogistics } from '../middleware/logisticsAuth.js';
@@ -20,6 +19,5 @@ router.get('/me', protectLogistics, getLogisticsMe);
 
 router.get('/requests', protectLogistics, getLogisticsDashboardRequests);
 router.patch('/requests/:requestId/legs/:legType/status', protectLogistics, validate(V.updateLegStatus), updateLogisticsLegStatus);
-router.post('/requests/:requestId/location', protectLogistics, validate(V.updateLocation), postLogisticsLocation);
 
 export default router;

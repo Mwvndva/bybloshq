@@ -6,12 +6,12 @@ import { sanitizeBuyer, sanitizeOrder, sanitizeWithdrawalRequest } from '../../.
 import logger from '../../../shared/utils/logger.js';
 import AuthService from '../../identity/auth/auth.service.js';
 import { setAuthCookie } from '../../../shared/utils/cookie.utils.js';
-import { signToken, verifyToken, getTokenFromRequest } from '../../../shared/utils/jwt.js';
+import { signToken, verifyToken } from '../../../shared/utils/jwt.js';
 import { generateRefreshToken } from '../../../shared/utils/refreshToken.js';
+import { revokeSessionTokens, clearAuthCookies } from '../../../shared/utils/sessionRevocation.js';
 import OrderModel from "../../orders/order/order.model.js";
 import { OrderStatus } from "../../../shared/constants/enums.js";
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
-import tokenBlacklist from '../../identity/tokens/tokenBlacklist.service.js';
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res, next) => {
@@ -63,27 +63,9 @@ const createSendToken = (data, statusCode, req, res, next) => {
 };
 
 export const logout = async (req, res) => {
-  // Blacklist the current token so it can't be reused
-  const token = getTokenFromRequest(req);
-  if (token) {
-    try {
-      const decoded = verifyToken(token);
-      await tokenBlacklist.addToken(token, decoded.exp);
-    } catch (err) {
-      // Token may be invalid/expired — that's fine, just clear cookies
-      logger.debug('[LOGOUT] Could not blacklist token:', err.message);
-    }
-  }
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    expires: new Date(0),
-    path: '/'
-  };
-  res.cookie('jwt', '', cookieOptions);
-  res.cookie('token', '', cookieOptions);
+  // Revoke BOTH the access token and the refresh token so the session truly ends.
+  await revokeSessionTokens(req);
+  clearAuthCookies(res);
   res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
@@ -256,14 +238,27 @@ export const verifyEmail = async (req, res, next) => {
 
     const result = await AuthService.verifyEmail(email, token)
 
+    // Verification doubles as login (magic-link): a valid token proves the person
+    // controls this email, so issue a buyer session and land them signed in — the
+    // Android deep-link uses this to drop straight into the orders tab. (verifyEmail
+    // throws on an invalid/expired token, so reaching here means it was valid.)
+    let sessionToken = null
+    if (result.user?.id && result.user.role === 'buyer') {
+      sessionToken = signToken(result.user.id, 'buyer')
+      setAuthCookie(res, sessionToken)
+    }
+
     return res.status(200).json({
       status: 'success',
-      message: result.alreadyVerified
-        ? 'Your email is already verified. You can log in.'
-        : 'Email verified successfully! You can now log in.',
+      message: sessionToken
+        ? 'Email verified — you are now signed in.'
+        : (result.alreadyVerified
+          ? 'Your email is already verified. You can log in.'
+          : 'Email verified successfully! You can now log in.'),
       data: {
         alreadyVerified: result.alreadyVerified,
-        email: result.user.email
+        email: result.user.email,
+        ...(sessionToken ? { token: sessionToken, autoLoggedIn: true } : {})
       }
     })
   } catch (error) {

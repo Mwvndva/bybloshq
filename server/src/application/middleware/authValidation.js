@@ -32,10 +32,10 @@ export const registrationSchema = z.object({
 }).refine((data) => data.mobilePayment || data.mobile_payment, {
     message: "Mobile payment number is required",
     path: ["mobile_payment"],
-}).refine((data) => data.whatsappNumber || data.whatsapp_number, {
-    message: "WhatsApp number is required",
-    path: ["whatsapp_number"],
 });
+// NOTE: WhatsApp is no longer a notification channel (notifications go via in-app /
+// push / email); it's only an optional alternative contact, so it is NOT required
+// at registration.
 
 export const loginSchema = z.object({
     email: z.string().email('Please provide a valid email address').trim().toLowerCase(),

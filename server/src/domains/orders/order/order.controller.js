@@ -19,32 +19,7 @@ import paymentService from '../../payments/payments/payment.service.js';
 import OrderHubDropoffService from './orderHubDropoff.service.js';
 import { generateSignedDownloadUrl } from '../../../shared/utils/cloudinary.js';
 
-import { getLiveLocationForOrder } from '../../logistics/logisticsLiveLocation.service.js';
-
 const OrderService = CoreOrderService;
-
-/**
- * Phase-scoped live courier location for the buyer or seller on this order.
- * Returns the last-known point only while the caller's own leg is in motion
- * (buyer ↔ delivery out-for-delivery, seller ↔ pickup), so neither party sees
- * the courier at the other's address.
- */
-export const getOrderLiveLocation = async (req, res, next) => {
-    try {
-        const result = await getLiveLocationForOrder({
-            orderId: req.params.id,
-            buyerId: req.user.buyerId,
-            sellerId: req.user.sellerId
-        });
-
-        res.status(200).json({
-            status: 'success',
-            data: result
-        });
-    } catch (error) {
-        next(error);
-    }
-};
 
 export const getSellerOrders = async (req, res) => {
     try {

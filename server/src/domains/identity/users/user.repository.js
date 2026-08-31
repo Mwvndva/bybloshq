@@ -57,7 +57,7 @@ export async function findSellerAuthProfile(userId) {
     text: `
       SELECT 
         u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
-        s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings
+        s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.status, s.referral_code, s.total_referral_earnings
       FROM users u 
       LEFT JOIN sellers s ON u.id = s.user_id 
       WHERE u.id = $1
