@@ -1,4 +1,4 @@
-import { query } from '../src/config/database.js';
+import { query } from '../src/infrastructure/database/database.js';
 
 async function updateDashboardStats(organizerId) {
   try {

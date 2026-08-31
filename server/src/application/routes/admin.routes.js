@@ -4,9 +4,7 @@ import express from 'express';
 import * as adminController from '../../domains/identity/admin/admin.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
-import { getTokenFromRequest, verifyToken } from '../../shared/utils/jwt.js';
-import tokenBlacklist from '../../domains/identity/tokens/tokenBlacklist.service.js';
-import logger from '../../shared/utils/logger.js';
+import { revokeSessionTokens, clearAuthCookies } from '../../shared/utils/sessionRevocation.js';
 
 const router = express.Router();
 
@@ -14,27 +12,9 @@ const router = express.Router();
 router.post('/login', authLimiter, validate(V.login), adminController.adminLogin);
 
 router.post('/logout', async (req, res) => {
-    // Blacklist the current token so it can't be reused
-    const token = getTokenFromRequest(req);
-    if (token) {
-        try {
-            const decoded = verifyToken(token);
-            await tokenBlacklist.addToken(token, decoded.exp);
-        } catch (err) {
-            // Token may be invalid/expired — that's fine, just clear cookies
-            logger.debug('[LOGOUT] Could not blacklist admin token:', err.message);
-        }
-    }
-
-    const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        expires: new Date(0),
-        path: '/'
-    };
-    res.cookie('jwt', '', cookieOptions);
-    res.cookie('token', '', cookieOptions);
+    // Revoke BOTH the access token and the refresh token so the session truly ends.
+    await revokeSessionTokens(req);
+    clearAuthCookies(res);
     res.status(200).json({ status: 'success', message: 'Admin logged out' });
 });
 

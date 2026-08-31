@@ -31,6 +31,7 @@ function feedSend(recipientUserId, recipientRole, notif) {
  */
 eventBus.on(AppEvents.PAYMENT.COMPLETED, async ({ eventId, payment, order }) => {
     logger.info(`[Event:PaymentCompleted] Payment ${payment.id} for Order ${order?.id}`);
+
     const deliveryResult = await LogisticsRequestService.activateDoorDeliveryAfterPayment({
         payment,
         order,

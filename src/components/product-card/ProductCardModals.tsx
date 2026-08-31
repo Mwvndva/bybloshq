@@ -32,6 +32,7 @@ interface ProductCardModalsProps {
     invoiceId: string | null;
     isGuest: boolean;
     email?: string;
+    checkoutToken?: string | null;
     paymentSummary?: {
       productAmount?: number;
       deliveryFee?: number;

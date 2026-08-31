@@ -51,14 +51,12 @@ export const findSellerByUserId = async (userId) => {
       whatsapp_number AS "whatsappNumber", 
       city,
       location,
-      banner_image AS "bannerImage",
       bio,
       avatar_url AS "avatarUrl",
       theme,
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
-      client_count AS "clientCount",
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
@@ -97,7 +95,6 @@ export const findSellerByShopName = async (shopName) => {
       physical_address AS "physicalAddress",
       latitude,
       longitude,
-      banner_image AS "bannerImage",
       bio,
       avatar_url AS "avatarUrl",
       theme,
@@ -108,7 +105,6 @@ export const findSellerByShopName = async (shopName) => {
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
-      client_count AS "clientCount",
       created_at AS "createdAt"
     FROM sellers 
     WHERE COALESCE(status, 'active') = 'active'
@@ -130,8 +126,7 @@ export const findSellerByShopName = async (shopName) => {
   const result = await query(queryText, [rawInput, slugified, unslugified]);
 
   logger.debug('Query result details', {
-    rowCount: result.rowCount,
-    hasBannerImage: !!result.rows[0]?.banner_image
+    rowCount: result.rowCount
   });
 
   return result.rows[0];
@@ -157,7 +152,6 @@ export const findSellerById = async (id) => {
       physical_address AS "physicalAddress",
       latitude,
       longitude,
-      banner_image AS "bannerImage",
       bio,
       avatar_url AS "avatarUrl",
       theme, 
@@ -168,7 +162,6 @@ export const findSellerById = async (id) => {
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
-      client_count AS "clientCount",
       created_at AS "createdAt", 
       updated_at AS "updatedAt"
      FROM sellers 
@@ -189,7 +182,12 @@ export const updateSeller = async (id, updates) => {
     throw new Error('Seller ID is required for update');
   }
 
-  const { fullName, shopName, email, whatsappNumber, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link, tiktokLink, tiktok_link, facebookLink, facebook_link, creatorCommissionRate, creator_commission_rate } = updates || {};
+  // NOTE: `email` is intentionally NOT updatable here. Email is the auth identity,
+  // owned by the users table (login uses users.email); sellers.email is seeded in
+  // sync at registration. Allowing a profile PATCH to change sellers.email alone
+  // desynced it from users.email. Email changes must go through a verified auth
+  // flow that updates both, not this profile-update path.
+  const { fullName, shopName, whatsappNumber, password, city, location, theme, instagramLink, instagram_link, tiktokLink, tiktok_link, facebookLink, facebook_link, creatorCommissionRate, creator_commission_rate } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -204,12 +202,6 @@ export const updateSeller = async (id, updates) => {
     paramCount++;
     updatesList.push(`shop_name = $${paramCount}`);
     values.push(shopName);
-  }
-
-  if (email) {
-    paramCount++;
-    updatesList.push(`email = $${paramCount}`);
-    values.push(email);
   }
 
   if (whatsappNumber) {
@@ -233,14 +225,6 @@ export const updateSeller = async (id, updates) => {
   }
 
 
-
-  // Handle banner image (accept both bannerImage and banner_image for backward compatibility)
-  const bannerImageToUpdate = bannerImage || banner_image;
-  if (bannerImageToUpdate) {
-    paramCount++;
-    updatesList.push(`banner_image = $${paramCount}`);
-    values.push(bannerImageToUpdate);
-  }
 
   // Handle theme update
   if (theme !== undefined) {
@@ -341,7 +325,6 @@ export const updateSeller = async (id, updates) => {
       whatsapp_number AS "whatsappNumber", 
       city, 
       location, 
-      banner_image AS "bannerImage",
       theme, 
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
@@ -350,7 +333,6 @@ export const updateSeller = async (id, updates) => {
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
-      client_count AS "clientCount",
       physical_address AS "physicalAddress",
       latitude,
       longitude,
@@ -380,147 +362,6 @@ export const updateSeller = async (id, updates) => {
 };
 
 
-export const becomeClient = async (sellerId, userId) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1. Check if relationship already exists
-    const check = await client.query(
-      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
-      [sellerId, userId]
-    );
-
-    if (check.rowCount > 0) {
-      await client.query('ROLLBACK');
-      const countResult = await pool.query(
-        'SELECT COUNT(*)::int AS count FROM seller_clients WHERE seller_id = $1',
-        [sellerId]
-      );
-      return { clientCount: countResult.rows[0]?.count || 0, alreadyClient: true };
-    }
-
-    // 2. Insert into seller_clients
-    await client.query(
-      'INSERT INTO seller_clients (seller_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [sellerId, userId]
-    );
-
-    // 3. Increment/reconcile client_count in sellers
-    const countResult = await client.query(
-      'SELECT COUNT(*)::int AS count FROM seller_clients WHERE seller_id = $1',
-      [sellerId]
-    );
-    const newCount = countResult.rows[0]?.count || 0;
-    await client.query(
-      'UPDATE sellers SET client_count = $1 WHERE id = $2',
-      [newCount, sellerId]
-    );
-
-    await client.query('COMMIT');
-    return { clientCount: newCount, alreadyClient: false };
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-export const removeClient = async (sellerId, userId) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1. Remove from seller_clients
-    await client.query(
-      'DELETE FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
-      [sellerId, userId]
-    );
-
-    // 2. Decrement/reconcile client_count in sellers
-    const countResult = await client.query(
-      'SELECT COUNT(*)::int AS count FROM seller_clients WHERE seller_id = $1',
-      [sellerId]
-    );
-    const newCount = countResult.rows[0]?.count || 0;
-    await client.query(
-      'UPDATE sellers SET client_count = $1 WHERE id = $2',
-      [newCount, sellerId]
-    );
-
-    await client.query('COMMIT');
-    return { clientCount: newCount, wasClient: true };
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-export const findSellersByUserId = async (userId, options = {}) => {
-  const page = Math.max(1, parseInt(options.page || '1', 10) || 1);
-  const pageSize = Math.min(50, Math.max(1, parseInt(options.limit || options.pageSize || '24', 10) || 24));
-  const offset = (page - 1) * pageSize;
-  const result = await query(
-    `SELECT 
-      s.id, 
-      s.full_name AS "fullName", 
-      s.shop_name AS "shopName", 
-      s.slug,
-      s.city, 
-      s.location, 
-      s.physical_address AS "physicalAddress",
-      s.latitude,
-      s.longitude,
-      s.banner_image AS "bannerImage",
-      s.bio,
-      s.avatar_url AS "avatarUrl",
-      s.theme,
-      s.instagram_link AS "instagramLink",
-      COALESCE(sc_counts.count, s.client_count, 0) AS "clientCount",
-      COALESCE(w.total_wishlist_count, 0) AS "totalWishlistCount",
-      COALESCE(w.total_wishlist_count, 0) AS "wishlistCount",
-      COALESCE(k.knock_count, 0) AS "knockCount",
-      s.created_at AS "createdAt",
-      COUNT(*) OVER() AS "totalCount"
-     FROM sellers s
-     JOIN seller_clients sc ON s.id = sc.seller_id
-     LEFT JOIN LATERAL (
-       SELECT COUNT(*)::int AS count
-       FROM seller_clients sc2
-       WHERE sc2.seller_id = s.id
-     ) sc_counts ON true
-     LEFT JOIN LATERAL (
-       SELECT COUNT(wl.id)::int AS total_wishlist_count
-       FROM products p
-       LEFT JOIN wishlists wl ON p.id = wl.product_id
-       WHERE p.seller_id = s.id
-     ) w ON true
-     LEFT JOIN LATERAL (
-       SELECT COUNT(*)::int AS knock_count
-       FROM seller_knocks sk
-       WHERE sk.seller_id = s.id
-         AND sk.created_at >= NOW() - INTERVAL '24 hours'
-     ) k ON true
-     WHERE sc.user_id = $1
-     ORDER BY sc.created_at DESC, s.id ASC
-     LIMIT $2 OFFSET $3`,
-    [userId, pageSize, offset]
-  );
-  return {
-    sellers: result.rows,
-    pagination: {
-      page,
-      pageSize,
-      total: parseInt(result.rows[0]?.totalCount || '0', 10),
-      hasMore: offset + result.rows.length < parseInt(result.rows[0]?.totalCount || '0', 10)
-    }
-  };
-};
-
-
 // Soft-delete a seller: block if they still hold a balance, otherwise anonymise
 // PII, hide the shop (status='deleted' + tombstoned unique name/slug), and
 // deactivate the auth account. Orders/withdrawals are preserved via FK.
@@ -540,7 +381,7 @@ export const softDeleteSeller = async (sellerId, userId) => {
     await client.query(
       `UPDATE sellers SET status = 'deleted', full_name = 'Deleted user', email = $1,
          shop_name = $2, slug = $3, whatsapp_number = NULL, instagram_link = NULL,
-         tiktok_link = NULL, facebook_link = NULL, banner_image = NULL,
+         tiktok_link = NULL, facebook_link = NULL,
          city = NULL, location = NULL, physical_address = NULL,
          latitude = NULL, longitude = NULL, updated_at = NOW() WHERE id = $4`,
       [tombstone, `deleted-shop-${tag}`, `deleted-shop-${tag}`, sellerId]

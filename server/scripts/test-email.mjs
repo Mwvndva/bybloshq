@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { sendEmail, testUtils as _test } from '../src/utils/email.js';
+import { sendEmail } from '../src/shared/utils/email.js';
 
 // Get current module path
 const __filename = fileURLToPath(import.meta.url);
@@ -154,9 +154,6 @@ async function runTests() {
   console.log('🚀 Starting Email System Tests');
   console.log(`📧 Test emails will be sent to: ${TEST_EMAIL}`);
   console.log('='.repeat(60) + '\n');
-  
-  // Clear caches before tests
-  _test.clearCaches();
   
   // Run tests
   const testResults = [
