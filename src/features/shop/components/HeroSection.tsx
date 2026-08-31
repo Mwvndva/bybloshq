@@ -63,7 +63,7 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
               <Button
                 className="group w-full rounded-full bg-yellow-400 px-5 py-4 text-sm font-medium text-black shadow-[0_12px_28px_rgba(245,197,24,0.22)] transition-all duration-300 hover:bg-yellow-300 sm:w-auto sm:px-8 sm:py-5 sm:text-base"
               >
-                Start Selling
+                Click here to add business
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>

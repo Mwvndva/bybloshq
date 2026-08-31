@@ -1,6 +1,7 @@
 import HeroSection from '@/features/shop/components/HeroSection';
 import Footer from '@/shared/components/Footer';
 import { Button } from '@/shared/ui/button';
+import { AddBusinessCard } from '@/features/shop/components/AddBusinessCard';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
 import { Link, Navigate } from 'react-router-dom';
@@ -20,8 +21,13 @@ const NativeAppHome = () => (
         Creator
       </Button>
     </Link>
-    <main className="flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)]">
-      <div className="overflow-hidden">
+    <main className="flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)] pb-28">
+      {/* The centre logo is the buyer entry point — tapping it opens buyer login. */}
+      <Link
+        to="/buyer/login"
+        aria-label="Tap the Byblos logo to get access"
+        className="overflow-hidden rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400/70"
+      >
         <img
           src="/byblos-mark-dark.png"
           alt="Byblos logo"
@@ -32,27 +38,18 @@ const NativeAppHome = () => (
           alt="Byblos logo"
           className="block dark:hidden h-auto w-[min(68vw,260px)] object-cover"
         />
-      </div>
+      </Link>
 
       <p className="text-xs font-semibold tracking-wide text-slate-600 dark:text-white/80 max-w-[280px] leading-relaxed">
         The safer way to buy from businesses on social media
       </p>
 
-      <div className="flex w-full flex-col gap-3">
-
-        <Link to="/buyer/login" className="w-full">
-          <Button className="h-[52px] w-full rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-white/[0.06] text-sm font-semibold text-slate-900 dark:text-white shadow-sm dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)] hover:bg-slate-50 dark:hover:bg-white/10">
-            Browse trusted shops
-          </Button>
-        </Link>
-
-        <Link to="/seller/register" className="w-full">
-          <Button className="h-[52px] w-full rounded-full bg-yellow-400 text-sm font-semibold text-black shadow-[0_14px_30px_rgba(245,197,24,0.24)] hover:bg-yellow-300">
-            Start selling
-          </Button>
-        </Link>
-      </div>
+      <p className="text-[13px] font-bold tracking-wide text-slate-800 dark:text-white/90">
+        Tap logo to get access
+      </p>
     </main>
+
+    <AddBusinessCard />
   </div>
 );
 

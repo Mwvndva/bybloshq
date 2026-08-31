@@ -16,6 +16,9 @@ export interface ApiPublicSeller {
   city?: string;
   website?: string;
   socialMedia?: Record<string, string>;
+  instagramLink?: string | null;
+  tiktokLink?: string | null;
+  facebookLink?: string | null;
   shopName?: string;
   shop_name?: string;
   slug?: string | null;

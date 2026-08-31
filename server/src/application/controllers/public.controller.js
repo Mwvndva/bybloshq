@@ -279,6 +279,8 @@ export const getSellers = async (req, res) => {
       hasPhysicalShop: Boolean(row.physical_address || (row.latitude && row.longitude)),
       latitude: row.latitude,
       longitude: row.longitude,
+      instagramLink: row.instagramLink || null,
+      tiktokLink: row.tiktokLink || null,
       totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
       wishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
       knockCount: parseInt(row.knock_count, 10) || 0,
