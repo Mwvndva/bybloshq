@@ -79,12 +79,17 @@ export const buyerRoutes = [
         ),
       },
       {
-        path: 'shops',
+        path: 'notifications',
         element: (
           <Suspense fallback={<RouteFallback />}>
             <BuyerDashboard />
           </Suspense>
         ),
+      },
+      {
+        // "My Shops" was removed (spec §5); keep the old path working by redirecting.
+        path: 'shops',
+        element: <Navigate to="/buyer/dashboard" replace />,
       },
       {
         path: 'wishlist',
