@@ -491,7 +491,7 @@ class Order {
       LEFT JOIN sellers s ON o.seller_id = s.id
       LEFT JOIN buyers b ON o.buyer_id = b.id
       ${whereClause}
-      GROUP BY o.id, s.id, sc.user_id
+      GROUP BY o.id, s.id
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
