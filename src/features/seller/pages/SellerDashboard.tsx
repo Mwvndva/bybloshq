@@ -244,7 +244,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         <div className="mb-6 sm:mb-7 md:mb-8">
           <SellerProfileHero
             sellerProfile={(liveSellerProfile as unknown as typeof sellerProfile) || sellerProfile}
-            sales={analytics.totalSales || 0}
             shopUsername={getShopUsername(sellerProfile?.shopName)}
             onCopyShopLink={handleCopyShopLink}
             canEdit

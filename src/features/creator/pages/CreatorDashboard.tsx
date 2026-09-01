@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, LogOut, Trophy, Wallet } from 'lucide-react';
+import { Loader2, LogOut, Wallet } from 'lucide-react';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
 import { toast } from 'sonner';
@@ -271,24 +271,6 @@ export default function CreatorDashboard() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500 dark:text-yellow-300" />
-            <h2 className="text-base font-black text-slate-950 dark:text-white">How you rank</h2>
-          </div>
-          <div className="mt-4 divide-y divide-slate-200 dark:divide-white/10 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
-            {(dashboard?.leaderboard || []).map((item, index: number) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 bg-white dark:bg-black/25 p-3 text-slate-950 dark:text-white">
-                <div>
-                  <p className="font-black">#{index + 1} {item.first_name} {item.last_name}</p>
-                  <p className="text-xs font-semibold text-slate-500 dark:text-white/40">{item.total_sales || 0} sales</p>
-                </div>
-                <p className="font-black text-yellow-600 dark:text-yellow-200">{money(item.total_income)}</p>
-              </div>
-            ))}
           </div>
         </section>
 

@@ -1,7 +1,7 @@
 import type { Product, Theme } from '@/shared/types';
 export type { Theme };
 import type { ApiSellerProduct, ApiProduct } from '@/shared/types/api/product';
-type ProductWithApiFields = Product & Partial<ApiSellerProduct> & Partial<ApiProduct>;
+export type ProductWithApiFields = Product & Partial<ApiSellerProduct> & Partial<ApiProduct>;
 
 
 export interface ProductCardThemeClasses {

@@ -279,9 +279,19 @@ export async function normalizeOrderInput(req) {
 
 
     // 5. Final Assembly (PIN-02: UNIFIED ORDER CONTEXT)
+    // Per-seller bag: normalize body.items into [{ productId, quantity }] for the
+    // checkout service. Absent for single-product checkout (falls back to service).
+    const bagItems = Array.isArray(body.items) && body.items.length > 0
+        ? body.items.map((it) => ({
+            productId: it.productId ?? it.product_id ?? it.id,
+            quantity: Math.max(1, Number.parseInt(it.quantity ?? 1, 10) || 1),
+        }))
+        : undefined;
+
     return {
         buyer,
         service,
+        items: bagItems,
         location,
         payment: {
             status: 'pending',
