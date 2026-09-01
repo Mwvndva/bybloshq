@@ -7,6 +7,7 @@ import { JOURNEY_STEPS, type Journey } from '../utils/mzigoJourney';
  * yellow, and a delayed/attention journey tints the current step.
  */
 export function MzigoJourneyStepper({ journey, compact = false }: { journey: Journey; compact?: boolean }) {
+  const steps = journey.steps || JOURNEY_STEPS;
   const currentTone = journey.state === 'attention'
     ? 'border-red-400 bg-red-400 text-black'
     : journey.state === 'delayed'
@@ -15,7 +16,7 @@ export function MzigoJourneyStepper({ journey, compact = false }: { journey: Jou
 
   return (
     <div className="flex items-center">
-      {JOURNEY_STEPS.map((step, index) => {
+      {steps.map((step, index) => {
         const isDone = index < journey.stepIndex;
         const isCurrent = index === journey.stepIndex;
         const dotClass = isDone
@@ -44,7 +45,7 @@ export function MzigoJourneyStepper({ journey, compact = false }: { journey: Jou
               </span>
               {!compact && (
                 <span
-                  className={`text-[10px] font-semibold ${
+                  className={`text-[10px] font-semibold text-center ${
                     isCurrent ? 'text-white' : isDone ? 'text-white/70' : 'text-white/35'
                   }`}
                 >
@@ -52,7 +53,7 @@ export function MzigoJourneyStepper({ journey, compact = false }: { journey: Jou
                 </span>
               )}
             </div>
-            {index < JOURNEY_STEPS.length - 1 && (
+            {index < steps.length - 1 && (
               <span
                 className={`mx-1 h-0.5 flex-1 rounded-full ${
                   index < journey.stepIndex ? 'bg-yellow-400/60' : 'bg-white/10'

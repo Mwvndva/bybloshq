@@ -58,23 +58,10 @@ export interface ApiOrderLogisticsDeliveryLeg {
   destinationAddress?: string | null;
   destinationLat?: number | string | null;
   destinationLng?: number | string | null;
+  assignedAt?: string | null;
+  startedAt?: string | null;
   deadlineAt?: string | null;
   completedAt?: string | null;
-}
-
-export interface OrderLiveLocationPoint {
-  lat: number;
-  lng: number;
-  accuracy?: number | null;
-  heading?: number | null;
-  speed?: number | null;
-  updatedAt: string;
-}
-
-export interface OrderLiveLocation {
-  available: boolean;
-  phase: 'delivery' | 'pickup' | null;
-  location: OrderLiveLocationPoint | null;
 }
 
 export interface ApiOrderLogisticsTracking {

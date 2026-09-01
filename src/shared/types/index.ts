@@ -9,8 +9,6 @@ export type {
   ApiOrderSeller,
   ApiOrderLogisticsEvent,
   ApiOrderLogisticsDeliveryLeg,
-  OrderLiveLocationPoint,
-  OrderLiveLocation,
   ApiOrderLogisticsTracking,
   ApiShippingAddress,
 } from './api/order';

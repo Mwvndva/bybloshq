@@ -1,13 +1,6 @@
 import type { LogisticsLeg, LogisticsLegType, LogisticsLocation, LogisticsRequestCard, LogisticsStatusUpdate } from '@/features/logistics/api';
 import { DELIVERY_ACTIONS, PICKUP_ACTIONS } from '@/features/logistics/utils/mzigoDashboard.constants';
-
-// The backend tracks a package as two separate legs (pickup + delivery), each
-// with its own status machine. For a human that is one journey. This file
-// collapses both legs into a single linear story everyone can read at a glance:
-//
-//   Preparing  →  Picked up  →  On the way  →  Delivered
-//
-// with two overlays that can happen at any point: "Delayed" and "Needs attention".
+import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/shared/types';
 
 export type JourneyState = 'normal' | 'delayed' | 'attention';
 
@@ -16,22 +9,45 @@ export interface JourneyStep {
   label: string;
 }
 
-export const JOURNEY_STEPS: JourneyStep[] = [
+export const COURIER_JOURNEY_STEPS: JourneyStep[] = [
   { key: 'preparing', label: 'Preparing' },
   { key: 'picked_up', label: 'Picked up' },
   { key: 'on_the_way', label: 'On the way' },
   { key: 'delivered', label: 'Delivered' },
 ];
 
+export const PICKUP_JOURNEY_STEPS: JourneyStep[] = [
+  { key: 'order_paid', label: 'Order Paid' },
+  { key: 'preparing', label: 'Preparing' },
+  { key: 'ready_pickup', label: 'Ready for Pickup' },
+  { key: 'completed', label: 'Collected' },
+];
+
+export const DIGITAL_JOURNEY_STEPS: JourneyStep[] = [
+  { key: 'paid', label: 'Payment Confirmed' },
+  { key: 'ready', label: 'Download Ready' },
+];
+
+export const SERVICE_JOURNEY_STEPS: JourneyStep[] = [
+  { key: 'booked', label: 'Booking Paid' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'completed', label: 'Completed' },
+];
+
+export const JOURNEY_STEPS: JourneyStep[] = COURIER_JOURNEY_STEPS;
+
 export interface Journey {
-  /** 0-based index into JOURNEY_STEPS for the step the package is currently on. */
+  /** 0-based index into steps for the step currently active. */
   stepIndex: number;
+  steps: JourneyStep[];
   state: JourneyState;
   /** Plain-language headline for the current situation. */
   label: string;
   /** One line of reassuring context under the headline. */
   detail: string;
   isDelivered: boolean;
+  isRiderMoving?: boolean;
+  percentProgress: number;
 }
 
 function has(status: string | null | undefined, ...needles: string[]) {
@@ -39,15 +55,21 @@ function has(status: string | null | undefined, ...needles: string[]) {
   return needles.some((needle) => value.includes(needle));
 }
 
-// Mirrors the server (logisticsLiveLocation.service.js): which leg statuses mean
-// the courier is actively in motion and worth live-tracking. Kept in sync so the
-// courier only broadcasts, and buyers/sellers only poll, when it's useful.
+/** Check whether rider has actively started moving on the delivery leg */
+export function isRiderMoving(deliveryLeg?: ApiOrderLogisticsDeliveryLeg | LogisticsLeg | null) {
+  if (!deliveryLeg) return false;
+  const status = String(deliveryLeg.status || '').toLowerCase();
+  return status === 'out_for_delivery' || Boolean((deliveryLeg as any).startedAt && status !== 'delivered' && status !== 'failed');
+}
+
+/** Check whether pickup is actively in progress */
 export function isPickupTrackable(status: string | null | undefined) {
   const s = String(status || '').toLowerCase();
   if (/picked|dropped|failed|cancelled/.test(s)) return false;
   return /assigned|started|out_for_pickup|en_route/.test(s);
 }
 
+/** Check whether delivery is actively in transit */
 export function isDeliveryTrackable(status: string | null | undefined) {
   return /out_for_delivery|out for delivery/.test(String(status || '').toLowerCase());
 }
@@ -57,7 +79,7 @@ export function isRequestTrackable(request: LogisticsRequestCard) {
   return isDeliveryTrackable(request.deliveryLeg?.status) || isPickupTrackable(request.pickupLeg?.status);
 }
 
-/** Collapse pickup + delivery leg statuses into one linear journey. */
+/** Collapse pickup + delivery leg statuses into one linear courier journey. */
 export function deriveJourney(request: LogisticsRequestCard): Journey {
   return deriveJourneyFromStatuses(
     request.pickupLeg?.status ?? null,
@@ -67,9 +89,7 @@ export function deriveJourney(request: LogisticsRequestCard): Journey {
 }
 
 /**
- * Shared journey logic keyed only on the two leg statuses, so both the courier
- * dashboard (LogisticsRequestCard) and the buyer/seller order view (ApiOrder,
- * a different leg shape) can render the same story.
+ * Shared journey logic for courier door deliveries.
  */
 export function deriveJourneyFromStatuses(
   pickup: string | null | undefined,
@@ -79,19 +99,26 @@ export function deriveJourneyFromStatuses(
   const isCompleted = completed || has(delivery, 'delivered');
   const failed = has(pickup, 'failed') || has(delivery, 'failed');
   const delayed = has(pickup, 'delayed') || has(delivery, 'delayed');
+  const riderInMotion = has(delivery, 'out_for_delivery', 'out for');
 
   let stepIndex = 0;
+  let percentProgress = 15;
+
   if (isCompleted || has(delivery, 'delivered')) {
     stepIndex = 3;
-  } else if (has(delivery, 'out_for_delivery', 'out for')) {
+    percentProgress = 100;
+  } else if (riderInMotion) {
     stepIndex = 2;
+    percentProgress = 75;
   } else if (
     has(pickup, 'picked_up', 'dropped', 'hub')
     || has(delivery, 'courier', 'assigned')
   ) {
     stepIndex = 1;
+    percentProgress = 45;
   } else {
     stepIndex = 0;
+    percentProgress = 15;
   }
 
   let state: JourneyState = 'normal';
@@ -103,24 +130,119 @@ export function deriveJourneyFromStatuses(
   const label = journeyLabel(stepIndex, state);
   const detail = journeyDetail(stepIndex, state);
 
-  return { stepIndex, state, label, detail, isDelivered };
+  return {
+    stepIndex,
+    steps: COURIER_JOURNEY_STEPS,
+    state,
+    label,
+    detail,
+    isDelivered,
+    isRiderMoving: riderInMotion,
+    percentProgress,
+  };
 }
 
 function journeyLabel(stepIndex: number, state: JourneyState) {
   if (state === 'attention') return 'Needs attention';
   if (state === 'delayed') return 'Running late';
-  return JOURNEY_STEPS[stepIndex]?.label ?? 'Preparing';
+  return COURIER_JOURNEY_STEPS[stepIndex]?.label ?? 'Preparing';
 }
 
 function journeyDetail(stepIndex: number, state: JourneyState) {
   if (state === 'attention') return 'A pickup or delivery step could not be completed. Follow up with the courier.';
-  if (state === 'delayed') return 'The package is taking longer than the 24 hour window. It is still on track.';
+  if (state === 'delayed') return 'The package is taking longer than usual. It is still on track.';
   switch (stepIndex) {
-    case 3: return 'Delivered and checked against the order.';
-    case 2: return 'The courier is on the way to the buyer.';
-    case 1: return 'Mzigo Ego has the package and is arranging delivery.';
-    default: return 'Waiting for the seller handover before pickup.';
+    case 3: return 'Delivered to destination and checked against order.';
+    case 2: return 'The rider is actively on the way to your delivery address.';
+    case 1: return 'Mzigo Ego has collected the package and is arranging delivery.';
+    default: return 'Seller is preparing your package for Mzigo courier pickup.';
   }
+}
+
+/**
+ * Universal journey resolver supporting all fulfillment types:
+ * - COURIER (door delivery)
+ * - BUYER_TO_SELLER (pickup)
+ * - DIGITAL (instant access)
+ * - SERVICE (booking)
+ */
+export function deriveOrderJourney(order: ApiOrder): Journey {
+  const fulfillmentType = String(order.fulfillment_type || '').toUpperCase();
+  const isDigital = Boolean(order.isDigital || order.items?.some((i) => i.productType === 'digital' || i.isDigital));
+  const isService = Boolean(order.items?.some((i) => i.productType === 'service'));
+  const hasLogistics = Boolean(order.logistics?.deliveryLeg || order.logistics?.pickupLeg);
+
+  if (isDigital) {
+    const isReady = order.status === 'PAID' || order.status === 'COMPLETED' || order.status === 'READY_FOR_BUYER';
+    return {
+      stepIndex: isReady ? 1 : 0,
+      steps: DIGITAL_JOURNEY_STEPS,
+      state: 'normal',
+      label: isReady ? 'Download Ready' : 'Payment Processing',
+      detail: isReady ? 'Your digital purchase is ready for instant download.' : 'Verifying payment for your digital items.',
+      isDelivered: isReady,
+      percentProgress: isReady ? 100 : 50,
+    };
+  }
+
+  if (isService) {
+    const isCompleted = order.status === 'COMPLETED';
+    const isFulfilling = order.status === 'FULFILLING' || order.status === 'PROCESSING';
+    const stepIndex = isCompleted ? 2 : isFulfilling ? 1 : 0;
+    return {
+      stepIndex,
+      steps: SERVICE_JOURNEY_STEPS,
+      state: 'normal',
+      label: isCompleted ? 'Completed' : isFulfilling ? 'In Progress' : 'Booking Confirmed',
+      detail: isCompleted
+        ? 'Service rendered and confirmed.'
+        : isFulfilling
+          ? 'Seller is currently providing the booked service.'
+          : 'Service booking is confirmed and scheduled.',
+      isDelivered: isCompleted,
+      percentProgress: isCompleted ? 100 : isFulfilling ? 60 : 25,
+    };
+  }
+
+  if (fulfillmentType === 'BUYER_TO_SELLER' || (!hasLogistics && fulfillmentType !== 'COURIER')) {
+    const isCompleted = order.status === 'COMPLETED';
+    const isReady = order.status === 'READY_FOR_BUYER' || order.status === 'COLLECTION_PENDING';
+    const isFulfilling = order.status === 'FULFILLING' || order.status === 'PROCESSING';
+
+    const stepIndex = isCompleted ? 3 : isReady ? 2 : isFulfilling ? 1 : 0;
+    return {
+      stepIndex,
+      steps: PICKUP_JOURNEY_STEPS,
+      state: 'normal',
+      label: isCompleted
+        ? 'Collected'
+        : isReady
+          ? 'Ready for Pickup'
+          : isFulfilling
+            ? 'Preparing Order'
+            : 'Order Placed',
+      detail: isCompleted
+        ? 'Order collected from shop and confirmed.'
+        : isReady
+          ? 'Your order is ready for pickup at the seller\'s shop location.'
+          : isFulfilling
+            ? 'Seller is preparing your items for collection.'
+            : 'Payment confirmed. Waiting for seller to begin preparation.',
+      isDelivered: isCompleted,
+      percentProgress: isCompleted ? 100 : isReady ? 75 : isFulfilling ? 40 : 15,
+    };
+  }
+
+  // Default to Courier Journey
+  const pickupLeg = order.logistics?.pickupLeg;
+  const deliveryLeg = order.logistics?.deliveryLeg;
+  const isOrderCompleted = order.status === 'COMPLETED';
+
+  return deriveJourneyFromStatuses(
+    pickupLeg?.status,
+    deliveryLeg?.status,
+    isOrderCompleted || order.logistics?.status === 'completed',
+  );
 }
 
 export interface NextAction {
@@ -130,9 +252,7 @@ export interface NextAction {
 }
 
 /**
- * The single "next thing the courier does". Pickup is finished once the package
- * is picked up / dropped at the hub, after which the delivery leg drives the
- * action. Returns the forward action first, then any issue actions (fail/delay).
+ * The single "next thing the courier does".
  */
 export function courierActions(request: LogisticsRequestCard): {
   legType: LogisticsLegType;
@@ -173,15 +293,13 @@ export function courierActions(request: LogisticsRequestCard): {
     label: action.label,
   }));
 
-  // Forward actions read as progress; "Mark failed"/"Mark delayed" are issue
-  // actions we push behind. The forward action is always first in the maps.
   const secondary = mapped.filter((action) => /fail|delay/i.test(action.label));
   const primary = mapped.find((action) => !/fail|delay/i.test(action.label)) || null;
 
   return { legType: chosen.legType, leg: chosen.leg, primary, secondary };
 }
 
-/** Best single map link for the package's route: seller pickup → buyer delivery. */
+/** Route link to open in Google Maps */
 export function routeLink(request: LogisticsRequestCard): { href: string; label: string } | null {
   const origin: LogisticsLocation | null =
     request.pickupLeg?.origin
@@ -198,7 +316,6 @@ export function routeLink(request: LogisticsRequestCard): { href: string; label:
       label: 'Open route',
     };
   }
-  // Fall back to whichever single pin we have.
   const single = destination?.mapLink || origin?.mapLink || request.seller.mapLink;
   if (single) return { href: single, label: destination ? 'Open delivery map' : 'Open pickup map' };
   return null;
