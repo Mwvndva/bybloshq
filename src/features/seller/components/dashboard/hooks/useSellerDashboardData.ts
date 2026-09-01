@@ -27,10 +27,10 @@ export function useSellerDashboardData({ navigate, locationPathname, toast }: Us
   const analyticsQuery = useQuery({
     queryKey: sellerDashboardQueryKeys.analytics,
     queryFn: () => sellerApi.getAnalytics(),
-    staleTime: 60_000,
+    staleTime: 15_000,
     gcTime: 5 * 60_000,
     retry: 1,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true
   });
 
   const handleDashboardFetchError = useCallback((err: unknown) => {
