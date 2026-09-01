@@ -253,6 +253,26 @@ class NotificationService {
         return rowCount;
     }
 
+    async getUnreadCount({ userId, role = null }) {
+        if (!userId || !Number.isInteger(Number(userId)) || Number(userId) <= 0) {
+            return 0;
+        }
+        const normalizedRole = role ? normalizeRole(role) : null;
+        let query = `
+            SELECT COUNT(*)::int AS unread_count
+            FROM app_notifications
+            WHERE recipient_user_id = $1
+              AND read_at IS NULL
+        `;
+        const params = [Number(userId)];
+        if (normalizedRole) {
+            query += ' AND recipient_role = $2';
+            params.push(normalizedRole);
+        }
+        const { rows } = await pool.query(query, params);
+        return rows[0]?.unread_count || 0;
+    }
+
     // One-time re-engagement blast inviting existing buyers to become members.
     // Idempotent: skips buyers who already joined or already got the invite, so
     // it is safe to re-run. Deep-links to the dashboard with ?membership=1 which

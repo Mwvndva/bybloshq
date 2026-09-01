@@ -4,6 +4,7 @@ import {
   getUserOrders,
   getSellerOrders,
   getOrderById,
+  getOrderLiveEta,
   updateOrderStatus,
   confirmReceipt,
   cancelOrder,
@@ -71,6 +72,14 @@ router.get('/seller', getSellerOrders);
  *     summary: Get order by ID
  */
 router.get('/:id', getOrderById);
+
+/**
+ * @swagger
+ * /api/orders/{id}/live-eta:
+ *   get:
+ *     summary: Get live movement-based ETA for active order (Sanitized DTO)
+ */
+router.get('/:id/live-eta', getOrderLiveEta);
 
 /**
  * @swagger

@@ -44,6 +44,7 @@ export class UniversalHttpClient {
 
   private resolveRole(url: string): AppRole | undefined {
     const cleanUrl = url.split('?')[0];
+    if (/(^\/|^\/api\/)notifications\/logistics(\/|$)/.test(cleanUrl)) return 'logistics';
     if (/(^\/|^\/api\/)seller(\/|$)/.test(cleanUrl)) return 'seller';
     if (/(^\/|^\/api\/)creator(\/|$)/.test(cleanUrl)) return 'creator';
     if (/(^\/|^\/api\/)admin(\/|$)/.test(cleanUrl)) return 'admin';

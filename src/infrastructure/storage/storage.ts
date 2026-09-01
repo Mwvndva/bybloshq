@@ -34,28 +34,65 @@ export const storage = {
       }
     }
 
+    // 1. Try native Keystore-backed SecureStorage first
+    try {
+      const { SecureStorage } = await import('@aparajita/capacitor-secure-storage');
+      const val = await SecureStorage.getItem(key);
+      if (val !== null && val !== undefined) {
+        return String(val);
+      }
+    } catch (e: any) {
+      console.warn(`[Storage] Failed to read ${key} from SecureStorage`, e?.message || e);
+    }
+
+    // 2. Migration fallback: Check Preferences for previously stored tokens
     try {
       const { value } = await Preferences.get({ key });
-      return value || localStorage.getItem(key);
+      if (value !== null && value !== undefined) {
+        // Automatically migrate to SecureStorage and clean up unencrypted Preferences
+        try {
+          const { SecureStorage } = await import('@aparajita/capacitor-secure-storage');
+          await SecureStorage.setItem(key, value);
+          await Preferences.remove({ key });
+        } catch {
+          // ignore migration write failure
+        }
+        return value;
+      }
     } catch (e: any) {
-      console.warn(`[Storage] Failed to get ${key} from Preferences`, e?.message || e);
+      console.warn(`[Storage] Failed to get ${key} from Preferences fallback`, e?.message || e);
+    }
+
+    try {
       return localStorage.getItem(key);
+    } catch {
+      return null;
     }
   },
 
   async set(key: string, value: string): Promise<void> {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      /* ignore localstorage error */
+    if (!isNativeApp()) {
+      try {
+        localStorage.setItem(key, value);
+      } catch {
+        /* ignore localstorage error */
+      }
+      return;
     }
 
-    if (!isNativeApp()) return;
-
+    // On native Android/iOS, write exclusively to Keystore-backed SecureStorage
     try {
-      await Preferences.set({ key, value });
+      const { SecureStorage } = await import('@aparajita/capacitor-secure-storage');
+      await SecureStorage.setItem(key, value);
+      // Clean up any stale unencrypted copy in Preferences
+      await Preferences.remove({ key }).catch(() => {});
     } catch (e: any) {
-      console.warn(`[Storage] Failed to set ${key} in Preferences`, e?.message || e);
+      console.warn(`[Storage] Failed to set ${key} in SecureStorage, using fallback`, e?.message || e);
+      try {
+        await Preferences.set({ key, value });
+      } catch (prefErr: any) {
+        console.warn(`[Storage] Failed to set ${key} in Preferences fallback`, prefErr?.message || prefErr);
+      }
     }
   },
 
@@ -68,6 +105,13 @@ export const storage = {
     }
 
     if (!isNativeApp()) return;
+
+    try {
+      const { SecureStorage } = await import('@aparajita/capacitor-secure-storage');
+      await SecureStorage.removeItem(key);
+    } catch (e: any) {
+      console.warn(`[Storage] Failed to remove ${key} from SecureStorage`, e?.message || e);
+    }
 
     try {
       await Preferences.remove({ key });
@@ -85,6 +129,13 @@ export const storage = {
     }
 
     if (!isNativeApp()) return;
+
+    try {
+      const { SecureStorage } = await import('@aparajita/capacitor-secure-storage');
+      await SecureStorage.clear();
+    } catch (e: any) {
+      console.warn(`[Storage] Failed to clear SecureStorage`, e?.message || e);
+    }
 
     try {
       await Preferences.clear();

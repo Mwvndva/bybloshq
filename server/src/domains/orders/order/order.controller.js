@@ -18,6 +18,7 @@ import { sanitizeOrder } from '../../../shared/utils/sanitize.js';
 import paymentService from '../../payments/payments/payment.service.js';
 import OrderHubDropoffService from './orderHubDropoff.service.js';
 import { generateSignedDownloadUrl } from '../../../shared/utils/cloudinary.js';
+import LogisticsEtaService from '../../logistics/logisticsEta.service.js';
 
 const OrderService = CoreOrderService;
 
@@ -292,7 +293,12 @@ export const cancelOrder = async (req, res) => {
         res.status(200).json({ status: 'success', message: 'Order cancelled', data: { order: sanitizeOrder(updatedOrder, 'buyer') } });
     } catch (error) {
         logger.error('Error cancelling order:', error);
-        res.status(400).json({ status: 'error', message: error.message });
+        const statusCode = error.statusCode || 400;
+        res.status(statusCode).json({
+            status: 'error',
+            error: error.code || 'ORDER_CANCELLATION_FAILED',
+            message: error.message
+        });
     }
 };
 
@@ -356,7 +362,12 @@ export const sellerCancelOrder = async (req, res) => {
         });
     } catch (error) {
         logger.error('Error cancelling order (seller):', error);
-        res.status(500).json({ status: 'error', message: error.message });
+        const statusCode = error.statusCode || 400;
+        res.status(statusCode).json({
+            status: 'error',
+            error: error.code || 'ORDER_CANCELLATION_FAILED',
+            message: error.message
+        });
     }
 };
 
@@ -444,6 +455,24 @@ export const locationPreview = async (req, res) => {
         });
     }
 };
+export const getOrderLiveEta = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await LogisticsEtaService.getOrderLiveEta({
+            orderId: id,
+            user: req.user
+        });
 
-
-
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        logger.error('Error fetching order live ETA:', error);
+        const statusCode = error.statusCode || (error.message.includes('Unauthorized') ? 403 : error.message.includes('not found') ? 404 : 500);
+        res.status(statusCode).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};

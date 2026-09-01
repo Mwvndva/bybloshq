@@ -142,7 +142,7 @@ async function findExistingByToken(token) {
     `SELECT po.id AS order_id, po.order_number,
             p.id AS payment_id, p.provider_reference, p.status AS payment_status
        FROM product_orders po
-       LEFT JOIN payments p ON p.metadata->>'order_id' = po.id::text
+       LEFT JOIN payments p ON p.order_id = po.id OR p.metadata->>'order_id' = po.id::text
       WHERE po.client_checkout_token = $1
       ORDER BY p.created_at DESC NULLS LAST
       LIMIT 1`,
@@ -309,6 +309,7 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
     code: creatorCode,
     sellerId: Number.parseInt(anyProduct.seller_id, 10),
     productSubtotal: subtotal,
+    buyer,
   });
   const creatorCommission = creatorAttribution?.commission_amount || 0;
 
@@ -445,6 +446,7 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
 
     apiRef = `BYB-${order.id}-${Date.now()}`;
     payment = await Payment.insert(client, {
+      order_id: order.id,
       invoice_id: String(order.id),
       email: buyer.email,
       mobile_payment: buyerPhone,

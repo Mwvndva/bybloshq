@@ -123,3 +123,21 @@ export const markAllNotificationsRead = async (req, res) => {
         data: { updated }
     });
 };
+
+export const getUnreadNotificationCount = async (req, res) => {
+    const userId = currentUserId(req);
+    if (!userId || !Number.isInteger(userId) || userId <= 0) {
+        return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    }
+
+    const role = currentRole(req);
+    const unreadCount = await NotificationService.getUnreadCount({
+        userId,
+        role
+    });
+
+    res.status(200).json({
+        status: 'success',
+        data: { unreadCount }
+    });
+};

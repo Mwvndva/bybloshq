@@ -210,6 +210,156 @@ class SettlementService {
 
         return { adjusted: false, reason: `settlement_status_${settlementStatus || 'unknown'}` };
     }
+
+    async reverseCreatorEarningsForRefund(client, orderId, source = 'refund') {
+        const results = {
+            salesCommission: null,
+            referralCommission: null
+        };
+
+        // 1. Reversal for creator sales earnings
+        const { rows: earningsRows } = await client.query(
+            `SELECT id, creator_id, amount, status
+             FROM creator_earnings
+             WHERE order_id = $1
+             FOR UPDATE`,
+            [orderId]
+        );
+
+        if (earningsRows.length > 0) {
+            const earning = earningsRows[0];
+            const amount = Number.parseFloat(earning.amount || 0);
+
+            if (amount > 0 && earning.status !== 'reversed') {
+                const { rows: creatorRows } = await client.query(
+                    `SELECT id, balance FROM creators WHERE id = $1 FOR UPDATE`,
+                    [earning.creator_id]
+                );
+
+                if (creatorRows.length > 0) {
+                    const currentBalance = Number.parseFloat(creatorRows[0].balance || 0);
+
+                    if (currentBalance >= amount) {
+                        await client.query(
+                            `UPDATE creators
+                             SET balance = balance - $1,
+                                 total_earnings = GREATEST(total_earnings - $1, 0),
+                                 updated_at = NOW()
+                             WHERE id = $2`,
+                            [amount, earning.creator_id]
+                        );
+
+                        await client.query(
+                            `UPDATE creator_earnings
+                             SET status = 'reversed',
+                                 metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+                             WHERE id = $1`,
+                            [earning.id, JSON.stringify({ reversal_source: source, reversed_at: new Date().toISOString() })]
+                        );
+                        results.salesCommission = { adjusted: true, amount, creator_id: earning.creator_id };
+                    } else {
+                        // Creator balance is insufficient (already withdrawn) - record deficit without going negative
+                        await client.query(
+                            `UPDATE creator_earnings
+                             SET status = 'reversal_compensation_required',
+                                 metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+                             WHERE id = $1`,
+                            [
+                                earning.id,
+                                JSON.stringify({
+                                    reversal_source: source,
+                                    deficit: true,
+                                    shortfall: amount - currentBalance,
+                                    available_balance: currentBalance,
+                                    reason: 'creator_balance_insufficient',
+                                    manual_compensation_required: true,
+                                    flagged_at: new Date().toISOString()
+                                })
+                            ]
+                        );
+                        results.salesCommission = {
+                            adjusted: false,
+                            reason: 'creator_balance_insufficient',
+                            deficit: amount - currentBalance,
+                            creator_id: earning.creator_id
+                        };
+                    }
+                }
+            }
+        }
+
+        // 2. Reversal for creator-refers-seller earnings
+        const { rows: refEarningsRows } = await client.query(
+            `SELECT id, referrer_creator_id, amount, status
+             FROM creator_referral_earnings
+             WHERE order_id = $1
+             FOR UPDATE`,
+            [orderId]
+        );
+
+        if (refEarningsRows.length > 0) {
+            const refEarning = refEarningsRows[0];
+            const refAmount = Number.parseFloat(refEarning.amount || 0);
+
+            if (refAmount > 0 && refEarning.status !== 'reversed') {
+                const { rows: refCreatorRows } = await client.query(
+                    `SELECT id, balance FROM creators WHERE id = $1 FOR UPDATE`,
+                    [refEarning.referrer_creator_id]
+                );
+
+                if (refCreatorRows.length > 0) {
+                    const currentRefBalance = Number.parseFloat(refCreatorRows[0].balance || 0);
+
+                    if (currentRefBalance >= refAmount) {
+                        await client.query(
+                            `UPDATE creators
+                             SET balance = balance - $1,
+                                 total_referral_earnings = GREATEST(total_referral_earnings - $1, 0),
+                                 updated_at = NOW()
+                             WHERE id = $2`,
+                            [refAmount, refEarning.referrer_creator_id]
+                        );
+
+                        await client.query(
+                            `UPDATE creator_referral_earnings
+                             SET status = 'reversed',
+                                 metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+                             WHERE id = $1`,
+                            [refEarning.id, JSON.stringify({ reversal_source: source, reversed_at: new Date().toISOString() })]
+                        );
+                        results.referralCommission = { adjusted: true, amount: refAmount, referrer_creator_id: refEarning.referrer_creator_id };
+                    } else {
+                        await client.query(
+                            `UPDATE creator_referral_earnings
+                             SET status = 'reversal_compensation_required',
+                                 metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+                             WHERE id = $1`,
+                            [
+                                refEarning.id,
+                                JSON.stringify({
+                                    reversal_source: source,
+                                    deficit: true,
+                                    shortfall: refAmount - currentRefBalance,
+                                    available_balance: currentRefBalance,
+                                    reason: 'creator_referral_balance_insufficient',
+                                    manual_compensation_required: true,
+                                    flagged_at: new Date().toISOString()
+                                })
+                            ]
+                        );
+                        results.referralCommission = {
+                            adjusted: false,
+                            reason: 'creator_referral_balance_insufficient',
+                            deficit: refAmount - currentRefBalance,
+                            referrer_creator_id: refEarning.referrer_creator_id
+                        };
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
 }
 
 export default new SettlementService();

@@ -79,16 +79,37 @@ export class OrderService {
         'SELECT * FROM product_orders WHERE id = $1 AND buyer_id = $2 FOR UPDATE',
         [orderId, buyerId]
       );
-      if (rows.length === 0) throw new Error('Order not found or unauthorized buyer');
+      if (rows.length === 0) {
+        const { AppError } = await import('../../../shared/utils/errorHandler.js');
+        throw new AppError('Order not found or unauthorized buyer', 404, 'ORDER_NOT_FOUND');
+      }
       const order = rows[0];
-      assertValidTransition(order.status, OrderStatus.COMPLETED);
+      assertValidTransition(order.status, OrderStatus.COMPLETED, orderId);
+
+      const completionMetadata = {
+        completed_by: 'buyer',
+        completion_reason: 'buyer_confirmation',
+        financial_finality: true,
+        confirmed_at: new Date().toISOString()
+      };
+
       const upd = await client.query(
-        'UPDATE product_orders SET status = $1::order_status, completed_at = NOW(), updated_at = NOW() WHERE id = $2 RETURNING *',
-        [OrderStatus.COMPLETED, orderId]
+        `UPDATE product_orders 
+         SET status = $1::order_status, 
+             completed_at = NOW(), 
+             updated_at = NOW(),
+             metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+         WHERE id = $2 
+         RETURNING *`,
+        [OrderStatus.COMPLETED, orderId, JSON.stringify(completionMetadata)]
       );
+      const completedOrder = upd.rows[0];
+
+      await escrowManager.releaseFunds(client, completedOrder, 'BuyerConfirmation');
+
       await client.query('COMMIT');
       OrderService._emitOrderUpdate(orderId, order.status, OrderStatus.COMPLETED, note, buyerId);
-      return upd.rows[0];
+      return completedOrder;
     } catch (err) {
       await client.query('ROLLBACK').catch((rErr) => logger.error('[buyerComplete] Rollback failed:', rErr));
       throw err;
@@ -112,6 +133,156 @@ export class OrderService {
   static async cancelOrder(orderId, reason = null) {
     const { default: OrderCancellationService } = await import('./orderCancellation.service.js');
     return OrderCancellationService.cancelOrder(orderId, reason);
+  }
+
+  /**
+   * Exceptional administrative reversal of an order (even after completion).
+   * Authorized strictly for admins to handle fraud, chargebacks, legal disputes, etc.
+   * Performs complete accounting reversal across Buyer, Seller, Creator, and Platform allocations.
+   */
+  static async executeExceptionalReversal(orderId, adminUser, reason, notes = null) {
+    const { AppError } = await import('../../../shared/utils/errorHandler.js');
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+      throw new AppError(
+        'A valid administrative reason (minimum 5 characters) is required for exceptional reversal.',
+        400,
+        'INVALID_REVERSAL_REASON'
+      );
+    }
+
+    const { default: settlementService } = await import('../escrow/settlement.service.js');
+    const client = await pool.connect();
+    let reversedEventId = null;
+
+    try {
+      await client.query('BEGIN');
+
+      const { rows: orderRows } = await client.query(
+        'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE',
+        [orderId]
+      );
+
+      if (orderRows.length === 0) {
+        throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
+      }
+      const order = orderRows[0];
+
+      if (order.status === OrderStatus.REFUNDED) {
+        throw new AppError('Order is already refunded', 400, 'ORDER_ALREADY_REFUNDED');
+      }
+
+      const previousStatus = order.status;
+      const refundAmount = Number.parseFloat(order.total_amount || 0);
+
+      // 1. Buyer Refund: Credit buyer refund balance if order was paid or completed
+      let buyerRefundResult = null;
+      if (order.payment_status === 'completed' || ['PAID', 'COMPLETED', 'FULFILLING', 'DELIVERED', 'READY_FOR_BUYER'].includes(order.status)) {
+        if (order.buyer_id && refundAmount > 0) {
+          await client.query(
+            `UPDATE buyers 
+             SET refunds = COALESCE(refunds, 0) + $1,
+                 updated_at = NOW()
+             WHERE id = $2`,
+            [refundAmount, order.buyer_id]
+          );
+          buyerRefundResult = { refunded: true, amount: refundAmount, buyer_id: order.buyer_id };
+        }
+      }
+
+      // 2. Seller Settlement Reversal
+      const sellerReversalResult = await settlementService.reverseOrderSettlementForRefund(
+        client,
+        orderId,
+        'admin_exceptional_reversal'
+      );
+
+      // 3. Creator Commission & Referral Reversal (with Deficit Protection)
+      const creatorReversalResult = await settlementService.reverseCreatorEarningsForRefund(
+        client,
+        orderId,
+        'admin_exceptional_reversal'
+      );
+
+      // 4. Release slots / reservations if applicable
+      if (order.order_type === OrderType.SERVICE) {
+        await client.query(
+          `UPDATE service_slots 
+           SET status = 'AVAILABLE', reserved_by_order_id = NULL, expires_at = NULL, updated_at = NOW()
+           WHERE reserved_by_order_id = $1`,
+          [orderId]
+        );
+      } else if (order.order_type === OrderType.PHYSICAL) {
+        try {
+          await InventoryReservationService.releaseOrderInventory(client, orderId);
+        } catch (invErr) {
+          logger.warn(`[ExceptionalReversal] Inventory release skipped or not needed for Order ${orderId}:`, invErr.message);
+        }
+      }
+
+      // 5. Update Order Status to REFUNDED with audit metadata
+      const reversalAudit = {
+        exceptional_reversal: true,
+        reversal_type: 'ADMIN_EXCEPTIONAL_REVERSAL',
+        reversed_at: new Date().toISOString(),
+        admin_id: adminUser?.id || null,
+        admin_email: adminUser?.email || 'admin',
+        reason: reason.trim(),
+        notes: notes || null,
+        previous_status: previousStatus,
+        financial_summary: {
+          buyer_refund: buyerRefundResult,
+          seller_reversal: sellerReversalResult,
+          creator_reversal: creatorReversalResult
+        }
+      };
+
+      const { rows: updatedRows } = await client.query(
+        `UPDATE product_orders 
+         SET status = $1::order_status,
+             cancelled_at = COALESCE(cancelled_at, NOW()),
+             updated_at = NOW(),
+             metadata = jsonb_set(
+               COALESCE(metadata, '{}'::jsonb),
+               '{exceptional_reversal}',
+               $2::jsonb,
+               true
+             )
+         WHERE id = $3
+         RETURNING *`,
+        [OrderStatus.REFUNDED, JSON.stringify(reversalAudit), orderId]
+      );
+      const updatedOrder = updatedRows[0];
+
+      // 6. Enqueue durable domain event
+      const reversedEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.CANCELLED, {
+        eventId: `order.exceptional_reversal:${orderId}`,
+        order: updatedOrder,
+        cancelledBy: `admin:${adminUser?.id || 'system'}`,
+        reason,
+        reversalAudit
+      });
+      reversedEventId = reversedEvent.eventId;
+
+      await client.query('COMMIT');
+
+      if (reversedEventId) {
+        eventBus.dispatchAfterCommit(reversedEventId, 'OrderService.executeExceptionalReversal');
+      }
+      OrderService._emitOrderUpdate(orderId, previousStatus, OrderStatus.REFUNDED, `Admin exceptional reversal: ${reason}`, adminUser?.id);
+
+      logger.info(`[ExceptionalReversal] Order ${orderId} reversed by Admin ${adminUser?.id || 'admin'}. Reason: ${reason}`);
+
+      return {
+        success: true,
+        order: updatedOrder,
+        audit: reversalAudit
+      };
+    } catch (error) {
+      await client.query('ROLLBACK').catch((rErr) => logger.error('[executeExceptionalReversal] Rollback failed:', rErr));
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   static async _emitOrderUpdate(orderId, oldStatus, newStatus, notes, source) {

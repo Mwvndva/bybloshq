@@ -4,6 +4,7 @@ import express from 'express';
 import { protect } from '../middleware/auth.js';
 import { protectLogistics } from '../middleware/logisticsAuth.js';
 import {
+    getUnreadNotificationCount,
     listNotifications,
     markAllNotificationsRead,
     markNotificationRead,
@@ -19,12 +20,14 @@ router.delete('/logistics/devices/:token', protectLogistics, validate(V.unregist
 
 // Logistics partners authenticate differently, so they get their own list/read routes
 // (the controller's currentUserId already resolves req.logisticsPartner.userId).
+router.get('/logistics/unread-count', protectLogistics, getUnreadNotificationCount);
 router.get('/logistics', protectLogistics, listNotifications);
 router.patch('/logistics/read-all', protectLogistics, markAllNotificationsRead);
 router.patch('/logistics/:notificationId/read', protectLogistics, validate(V.markRead), markNotificationRead);
 
 router.use(protect);
 
+router.get('/unread-count', getUnreadNotificationCount);
 router.get('/', listNotifications);
 router.patch('/read-all', markAllNotificationsRead);
 router.patch('/:notificationId/read', validate(V.markRead), markNotificationRead);

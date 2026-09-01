@@ -69,5 +69,8 @@ router.get('/logistics/requests', adminController.getAdminLogisticsRequests);
 router.patch('/logistics/requests/:requestId/legs/:legType/status', validate(V.adminUpdateLegStatus), adminController.adminUpdateLogisticsLegStatus);
 router.post('/logistics/requests/:requestId/disputes/resolve', validate(V.resolveDispute), adminController.adminResolveLogisticsDispute);
 
+// Exceptional Order Reversal (Admin safety valve)
+router.post('/orders/:id/exceptional-reversal', validate(V.exceptionalOrderReversal), adminController.exceptionalOrderReversal);
+
 export default router;
 
