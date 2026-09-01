@@ -51,6 +51,24 @@ let retryCount = 0;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 10000; // 10 seconds
 
+async function setupNotificationChannel() {
+  try {
+    await PushNotifications.createChannel({
+      id: 'byblos_general',
+      name: 'Byblos Notifications',
+      description: 'Orders, payments, deliveries, and account alerts',
+      importance: 5, // High importance: banner popup + sound + vibration
+      visibility: 1, // Public on lockscreen
+      sound: 'default',
+      vibration: true,
+      lights: true,
+      lightColor: '#F5C518'
+    });
+  } catch (err) {
+    console.warn('[MobileNotifications] Failed to create notification channel', err);
+  }
+}
+
 function ensurePushListeners() {
   if (listenersReady) return;
   listenersReady = true;
@@ -76,6 +94,10 @@ function ensurePushListeners() {
         }
       }, nextDelay);
     }
+  });
+
+  PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    console.log('[MobileNotifications] Push received in foreground:', notification);
   });
 
   PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
@@ -105,6 +127,8 @@ export async function registerNativePushNotifications(
     try {
       const permission = await PushNotifications.requestPermissions();
       if (permission.receive !== 'granted') return;
+
+      await setupNotificationChannel();
 
       await PushNotifications.register().catch((err) => {
         console.warn('[MobileNotifications] Push registration failed or unsupported on device', err);

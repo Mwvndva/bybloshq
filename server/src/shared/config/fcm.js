@@ -111,6 +111,8 @@ export async function sendFcmV1({ token, title, body, data = {} }) {
     const accessToken = await getAccessToken();
     if (!accessToken) return { ok: false, reason: 'auth_failed' };
 
+    const channelId = data.channelId || 'byblos_general';
+
     const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -119,7 +121,17 @@ export async function sendFcmV1({ token, title, body, data = {} }) {
                 token,
                 notification: { title, body },
                 data,
-                android: { priority: 'HIGH' },
+                android: {
+                    priority: 'HIGH',
+                    notification: {
+                        channel_id: channelId,
+                        sound: 'default',
+                        default_sound: true,
+                        default_vibrate_timings: true,
+                        notification_priority: 'PRIORITY_HIGH',
+                        visibility: 'PUBLIC',
+                    },
+                },
             },
         }),
     });
