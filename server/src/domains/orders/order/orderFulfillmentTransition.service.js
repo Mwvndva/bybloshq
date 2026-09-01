@@ -101,13 +101,22 @@ class OrderFulfillmentTransitionService {
     }
 
     static async grantDigitalAccess(client, order, items) {
+        let authUserId = null;
+        if (order.buyer_id) {
+            const { rows: buyerRows } = await client.query(
+                `SELECT user_id FROM buyers WHERE id = $1`,
+                [order.buyer_id]
+            );
+            authUserId = buyerRows[0]?.user_id || null;
+        }
+
         for (const item of items) {
             if (item.is_digital) {
                 const accessToken = crypto.randomBytes(32).toString('hex');
                 await client.query(
-                    `INSERT INTO digital_access (order_id, user_id, access_token)
-                     VALUES ($1, $2, $3)`,
-                    [order.id, order.buyer_id, accessToken]
+                    `INSERT INTO digital_access (order_id, buyer_id, user_id, access_token)
+                     VALUES ($1, $2, $3, $4)`,
+                    [order.id, order.buyer_id || null, authUserId, accessToken]
                 );
             }
         }
