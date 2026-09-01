@@ -5,13 +5,17 @@ const PAYMENT_UPDATABLE_FIELDS = new Set([
   'mpesa_receipt', 'raw_response', 'updated_at'
 ]);
 
+const ENUM_CASTS = {
+  status: '::payment_status',
+};
+
 class Payment {
   /**
    * Insert a new payment record
    */
   static async insert(client, data) {
     const fields = Object.keys(data);
-    const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+    const placeholders = fields.map((f, i) => `$${i + 1}${ENUM_CASTS[f] || ''}`).join(', ');
     const query = `
       INSERT INTO payments (${fields.join(', ')})
       VALUES (${placeholders})
@@ -62,7 +66,7 @@ class Payment {
     if (metadata) {
       query = `
         UPDATE payments 
-        SET status = $1, 
+        SET status = $1::payment_status, 
             metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
             updated_at = NOW()
         WHERE invoice_id = $3
@@ -72,7 +76,7 @@ class Payment {
     } else {
       query = `
         UPDATE payments 
-        SET status = $1, 
+        SET status = $1::payment_status, 
             updated_at = NOW()
         WHERE invoice_id = $2
         RETURNING *
@@ -89,7 +93,7 @@ class Payment {
     const fields = Object.keys(updateData).filter(f => PAYMENT_UPDATABLE_FIELDS.has(f));
     if (fields.length === 0) return null;
 
-    const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+    const setClause = fields.map((field, index) => `${field} = $${index + 1}${ENUM_CASTS[field] || ''}`).join(', ');
     const values = fields.map(field => {
       if (field === 'metadata' && updateData[field] && typeof updateData[field] === 'object') {
         return JSON.stringify(updateData[field]);

@@ -375,7 +375,7 @@ const CorePaymentService = {
                     };
                     const { rows: reviewRows } = await client.query(
                         `UPDATE payments
-                         SET status = 'manual_review_required',
+                         SET status = 'manual_review_required'::payment_status,
                              provider_reference = COALESCE($1, provider_reference),
                              metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
                              updated_at = NOW()
@@ -424,7 +424,7 @@ const CorePaymentService = {
 
                 const { rows: reviewRows } = await client.query(
                     `UPDATE payments
-                     SET status = 'manual_review_required',
+                     SET status = 'manual_review_required'::payment_status,
                          provider_reference = COALESCE($1, provider_reference),
                          metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
                          updated_at = NOW()
@@ -487,7 +487,7 @@ const CorePaymentService = {
 
             const { rows: updatedPayments } = await client.query(
                 `UPDATE payments
-                 SET status = $1,
+                 SET status = $1::payment_status,
                      mpesa_receipt = COALESCE($2, mpesa_receipt),
                      provider_reference = COALESCE($3, provider_reference),
                      metadata = COALESCE(metadata, '{}'::jsonb) || $4::jsonb,
@@ -524,8 +524,8 @@ const CorePaymentService = {
                         if (CANNOT_FULFILL_ORDER_STATUSES.has(currentStatus)) {
                             const { rows: latePaymentRows } = await client.query(
                                 `UPDATE product_orders
-                                 SET status = 'COMPENSATION_REQUIRED',
-                                     payment_status = 'completed',
+                                 SET status = 'COMPENSATION_REQUIRED'::order_status,
+                                     payment_status = 'completed'::payment_status,
                                      metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
                                      updated_at = NOW()
                                  WHERE id = $1
@@ -550,8 +550,8 @@ const CorePaymentService = {
                             if (!PAID_TERMINAL_ORDER_STATUSES.has(currentStatus)) {
                                 const { rows: paidOrders } = await client.query(
                                     `UPDATE product_orders
-                                     SET status = 'PAID',
-                                         payment_status = 'completed',
+                                     SET status = 'PAID'::order_status,
+                                         payment_status = 'completed'::payment_status,
                                          custom_production_deadline_at = COALESCE(custom_production_deadline_at, $2),
                                          custom_production_grace_deadline_at = COALESCE(custom_production_grace_deadline_at, $3),
                                          metadata = COALESCE(metadata, '{}'::jsonb) || $4::jsonb,
@@ -591,8 +591,8 @@ const CorePaymentService = {
                         const releaseResult = await releaseOrderReservations(client, orderId);
                         const { rows: failedOrders } = await client.query(
                             `UPDATE product_orders
-                             SET status = 'FAILED',
-                                 payment_status = 'failed',
+                             SET status = 'FAILED'::order_status,
+                                 payment_status = 'failed'::payment_status,
                                  metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
                                  updated_at = NOW()
                              WHERE id = $1

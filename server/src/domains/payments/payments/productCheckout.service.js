@@ -92,6 +92,7 @@ function mergeQuantities(list) {
 // character varying" even when the string value is valid for the enum.
 const ENUM_CASTS = {
   status: '::order_status',
+  payment_status: '::payment_status',
   order_type: '::order_type',
   fulfillment_type: '::fulfillment_type',
 };
@@ -528,9 +529,9 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
         statusCode: gwErr.statusCode,
         error: gwErr.message,
       });
-      await pool.query(`UPDATE payments SET status = 'failed', updated_at = NOW() WHERE id = $1`, [payment.id]);
+      await pool.query(`UPDATE payments SET status = 'failed'::payment_status, updated_at = NOW() WHERE id = $1`, [payment.id]);
       await pool.query(
-        `UPDATE product_orders SET status = 'FAILED', payment_status = 'failed', updated_at = NOW() WHERE id = $1`,
+        `UPDATE product_orders SET status = 'FAILED'::order_status, payment_status = 'failed'::payment_status, updated_at = NOW() WHERE id = $1`,
         [order.id]
       );
       // Release the reserved stock for every line so a declined charge doesn't hold inventory.
