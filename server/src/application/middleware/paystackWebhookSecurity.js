@@ -250,14 +250,17 @@ export const requirePaystackWebhookHmac = async (req, res, next) => {
 
         res.on('finish', () => {
             const completed = res.statusCode < 500;
+            const status = completed ? 'completed' : 'failed';
+            const lastError = completed ? null : `HTTP ${res.statusCode}`;
+
             pool.query(
                 `UPDATE webhook_replay_dedupe
-                 SET status = $2,
-                     completed_at = CASE WHEN $2 = 'completed' THEN NOW() ELSE completed_at END,
-                     last_error = CASE WHEN $2 = 'failed' THEN $3 ELSE NULL END,
+                 SET status = $2::varchar,
+                     completed_at = CASE WHEN $2::varchar = 'completed' THEN NOW() ELSE completed_at END,
+                     last_error = $3::text,
                      updated_at = NOW()
                  WHERE event_id = $1`,
-                [eventId, completed ? 'completed' : 'failed', `HTTP ${res.statusCode}`]
+                [eventId, status, lastError]
             ).catch(error => logger.warn('[PAYSTACK-WEBHOOK] Failed to finalize replay state', {
                 eventId,
                 error: error.message
