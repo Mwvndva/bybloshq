@@ -87,11 +87,20 @@ function mergeQuantities(list) {
   return [...merged.entries()].map(([productId, quantity]) => ({ productId, quantity }));
 }
 
+// Columns that are PostgreSQL typed enums — they need explicit casts or PG
+// rejects the INSERT with "column X is of type Y but expression is of type
+// character varying" even when the string value is valid for the enum.
+const ENUM_CASTS = {
+  status: '::order_status',
+  order_type: '::order_type',
+  fulfillment_type: '::fulfillment_type',
+};
+
 // Insert a product_orders row. order_number is intentionally omitted so the
 // DB trigger (generate_order_number, WHEN order_number IS NULL) owns generation.
 async function insertProductOrder(client, data) {
   const fields = Object.keys(data);
-  const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+  const placeholders = fields.map((f, i) => `$${i + 1}${ENUM_CASTS[f] || ''}`).join(', ');
   const values = fields.map((f) =>
     data[f] !== null && typeof data[f] === 'object' ? JSON.stringify(data[f]) : data[f]
   );
@@ -101,6 +110,7 @@ async function insertProductOrder(client, data) {
   );
   return rows[0];
 }
+
 
 // Insert one order_items row per line. Writes BOTH column pairs
 // (name/price AND product_name/product_price): the order_items table historically
