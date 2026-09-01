@@ -143,24 +143,32 @@ class ReconciliationEngine {
      * Cleanup PAYMENT_PENDING orders that have been stuck for too long.
      */
     static async handleStuckPayments() {
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
+        const stuckQuery = `
+            SELECT id, order_type FROM product_orders
+            WHERE status = 'PAYMENT_PENDING'
+              AND updated_at < NOW() - INTERVAL '30 minutes'
+              AND COALESCE(metadata->>'provider_result_ambiguous_manual_review_required', 'false') <> 'true'
+              AND COALESCE(metadata->>'requires_manual_review', 'false') <> 'true'
+              AND COALESCE(metadata->>'needs_manual_review', 'false') <> 'true'
+            ORDER BY updated_at ASC, id ASC
+            LIMIT 50
+        `;
+        const { rows: stuckOrders } = await pool.query(stuckQuery);
 
-            const stuckQuery = `
-                SELECT id, order_type FROM product_orders
-                WHERE status = 'PAYMENT_PENDING'
-                  AND updated_at < NOW() - INTERVAL '30 minutes'
-                  AND COALESCE(metadata->>'provider_result_ambiguous_manual_review_required', 'false') <> 'true'
-                  AND COALESCE(metadata->>'requires_manual_review', 'false') <> 'true'
-                  AND COALESCE(metadata->>'needs_manual_review', 'false') <> 'true'
-                ORDER BY updated_at ASC, id ASC
-                LIMIT 50
-                FOR UPDATE SKIP LOCKED
-            `;
-            const { rows: stuckOrders } = await client.query(stuckQuery);
+        for (const order of stuckOrders) {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
 
-            for (const order of stuckOrders) {
+                const { rows: lockedOrders } = await client.query(
+                    `SELECT id, order_type, status FROM product_orders WHERE id = $1 AND status = 'PAYMENT_PENDING' FOR UPDATE SKIP LOCKED`,
+                    [order.id]
+                );
+                if (lockedOrders.length === 0) {
+                    await client.query('ROLLBACK');
+                    continue;
+                }
+
                 logger.warn(`[RECON] Found stuck PAYMENT_PENDING order ${order.id} (${order.order_type}). Cancelling.`);
 
                 if (order.order_type === 'PHYSICAL' || !order.order_type) {
@@ -179,14 +187,14 @@ class ReconciliationEngine {
 
                 await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, PaymentStatus.CANCELLED);
                 await this.markCancellationReason(client, order.id, 'stuck_payment');
-            }
 
-            await client.query('COMMIT');
-        } catch (err) {
-            await client.query('ROLLBACK');
-            throw err;
-        } finally {
-            client.release();
+                await client.query('COMMIT');
+            } catch (err) {
+                await client.query('ROLLBACK').catch(() => {});
+                logger.error(`[RECON] Failed cancelling stuck order ${order.id}:`, err.message);
+            } finally {
+                client.release();
+            }
         }
     }
 
