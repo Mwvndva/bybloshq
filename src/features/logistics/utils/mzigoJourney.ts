@@ -9,18 +9,24 @@ export interface JourneyStep {
   label: string;
 }
 
-export const COURIER_JOURNEY_STEPS: JourneyStep[] = [
-  { key: 'preparing', label: 'Preparing' },
-  { key: 'picked_up', label: 'Picked up' },
-  { key: 'on_the_way', label: 'On the way' },
+export const MZIGO_CBD_HUB = {
+  name: 'Byblos CBD Hub (Mzigo Ego)',
+  address: 'Shop SL 32, Dynamic Mall, Tom Mboya St, Nairobi',
+  mapLink: 'https://www.google.com/maps/search/?api=1&query=Dynamic+Mall+Tom+Mboya+St+Nairobi',
+};
+
+export const DOOR_DELIVERY_JOURNEY_STEPS: JourneyStep[] = [
+  { key: 'seller_handoff', label: 'Seller Handoff' },
+  { key: 'hub_processing', label: 'Mzigo Hub' },
+  { key: 'out_for_delivery', label: 'Out for Delivery' },
   { key: 'delivered', label: 'Delivered' },
 ];
 
-export const PICKUP_JOURNEY_STEPS: JourneyStep[] = [
-  { key: 'order_paid', label: 'Order Paid' },
-  { key: 'preparing', label: 'Preparing' },
-  { key: 'ready_pickup', label: 'Ready for Pickup' },
-  { key: 'completed', label: 'Collected' },
+export const HUB_COLLECTION_JOURNEY_STEPS: JourneyStep[] = [
+  { key: 'seller_handoff', label: 'Seller Handoff' },
+  { key: 'hub_processing', label: 'Mzigo Hub' },
+  { key: 'ready_at_hub', label: 'Ready at Hub' },
+  { key: 'collected', label: 'Collected' },
 ];
 
 export const DIGITAL_JOURNEY_STEPS: JourneyStep[] = [
@@ -34,7 +40,9 @@ export const SERVICE_JOURNEY_STEPS: JourneyStep[] = [
   { key: 'completed', label: 'Completed' },
 ];
 
-export const JOURNEY_STEPS: JourneyStep[] = COURIER_JOURNEY_STEPS;
+export const COURIER_JOURNEY_STEPS = DOOR_DELIVERY_JOURNEY_STEPS;
+export const PICKUP_JOURNEY_STEPS = HUB_COLLECTION_JOURNEY_STEPS;
+export const JOURNEY_STEPS: JourneyStep[] = DOOR_DELIVERY_JOURNEY_STEPS;
 
 export interface Journey {
   /** 0-based index into steps for the step currently active. */
@@ -47,6 +55,8 @@ export interface Journey {
   detail: string;
   isDelivered: boolean;
   isRiderMoving?: boolean;
+  activeLeg: 'seller_to_hub' | 'hub' | 'hub_to_buyer' | 'completed';
+  activeEta?: string | null;
   percentProgress: number;
 }
 
@@ -89,36 +99,46 @@ export function deriveJourney(request: LogisticsRequestCard): Journey {
 }
 
 /**
- * Shared journey logic for courier door deliveries.
+ * Shared journey logic for courier door deliveries (Seller -> Mzigo Hub -> Buyer).
  */
 export function deriveJourneyFromStatuses(
   pickup: string | null | undefined,
   delivery: string | null | undefined,
   completed = false,
+  pickupDeadline?: string | null,
+  deliveryDeadline?: string | null,
 ): Journey {
   const isCompleted = completed || has(delivery, 'delivered');
   const failed = has(pickup, 'failed') || has(delivery, 'failed');
   const delayed = has(pickup, 'delayed') || has(delivery, 'delayed');
   const riderInMotion = has(delivery, 'out_for_delivery', 'out for');
+  const atHub = has(pickup, 'picked_up', 'dropped', 'hub') || has(delivery, 'courier', 'assigned');
 
   let stepIndex = 0;
   let percentProgress = 15;
+  let activeLeg: Journey['activeLeg'] = 'seller_to_hub';
+  let activeEta = pickupDeadline || deliveryDeadline || null;
 
   if (isCompleted || has(delivery, 'delivered')) {
     stepIndex = 3;
     percentProgress = 100;
+    activeLeg = 'completed';
+    activeEta = deliveryDeadline || null;
   } else if (riderInMotion) {
     stepIndex = 2;
     percentProgress = 75;
-  } else if (
-    has(pickup, 'picked_up', 'dropped', 'hub')
-    || has(delivery, 'courier', 'assigned')
-  ) {
+    activeLeg = 'hub_to_buyer';
+    activeEta = deliveryDeadline || null;
+  } else if (atHub) {
     stepIndex = 1;
     percentProgress = 45;
+    activeLeg = 'hub';
+    activeEta = deliveryDeadline || null;
   } else {
     stepIndex = 0;
     percentProgress = 15;
+    activeLeg = 'seller_to_hub';
+    activeEta = pickupDeadline || deliveryDeadline || null;
   }
 
   let state: JourneyState = 'normal';
@@ -132,12 +152,14 @@ export function deriveJourneyFromStatuses(
 
   return {
     stepIndex,
-    steps: COURIER_JOURNEY_STEPS,
+    steps: DOOR_DELIVERY_JOURNEY_STEPS,
     state,
     label,
     detail,
     isDelivered,
     isRiderMoving: riderInMotion,
+    activeLeg,
+    activeEta,
     percentProgress,
   };
 }
@@ -145,7 +167,7 @@ export function deriveJourneyFromStatuses(
 function journeyLabel(stepIndex: number, state: JourneyState) {
   if (state === 'attention') return 'Needs attention';
   if (state === 'delayed') return 'Running late';
-  return COURIER_JOURNEY_STEPS[stepIndex]?.label ?? 'Preparing';
+  return DOOR_DELIVERY_JOURNEY_STEPS[stepIndex]?.label ?? 'Seller Handoff';
 }
 
 function journeyDetail(stepIndex: number, state: JourneyState) {
@@ -153,24 +175,25 @@ function journeyDetail(stepIndex: number, state: JourneyState) {
   if (state === 'delayed') return 'The package is taking longer than usual. It is still on track.';
   switch (stepIndex) {
     case 3: return 'Delivered to destination and checked against order.';
-    case 2: return 'The rider is actively on the way to your delivery address.';
-    case 1: return 'Mzigo Ego has collected the package and is arranging delivery.';
-    default: return 'Seller is preparing your package for Mzigo courier pickup.';
+    case 2: return 'Rider has departed Mzigo CBD Hub and is en route to your delivery address.';
+    case 1: return 'Package verified at Byblos CBD Hub (Shop SL 32, Dynamic Mall). Preparing for dispatch.';
+    default: return 'Seller is preparing your package for handoff to Mzigo Ego Hub.';
   }
 }
 
 /**
  * Universal journey resolver supporting all fulfillment types:
- * - COURIER (door delivery)
- * - BUYER_TO_SELLER (pickup)
- * - DIGITAL (instant access)
- * - SERVICE (booking)
+ * - PHYSICAL (COURIER) Door Delivery: SELLER -> MZIGO HUB -> BUYER
+ * - PHYSICAL (COURIER) Hub Pickup: SELLER -> MZIGO HUB -> BUYER AT HUB
+ * - DIGITAL: Instant download
+ * - SERVICE: Appointment at seller
  */
 export function deriveOrderJourney(order: ApiOrder): Journey {
-  const fulfillmentType = String(order.fulfillment_type || '').toUpperCase();
   const isDigital = Boolean(order.isDigital || order.items?.some((i) => i.productType === 'digital' || i.isDigital));
   const isService = Boolean(order.items?.some((i) => i.productType === 'service'));
-  const hasLogistics = Boolean(order.logistics?.deliveryLeg || order.logistics?.pickupLeg);
+  const deliveryLeg = order.logistics?.deliveryLeg;
+  const pickupLeg = order.logistics?.pickupLeg;
+  const hasDoorDelivery = Boolean(deliveryLeg || order.shippingAddress?.address);
 
   if (isDigital) {
     const isReady = order.status === 'PAID' || order.status === 'COMPLETED' || order.status === 'READY_FOR_BUYER';
@@ -181,6 +204,7 @@ export function deriveOrderJourney(order: ApiOrder): Journey {
       label: isReady ? 'Download Ready' : 'Payment Processing',
       detail: isReady ? 'Your digital purchase is ready for instant download.' : 'Verifying payment for your digital items.',
       isDelivered: isReady,
+      activeLeg: isReady ? 'completed' : 'hub',
       percentProgress: isReady ? 100 : 50,
     };
   }
@@ -200,48 +224,51 @@ export function deriveOrderJourney(order: ApiOrder): Journey {
           ? 'Seller is currently providing the booked service.'
           : 'Service booking is confirmed and scheduled.',
       isDelivered: isCompleted,
+      activeLeg: isCompleted ? 'completed' : 'hub',
       percentProgress: isCompleted ? 100 : isFulfilling ? 60 : 25,
     };
   }
 
-  if (fulfillmentType === 'BUYER_TO_SELLER' || (!hasLogistics && fulfillmentType !== 'COURIER')) {
+  // Physical: Hub Collection (Buyer collects at Byblos CBD Hub)
+  if (!hasDoorDelivery) {
     const isCompleted = order.status === 'COMPLETED';
     const isReady = order.status === 'READY_FOR_BUYER' || order.status === 'COLLECTION_PENDING';
-    const isFulfilling = order.status === 'FULFILLING' || order.status === 'PROCESSING';
+    const isAtHub = has(pickupLeg?.status, 'picked_up', 'dropped', 'hub') || isReady;
+    const stepIndex = isCompleted ? 3 : isReady ? 2 : isAtHub ? 1 : 0;
 
-    const stepIndex = isCompleted ? 3 : isReady ? 2 : isFulfilling ? 1 : 0;
     return {
       stepIndex,
-      steps: PICKUP_JOURNEY_STEPS,
+      steps: HUB_COLLECTION_JOURNEY_STEPS,
       state: 'normal',
       label: isCompleted
         ? 'Collected'
         : isReady
-          ? 'Ready for Pickup'
-          : isFulfilling
-            ? 'Preparing Order'
-            : 'Order Placed',
+          ? 'Ready at Hub'
+          : isAtHub
+            ? 'Mzigo Hub'
+            : 'Seller Handoff',
       detail: isCompleted
-        ? 'Order collected from shop and confirmed.'
+        ? 'Package collected at Byblos CBD Hub and confirmed.'
         : isReady
-          ? 'Your order is ready for pickup at the seller\'s shop location.'
-          : isFulfilling
-            ? 'Seller is preparing your items for collection.'
-            : 'Payment confirmed. Waiting for seller to begin preparation.',
+          ? 'Your order is ready for collection at Byblos CBD Hub (Shop SL 32, Dynamic Mall, Tom Mboya St).'
+          : isAtHub
+            ? 'Package received and verified at Byblos CBD Hub.'
+            : 'Seller is preparing package for delivery to Byblos CBD Hub.',
       isDelivered: isCompleted,
-      percentProgress: isCompleted ? 100 : isReady ? 75 : isFulfilling ? 40 : 15,
+      activeLeg: isCompleted ? 'completed' : isReady ? 'hub_to_buyer' : isAtHub ? 'hub' : 'seller_to_hub',
+      activeEta: pickupLeg?.deadlineAt || order.logistics?.deadlineAt || null,
+      percentProgress: isCompleted ? 100 : isReady ? 75 : isAtHub ? 45 : 15,
     };
   }
 
-  // Default to Courier Journey
-  const pickupLeg = order.logistics?.pickupLeg;
-  const deliveryLeg = order.logistics?.deliveryLeg;
+  // Physical: Door Delivery (Seller -> Mzigo Hub -> Buyer)
   const isOrderCompleted = order.status === 'COMPLETED';
-
   return deriveJourneyFromStatuses(
     pickupLeg?.status,
     deliveryLeg?.status,
     isOrderCompleted || order.logistics?.status === 'completed',
+    pickupLeg?.deadlineAt,
+    deliveryLeg?.deadlineAt,
   );
 }
 

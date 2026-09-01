@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   COURIER_JOURNEY_STEPS,
   DIGITAL_JOURNEY_STEPS,
+  DOOR_DELIVERY_JOURNEY_STEPS,
+  HUB_COLLECTION_JOURNEY_STEPS,
   PICKUP_JOURNEY_STEPS,
   SERVICE_JOURNEY_STEPS,
   deriveJourneyFromStatuses,
@@ -12,30 +14,36 @@ import {
 } from '@/features/logistics/utils/mzigoJourney';
 import type { ApiOrder } from '@/shared/types';
 
-describe('Mzigo ETA & Fulfillment Journey System', () => {
-  describe('1. Courier (Door Delivery) Journey Progression', () => {
-    it('initializes in Preparing stage when payment succeeds and pickup is pending', () => {
-      const journey = deriveJourneyFromStatuses('pending', 'delivery_pending');
+describe('Mzigo ETA & Central Hub Fulfillment Journey System', () => {
+  describe('1. Door Delivery Two-Leg Journey Progression (Seller -> Hub -> Buyer)', () => {
+    it('initializes in Seller Handoff stage with Leg 1 active when order is paid', () => {
+      const journey = deriveJourneyFromStatuses('pending', 'delivery_pending', false, '2026-09-02T10:00:00Z', '2026-09-02T18:00:00Z');
       expect(journey.stepIndex).toBe(0);
-      expect(journey.label).toBe('Preparing');
-      expect(journey.steps).toEqual(COURIER_JOURNEY_STEPS);
+      expect(journey.label).toBe('Seller Handoff');
+      expect(journey.steps).toEqual(DOOR_DELIVERY_JOURNEY_STEPS);
+      expect(journey.activeLeg).toBe('seller_to_hub');
+      expect(journey.activeEta).toBe('2026-09-02T10:00:00Z');
       expect(journey.isDelivered).toBe(false);
       expect(journey.isRiderMoving).toBe(false);
       expect(journey.percentProgress).toBe(15);
     });
 
-    it('advances to Picked up stage when Mzigo collects from seller or arrives at hub', () => {
-      const journey = deriveJourneyFromStatuses('picked_up', 'assigned');
+    it('advances to Mzigo Hub stage when Leg 1 completes (package arrives at Hub)', () => {
+      const journey = deriveJourneyFromStatuses('picked_up', 'assigned', false, '2026-09-02T10:00:00Z', '2026-09-02T18:00:00Z');
       expect(journey.stepIndex).toBe(1);
-      expect(journey.label).toBe('Picked up');
+      expect(journey.label).toBe('Mzigo Hub');
+      expect(journey.activeLeg).toBe('hub');
+      expect(journey.activeEta).toBe('2026-09-02T18:00:00Z');
       expect(journey.isRiderMoving).toBe(false);
       expect(journey.percentProgress).toBe(45);
     });
 
-    it('activates Rider Moving & In-Transit progress when status becomes out_for_delivery', () => {
-      const journey = deriveJourneyFromStatuses('picked_up', 'out_for_delivery');
+    it('activates Out for Delivery with Leg 2 Rider Moving when second rider starts to buyer', () => {
+      const journey = deriveJourneyFromStatuses('picked_up', 'out_for_delivery', false, null, '2026-09-02T18:00:00Z');
       expect(journey.stepIndex).toBe(2);
-      expect(journey.label).toBe('On the way');
+      expect(journey.label).toBe('Out for Delivery');
+      expect(journey.activeLeg).toBe('hub_to_buyer');
+      expect(journey.activeEta).toBe('2026-09-02T18:00:00Z');
       expect(journey.isRiderMoving).toBe(true);
       expect(journey.percentProgress).toBe(75);
     });
@@ -44,6 +52,7 @@ describe('Mzigo ETA & Fulfillment Journey System', () => {
       const journey = deriveJourneyFromStatuses('picked_up', 'delivered');
       expect(journey.stepIndex).toBe(3);
       expect(journey.label).toBe('Delivered');
+      expect(journey.activeLeg).toBe('completed');
       expect(journey.isDelivered).toBe(true);
       expect(journey.percentProgress).toBe(100);
     });
@@ -79,8 +88,8 @@ describe('Mzigo ETA & Fulfillment Journey System', () => {
     });
   });
 
-  describe('3. In-Store Pickup (Buyer-to-Seller) Journey', () => {
-    const basePickupOrder: ApiOrder = {
+  describe('3. Central Hub Collection (Buyer Collects at Mzigo CBD Hub) Journey', () => {
+    const baseHubOrder: ApiOrder = {
       id: 'ord-123',
       orderNumber: 'BYB-123',
       status: 'PAID',
@@ -89,35 +98,29 @@ describe('Mzigo ETA & Fulfillment Journey System', () => {
       createdAt: '2026-09-01T10:00:00Z',
       updatedAt: '2026-09-01T10:00:00Z',
       paymentStatus: 'paid',
-      fulfillment_type: 'BUYER_TO_SELLER',
+      fulfillment_type: 'COURIER',
       items: [{ id: '1', productId: 'p1', name: 'Hoodie', price: 1500, quantity: 1, imageUrl: '', productType: 'physical', subtotal: 1500 }],
       customer: { id: 'c1', name: 'Roy', email: 'roy@example.com' },
-      seller: { id: 's1', name: 'Vintage Vault', shopName: 'Vintage Vault', physicalAddress: 'Tom Mboya St Shop 12' },
-      shippingAddress: { address: 'Nairobi', city: 'Nairobi', country: 'Kenya', postalCode: '00100' },
+      seller: { id: 's1', name: 'Vintage Vault', shopName: 'Vintage Vault' },
+      shippingAddress: { address: '', city: '', country: 'Kenya', postalCode: '' },
     };
 
-    it('shows Order Placed for new paid pickup order', () => {
-      const journey = deriveOrderJourney(basePickupOrder);
+    it('shows Seller Handoff for new paid hub pickup order', () => {
+      const journey = deriveOrderJourney(baseHubOrder);
       expect(journey.stepIndex).toBe(0);
-      expect(journey.label).toBe('Order Placed');
-      expect(journey.steps).toEqual(PICKUP_JOURNEY_STEPS);
+      expect(journey.label).toBe('Seller Handoff');
+      expect(journey.steps).toEqual(HUB_COLLECTION_JOURNEY_STEPS);
     });
 
-    it('shows Preparing Order when seller is preparing', () => {
-      const journey = deriveOrderJourney({ ...basePickupOrder, status: 'FULFILLING' });
-      expect(journey.stepIndex).toBe(1);
-      expect(journey.label).toBe('Preparing Order');
-    });
-
-    it('shows Ready for Pickup when package is ready at the shop', () => {
-      const journey = deriveOrderJourney({ ...basePickupOrder, status: 'READY_FOR_BUYER' });
+    it('shows Ready at Hub when package is ready for collection at Byblos CBD Hub', () => {
+      const journey = deriveOrderJourney({ ...baseHubOrder, status: 'READY_FOR_BUYER' });
       expect(journey.stepIndex).toBe(2);
-      expect(journey.label).toBe('Ready for Pickup');
-      expect(journey.detail).toContain('ready for pickup at the seller\'s shop location');
+      expect(journey.label).toBe('Ready at Hub');
+      expect(journey.detail).toContain('Byblos CBD Hub (Shop SL 32, Dynamic Mall, Tom Mboya St)');
     });
 
-    it('shows Collected when order is confirmed complete', () => {
-      const journey = deriveOrderJourney({ ...basePickupOrder, status: 'COMPLETED' });
+    it('shows Collected when buyer confirms pickup from Central Hub', () => {
+      const journey = deriveOrderJourney({ ...baseHubOrder, status: 'COMPLETED' });
       expect(journey.stepIndex).toBe(3);
       expect(journey.label).toBe('Collected');
       expect(journey.isDelivered).toBe(true);
