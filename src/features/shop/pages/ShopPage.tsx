@@ -116,9 +116,9 @@ const ShopPage = () => {
             <input
               type="text"
               className={cn(
-                "block w-full pl-10 pr-3 py-3 border border-[var(--theme-border)] rounded-2xl transition-all duration-300",
-                "bg-[var(--theme-card-bg)] text-[var(--theme-text)] placeholder:text-[var(--theme-text)]/50",
-                "focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]/50 focus:border-[var(--theme-accent)] shadow-xl"
+                "block w-full pl-10 pr-3 py-3 border border-[var(--byblos-border,rgba(0,0,0,0.1))] rounded-2xl transition-all duration-300",
+                "bg-[var(--byblos-surface,#ffffff)] text-[var(--byblos-text,#0f0f0e)] placeholder:text-[var(--byblos-muted)]",
+                "focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400 shadow-sm"
               )}
               placeholder="Search products..."
               value={searchQuery}

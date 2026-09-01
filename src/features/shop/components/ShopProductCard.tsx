@@ -54,9 +54,9 @@ export function ShopProductCard({
         }}
         style={{
           ...themeVars,
-          backgroundColor: 'var(--theme-card-bg, #0a0a0a)',
-          color: 'var(--theme-text, #ffffff)',
-          borderColor: 'var(--theme-border, rgba(255,255,255,0.12))',
+          backgroundColor: 'var(--product-card-bg, var(--byblos-surface, #ffffff))',
+          color: 'var(--product-card-text, var(--byblos-text, #0f0f0e))',
+          borderColor: 'var(--product-card-border, var(--byblos-border, rgba(0, 0, 0, 0.1)))',
         }}
         className={cn(
           'group relative flex h-full flex-col overflow-hidden rounded-xl border transition-all duration-300 sm:rounded-2xl',
@@ -128,11 +128,16 @@ export function ShopProductCard({
           <button type="button" aria-label="Close description" onClick={() => setShowDescription(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div
             className="relative z-10 w-full max-w-sm rounded-2xl border p-5 shadow-2xl"
-            style={{ ...themeVars, backgroundColor: 'var(--theme-card-bg, #0a0a0a)', color: 'var(--theme-text, #ffffff)', borderColor: 'var(--theme-border, rgba(255,255,255,0.12))' }}
+            style={{
+              ...themeVars,
+              backgroundColor: 'var(--product-card-bg, var(--byblos-surface, #ffffff))',
+              color: 'var(--product-card-text, var(--byblos-text, #0f0f0e))',
+              borderColor: 'var(--product-card-border, var(--byblos-border, rgba(0, 0, 0, 0.12)))',
+            }}
           >
             <div className="mb-2 flex items-start justify-between gap-3">
               <h3 className="text-base font-black" style={{ color: 'var(--product-card-accent)' }}>{product.name}</h3>
-              <button type="button" onClick={() => setShowDescription(false)} aria-label="Close" className="-mr-1 -mt-1 rounded-full p-1.5 opacity-60 hover:opacity-100 hover:bg-white/10">
+              <button type="button" onClick={() => setShowDescription(false)} aria-label="Close" className="-mr-1 -mt-1 rounded-full p-1.5 opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10">
                 <X className="h-4 w-4" />
               </button>
             </div>

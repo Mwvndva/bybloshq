@@ -62,7 +62,7 @@ export function ThemeSegmentedPill({ value, onChange, showLabels = true, classNa
       >
         {OPTIONS.map(({ value: optionValue, label }) => (
           <option key={optionValue} value={optionValue} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-            {showLabels ? label : label.charAt(0)}
+            {label}
           </option>
         ))}
       </select>

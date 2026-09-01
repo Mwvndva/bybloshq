@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
 import { OrderStatusBadge } from '@/shared/ui/OrderStatusBadge';
-import { ChevronDown, Download, Loader2, Package, RefreshCw, Users } from 'lucide-react';
+import { ChevronDown, Download, Loader2, Package } from 'lucide-react';
 import type { ApiOrder } from '@/shared/types';
 import { cn, getImageUrl } from '@/shared/utils/formatting';
 import { getOrderInstruction } from '@/features/orders/utils/orderInstructions';
@@ -22,26 +22,20 @@ import {
 
 interface BuyerOrderCardProps {
   order: ApiOrder;
-  clientStatus: Record<string, boolean>;
-  isBecomingClient: Record<string, boolean>;
   downloadingOrderId: string | null;
   downloadProgress: Record<string, number>;
   onViewDetails: (order: ApiOrder) => void;
   onConfirmReceipt: (orderId: string) => void;
   onDownload: (order: ApiOrder) => void;
-  onToggleClientStatus: (sellerId: string, sellerName: string) => void;
 }
 
 export function BuyerOrderCard({
   order,
-  clientStatus,
-  isBecomingClient,
   downloadingOrderId,
   downloadProgress,
   onViewDetails,
   onConfirmReceipt,
   onDownload,
-  onToggleClientStatus
 }: BuyerOrderCardProps) {
   const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
   const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
@@ -227,27 +221,6 @@ export function BuyerOrderCard({
                   <>
                     <Download className="h-3.5 w-3.5" />
                     Download
-                  </>
-                )}
-              </Button>
-            )}
-
-            {order.seller && (
-              <Button
-                size="sm"
-                className={`font-semibold text-xs sm:text-sm ${clientStatus[order.seller.id]
-                  ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50'
-                  : 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                  }`}
-                onClick={() => onToggleClientStatus(order.seller.id, order.seller.name || '')}
-                disabled={isBecomingClient[order.seller.id]}
-              >
-                {isBecomingClient[order.seller.id] ? (
-                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    {clientStatus[order.seller.id] ? 'Unfollow' : 'Follow'}
                   </>
                 )}
               </Button>
