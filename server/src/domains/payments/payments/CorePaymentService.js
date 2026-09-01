@@ -545,6 +545,28 @@ const CorePaymentService = {
                                 orderId,
                                 previousStatus: currentStatus
                             });
+
+                            if (orderRow?.buyer_id) {
+                                await client.query(
+                                    `INSERT INTO refund_requests (buyer_id, order_id, amount, status, notes, payment_method, payment_details)
+                                     VALUES ($1, $2, $3, 'manual_review', $4, $5, $6::jsonb)`,
+                                    [
+                                        orderRow.buyer_id,
+                                        orderId,
+                                        paymentRow.amount,
+                                        `Late payment of ${paymentRow.amount} KES received for cancelled order #${orderRow.order_number || orderId}. Requires manual review / refund.`,
+                                        paymentRow.payment_method || 'mpesa',
+                                        JSON.stringify({
+                                            payment_id: paymentRow.id,
+                                            order_id: orderId,
+                                            order_number: orderRow.order_number,
+                                            provider_reference: providerReference,
+                                            receipt,
+                                            reason: 'late_payment_on_cancelled_order'
+                                        })
+                                    ]
+                                ).catch(err => logger.error('[CorePaymentService] Failed to record manual review refund request:', err.message));
+                            }
                         } else {
                             const customProductionPatch = resolveCustomProductionPatch(orderRow, completedAt);
                             if (!PAID_TERMINAL_ORDER_STATUSES.has(currentStatus)) {

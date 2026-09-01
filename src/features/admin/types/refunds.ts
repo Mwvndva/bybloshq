@@ -13,4 +13,6 @@ export interface RefundRequest {
   admin_notes: string;
   requested_at: string;
   processed_at: string;
+  order_id?: number;
+  order_number?: string;
 }

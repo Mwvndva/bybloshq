@@ -4,7 +4,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Textarea } from '@/shared/ui/textarea';
 import { Label } from '@/shared/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
-import { CheckCircle, XCircle, Clock, DollarSign, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, DollarSign, Loader2, AlertTriangle } from 'lucide-react';
 import { RefundRequestCard } from '../components/RefundRequestCard';
 import type { RefundRequest } from '../types/refunds';
 import { useRefundRequests } from '../hooks/useRefundRequests';
@@ -37,6 +37,13 @@ export default function RefundRequestsPage() {
           <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20">
             <Clock className="h-3 w-3 mr-1" />
             Pending
+          </Badge>
+        );
+      case 'manual_review':
+        return (
+          <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Manual Review
           </Badge>
         );
       case 'completed':
@@ -81,18 +88,18 @@ export default function RefundRequestsPage() {
           <p className="text-gray-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-2 ml-1">Capital Reclamation Management</p>
         </div>
 
-        <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
-          {['pending', 'completed', 'rejected'].map((status) => (
+        <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md flex-wrap gap-1">
+          {['pending', 'manual_review', 'completed', 'rejected'].map((status) => (
             <Button
               key={status}
               variant="ghost"
               onClick={() => setStatusFilter(status)}
-              className={`capitalize px-6 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${statusFilter === status
+              className={`capitalize px-5 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${statusFilter === status
                 ? 'bg-white/10 text-white shadow-inner'
                 : 'text-gray-500 hover:text-white hover:bg-white/5'
                 }`}
             >
-              {status}
+              {status === 'manual_review' ? 'Manual Review' : status}
             </Button>
           ))}
         </div>

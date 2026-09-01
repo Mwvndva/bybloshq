@@ -45,9 +45,11 @@ const SELECT_WITH_BUYER = `
     b.full_name as buyer_name,
     b.email as buyer_email,
     b.whatsapp_number as buyer_phone,
-    b.refunds as buyer_current_refunds
+    b.refunds as buyer_current_refunds,
+    po.order_number
   FROM refund_requests rr
   JOIN buyers b ON rr.buyer_id = b.id
+  LEFT JOIN product_orders po ON rr.order_id = po.id
 `;
 
 /**

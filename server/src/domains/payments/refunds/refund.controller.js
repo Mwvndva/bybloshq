@@ -60,13 +60,81 @@ export const getRefundRequestById = async (req, res, next) => {
 
 /**
  * Confirm/Complete refund request (Admin only)
- * This deducts the amount from buyer's refunds
  */
 export const confirmRefundRequest = async (req, res, next) => {
-  return next(new AppError(
-    'Manual refund payout confirmation is disabled. Buyer refund withdrawals are processed through Paystack withdrawal requests.',
-    410
-  ));
+  try {
+    const { id } = req.params;
+    const { adminNotes } = req.body;
+    const adminId = req.user.id;
+
+    const request = await refundRequestRepository.findByIdWithBuyer(id);
+    if (!request) {
+      return next(new AppError('Refund request not found', 404));
+    }
+
+    if (request.status !== 'pending' && request.status !== 'manual_review') {
+      return next(new AppError(`Refund request is already ${request.status}`, 400));
+    }
+
+    const processedBy = typeof adminId === 'number' ? adminId : null;
+    await refundRequestRepository.markCompleted({
+      id,
+      adminNotes: adminNotes || 'Refund authorized by admin',
+      processedBy
+    });
+
+    if (request.order_id) {
+      const { pool } = await import('../../../infrastructure/database/database.js');
+      await pool.query(
+        `UPDATE product_orders
+         SET status = 'REFUNDED'::order_status,
+             payment_status = 'refunded'::payment_status,
+             metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [
+          request.order_id,
+          JSON.stringify({
+            refund_completed: {
+              refund_request_id: id,
+              admin_id: adminId,
+              admin_notes: adminNotes || null,
+              completed_at: new Date().toISOString()
+            }
+          })
+        ]
+      );
+    }
+
+    logger.info(`Refund request ${id} approved/completed by admin ${adminId}`);
+
+    await eventBus.enqueueAndDispatch(AppEvents.REFUND.COMPLETED, {
+      eventId: `refund.completed:${id}`,
+      refund: {
+        id,
+        buyer_id: request.buyer_id,
+        amount: request.amount,
+        status: 'completed',
+        adminNotes
+      },
+      buyer: {
+        id: request.buyer_id,
+        full_name: request.buyer_name,
+        whatsapp_number: request.buyer_phone
+      }
+    }, 'RefundController.confirmRefundRequest').catch(() => {});
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Refund request confirmed and processed',
+      data: {
+        requestId: id
+      }
+    });
+  } catch (error) {
+    logger.error('Error confirming refund request:', error);
+    next(error);
+  }
 };
 
 /**
@@ -88,7 +156,7 @@ export const rejectRefundRequest = async (req, res, next) => {
 
     const { status: currentStatus, buyer_id, amount, full_name, whatsapp_number } = header;
 
-    if (currentStatus !== 'pending') {
+    if (currentStatus !== 'pending' && currentStatus !== 'manual_review') {
       return next(new AppError(`Refund request is already ${currentStatus}`, 400));
     }
 
@@ -116,7 +184,7 @@ export const rejectRefundRequest = async (req, res, next) => {
         full_name,
         whatsapp_number
       }
-    }, 'RefundController.rejectRefundRequest');
+    }, 'RefundController.rejectRefundRequest').catch(() => {});
 
     res.status(200).json({
       status: 'success',

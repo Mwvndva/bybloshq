@@ -19,9 +19,14 @@ export function RefundRequestCard({ request, getStatusBadge, formatCurrency, onA
               <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01]">
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-60">Sequence</p>
                       <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[10px] font-black text-white">#{request.id}</div>
+                      {request.order_number && (
+                        <div className="px-3 py-1 bg-orange-500/10 rounded-full border border-orange-500/20 text-[10px] font-black text-orange-400">
+                          Order: #{request.order_number}
+                        </div>
+                      )}
                     </div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                       Captured: {format(new Date(request.requested_at), 'MMM d, yyyy • h:mm a')}
@@ -108,7 +113,7 @@ export function RefundRequestCard({ request, getStatusBadge, formatCurrency, onA
                   )}
                 </div>
 
-                {request.status === 'pending' && (
+                {(request.status === 'pending' || request.status === 'manual_review') && (
                   <div className="flex gap-4 pt-6">
                     <Button
                       onClick={onApprove}
