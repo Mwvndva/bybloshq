@@ -57,7 +57,8 @@ export const PaymentStatus = {
     PAID: 'paid',
     MANUAL_REVIEW_REQUIRED: 'manual_review_required',
     PAYMENT_MAPPING_FAILED: 'payment_mapping_failed',
-    COMPENSATION_REQUIRED: 'compensation_required'
+    COMPENSATION_REQUIRED: 'compensation_required',
+    REFUNDED: 'refunded'
 };
 
 /**

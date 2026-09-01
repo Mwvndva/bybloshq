@@ -85,25 +85,36 @@ export const confirmRefundRequest = async (req, res, next) => {
 
     if (request.order_id) {
       const { pool } = await import('../../../infrastructure/database/database.js');
-      await pool.query(
-        `UPDATE product_orders
-         SET status = 'REFUNDED'::order_status,
-             payment_status = 'refunded'::payment_status,
-             metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-             updated_at = NOW()
-         WHERE id = $1`,
-        [
-          request.order_id,
-          JSON.stringify({
-            refund_completed: {
-              refund_request_id: id,
-              admin_id: adminId,
-              admin_notes: adminNotes || null,
-              completed_at: new Date().toISOString()
-            }
-          })
-        ]
-      );
+      try {
+        await pool.query(
+          `UPDATE product_orders
+           SET status = 'REFUNDED'::order_status,
+               payment_status = 'cancelled'::payment_status,
+               metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [
+            request.order_id,
+            JSON.stringify({
+              refund_completed: {
+                refund_request_id: id,
+                admin_id: adminId,
+                admin_notes: adminNotes || null,
+                completed_at: new Date().toISOString()
+              }
+            })
+          ]
+        );
+      } catch (orderErr) {
+        logger.warn(`[REFUND] Order ${request.order_id} status update fallback:`, orderErr.message);
+        await pool.query(
+          `UPDATE product_orders
+           SET status = 'REFUNDED'::order_status,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [request.order_id]
+        ).catch(() => {});
+      }
     }
 
     logger.info(`Refund request ${id} approved/completed by admin ${adminId}`);
