@@ -185,25 +185,23 @@ class InventoryReservationService {
 
             const { rows } = await client.query(
                 `UPDATE products AS p
-                 SET quantity = p.quantity + v.qty,
-                     reserved_quantity = p.reserved_quantity - v.qty,
+                 SET quantity = p.quantity + LEAST(COALESCE(p.reserved_quantity, 0), v.qty),
+                     reserved_quantity = GREATEST(0, COALESCE(p.reserved_quantity, 0) - v.qty),
                      updated_at = NOW()
                  FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
                  WHERE p.id = v.id
                    AND p.track_inventory = true
                    AND COALESCE(LOWER(p.product_type::text), '') <> 'digital'
-                   AND p.reserved_quantity >= v.qty
                  RETURNING p.id, p.quantity, p.reserved_quantity`,
                 [ids, qtys]
             );
 
             if (rows.length !== trackable.length) {
-                logger.error('[RESERVATION-RELEASE] Reserved inventory invariant failed during release', {
+                logger.warn('[RESERVATION-RELEASE] Some trackable product(s) were not updated (may be already released or modified)', {
                     expected: trackable.length,
                     released: rows.length,
                     ids
                 });
-                throw new Error('Reserved inventory invariant failed during release');
             }
 
             releasedCount += rows.length;
@@ -226,13 +224,13 @@ class InventoryReservationService {
                 [ids]
             );
 
-            if (rows.length !== singlePurchase.length) {
-                logger.error('[RESERVATION-RELEASE] Single-purchase product release invariant failed', {
-                    expected: singlePurchase.length,
-                    released: rows.length,
-                    ids
+            const releasedIds = new Set(rows.map(r => r.id));
+            const alreadyAvailable = singlePurchase.filter(item => !releasedIds.has(item.productId));
+            if (alreadyAvailable.length > 0) {
+                logger.info('[RESERVATION-RELEASE] Single-purchase product(s) already available or not in sold status (idempotent)', {
+                    alreadyAvailableIds: alreadyAvailable.map(i => i.productId),
+                    releasedCount: rows.length
                 });
-                throw new Error('Single-purchase product release invariant failed');
             }
 
             releasedCount += rows.length;
