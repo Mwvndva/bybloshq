@@ -79,7 +79,6 @@ export default function WishlistSection() {
                 <ShopProductCard
                   product={product}
                   onTap={handleTap}
-                  forceWhiteText
                   isWishlisted
                   onToggleWishlist={() => removeFromWishlist(String(product.id))}
                 />
