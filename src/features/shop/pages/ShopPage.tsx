@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/shared/ui/button';
 import { Loader2, Store, Package } from 'lucide-react';
 import { cn, getImageUrl } from '@/shared/utils/formatting';
-import { ProductCard } from '@/features/shop/components/ProductCard';
+import { BagProvider } from '@/features/shop/bag/BagContext';
+import { BagSheet } from '@/features/shop/components/BagSheet';
+import { ShopBagProductCard } from '@/features/shop/components/ShopBagProductCard';
 import type { Product, Seller } from '@/shared/types';
 import { type Theme } from '@/shared/hooks/useShopTheme';
 import { isAesthetic } from '../utils/shopPage.shared';
@@ -28,8 +30,11 @@ const ShopPage = () => {
     showSellerAvatar,
     isLoading,
     error,
-    isAuthenticated,
   } = useShopPage();
+
+  // A wishlist tap navigates here with the product to pre-add to the bag.
+  const location = useLocation();
+  const bagAdd = (location.state as { bagAdd?: Product } | null)?.bagAdd ?? null;
 
   if (isLoading) {
     return (
@@ -76,6 +81,7 @@ const ShopPage = () => {
   }
 
   return (
+    <BagProvider seedProduct={bagAdd}>
     <div
       className="shop-page-root min-h-screen transition-colors duration-300"
       data-shop-theme={resolvedShopTheme}
@@ -119,23 +125,13 @@ const ShopPage = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <p className="mt-3 text-center text-xs font-semibold text-[var(--byblos-muted)]">
+            Tap a product to add it to your bag
+          </p>
         </div>
 
         {filteredProducts.length > 0 ? (
           <div className="shop-products-card rounded-[2rem] p-5 sm:p-10 sm:rounded-[2.5rem] transition-all duration-300">
-            <div className="flex justify-between items-center mb-6 sm:mb-8">
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg sm:text-2xl font-black text-[var(--byblos-text)] truncate">
-                  Available Products
-                </h2>
-                <p className="text-[10px] sm:text-sm font-medium text-[var(--byblos-muted)] mt-1 truncate">
-                  {products.length} {products.length === 1 ? 'item' : 'items'} available
-                </p>
-              </div>
-              <div className={`${themeClasses.buttonGradient} text-white px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl font-bold text-[10px] sm:text-xs shrink-0 ml-2 shadow-sm`}>
-                {products.length} Items
-              </div>
-            </div>
             <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
               {filteredProducts.map((product) => {
                 // Ensure the product has the seller info from the shop
@@ -162,40 +158,9 @@ const ShopPage = () => {
                   } : undefined
                 };
 
-                // Create a properly typed seller object that matches the Seller interface
-                const sellerForCard: Seller | undefined = sellerInfo ? {
-                  id: sellerInfo.id,
-                  fullName: sellerInfo.fullName || '',
-                  email: sellerInfo.email || '',
-                  phone: sellerInfo.phone || '',
-                  whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
-                  shopName: sellerInfo.shopName || '',
-                  bannerUrl: '',
-                  location: sellerInfo.location || '',
-                  city: sellerInfo.city || '',
-                  // New physical shop fields
-                  hasPhysicalShop: !!sellerInfo.physicalAddress,
-                  physicalAddress: sellerInfo.physicalAddress,
-                  latitude: sellerInfo.latitude,
-                  longitude: sellerInfo.longitude,
-                  createdAt: sellerInfo.createdAt || new Date().toISOString(),
-                  updatedAt: sellerInfo.updatedAt || new Date().toISOString(),
-                  theme: sellerInfo.theme,
-                  // Optional fields with defaults
-                  bio: sellerInfo.bio,
-                  avatarUrl: sellerInfo.avatarUrl,
-                  website: sellerInfo.website,
-                  socialMedia: sellerInfo.socialMedia
-                } : undefined;
-
                 return (
                   <div key={product.id}>
-                    <ProductCard
-                      product={productWithSeller}
-                      seller={sellerForCard}
-                      hideWishlist={!isAuthenticated}
-                      theme={sellerInfo?.theme as Theme}
-                    />
+                    <ShopBagProductCard product={productWithSeller} />
                   </div>
                 );
               })}
@@ -226,6 +191,8 @@ const ShopPage = () => {
 
       </main>
     </div>
+    <BagSheet />
+    </BagProvider>
   );
 };
 
