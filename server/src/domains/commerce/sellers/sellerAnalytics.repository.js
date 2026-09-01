@@ -34,8 +34,8 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       COALESCE(financials.net_revenue, 0) as net_revenue,
       COALESCE(s.balance, 0) as balance,
       COALESCE(s.balance, 0) as available_balance,
-      COALESCE(s.pending_settlement_balance, 0) as pending_settlement_balance,
-      COALESCE(s.withdrawal_reserved_balance, 0) as withdrawal_reserved_balance,
+      GREATEST(COALESCE(s.pending_settlement_balance, 0), COALESCE(pending_payouts.pending_total, 0)) as pending_settlement_balance,
+      GREATEST(COALESCE(s.withdrawal_reserved_balance, 0), COALESCE(active_withdrawals.active_total, 0)) as withdrawal_reserved_balance,
       COALESCE(s.refund_reserved_balance, 0) as refund_reserved_balance,
       next_settlement.next_settlement_at,
       COALESCE(creator_links.creator_count, 0) as creator_count,
@@ -46,13 +46,22 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
         COALESCE(SUM(o.total_amount), 0) as total_sales,
         COALESCE(SUM(o.seller_payout_amount), 0) as net_revenue
       FROM product_orders o
-      JOIN payouts p
-        ON p.order_id = o.id
-       AND p.settlement_status IN ('pending_settlement', 'settled', 'refunded_after_settlement', 'refunded_before_settlement')
       WHERE o.seller_id = s.id
         AND o.payment_status = 'completed'
         AND o.status::text <> ALL($2::text[])
     ) financials ON true
+    LEFT JOIN LATERAL (
+      SELECT COALESCE(SUM(p.amount), 0) as pending_total
+      FROM payouts p
+      WHERE p.seller_id = s.id
+        AND p.settlement_status = 'pending_settlement'
+    ) pending_payouts ON true
+    LEFT JOIN LATERAL (
+      SELECT COALESCE(SUM(w.amount + COALESCE((w.metadata->>'withdrawal_fee')::numeric, 0)), 0) as active_total
+      FROM withdrawal_requests w
+      WHERE w.seller_id = s.id
+        AND w.status IN ('pending', 'processing')
+    ) active_withdrawals ON true
     LEFT JOIN LATERAL (
       SELECT COUNT(DISTINCT scl.creator_id)::int as creator_count
       FROM seller_creator_links scl
@@ -64,9 +73,6 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
     LEFT JOIN LATERAL (
       SELECT COALESCE(SUM(o.total_amount), 0) as creator_generated_sales
       FROM product_orders o
-      JOIN payouts p
-        ON p.order_id = o.id
-       AND p.settlement_status IN ('pending_settlement', 'settled', 'refunded_after_settlement', 'refunded_before_settlement')
       WHERE o.seller_id = s.id
         AND o.payment_status = 'completed'
         AND o.status::text <> ALL($2::text[])
