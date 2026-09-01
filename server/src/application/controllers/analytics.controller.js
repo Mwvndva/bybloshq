@@ -1,5 +1,6 @@
 import * as sellerAnalyticsRepository from '../../domains/commerce/sellers/sellerAnalytics.repository.js';
 import { promoteSettlementsOnce } from '../cron/settlementCron.js';
+import FulfillmentQueueService from '../../domains/orders/fulfillment/fulfillmentQueue.service.js';
 import { AppError } from '../../shared/utils/errorHandler.js';
 import logger from '../../shared/utils/logger.js';
 
@@ -28,9 +29,10 @@ export const getSellerAnalytics = async (req, res, next) => {
 
   try {
     try {
+      await FulfillmentQueueService.processJobs(5);
       await promoteSettlementsOnce({ limit: 100 });
     } catch (settlementError) {
-      logger.error('[AnalyticsController] Settlement refresh before seller analytics failed:', settlementError.message);
+      logger.warn('[AnalyticsController] Background queue/settlement check before analytics:', settlementError.message);
     }
 
     const [
