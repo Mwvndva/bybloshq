@@ -9,24 +9,25 @@ import escrowManager from '../escrow/EscrowManager.js';
 class OrderFulfillmentTransitionService {
     static async executeFulfillment(client, order) {
         const orderId = order.id;
+        const currentStatus = String(order.status || '').toUpperCase();
 
-        if (order.status !== OrderStatus.PAID) {
-            logger.warn(`[FULFILLMENT] Order ${orderId} is not in PAID status (Current: ${order.status}). skipping.`);
+        if (currentStatus !== OrderStatus.PAID && currentStatus !== OrderStatus.FULFILLING) {
+            logger.warn(`[FULFILLMENT] Order ${orderId} is not in PAID or FULFILLING status (Current: ${order.status}). skipping.`);
             return;
         }
 
         const items = await this.fetchFulfillmentItems(client, orderId);
-        const orderType = order.order_type;
-        logger.info(`[FULFILLMENT] Starting execution for Order ${orderId} (${orderType})`);
+        const orderType = String(order.order_type || '').toUpperCase();
+        logger.info(`[FULFILLMENT] Starting execution for Order ${orderId} (${orderType || 'auto-detect'})`);
 
-        if (orderType === OrderType.PHYSICAL) {
+        if (orderType === OrderType.PHYSICAL || (!orderType && items.some(i => !i.is_digital))) {
             await this.completePhysicalOrder(client, order, items);
         } else if (orderType === OrderType.SERVICE) {
             await this.completeServiceOrder(client, order);
-        } else if (orderType === OrderType.DIGITAL) {
+        } else if (orderType === OrderType.DIGITAL || (!orderType && items.every(i => i.is_digital))) {
             await this.completeDigitalOrder(client, order, items);
         } else {
-            throw new Error(`Unknown order type: ${orderType}`);
+            throw new Error(`Unknown order type: ${order.order_type}`);
         }
     }
 
@@ -51,8 +52,10 @@ class OrderFulfillmentTransitionService {
 
             await this.preparePhysicalFulfillment(currentOrder);
 
-            assertValidTransition(currentOrder.status, OrderStatus.AWAITING_SELLER_ACTION, order.id);
-            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.AWAITING_SELLER_ACTION, 'completed');
+            if (currentOrder.status !== OrderStatus.AWAITING_SELLER_ACTION) {
+                assertValidTransition(currentOrder.status, OrderStatus.AWAITING_SELLER_ACTION, order.id);
+                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.AWAITING_SELLER_ACTION, 'completed');
+            }
         } catch (err) {
             logger.error(`[FULFILLMENT-PHYSICAL] Failed initiation for Order ${order.id}:`, err);
             throw err;
@@ -60,13 +63,17 @@ class OrderFulfillmentTransitionService {
     }
 
     static async completeServiceOrder(client, order) {
-        assertValidTransition(order.status, OrderStatus.AWAITING_SELLER_ACTION, order.id);
-        await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.AWAITING_SELLER_ACTION, 'completed');
+        if (order.status !== OrderStatus.AWAITING_SELLER_ACTION) {
+            assertValidTransition(order.status, OrderStatus.AWAITING_SELLER_ACTION, order.id);
+            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.AWAITING_SELLER_ACTION, 'completed');
+        }
     }
 
     static async completeDigitalOrder(client, order, items) {
-        assertValidTransition(order.status, OrderStatus.FULFILLING, order.id);
-        await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLING, 'completed');
+        if (order.status !== OrderStatus.FULFILLING && order.status !== OrderStatus.COMPLETED) {
+            assertValidTransition(order.status, OrderStatus.FULFILLING, order.id);
+            await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLING, 'completed');
+        }
 
         try {
             await this.grantDigitalAccess(client, order, items);
