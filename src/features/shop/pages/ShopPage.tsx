@@ -152,6 +152,7 @@ const ShopPage = () => {
                     physicalAddress: sellerInfo.physicalAddress,
                     latitude: sellerInfo.latitude,
                     longitude: sellerInfo.longitude,
+                    theme: sellerInfo.theme,
                     // Add any other required fields from Seller interface with defaults
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
