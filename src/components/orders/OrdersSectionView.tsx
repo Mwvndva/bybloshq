@@ -13,8 +13,6 @@ export interface OrdersSectionViewProps {
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
-  clientStatus: Record<string, boolean>;
-  isBecomingClient: Record<string, boolean>;
   downloadingOrderId: string | null;
   downloadProgress: Record<string, number>;
   isConfirming: string | null;
@@ -22,7 +20,6 @@ export interface OrdersSectionViewProps {
   onCancelOrder: (orderId: string) => Promise<void>;
   onConfirmReceipt: (orderId: string) => Promise<void>;
   onDownload: (order: ApiOrder) => Promise<void>;
-  onToggleClientStatus: (sellerId: string, sellerName: string) => Promise<void>;
 }
 
 export function OrdersSectionView({
@@ -30,8 +27,6 @@ export function OrdersSectionView({
   isLoading,
   error,
   refetch,
-  clientStatus,
-  isBecomingClient,
   downloadingOrderId,
   downloadProgress,
   isConfirming,
@@ -39,7 +34,6 @@ export function OrdersSectionView({
   onCancelOrder,
   onConfirmReceipt,
   onDownload,
-  onToggleClientStatus,
 }: OrdersSectionViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
@@ -130,14 +124,11 @@ export function OrdersSectionView({
             <BuyerOrderCard
               key={order.id}
               order={order}
-              clientStatus={clientStatus}
-              isBecomingClient={isBecomingClient}
               downloadingOrderId={downloadingOrderId}
               downloadProgress={downloadProgress}
               onViewDetails={(o) => setSelectedOrderForDetails(o)}
               onConfirmReceipt={handleConfirmClick}
               onDownload={onDownload}
-              onToggleClientStatus={onToggleClientStatus}
             />
           ))}
         </div>
