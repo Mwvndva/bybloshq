@@ -14,21 +14,44 @@ let cachedToken = null;   // { accessToken, expiresAt (epoch seconds) }
 
 function getServiceAccount() {
     if (cachedServiceAccount !== undefined) return cachedServiceAccount;
-    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (!raw) { cachedServiceAccount = null; return null; }
-    try {
-        const text = raw.trim().startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
-        const parsed = JSON.parse(text);
-        if (!parsed.client_email || !parsed.private_key || !parsed.project_id) {
-            logger.error('[FCM] FIREBASE_SERVICE_ACCOUNT is missing client_email/private_key/project_id');
-            cachedServiceAccount = null; return null;
+
+    // 1. Try full JSON / base64 string from FIREBASE_SERVICE_ACCOUNT
+    const raw = (process.env.FIREBASE_SERVICE_ACCOUNT || '').trim();
+    if (raw && raw !== '{}' && raw !== 'undefined' && raw !== 'null') {
+        try {
+            const text = raw.startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
+            const parsed = JSON.parse(text);
+            if (parsed.client_email && parsed.private_key && parsed.project_id) {
+                cachedServiceAccount = {
+                    ...parsed,
+                    private_key: parsed.private_key.replace(/\\n/g, '\n'),
+                };
+                return cachedServiceAccount;
+            }
+            logger.warn('[FCM] FIREBASE_SERVICE_ACCOUNT is missing client_email/private_key/project_id; checking individual environment variables...');
+        } catch (error) {
+            logger.warn('[FCM] Failed to parse FIREBASE_SERVICE_ACCOUNT JSON/base64:', error.message);
         }
-        cachedServiceAccount = parsed;
-        return parsed;
-    } catch (error) {
-        logger.error('[FCM] Failed to parse FIREBASE_SERVICE_ACCOUNT', { error: error.message });
-        cachedServiceAccount = null; return null;
     }
+
+    // 2. Fallback to individual environment variables
+    const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
+    let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
+
+    if (projectId && clientEmail && privateKey) {
+        privateKey = privateKey.replace(/\\n/g, '\n');
+        cachedServiceAccount = {
+            project_id: projectId,
+            client_email: clientEmail,
+            private_key: privateKey,
+            private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || undefined,
+        };
+        return cachedServiceAccount;
+    }
+
+    cachedServiceAccount = null;
+    return null;
 }
 
 export function isFcmConfigured() {
