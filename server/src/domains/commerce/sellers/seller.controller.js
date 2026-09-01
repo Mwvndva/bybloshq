@@ -17,18 +17,11 @@ export {
   searchSellers,
   getSellerProducts,
   getSellerById,
-  getBuyerShops,
 } from './seller.shop.controller.js';
 
 export {
   getProfile,
   updateProfile,
   updateTheme,
-  uploadBanner,
   uploadBusinessPhoto,
 } from './seller.profile.controller.js';
-
-export {
-  handleBecomeClient,
-  handleLeaveClient,
-} from './seller.clientele.controller.js';

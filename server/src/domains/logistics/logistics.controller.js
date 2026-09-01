@@ -1,6 +1,6 @@
 import LogisticsDashboardService from './logisticsDashboard.service.js';
-import { setCourierLocation } from './logisticsLiveLocation.service.js';
 import { setAuthCookie } from '../../shared/utils/cookie.utils.js';
+import { AppError } from '../../shared/utils/errorHandler.js';
 
 export const loginLogisticsPartner = async (req, res, next) => {
     try {
@@ -98,28 +98,3 @@ export const updateLogisticsLegStatus = async (req, res, next) => {
     }
 };
 
-export const postLogisticsLocation = async (req, res, next) => {
-    try {
-        const partnerId = req.logisticsPartner?.id || req.user?.profile_id || req.user?.id;
-        if (!partnerId) {
-            return next(new AppError('Logistics partner identity not found', 400));
-        }
-
-        const result = await setCourierLocation({
-            requestId: req.params.requestId,
-            partnerId,
-            lat: req.body?.lat,
-            lng: req.body?.lng,
-            accuracy: req.body?.accuracy,
-            heading: req.body?.heading,
-            speed: req.body?.speed
-        });
-
-        res.status(200).json({
-            status: 'success',
-            data: result
-        });
-    } catch (error) {
-        next(error);
-    }
-};

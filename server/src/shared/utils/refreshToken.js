@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import tokenBlacklist from '../../domains/identity/tokens/tokenBlacklist.service.js';
 
 /**
  * Generate a refresh token (longer-lived, uses JWT_REFRESH_SECRET)
@@ -54,8 +55,16 @@ export const verifyRefreshToken = (token) => {
  * @param {string} refreshToken - Refresh token
  * @returns {Object} New access token and user info
  */
-export const refreshAccessToken = (refreshToken) => {
+export const refreshAccessToken = async (refreshToken) => {
   const decoded = verifyRefreshToken(refreshToken);
+
+  // SECURITY: a refresh token revoked on logout (or explicitly revoked) must not
+  // be able to mint fresh access tokens. Without this check, logout only killed
+  // the 24h access token while the 90d refresh token stayed usable.
+  const isRevoked = await tokenBlacklist.isBlacklisted(refreshToken);
+  if (isRevoked) {
+    throw new Error('Refresh token has been revoked. Please log in again.');
+  }
 
   // Access token always uses JWT_SECRET — separate from refresh secret
   const accessToken = jwt.sign(

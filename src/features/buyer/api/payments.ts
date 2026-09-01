@@ -1,8 +1,13 @@
 import apiClient from '@/infrastructure/http/apiClient';
 
-export async function getOrderStatus(orderNumber: string): Promise<unknown> {
+export async function getOrderStatus(orderNumber: string, clientCheckoutToken?: string | null): Promise<unknown> {
   try {
-    const response = await apiClient.get<unknown>(`/public/orders/${orderNumber}/status`);
+    // Send the checkout ownership token so a verified buyer's poll can return an
+    // auto-login token (backend gates it on this secret + payment success + verified).
+    const url = clientCheckoutToken
+      ? `/public/orders/${orderNumber}/status?client_checkout_token=${encodeURIComponent(clientCheckoutToken)}`
+      : `/public/orders/${orderNumber}/status`;
+    const response = await apiClient.get<unknown>(url);
     const data = response.data as Record<string, unknown>;
     return data.data;
   } catch (error) {

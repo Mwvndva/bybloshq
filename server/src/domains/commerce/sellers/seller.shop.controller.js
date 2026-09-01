@@ -1,7 +1,6 @@
 // Seller shop/discovery handlers (public shop lookup, search, product listing).
 // Split from seller.controller.js in Phase 15.7b; re-exported via that barrel.
 import { query } from '../../../infrastructure/database/database.js';
-import * as SellerModel from './seller.model.js';
 import { findSellerByShopName, isShopNameAvailable, findSellerById } from './seller.model.js';
 import { sanitizeSeller, sanitizePublicSeller } from '../../../shared/utils/sanitize.js';
 
@@ -252,36 +251,3 @@ export const getSellerById = async (req, res) => {
   }
 };
 
-export const getBuyerShops = async (req, res) => {
-  try {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required'
-      });
-    }
-
-    const result = await SellerModel.findSellersByUserId(userId, {
-      page: req.query.page,
-      limit: req.query.limit || req.query.pageSize
-    });
-    const sellers = result.sellers || [];
-
-    res.status(200).json({
-      status: 'success',
-      success: true,
-      data: sellers.map(s => sanitizePublicSeller(s)),
-      pagination: result.pagination
-    });
-
-  } catch (error) {
-    console.error('Error fetching buyer shops:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch shops',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};

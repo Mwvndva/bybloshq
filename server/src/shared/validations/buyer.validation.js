@@ -24,5 +24,3 @@ export const autoLogin = z.object({ autoLoginToken: s, token: s }).passthrough()
 export const updateProfile = z.object({}).passthrough();
 export const refundRequest = z.object({ amount: n }).passthrough();
 export const orderCollected = z.object({ orderId: id }).passthrough();
-export const becomeClient = z.object({ sellerId: id }).passthrough();
-export const leaveClient = z.object({ sellerId: id }).passthrough();

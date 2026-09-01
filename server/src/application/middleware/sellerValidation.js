@@ -24,7 +24,8 @@ export const sellerRegistrationSchema = z.object({
 
     confirmPassword: z.string().min(1, 'Please confirm your password'),
 
-    whatsappNumber: z.string().min(1, 'WhatsApp number is required').trim(),
+    // WhatsApp is an optional alternative contact only (not a notification channel).
+    whatsappNumber: z.string().trim().optional(),
 
     city: z.string().min(1, 'City is required').trim(),
 

@@ -313,8 +313,7 @@ class Order {
           'id', s.id,
           'name', s.full_name,
           'shopName', s.shop_name,
-          'theme', s.theme,
-          'clientCount', s.client_count
+          'theme', s.theme
         ) as seller,
         COALESCE(
           json_agg(
@@ -387,8 +386,7 @@ class Order {
           'id', s.id,
           'name', s.full_name,
           'shopName', s.shop_name,
-          'theme', s.theme,
-          'clientCount', s.client_count
+          'theme', s.theme
         ) as seller,
         COALESCE(
           json_agg(
@@ -467,9 +465,7 @@ class Order {
           'id', s.id,
           'name', s.full_name,
           'shopName', s.shop_name,
-          'theme', s.theme,
-          'clientCount', COALESCE(s.client_count, 0),
-          'isClient', (sc.user_id IS NOT NULL)
+          'theme', s.theme
         ) as seller,
         COALESCE(
           json_agg(
@@ -494,9 +490,8 @@ class Order {
       LEFT JOIN products p ON oi.product_id = p.id
       LEFT JOIN sellers s ON o.seller_id = s.id
       LEFT JOIN buyers b ON o.buyer_id = b.id
-      LEFT JOIN seller_clients sc ON s.id = sc.seller_id AND sc.user_id = b.user_id
       ${whereClause}
-      GROUP BY o.id, s.id, sc.user_id
+      GROUP BY o.id, s.id
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
@@ -624,41 +619,6 @@ class Order {
     };
   }
 
-  static async markAsShipped(orderId, trackingNumber = null) {
-    const query = `
-      UPDATE product_orders 
-      SET 
-        status = 'shipped',
-        metadata = jsonb_set(
-          COALESCE(metadata, '{}'::jsonb), 
-          '{tracking}', 
-          $1::jsonb,
-          true
-        ),
-        updated_at = NOW()
-      WHERE id = $2
-      RETURNING *
-    `;
-
-    const trackingData = trackingNumber ? { number: trackingNumber, date: new Date().toISOString() } : null;
-    const { rows } = await pool.query(query, [JSON.stringify(trackingData), orderId]);
-    return rows[0];
-  }
-
-  static async markAsDelivered(orderId) {
-    const query = `
-      UPDATE product_orders 
-      SET 
-        status = 'delivered',
-        updated_at = NOW()
-      WHERE id = $1
-      RETURNING *
-    `;
-
-    const { rows } = await pool.query(query, [orderId]);
-    return rows[0];
-  }
-
   static async updateStatusWithSideEffects(client, orderId, status, paymentStatus, paymentReference = null) {
     const query = `
       UPDATE product_orders 
@@ -681,47 +641,21 @@ class Order {
   static async updateStatusWithReason(client, orderId, status, reason) {
     const updateOrderQuery = `
       UPDATE product_orders 
-      SET 
-        status = $1,
+      SET
+        status = $1::text,
         metadata = jsonb_set(
-          COALESCE(metadata, '{}'::jsonb), 
-          '{cancellation_reason}', 
+          COALESCE(metadata, '{}'::jsonb),
+          '{cancellation_reason}',
           $2::jsonb,
           true
         ),
-        cancelled_at = CASE WHEN $1::order_status = 'CANCELLED'::order_status AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END,
+        cancelled_at = CASE WHEN $1::text = 'CANCELLED' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END,
         updated_at = NOW()
       WHERE id = $3
       RETURNING *
     `;
     const executor = client || pool;
     const { rows } = await executor.query(updateOrderQuery, [status, JSON.stringify(reason), orderId]);
-    return rows[0];
-  }
-
-  static async getOrderStats(sellerId = null) {
-    const params = [];
-    let whereClause = '';
-
-    if (sellerId) {
-      params.push(sellerId);
-      whereClause = 'WHERE seller_id = $1';
-    }
-
-    const query = `
-      SELECT 
-        COUNT(*) as total_orders,
-        COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as completed_orders,
-        COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) as pending_orders,
-        COALESCE(SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END), 0) as cancelled_orders,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
-        COALESCE(SUM(platform_fee_amount), 0) as total_platform_fee,
-        COALESCE(SUM(seller_payout_amount), 0) as total_seller_payout
-      FROM product_orders
-      ${whereClause}
-    `;
-
-    const { rows } = await pool.query(query, params);
     return rows[0];
   }
 }

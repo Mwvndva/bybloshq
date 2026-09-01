@@ -58,7 +58,6 @@ export const getSellerAnalytics = async (req, res, next) => {
       withdrawal_reserved_balance: 0,
       refund_reserved_balance: 0,
       next_settlement_at: null,
-      client_count: 0,
       creator_count: 0,
       creator_generated_sales: 0,
     };
@@ -73,7 +72,6 @@ export const getSellerAnalytics = async (req, res, next) => {
       withdrawalReservedBalance: parseFloat(sellerStats.withdrawal_reserved_balance || 0),
       refundReservedBalance: parseFloat(sellerStats.refund_reserved_balance || 0),
       nextSettlementAt: sellerStats.next_settlement_at || null,
-      clientCount: parseInt(sellerStats.client_count || 0),
       creatorCount: parseInt(sellerStats.creator_count || 0),
       creatorGeneratedSales: parseFloat(sellerStats.creator_generated_sales || 0),
       wishlistCount,
