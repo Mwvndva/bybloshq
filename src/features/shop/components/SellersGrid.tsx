@@ -82,7 +82,7 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
     }
 
     return (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 [@media(min-width:640px)]:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
             {filteredSellers.map((seller) => (
                 <SellerBrandCard key={seller.id} seller={seller} isBuyer={isBuyer} />
             ))}
