@@ -1,4 +1,4 @@
-﻿-- Migration: Fix order_status_history.status column type and trigger function
+-- Migration: Fix order_status_history.status column type and trigger function
 -- Reason: Eliminate type mismatch error between product_orders.status (VARCHAR) and order_status_history.status (order_status ENUM)
 
 -- 1. Alter order_status_history.status column type to VARCHAR(50)
