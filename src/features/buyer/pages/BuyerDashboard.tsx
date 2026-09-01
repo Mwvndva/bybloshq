@@ -77,14 +77,6 @@ function BuyerDashboard() {
     };
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (profileCloseNavigationTimerRef.current !== null) {
-        window.clearTimeout(profileCloseNavigationTimerRef.current);
-      }
-    };
-  }, []);
-
   const navItems = [
     { key: 'shop', label: 'Shops', Icon: Store, path: '/buyer/dashboard' },
     { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },

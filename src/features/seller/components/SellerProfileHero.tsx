@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Link2, Pencil, TrendingUp } from 'lucide-react';
-import { formatCurrency } from '@/shared/utils/formatting';
+import { Link2, Pencil } from 'lucide-react';
 import type { SellerProfile } from '@/features/auth/types/authTypes';
 import { SellerMediaEditDialog } from './SellerMediaEditDialog';
 
 interface SellerProfileHeroProps {
   sellerProfile: SellerProfile;
-  sales: number;
   shopUsername?: string | null;
   onCopyShopLink?: () => void | Promise<void>;
   canEdit?: boolean;
@@ -15,9 +13,9 @@ interface SellerProfileHeroProps {
 /**
  * Shop identity hero for the seller dashboard: compact accent header,
  * the business profile photo centered in a circular frame with a pencil
- * edit overlay, a "Shop link" action, the shop name, bio, and the sales stat.
+ * edit overlay, a "Shop link" action, the shop name, and bio.
  */
-export function SellerProfileHero({ sellerProfile, sales, shopUsername, onCopyShopLink, canEdit }: SellerProfileHeroProps) {
+export function SellerProfileHero({ sellerProfile, shopUsername, onCopyShopLink, canEdit }: SellerProfileHeroProps) {
   const [isEditingMedia, setIsEditingMedia] = useState(false);
   const shopName = sellerProfile?.shopName?.trim() || 'Your shop';
   const avatar = sellerProfile?.avatarUrl;
@@ -94,17 +92,6 @@ export function SellerProfileHero({ sellerProfile, sales, shopUsername, onCopySh
             {bio}
           </p>
         )}
-
-        {/* Sales */}
-        <div className="mt-4 w-full max-w-md">
-          <div className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-            <TrendingUp className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-            <div className="text-center">
-              <p className="text-lg font-black leading-none text-white">{formatCurrency(sales || 0)}</p>
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-white/50">Sales</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {canEdit && (
