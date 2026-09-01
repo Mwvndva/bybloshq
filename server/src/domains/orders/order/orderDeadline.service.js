@@ -207,11 +207,11 @@ class OrderDeadlineService {
 
                     await client.query(
                         `UPDATE product_orders 
-                         SET status = 'EXPIRED',
+                         SET status = 'EXPIRED'::order_status,
                              metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window exceeded"}'::jsonb,
                              updated_at = NOW()
                          WHERE id = $1
-                           AND status IN ('RESERVED', 'HELD')`,
+                           AND status IN ('RESERVED'::order_status, 'HELD'::order_status)`,
                         [order.id]
                     );
 
@@ -368,8 +368,8 @@ class OrderDeadlineService {
                     const lockedOrder = lockedOrders[0];
                     await client.query(
                         `UPDATE product_orders
-                         SET status = 'CANCELLED',
-                             payment_status = 'failed',
+                         SET status = 'CANCELLED'::order_status,
+                             payment_status = 'failed'::payment_status,
                              auto_cancelled_reason = $1,
                              cancelled_at = NOW(),
                              updated_at = NOW(),
@@ -477,8 +477,8 @@ class OrderDeadlineService {
 
             await client.query(
                 `UPDATE product_orders 
-                 SET status = 'CANCELLED',
-                     payment_status = 'failed',
+                 SET status = 'CANCELLED'::order_status,
+                     payment_status = 'failed'::payment_status,
                      auto_cancelled_reason = $1,
                      cancelled_at = NOW()
                  WHERE id = $2

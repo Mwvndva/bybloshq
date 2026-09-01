@@ -97,19 +97,19 @@ const IMPORTANT_LOGISTICS_STATUS_NOTIFICATIONS = new Set([
 async function markOrderReadyForBuyerAfterDeliveredLeg(client, orderId, source) {
     const { rows } = await client.query(
         `UPDATE product_orders
-         SET status = 'READY_FOR_BUYER',
+         SET status = 'READY_FOR_BUYER'::order_status,
              metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
              updated_at = NOW()
          WHERE id = $1
            AND status IN (
-               'PAID',
-               'AWAITING_SELLER_ACTION',
-               'FULFILLING',
-               'PROCESSING',
-               'DELIVERY_PENDING',
-               'DELIVERY_COMPLETE',
-               'COLLECTION_PENDING',
-               'CONFIRMED'
+               'PAID'::order_status,
+               'AWAITING_SELLER_ACTION'::order_status,
+               'FULFILLING'::order_status,
+               'PROCESSING'::order_status,
+               'DELIVERY_PENDING'::order_status,
+               'DELIVERY_COMPLETE'::order_status,
+               'COLLECTION_PENDING'::order_status,
+               'CONFIRMED'::order_status
            )
          RETURNING id, status`,
         [
