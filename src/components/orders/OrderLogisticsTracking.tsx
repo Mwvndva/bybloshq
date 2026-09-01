@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/shared/types';
 import {
+  MZIGO_CBD_HUB,
   deriveOrderJourney,
   isRiderMoving,
 } from '@/features/logistics/utils/mzigoJourney';
@@ -246,27 +247,25 @@ export function OrderLogisticsTracking({
           </span>
         </div>
 
-        {/* Shop Pickup Card if in-person collection */}
+        {/* Byblos CBD Hub Pickup Card if hub collection */}
         {isPickup && (
           <div className="mt-3 rounded-lg border border-white/10 bg-black/40 p-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
-              <Store className="h-3 w-3 text-yellow-300" />
-              Pickup Location
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-300">
+              <Store className="h-3.5 w-3.5" />
+              Central Hub Collection Point
             </p>
-            <p className="mt-1 text-sm font-semibold text-white">
-              {order.seller?.shopName || order.seller?.name || 'Seller Shop'}
+            <p className="mt-1 text-sm font-bold text-white">
+              {MZIGO_CBD_HUB.name}
             </p>
-            <p className="text-xs text-white/70">{sellerShopAddress}</p>
-            {sellerMapLink && (
-              <a
-                href={sellerMapLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-yellow-200 hover:text-yellow-100"
-              >
-                <Navigation className="h-3 w-3" /> Get Directions
-              </a>
-            )}
+            <p className="text-xs text-white/70">{MZIGO_CBD_HUB.address}</p>
+            <a
+              href={MZIGO_CBD_HUB.mapLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-2.5 py-1 text-xs font-semibold text-yellow-200 hover:bg-yellow-400/20"
+            >
+              <Navigation className="h-3 w-3" /> Get Directions to Hub
+            </a>
           </div>
         )}
       </CollapsibleSection>
@@ -282,7 +281,7 @@ export function OrderLogisticsTracking({
             <div className="rounded-lg border border-white/10 bg-black/40 p-3">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
                 <MapPin className="h-3 w-3" />
-                Delivery address
+                Delivery Address (Buyer)
               </p>
               <p className="mt-1 text-sm font-semibold text-white">{deliveryAddress}</p>
               {deliveryMapLink && (
@@ -297,19 +296,18 @@ export function OrderLogisticsTracking({
               )}
             </div>
 
-            {isSeller && pickupLeg && (
-              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
-                  <MapPin className="h-3 w-3" />
-                  Pickup address
-                </p>
-                <p className="mt-1 text-sm font-semibold text-white">{pickupLeg.originAddress || pickupLeg.originLabel || 'Seller pickup location'}</p>
-              </div>
-            )}
+            <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+                <Store className="h-3 w-3" />
+                Central Transit Hub
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white">{MZIGO_CBD_HUB.name}</p>
+              <p className="text-xs text-white/70">{MZIGO_CBD_HUB.address}</p>
+            </div>
 
             {deliveryLeg && (
-              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Delivery fee</p>
+              <div className="rounded-lg border border-white/10 bg-black/40 p-3 sm:col-span-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Delivery Fee</p>
                 <p className="mt-1 text-sm font-semibold text-white">
                   {formatCurrency(deliveryLeg.feeAmount || 0, deliveryLeg.feeCurrency || order.currency)}
                 </p>
@@ -319,7 +317,7 @@ export function OrderLogisticsTracking({
 
           <p className="mt-3 flex items-start gap-2 text-xs text-white/70">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
-            Mzigo Ego verified delivery with continuous milestone status updates.
+            Mzigo Ego Central Hub handles verification, package security, and milestone tracking.
           </p>
 
           <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-3">
