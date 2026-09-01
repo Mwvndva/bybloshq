@@ -1,13 +1,14 @@
-import { Button } from '@/shared/ui/button';
-import { Card, CardContent } from '@/shared/ui/card';
 import { Heart, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useWishlist } from '@/features/buyer/hooks/useWishlist';
-import { ProductCard } from '@/features/shop/components/ProductCard';
+import { ShopProductCard } from '@/features/shop/components/ShopProductCard';
 import { Input } from '@/shared/ui/input';
 import { useState } from 'react';
 
 export default function WishlistSection() {
-  const { wishlist } = useWishlist();
+  const { wishlist, removeFromWishlist } = useWishlist();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
   const glassStyle: React.CSSProperties = {
@@ -63,14 +64,28 @@ export default function WishlistSection() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5">
-          {filteredWishlist.map((product) => (
-            <div key={product.id} className="max-w-[260px] w-full mx-auto sm:mx-0">
-              <ProductCard
-                product={product}
-                forceWhiteText={true}
-              />
-            </div>
-          ))}
+          {filteredWishlist.map((product) => {
+            const shopSlug = product.seller?.shopName || '';
+            const handleTap = () => {
+              if (!shopSlug) {
+                toast.error('This shop is unavailable right now.');
+                return;
+              }
+              // Open the seller shop with this product already in the bag.
+              navigate(`/buyer/shop/${encodeURIComponent(shopSlug)}`, { state: { bagAdd: product } });
+            };
+            return (
+              <div key={product.id} className="max-w-[260px] w-full mx-auto sm:mx-0">
+                <ShopProductCard
+                  product={product}
+                  onTap={handleTap}
+                  forceWhiteText
+                  isWishlisted
+                  onToggleWishlist={() => removeFromWishlist(String(product.id))}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

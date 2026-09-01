@@ -44,8 +44,8 @@ export function ShopHero({ sellerInfo, showSellerAvatar, setAvatarLoadFailed, se
         </Button>
       </div>
 
-      {/* Business Profile Identity */}
-      <div className="flex flex-col items-center text-center">
+      {/* Business Profile Identity — left-aligned */}
+      <div className="flex flex-col items-start text-left">
         {/* Business Profile Photo Avatar */}
         <div className="relative mb-3">
           <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-4 border-yellow-400 bg-[var(--byblos-surface-soft)] shadow-xl flex items-center justify-center text-2xl sm:text-3xl font-black text-[var(--byblos-text)]">
@@ -74,9 +74,10 @@ export function ShopHero({ sellerInfo, showSellerAvatar, setAvatarLoadFailed, se
           </p>
         )}
 
-        {/* Action row: Location, Instagram, TikTok — each shown only when available. */}
+        {/* Vertical stack under the photo: Location on its own row, then Instagram
+            + TikTok together on the next row. Each shown only when available. */}
         {(mapHref || instagramHref || tiktokHref) && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
+          <div className="mt-3 flex flex-col items-start gap-2 text-xs font-semibold">
             {mapHref && (
               <a
                 href={mapHref}
@@ -90,29 +91,34 @@ export function ShopHero({ sellerInfo, showSellerAvatar, setAvatarLoadFailed, se
                 <span>Location</span>
               </a>
             )}
-            {instagramHref && (
-              <a
-                href={instagramHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Instagram"
-                aria-label="Instagram"
-                className="inline-flex items-center justify-center p-1.5 rounded-full bg-[var(--byblos-surface-soft)] hover:opacity-80 border border-[var(--byblos-border)] transition-all shadow-sm"
-              >
-                <img src={instagramLogo} alt="" className="h-5 w-5 object-contain" />
-              </a>
-            )}
-            {tiktokHref && (
-              <a
-                href={tiktokHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="TikTok"
-                aria-label="TikTok"
-                className="inline-flex items-center justify-center p-1.5 rounded-full bg-[var(--byblos-surface-soft)] hover:opacity-80 border border-[var(--byblos-border)] transition-all shadow-sm"
-              >
-                <img src={tiktokLogo} alt="" className="h-5 w-5 object-contain" />
-              </a>
+
+            {(instagramHref || tiktokHref) && (
+              <div className="flex items-center gap-2">
+                {instagramHref && (
+                  <a
+                    href={instagramHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Instagram"
+                    aria-label="Instagram"
+                    className="inline-flex items-center justify-center p-1.5 rounded-full bg-[var(--byblos-surface-soft)] hover:opacity-80 border border-[var(--byblos-border)] transition-all shadow-sm"
+                  >
+                    <img src={instagramLogo} alt="" className="h-5 w-5 object-contain" />
+                  </a>
+                )}
+                {tiktokHref && (
+                  <a
+                    href={tiktokHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="TikTok"
+                    aria-label="TikTok"
+                    className="inline-flex items-center justify-center p-1.5 rounded-full bg-[var(--byblos-surface-soft)] hover:opacity-80 border border-[var(--byblos-border)] transition-all shadow-sm"
+                  >
+                    <img src={tiktokLogo} alt="" className="h-5 w-5 object-contain" />
+                  </a>
+                )}
+              </div>
             )}
           </div>
         )}
