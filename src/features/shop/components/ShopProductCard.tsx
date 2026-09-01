@@ -3,7 +3,7 @@ import { Heart, Info, Package, X } from 'lucide-react';
 import { Card } from '@/shared/ui/card';
 import type { Product } from '@/shared/types';
 import { cn, formatCurrency, getImageUrl } from '@/shared/utils/formatting';
-import { getProductFlags, type ProductWithApiFields } from '@/features/shop/utils/productCardUtils';
+import { getProductCardThemeVars, getProductFlags, type ProductWithApiFields, type Theme } from '@/features/shop/utils/productCardUtils';
 
 interface ShopProductCardProps {
   product: Product;
@@ -12,29 +12,31 @@ interface ShopProductCardProps {
   /** Shop context: the product is already in the bag → show the remove (x) control. */
   inBag?: boolean;
   onRemoveFromBag?: () => void;
-  forceWhiteText?: boolean;
   /** Wishlist context: a filled heart that removes the item from the wishlist. */
   isWishlisted?: boolean;
   onToggleWishlist?: () => void;
 }
 
 /**
- * Minimal product card (spec §17): product image, price, and a description
- * button — nothing else. Tapping the card adds the product to the seller-shop
- * bag; a sold / out-of-stock product is shown disabled with a "Sold" overlay.
+ * Minimal product card (spec §17): image, product name, price, and a description
+ * button. The card adopts the seller's shop theme — surface follows the shop's
+ * dark/light theme (--theme-*), and the name/price/description carry the seller's
+ * accent colour (--product-card-accent). Tapping adds the product to the bag; a
+ * sold / out-of-stock product is shown disabled with a "Sold" overlay.
  */
 export function ShopProductCard({
   product,
   onTap,
   inBag = false,
   onRemoveFromBag,
-  forceWhiteText = false,
   isWishlisted,
   onToggleWishlist,
 }: ShopProductCardProps) {
   const [showDescription, setShowDescription] = useState(false);
   const { isSold } = getProductFlags(product as unknown as ProductWithApiFields);
   const image = product.image_url ? getImageUrl(product.image_url) : null;
+  const theme = (product.seller?.theme as Theme) || 'default';
+  const themeVars = getProductCardThemeVars(theme);
 
   const stop = (e: MouseEvent) => e.stopPropagation();
 
@@ -50,10 +52,16 @@ export function ShopProductCard({
           if (isSold) return;
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(); }
         }}
+        style={{
+          ...themeVars,
+          backgroundColor: 'var(--theme-card-bg, #0a0a0a)',
+          color: 'var(--theme-text, #ffffff)',
+          borderColor: 'var(--theme-border, rgba(255,255,255,0.12))',
+        }}
         className={cn(
           'group relative flex h-full flex-col overflow-hidden rounded-xl border transition-all duration-300 sm:rounded-2xl',
           isSold ? 'cursor-not-allowed opacity-70' : 'cursor-pointer sm:hover:-translate-y-1',
-          inBag && 'ring-2 ring-[var(--theme-accent,#f5c518)]',
+          inBag && 'ring-2 ring-[var(--product-card-accent,#f5c518)]',
         )}
       >
         {/* Image — full width, flush to the top. */}
@@ -61,7 +69,7 @@ export function ShopProductCard({
           {image ? (
             <img src={image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-white/40"><Package className="h-8 w-8" /></div>
+            <div className="flex h-full w-full items-center justify-center opacity-40"><Package className="h-8 w-8" /></div>
           )}
 
           {isSold && (
@@ -93,15 +101,19 @@ export function ShopProductCard({
           )}
         </div>
 
-        {/* Price + description button — the only content (§17). */}
-        <div className="flex flex-1 flex-col gap-1.5 p-2 sm:p-2.5">
-          <p className={cn('text-sm font-black tabular-nums sm:text-base', forceWhiteText ? 'text-white' : 'text-[var(--product-card-accent,var(--byblos-text))]')}>
+        {/* Name, price, description button — themed with the seller's accent. */}
+        <div className="flex flex-1 flex-col gap-1 p-2 sm:p-2.5">
+          <h3 className="truncate text-xs font-black tracking-tight sm:text-sm" style={{ color: 'var(--product-card-accent)' }} title={product.name}>
+            {product.name}
+          </h3>
+          <p className="text-sm font-black tabular-nums sm:text-base" style={{ color: 'var(--product-card-accent)' }}>
             {formatCurrency(product.price)}
           </p>
           <button
             type="button"
             onClick={(e) => { stop(e); setShowDescription(true); }}
-            className={cn('inline-flex w-fit items-center gap-1 text-[11px] font-bold underline-offset-2 hover:underline sm:text-xs', forceWhiteText ? 'text-white/80' : 'text-[var(--product-card-muted,var(--byblos-muted))]')}
+            className="mt-auto inline-flex w-fit items-center gap-1 text-[11px] font-bold underline-offset-2 hover:underline sm:text-xs"
+            style={{ color: 'var(--product-card-accent)' }}
           >
             <Info className="h-3 w-3" />
             Description
@@ -109,18 +121,22 @@ export function ShopProductCard({
         </div>
       </Card>
 
-      {/* Description popup (§18) — closes on the close button or an outside tap; never navigates. */}
+      {/* Description popup (§18) — translucent, blurred backdrop; closes on the
+          close button or an outside tap; never navigates. */}
       {showDescription && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={`${product.name} description`}>
-          <button type="button" aria-label="Close description" onClick={() => setShowDescription(false)} className="absolute inset-0 bg-black/60" />
-          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white">
+          <button type="button" aria-label="Close description" onClick={() => setShowDescription(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-2xl border p-5 shadow-2xl"
+            style={{ ...themeVars, backgroundColor: 'var(--theme-card-bg, #0a0a0a)', color: 'var(--theme-text, #ffffff)', borderColor: 'var(--theme-border, rgba(255,255,255,0.12))' }}
+          >
             <div className="mb-2 flex items-start justify-between gap-3">
-              <h3 className="text-base font-black">{product.name}</h3>
-              <button type="button" onClick={() => setShowDescription(false)} aria-label="Close" className="-mr-1 -mt-1 rounded-full p-1.5 text-slate-500 hover:bg-black/5 dark:text-white/60 dark:hover:bg-white/10">
+              <h3 className="text-base font-black" style={{ color: 'var(--product-card-accent)' }}>{product.name}</h3>
+              <button type="button" onClick={() => setShowDescription(false)} aria-label="Close" className="-mr-1 -mt-1 rounded-full p-1.5 opacity-60 hover:opacity-100 hover:bg-white/10">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="max-h-[50vh] overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-slate-600 dark:text-white/70">
+            <p className="max-h-[50vh] overflow-y-auto whitespace-pre-line text-sm leading-relaxed opacity-80">
               {product.description?.trim() || 'No description provided for this product.'}
             </p>
           </div>

@@ -3,8 +3,7 @@ import { Button } from '@/shared/ui/button';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import { getImageUrl } from '@/shared/utils/formatting';
 import { socialUrl, coordsMapUrl } from '../utils/socialLinks';
-import instagramLogo from '@/assets/social/instagram.png';
-import tiktokLogo from '@/assets/social/tiktok.png';
+import { SocialButtons } from './SocialButtons';
 import type { ShopSeller } from '../utils/shopPage.shared';
 
 interface ShopHeroProps {
@@ -74,54 +73,25 @@ export function ShopHero({ sellerInfo, showSellerAvatar, setAvatarLoadFailed, se
           </p>
         )}
 
-        {/* Vertical stack under the photo: Location on its own row, then Instagram
-            + TikTok together on the next row. Each shown only when available. */}
-        {(mapHref || instagramHref || tiktokHref) && (
-          <div className="mt-3 flex flex-col items-start gap-2 text-xs font-semibold">
-            {mapHref && (
-              <a
-                href={mapHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Location"
-                aria-label="Open shop location on the map"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--byblos-surface-soft)] text-[var(--byblos-text)] border border-[var(--byblos-border)] shadow-sm transition-all hover:opacity-80"
-              >
-                <MapPin className="h-4 w-4 text-yellow-500" />
-                <span>Location</span>
-              </a>
-            )}
+        {/* Vertical stack under the photo: Location on its own row (when available),
+            then Instagram + TikTok together on the next row (disabled when absent). */}
+        <div className="mt-3 flex flex-col items-start gap-2 text-xs font-semibold">
+          {mapHref && (
+            <a
+              href={mapHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Location"
+              aria-label="Open shop location on the map"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--byblos-surface-soft)] text-[var(--byblos-text)] border border-[var(--byblos-border)] shadow-sm transition-all hover:opacity-80"
+            >
+              <MapPin className="h-4 w-4 text-yellow-500" />
+              <span>Location</span>
+            </a>
+          )}
 
-            {(instagramHref || tiktokHref) && (
-              <div className="flex items-center gap-2">
-                {instagramHref && (
-                  <a
-                    href={instagramHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Instagram"
-                    aria-label="Instagram"
-                    className="inline-flex items-center justify-center p-1.5 rounded-full bg-[var(--byblos-surface-soft)] hover:opacity-80 border border-[var(--byblos-border)] transition-all shadow-sm"
-                  >
-                    <img src={instagramLogo} alt="" className="h-5 w-5 object-contain" />
-                  </a>
-                )}
-                {tiktokHref && (
-                  <a
-                    href={tiktokHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="TikTok"
-                    aria-label="TikTok"
-                    className="inline-flex items-center justify-center p-1.5 rounded-full bg-[var(--byblos-surface-soft)] hover:opacity-80 border border-[var(--byblos-border)] transition-all shadow-sm"
-                  >
-                    <img src={tiktokLogo} alt="" className="h-5 w-5 object-contain" />
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+          <SocialButtons instagramHref={instagramHref} tiktokHref={tiktokHref} shopName={sellerInfo?.shopName || 'Shop'} />
+        </div>
       </div>
     </header>
   );

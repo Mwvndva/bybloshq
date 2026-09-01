@@ -5,8 +5,7 @@ import { cn, getImageUrl } from '@/shared/utils/formatting';
 import { useKnockSellerMutation } from '@/features/shop/hooks/useShopQueries';
 import type { ApiPublicSeller } from '@/shared/types/api/seller';
 import { socialUrl, coordsMapUrl } from '../utils/socialLinks';
-import instagramLogo from '@/assets/social/instagram.png';
-import tiktokLogo from '@/assets/social/tiktok.png';
+import { SocialButtons } from './SocialButtons';
 
 interface SellerBrandCardProps {
     seller: ApiPublicSeller;
@@ -99,7 +98,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
     return (
         <article
             className={cn(
-                'group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-black shadow-sm transition-colors duration-200 hover:bg-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70',
+                'group relative flex aspect-[4/5] cursor-pointer flex-col overflow-hidden rounded-2xl border bg-black shadow-sm transition-colors duration-200 hover:bg-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70',
                 className,
             )}
             role="link"
@@ -112,8 +111,8 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 boxShadow: `0 16px 40px rgba(0,0,0,0.45), 0 0 24px ${palette.accentSoft}`,
             }}
         >
-            {/* Top: business photo — full width, flush to the top edge, fixed aspect to avoid layout shift. */}
-            <div className="aspect-square w-full overflow-hidden" style={{ background: palette.avatarGradient }}>
+            {/* Top ~60%: business photo. */}
+            <div className="h-[60%] w-full overflow-hidden" style={{ background: palette.avatarGradient }}>
                 {hasAvatar ? (
                     <img
                         src={getImageUrl(avatarUrl)}
@@ -129,42 +128,14 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 )}
             </div>
 
-            {/* Bottom: name, social buttons (vertical, left), then a location button pinned to the bottom. */}
-            <div className="flex flex-1 flex-col p-3">
-                <h3 className="truncate text-sm font-black tracking-tight text-white" title={shopName}>
+            {/* Bottom ~40%: shop name, Instagram + TikTok (one row), then location —
+                stacked vertically, left-aligned. */}
+            <div className="flex min-h-0 flex-1 flex-col items-start gap-1.5 p-2.5">
+                <h3 className="w-full truncate text-sm font-black tracking-tight text-white" title={shopName}>
                     {shopName}
                 </h3>
 
-                {(instagramHref || tiktokHref) && (
-                    <div className="mt-2 flex flex-col items-start gap-1.5">
-                        {instagramHref && (
-                            <a
-                                href={instagramHref}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={stop}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-white/12"
-                                aria-label={`${shopName} on Instagram`}
-                            >
-                                <img src={instagramLogo} alt="" className="h-4 w-4 object-contain" />
-                                Instagram
-                            </a>
-                        )}
-                        {tiktokHref && (
-                            <a
-                                href={tiktokHref}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={stop}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-white/12"
-                                aria-label={`${shopName} on TikTok`}
-                            >
-                                <img src={tiktokLogo} alt="" className="h-4 w-4 object-contain" />
-                                TikTok
-                            </a>
-                        )}
-                    </div>
-                )}
+                <SocialButtons instagramHref={instagramHref} tiktokHref={tiktokHref} shopName={shopName} size="sm" />
 
                 {mapHref && (
                     <a
@@ -172,7 +143,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={stop}
-                        className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-white/12"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-white/12"
                         aria-label={`${shopName} location on the map`}
                     >
                         <MapPin className="h-3.5 w-3.5" />
