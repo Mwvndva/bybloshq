@@ -95,8 +95,8 @@ class Order {
         service_title, notification_sent, client_checkout_token
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 
-        $12, $13::jsonb, $14, $15, $16::jsonb, $17, $18::jsonb,
-        $19, $20, $21, $22, $23, $24, $25, $26, $27
+        $12, $13::jsonb, $14::order_status, $15::payment_status, $16::jsonb, $17::fulfillment_type, $18::jsonb,
+        $19::order_type, $20, $21, $22, $23, $24, $25, $26, $27
       )
       RETURNING *
     `;
@@ -241,7 +241,7 @@ class Order {
   static async updateOrderStatus(orderId, status, notes = null) {
     const query = `
       UPDATE product_orders 
-      SET status = $1, updated_at = NOW()
+      SET status = $1::order_status, updated_at = NOW()
       WHERE id = $2
       RETURNING *
     `;
@@ -262,7 +262,7 @@ class Order {
     const query = `
       UPDATE product_orders 
       SET 
-        payment_status = $1,
+        payment_status = $1::payment_status,
         payment_reference = $2,
         paid_at = ${shouldSetPaidAt ? 'NOW()' : 'paid_at'},
         updated_at = NOW()
@@ -642,14 +642,14 @@ class Order {
     const updateOrderQuery = `
       UPDATE product_orders 
       SET
-        status = $1::text,
+        status = $1::order_status,
         metadata = jsonb_set(
           COALESCE(metadata, '{}'::jsonb),
           '{cancellation_reason}',
           $2::jsonb,
           true
         ),
-        cancelled_at = CASE WHEN $1::text = 'CANCELLED' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END,
+        cancelled_at = CASE WHEN $1::order_status = 'CANCELLED'::order_status AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END,
         updated_at = NOW()
       WHERE id = $3
       RETURNING *

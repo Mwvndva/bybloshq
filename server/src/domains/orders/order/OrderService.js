@@ -24,7 +24,7 @@ export class OrderService {
       assertValidTransition(currentOrder.status, status);
 
       const updateRes = await client.query(
-        'UPDATE product_orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        'UPDATE product_orders SET status = $1::order_status, updated_at = NOW() WHERE id = $2 RETURNING *',
         [status, orderId]
       );
       const updatedOrder = updateRes.rows[0];
@@ -54,7 +54,7 @@ export class OrderService {
       const order = rows[0];
       assertValidTransition(order.status, OrderStatus.FULFILLING);
       const upd = await client.query(
-        'UPDATE product_orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        'UPDATE product_orders SET status = $1::order_status, updated_at = NOW() WHERE id = $2 RETURNING *',
         [OrderStatus.FULFILLING, orderId]
       );
       await client.query('COMMIT');
@@ -83,7 +83,7 @@ export class OrderService {
       const order = rows[0];
       assertValidTransition(order.status, OrderStatus.COMPLETED);
       const upd = await client.query(
-        'UPDATE product_orders SET status = $1, completed_at = NOW(), updated_at = NOW() WHERE id = $2 RETURNING *',
+        'UPDATE product_orders SET status = $1::order_status, completed_at = NOW(), updated_at = NOW() WHERE id = $2 RETURNING *',
         [OrderStatus.COMPLETED, orderId]
       );
       await client.query('COMMIT');
