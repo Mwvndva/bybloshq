@@ -111,8 +111,8 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 boxShadow: `0 16px 40px rgba(0,0,0,0.45), 0 0 24px ${palette.accentSoft}`,
             }}
         >
-            {/* Top ~60%: business photo. */}
-            <div className="h-[60%] w-full overflow-hidden" style={{ background: palette.avatarGradient }}>
+            {/* Top ~80%: business photo. */}
+            <div className="h-[80%] w-full overflow-hidden" style={{ background: palette.avatarGradient }}>
                 {hasAvatar ? (
                     <img
                         src={getImageUrl(avatarUrl)}
@@ -128,28 +128,36 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 )}
             </div>
 
-            {/* Bottom ~40%: shop name, Instagram + TikTok (one row), then location —
-                stacked vertically, left-aligned. */}
-            <div className="flex min-h-0 flex-1 flex-col items-start gap-1.5 p-2.5">
-                <h3 className="w-full truncate text-sm font-black tracking-tight text-white" title={shopName}>
+            {/* Bottom ~20%: shop name, then Instagram + TikTok + Location on one row,
+                left-aligned. Location is disabled when the seller has no coordinates. */}
+            <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-1 px-2 py-1.5">
+                <h3 className="w-full truncate text-[11px] font-black tracking-tight text-white sm:text-xs" title={shopName}>
                     {shopName}
                 </h3>
 
-                <SocialButtons instagramHref={instagramHref} tiktokHref={tiktokHref} shopName={shopName} size="sm" />
-
-                {mapHref && (
-                    <a
-                        href={mapHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={stop}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-white/12"
-                        aria-label={`${shopName} location on the map`}
-                    >
-                        <MapPin className="h-3.5 w-3.5" />
-                        Location
-                    </a>
-                )}
+                <div className="flex items-center gap-1.5">
+                    <SocialButtons instagramHref={instagramHref} tiktokHref={tiktokHref} shopName={shopName} size="sm" />
+                    {mapHref ? (
+                        <a
+                            href={mapHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={stop}
+                            aria-label={`${shopName} location on the map`}
+                            className="inline-flex items-center justify-center rounded-full border border-[var(--byblos-border,rgba(255,255,255,0.14))] bg-[var(--byblos-surface-soft,rgba(255,255,255,0.06))] p-1.5 shadow-sm transition-all hover:opacity-80"
+                        >
+                            <MapPin className="h-4 w-4 text-yellow-400" />
+                        </a>
+                    ) : (
+                        <span
+                            aria-label="Location not available"
+                            aria-disabled="true"
+                            className="inline-flex cursor-not-allowed items-center justify-center rounded-full border border-white/10 bg-white/[0.03] p-1.5 opacity-35"
+                        >
+                            <MapPin className="h-4 w-4 text-white/60" />
+                        </span>
+                    )}
+                </div>
 
                 {showUnfollow && onUnfollow && (
                     <button
