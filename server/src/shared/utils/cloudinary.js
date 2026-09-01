@@ -72,9 +72,14 @@ export const deleteFromCloudinary = async (publicId, resourceType = 'image') => 
  * @param {number} [expiresInSeconds=300] - URL validity window in seconds (default 5 minutes).
  * @returns {string} A signed Cloudinary URL.
  */
-export const generateSignedDownloadUrl = (publicId, expiresInSeconds = 300) => {
+export const generateSignedDownloadUrl = (publicId, expiresInSeconds = 300, resourceType = 'raw') => {
+  if (!publicId) return '';
+  if (publicId.startsWith('http://') || publicId.startsWith('https://')) {
+    return publicId;
+  }
   const expiresAt = Math.floor(Date.now() / 1000) + expiresInSeconds;
-  return cloudinary.utils.private_download_url(publicId, 'auto', {
+  return cloudinary.utils.private_download_url(publicId, '', {
+    resource_type: resourceType,
     expires_at: expiresAt,
     attachment: true,
   });
