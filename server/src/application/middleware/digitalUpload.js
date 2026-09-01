@@ -6,8 +6,17 @@ import { writeFile, unlink } from 'node:fs/promises';
 import os from 'node:os';
 import { uploadToCloudinary } from '../../shared/utils/cloudinary.js';
 
-// Allowed extensions for digital products
-const ALLOWED_EXTENSIONS = ['.pdf', '.zip', '.rar', '.epub', '.mobi'];
+// Allowed extensions for digital products (documents, images, graphics, audio, video, archives, software)
+const ALLOWED_EXTENSIONS = [
+    // Images & Graphics
+    '.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif', '.bmp', '.tiff', '.tif', '.heic', '.heif', '.ai', '.psd', '.eps', '.ico', '.raw',
+    // Documents & eBooks
+    '.pdf', '.epub', '.mobi', '.doc', '.docx', '.txt', '.csv', '.xlsx', '.xls', '.ppt', '.pptx',
+    // Archives & Compressed
+    '.zip', '.rar', '.7z', '.tar', '.gz',
+    // Audio & Video
+    '.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.mp4', '.mov', '.avi', '.mkv'
+];
 
 // File filter — validates extension before multer stores anything
 const fileFilter = (req, file, cb) => {

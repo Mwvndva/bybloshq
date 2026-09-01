@@ -183,16 +183,23 @@ export const AddProductFormSteps = ({
 
         {formData.product_type === 'digital' && (
           <div className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl space-y-3">
-            <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Upload Digital Content</Label>
+            <div className="flex justify-between items-center">
+              <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Upload Digital Content</Label>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Max 500MB</span>
+            </div>
             <div className="relative">
               <Input
                 type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.gif,.bmp,.tiff,.heic,.zip,.rar,.7z,.epub,.mobi,.doc,.docx,.txt,.mp3,.wav,.mp4"
                 onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) setFormData(p => ({ ...p, digital_file: file }));
                 }}
-                className="bg-white dark:bg-white/5 border-slate-300 dark:border-white/10 text-slate-950 dark:text-white h-12 pt-2.5 rounded-xl"
+                className="bg-white dark:bg-white/5 border-slate-300 dark:border-white/10 text-slate-950 dark:text-white h-12 pt-2.5 rounded-xl cursor-pointer"
               />
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 ml-1">
+                Supported: Images (PNG, JPG, SVG, WebP, etc.), PDFs, Archives (ZIP, RAR), Audio, eBooks
+              </p>
               {uploadProgress > 0 && (
                 <div className="mt-2 h-1.5 w-full bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
                   <div className="h-full bg-yellow-400 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
