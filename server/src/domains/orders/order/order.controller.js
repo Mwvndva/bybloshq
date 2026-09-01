@@ -19,7 +19,7 @@ import http from 'node:http';
 import { sanitizeOrder } from '../../../shared/utils/sanitize.js';
 import paymentService from '../../payments/payments/payment.service.js';
 import OrderHubDropoffService from './orderHubDropoff.service.js';
-import { generateSignedDownloadUrl } from '../../../shared/utils/cloudinary.js';
+import { generateSignedDownloadUrl, getDigitalAssetUrls } from '../../../shared/utils/cloudinary.js';
 import LogisticsEtaService from '../../logistics/logisticsEta.service.js';
 
 const OrderService = CoreOrderService;
@@ -406,53 +406,64 @@ export const downloadDigitalProduct = async (req, res) => {
         const cleanFileName = fileName.endsWith(ext) ? fileName : `${fileName}${ext}`;
         const mimeType = getMimeType(ext);
 
-        logger.info(`[DOWNLOAD] Generating signed Cloudinary stream for public_id: ${digitalFilePath} (Order: ${orderId})`);
+        const candidateUrls = getDigitalAssetUrls(digitalFilePath, 300);
+        logger.info(`[DOWNLOAD] Attempting stream for public_id: ${digitalFilePath} (Order: ${orderId}), candidate count: ${candidateUrls.length}`);
 
-        const signedUrl = generateSignedDownloadUrl(digitalFilePath, 300, 'raw');
+        const tryStream = (index) => {
+            if (index >= candidateUrls.length) {
+                logger.error(`[DOWNLOAD] All stream candidates failed for ${digitalFilePath}`);
+                if (!res.headersSent) {
+                    return res.status(404).json({
+                        status: 'error',
+                        message: 'File could not be retrieved from storage'
+                    });
+                }
+                return;
+            }
 
-        const clientReq = (signedUrl.startsWith('https:') ? https : http).get(signedUrl, (cloudinaryRes) => {
-            if (cloudinaryRes.statusCode >= 400) {
-                logger.error(`[DOWNLOAD] Cloudinary stream failed with status ${cloudinaryRes.statusCode} for ${digitalFilePath}`);
-                // Try image resource type as fallback if raw failed
-                const fallbackUrl = generateSignedDownloadUrl(digitalFilePath, 300, 'image');
-                return (fallbackUrl.startsWith('https:') ? https : http).get(fallbackUrl, (fallbackRes) => {
-                    if (fallbackRes.statusCode >= 400) {
-                        logger.error(`[DOWNLOAD] Fallback Cloudinary stream failed with status ${fallbackRes.statusCode}`);
-                        if (!res.headersSent) {
-                            return res.status(502).json({ status: 'error', message: 'Storage service temporarily unavailable for this download' });
-                        }
-                        return;
-                    }
+            const currentUrl = candidateUrls[index];
+            const requester = currentUrl.startsWith('https:') ? https : http;
+
+            const reqStream = requester.get(currentUrl, (streamRes) => {
+                if (streamRes.statusCode === 200) {
                     res.setHeader('Content-Type', mimeType);
                     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanFileName)}"`);
-                    if (fallbackRes.headers['content-length']) {
-                        res.setHeader('Content-Length', fallbackRes.headers['content-length']);
+                    if (streamRes.headers['content-length']) {
+                        res.setHeader('Content-Length', streamRes.headers['content-length']);
                     }
                     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
-                    fallbackRes.pipe(res);
-                }).on('error', (fbErr) => {
-                    logger.error('[DOWNLOAD] Fallback stream error:', fbErr.message);
-                    if (!res.headersSent) res.status(500).json({ status: 'error', message: 'Download streaming failed' });
-                });
-            }
+                    return streamRes.pipe(res);
+                }
 
-            res.setHeader('Content-Type', mimeType);
-            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanFileName)}"`);
-            if (cloudinaryRes.headers['content-length']) {
-                res.setHeader('Content-Length', cloudinaryRes.headers['content-length']);
-            }
-            res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
+                // If redirected (301/302/307/308), follow redirect
+                if ([301, 302, 307, 308].includes(streamRes.statusCode) && streamRes.headers.location) {
+                    const redirectUrl = streamRes.headers.location;
+                    const redirRequester = redirectUrl.startsWith('https:') ? https : http;
+                    return redirRequester.get(redirectUrl, (redirRes) => {
+                        if (redirRes.statusCode === 200) {
+                            res.setHeader('Content-Type', mimeType);
+                            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanFileName)}"`);
+                            if (redirRes.headers['content-length']) {
+                                res.setHeader('Content-Length', redirRes.headers['content-length']);
+                            }
+                            res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
+                            return redirRes.pipe(res);
+                        }
+                        return tryStream(index + 1);
+                    }).on('error', () => tryStream(index + 1));
+                }
 
-            cloudinaryRes.pipe(res);
-        });
+                logger.warn(`[DOWNLOAD] Candidate ${index} (${currentUrl}) returned status ${streamRes.statusCode}, trying next candidate...`);
+                return tryStream(index + 1);
+            });
 
-        clientReq.on('error', (streamErr) => {
-            logger.error('[DOWNLOAD] Stream pipeline error:', streamErr.message);
-            if (!res.headersSent) {
-                res.status(500).json({ status: 'error', message: 'Download streaming failed' });
-            }
-        });
+            reqStream.on('error', (err) => {
+                logger.warn(`[DOWNLOAD] Candidate ${index} network error (${err.message}), trying next candidate...`);
+                tryStream(index + 1);
+            });
+        };
 
+        tryStream(0);
         return;
     } catch (error) {
         logger.error('Error in downloadDigitalProduct:', error);
