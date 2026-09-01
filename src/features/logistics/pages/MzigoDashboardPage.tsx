@@ -1,5 +1,5 @@
-import { ArrowLeft, CalendarClock, CheckCircle2, LogOut, PackageCheck, Radio, RefreshCw, Truck } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import { ArrowLeft, CalendarClock, CheckCircle2, LogOut, PackageCheck, RefreshCw, Truck } from 'lucide-react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
@@ -7,8 +7,6 @@ import { SORT_OPTIONS } from '../utils/mzigoDashboard.constants';
 import { DashboardStat, RequestCard } from '../components/mzigoDashboard.components';
 import { useMzigoDashboard } from '../hooks/useMzigoDashboard';
 import { MzigoActivityPanel } from '../components/MzigoActivityPanel';
-import { isRequestTrackable } from '../utils/mzigoJourney';
-import { useCourierBroadcast } from '../hooks/useCourierBroadcast';
 
 // Buttons are always yellow (primary) or outlined-white (secondary), never a
 // dark fill, so every action reads clearly on the black theme.
@@ -41,13 +39,6 @@ const MzigoDashboardPage = () => {
     [dashboard?.requests],
   );
   const done = grouped.completed;
-
-  // Live location: broadcast the courier's position to every delivery currently
-  // in motion, but only while the courier opts in (web geolocation, phase-scoped
-  // on the viewer side).
-  const [shareLocation, setShareLocation] = useState(false);
-  const trackableIds = useMemo(() => todo.filter(isRequestTrackable).map((request) => request.id), [todo]);
-  const broadcast = useCourierBroadcast(trackableIds, shareLocation);
 
   return (
     <main className="dashboard-layout mzigo-light-dashboard min-h-[100svh] overflow-x-hidden bg-[var(--byblos-bg,#000000)] text-[var(--byblos-text,#f5f5f5)] transition-colors duration-200" style={{ height: '100svh', overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(4rem + var(--sab, 16px))' } as React.CSSProperties}>
@@ -112,35 +103,10 @@ const MzigoDashboardPage = () => {
           </div>
         </div>
 
-        {/* ── Sort & Live Location controls ───────────────────── */}
+        {/* ── Sort & Controls ───────────────────── */}
         <div className="mb-6 flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 shadow-sm sm:flex-row sm:items-center">
           <div>
             <p className="text-xs text-slate-600 dark:text-white/60">Finished deliveries move to Done below.</p>
-
-            {/* Live location sharing — lets buyers/sellers watch active deliveries. */}
-            <button
-              type="button"
-              onClick={() => { setShareLocation((v) => !v); }}
-              aria-pressed={shareLocation}
-              className={`mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                shareLocation
-                  ? 'border border-yellow-500/40 bg-yellow-500/15 text-yellow-700 dark:text-yellow-200'
-                  : 'border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.05] text-slate-800 dark:text-white/80 hover:bg-black/[0.08] dark:hover:bg-white/10'
-              }`}
-            >
-              <Radio size={13} className={shareLocation && broadcast.active ? 'animate-pulse text-yellow-500 dark:text-yellow-400' : ''} />
-              {shareLocation
-                ? `Sharing live location (${trackableIds.length})`
-                : 'Share my live location'}
-            </button>
-            {shareLocation && broadcast.error && (
-              <p className="mt-1 text-[11px] text-red-500 dark:text-red-300">{broadcast.error}</p>
-            )}
-            {shareLocation && !broadcast.error && trackableIds.length === 0 && (
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-white/40">
-                Starts automatically once a delivery is picked up or out for delivery.
-              </p>
-            )}
           </div>
 
           <div className="w-full overflow-x-auto pb-1 sm:w-auto">

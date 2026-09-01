@@ -27,6 +27,8 @@ const LOGISTICS_SUMMARY_SELECT = `
               'destinationAddress', dl.destination_address,
               'destinationLat', dl.destination_lat,
               'destinationLng', dl.destination_lng,
+              'assignedAt', dl.assigned_at,
+              'startedAt', dl.started_at,
               'deadlineAt', dl.deadline_at,
               'completedAt', dl.completed_at
             ) END,
@@ -44,6 +46,8 @@ const LOGISTICS_SUMMARY_SELECT = `
               'destinationAddress', pl.destination_address,
               'destinationLat', pl.destination_lat,
               'destinationLng', pl.destination_lng,
+              'assignedAt', pl.assigned_at,
+              'startedAt', pl.started_at,
               'deadlineAt', pl.deadline_at,
               'completedAt', pl.completed_at
             ) END,

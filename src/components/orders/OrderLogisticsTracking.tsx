@@ -1,18 +1,29 @@
-import { useState } from 'react';
-import { ChevronDown, Clock, MapPin, Navigation, PackageSearch, Radio, ShieldCheck, Truck } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  Download,
+  MapPin,
+  Navigation,
+  PackageSearch,
+  ShieldCheck,
+  Store,
+  Truck,
+} from 'lucide-react';
 import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/shared/types';
-import { deriveJourneyFromStatuses, isDeliveryTrackable, isPickupTrackable } from '@/features/logistics/utils/mzigoJourney';
+import {
+  deriveOrderJourney,
+  isRiderMoving,
+} from '@/features/logistics/utils/mzigoJourney';
 import { MzigoJourneyStepper } from '@/features/logistics/components/MzigoJourneyStepper';
-import { useLiveDelivery } from '@/features/logistics/hooks/useLiveDelivery';
-import { LiveDeliveryMap } from '@/features/logistics/components/LiveDeliveryMap';
 import { cn } from '@/shared/utils/formatting';
 
 type TrackingView = 'buyer' | 'seller';
 
 /**
- * Collapsible dropdown panel used for the "Live Tracking" and "Logistics Details"
- * sections. Shared verbatim by the buyer and seller order cards (via
- * OrderLogisticsTracking) so both roles see identical tracking UX.
+ * Collapsible dropdown panel used for the tracking and logistics details sections.
  */
 function CollapsibleSection({
   title,
@@ -67,9 +78,9 @@ function label(value?: string | null) {
 }
 
 function formatDateTime(value?: string | null) {
-  if (!value) return 'Not set';
+  if (!value) return 'Pending schedule';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Not set';
+  if (Number.isNaN(date.getTime())) return 'Pending schedule';
   return new Intl.DateTimeFormat('en-KE', {
     month: 'short',
     day: 'numeric',
@@ -97,13 +108,6 @@ function mapLink(lat?: number | string | null, lng?: number | string | null, add
   return null;
 }
 
-function toPoint(lat?: number | string | null, lng?: number | string | null): [number, number] | null {
-  const nLat = lat === null || lat === undefined ? NaN : Number(lat);
-  const nLng = lng === null || lng === undefined ? NaN : Number(lng);
-  if (!Number.isFinite(nLat) || !Number.isFinite(nLng)) return null;
-  return [nLat, nLng];
-}
-
 function getDeliveryAddress(leg?: ApiOrderLogisticsDeliveryLeg | null, order?: ApiOrder) {
   return leg?.destinationAddress
     || leg?.destinationLabel
@@ -116,7 +120,7 @@ function Timeline({ events }: { events: NonNullable<ApiOrder['logistics']>['even
   if (!events?.length) {
     return (
       <p className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-white/65">
-        Updates will appear here as Mzigo Ego moves your package.
+        Updates will appear here as fulfillment progresses.
       </p>
     );
   }
@@ -146,122 +150,144 @@ export function OrderLogisticsTracking({
   const logistics = order.logistics;
   const deliveryLeg = logistics?.deliveryLeg || null;
   const pickupLeg = logistics?.pickupLeg || null;
-  const hasLogistics = Boolean(deliveryLeg || pickupLeg);
   const isSeller = view === 'seller';
 
-  // Live tracking is phase-scoped: the buyer watches during delivery, the seller
-  // during pickup. Only poll while the caller's own leg is actually in motion.
-  const trackablePhase = isSeller
-    ? isPickupTrackable(pickupLeg?.status)
-    : isDeliveryTrackable(deliveryLeg?.status);
-  const live = useLiveDelivery(String(order.id), view, trackablePhase);
-  const courierPoint = live?.available && live.location
-    ? [live.location.lat, live.location.lng] as [number, number]
-    : null;
-  const destinationPoint = isSeller
-    ? toPoint(pickupLeg?.originLat, pickupLeg?.originLng)
-    : toPoint(deliveryLeg?.destinationLat, deliveryLeg?.destinationLng);
+  const fulfillmentType = String(order.fulfillment_type || '').toUpperCase();
+  const isDoorDelivery = fulfillmentType === 'COURIER' || Boolean(deliveryLeg);
+  const isPickup = fulfillmentType === 'BUYER_TO_SELLER' || (!isDoorDelivery && isPhysical);
+  const isDigital = Boolean(order.isDigital || order.items?.some((i) => i.productType === 'digital' || i.isDigital));
+  const isService = Boolean(order.items?.some((i) => i.productType === 'service'));
 
-  if (!hasLogistics && (!isSeller || !isPhysical)) {
-    return null;
-  }
-
-  const journey = deriveJourneyFromStatuses(
-    pickupLeg?.status,
-    deliveryLeg?.status,
-    logistics?.status === 'completed',
-  );
+  const journey = useMemo(() => deriveOrderJourney(order), [order]);
+  const riderMoving = isDoorDelivery && isRiderMoving(deliveryLeg);
 
   const fallbackDeadline = addHours(order.createdAt, 24);
-  const etaSource = logistics?.deadlineAt || deliveryLeg?.deadlineAt || fallbackDeadline;
+  const etaSource = deliveryLeg?.deadlineAt || logistics?.deadlineAt || fallbackDeadline;
 
   const deliveryAddress = getDeliveryAddress(deliveryLeg, order);
   const deliveryMapLink = mapLink(deliveryLeg?.destinationLat, deliveryLeg?.destinationLng, deliveryAddress);
-  const pickupAddress = pickupLeg?.originAddress || pickupLeg?.originLabel || 'Seller pickup location pending';
-  const pickupMapLink = mapLink(pickupLeg?.originLat, pickupLeg?.originLng, pickupAddress);
+
+  const sellerShopAddress = order.seller?.physicalAddress || order.seller?.location || order.location_address || pickupLeg?.originAddress || 'Shop address pending';
+  const sellerMapLink = mapLink(
+    order.seller?.latitude ?? pickupLeg?.originLat,
+    order.seller?.longitude ?? pickupLeg?.originLng,
+    sellerShopAddress
+  );
 
   return (
     <section className="mt-4 space-y-2 rounded-xl border border-yellow-400/30 bg-yellow-400/[0.08] p-2 text-white sm:p-3">
-      {/* ── Live Tracking (open by default): the current fulfillment progress. ── */}
+      {/* ── Fulfillment Progress & ETA (open by default) ── */}
       <CollapsibleSection
-        id={`tracking-live-${order.id}`}
-        title="Live Tracking"
-        icon={<Truck className="h-4 w-4" />}
+        id={`tracking-progress-${order.id}`}
+        title={isDoorDelivery ? 'Delivery Tracking' : isPickup ? 'Collection Progress' : isDigital ? 'Digital Fulfillment' : 'Service Tracking'}
+        icon={isDoorDelivery ? <Truck className="h-4 w-4" /> : isPickup ? <Store className="h-4 w-4" /> : isDigital ? <Download className="h-4 w-4" /> : <PackageSearch className="h-4 w-4" />}
         defaultOpen
-        headerRight={courierPoint ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-400/20 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200">
-            <Radio className="h-3 w-3 animate-pulse" /> Live
-          </span>
-        ) : (
-          <span className="rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-100">
-            {journey.label}
-          </span>
-        )}
+        headerRight={
+          riderMoving ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/50 bg-yellow-400/20 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200">
+              <Truck className="h-3 w-3 animate-pulse text-yellow-300" /> In Transit
+            </span>
+          ) : journey.isDelivered ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-200">
+              <CheckCircle2 className="h-3 w-3 text-emerald-300" /> {journey.label}
+            </span>
+          ) : (
+            <span className="rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-100">
+              {journey.label}
+            </span>
+          )
+        }
       >
-        {/* Live map — only while the courier is moving on the caller's leg. */}
-        {courierPoint && (
-          <div className="mb-3">
-            <LiveDeliveryMap
-              courier={courierPoint}
-              destination={destinationPoint}
-              updatedAt={live?.location?.updatedAt}
-              destinationLabel={isSeller ? 'Your shop' : 'You'}
-            />
-          </div>
-        )}
-
-        {/* Journey stepper — the ETA progress. */}
+        {/* Progress Stepper */}
         <div className="rounded-xl border border-white/10 bg-black/40 px-3 py-3">
           <MzigoJourneyStepper journey={journey} />
         </div>
 
-        {/* Plain ETA. */}
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm">
-          <Clock className="h-4 w-4 shrink-0 text-yellow-300" />
-          <span className="text-white">
-            {journey.isDelivered
-              ? `Delivered ${formatDateTime(deliveryLeg?.completedAt || logistics?.completedAt || etaSource)}`
-              : `Arrives by ${formatDateTime(etaSource)}`}
+        {/* Progress Bar with glowing fill */}
+        <div className="mt-2.5 overflow-hidden rounded-full bg-white/10 p-0.5">
+          <div
+            className={cn(
+              'h-1.5 rounded-full transition-all duration-500',
+              journey.state === 'attention'
+                ? 'bg-red-400'
+                : journey.state === 'delayed'
+                  ? 'bg-amber-400'
+                  : journey.isDelivered
+                    ? 'bg-emerald-400'
+                    : riderMoving
+                      ? 'bg-gradient-to-r from-yellow-500 via-amber-300 to-yellow-400 animate-pulse'
+                      : 'bg-yellow-400'
+            )}
+            style={{ width: `${Math.min(100, Math.max(10, journey.percentProgress))}%` }}
+          />
+        </div>
+
+        {/* Informative Status & ETA Badge */}
+        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 shrink-0 text-yellow-300" />
+            <span className="text-white">
+              {journey.isDelivered
+                ? `${isPickup ? 'Collected' : 'Delivered'} on ${formatDateTime(deliveryLeg?.completedAt || logistics?.completedAt || order.updatedAt)}`
+                : isDoorDelivery
+                  ? (riderMoving ? `Arriving by ${formatDateTime(etaSource)}` : `Est. delivery by ${formatDateTime(etaSource)}`)
+                  : isPickup
+                    ? (order.status === 'READY_FOR_BUYER' || order.status === 'COLLECTION_PENDING'
+                        ? 'Ready for pickup at shop'
+                        : 'Estimated ready within 24 hours')
+                    : isDigital
+                      ? 'Instant access available'
+                      : 'Booking active'}
+            </span>
+          </div>
+
+          <span className="text-xs text-white/70">
+            {journey.detail}
           </span>
         </div>
-      </CollapsibleSection>
 
-      {/* ── Logistics Details (collapsed by default): addresses, fee, updates. ── */}
-      <CollapsibleSection
-        id={`tracking-logistics-${order.id}`}
-        title="Logistics Details"
-        icon={<PackageSearch className="h-4 w-4" />}
-      >
-        {/* Where it's going (and, for sellers, where it's coming from). */}
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+        {/* Shop Pickup Card if in-person collection */}
+        {isPickup && (
+          <div className="mt-3 rounded-lg border border-white/10 bg-black/40 p-3">
             <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
-              <MapPin className="h-3 w-3" />
-              Delivery address
+              <Store className="h-3 w-3 text-yellow-300" />
+              Pickup Location
             </p>
-            <p className="mt-1 text-sm font-semibold text-white">{deliveryAddress}</p>
-            {deliveryMapLink && (
+            <p className="mt-1 text-sm font-semibold text-white">
+              {order.seller?.shopName || order.seller?.name || 'Seller Shop'}
+            </p>
+            <p className="text-xs text-white/70">{sellerShopAddress}</p>
+            {sellerMapLink && (
               <a
-                href={deliveryMapLink}
+                href={sellerMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-yellow-200 hover:text-yellow-100"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-yellow-200 hover:text-yellow-100"
               >
-                <Navigation className="h-3 w-3" /> Open map
+                <Navigation className="h-3 w-3" /> Get Directions
               </a>
             )}
           </div>
+        )}
+      </CollapsibleSection>
 
-          {isSeller && pickupLeg && (
+      {/* ── Logistics Details (collapsed by default for courier orders) ── */}
+      {isDoorDelivery && (
+        <CollapsibleSection
+          id={`tracking-logistics-${order.id}`}
+          title="Logistics Details"
+          icon={<PackageSearch className="h-4 w-4" />}
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-lg border border-white/10 bg-black/40 p-3">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
                 <MapPin className="h-3 w-3" />
-                Pickup address
+                Delivery address
               </p>
-              <p className="mt-1 text-sm font-semibold text-white">{pickupAddress}</p>
-              {pickupMapLink && (
+              <p className="mt-1 text-sm font-semibold text-white">{deliveryAddress}</p>
+              {deliveryMapLink && (
                 <a
-                  href={pickupMapLink}
+                  href={deliveryMapLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-yellow-200 hover:text-yellow-100"
@@ -270,33 +296,41 @@ export function OrderLogisticsTracking({
                 </a>
               )}
             </div>
-          )}
 
-          {deliveryLeg && (
-            <div className="rounded-lg border border-white/10 bg-black/40 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Delivery fee</p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {formatCurrency(deliveryLeg.feeAmount || 0, deliveryLeg.feeCurrency || order.currency)}
-              </p>
-            </div>
-          )}
-        </div>
+            {isSeller && pickupLeg && (
+              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+                  <MapPin className="h-3 w-3" />
+                  Pickup address
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white">{pickupLeg.originAddress || pickupLeg.originLabel || 'Seller pickup location'}</p>
+              </div>
+            )}
 
-        {/* One-line trust note. */}
-        <p className="mt-3 flex items-start gap-2 text-xs text-white/70">
-          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
-          Mzigo Ego keeps your package safe and checks it against the order before delivery.
-        </p>
+            {deliveryLeg && (
+              <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Delivery fee</p>
+                <p className="mt-1 text-sm font-semibold text-white">
+                  {formatCurrency(deliveryLeg.feeAmount || 0, deliveryLeg.feeCurrency || order.currency)}
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Plain timeline. */}
-        <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-3">
-          <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/55">
-            <Clock className="h-3.5 w-3.5 text-yellow-300" />
-            Updates
+          <p className="mt-3 flex items-start gap-2 text-xs text-white/70">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
+            Mzigo Ego verified delivery with continuous milestone status updates.
           </p>
-          <Timeline events={logistics?.events || []} />
-        </div>
-      </CollapsibleSection>
+
+          <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+              <Clock className="h-3.5 w-3.5 text-yellow-300" />
+              Fulfillment Milestones
+            </p>
+            <Timeline events={logistics?.events || []} />
+          </div>
+        </CollapsibleSection>
+      )}
     </section>
   );
 }
