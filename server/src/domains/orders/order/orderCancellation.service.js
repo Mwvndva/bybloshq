@@ -7,6 +7,8 @@ const eventBus = domainEventDispatcher;
 import InventoryReservationService from '../../commerce/products/inventoryReservation.service.js';
 import settlementService from '../escrow/settlement.service.js';
 
+import { AppError } from '../../../shared/utils/errorHandler.js';
+
 class OrderCancellationService {
   static async cancelOrder(orderId, reason = null) {
     const client = await pool.connect();
@@ -19,11 +21,25 @@ class OrderCancellationService {
         [orderId]
       );
 
-      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      if (orderResult.rows.length === 0) {
+        throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
+      }
       const order = orderResult.rows[0];
 
-      if (order.status === OrderStatus.COMPLETED) throw new Error('Cannot cancel a completed order');
-      if (order.status === OrderStatus.CANCELLED) throw new Error('Order is already cancelled');
+      // Invariant: Once COMPLETED, normal user-facing cancellation/refund is prohibited.
+      if (order.status === OrderStatus.COMPLETED) {
+        throw new AppError(
+          'This order has already been confirmed and is no longer eligible for a normal refund.',
+          400,
+          'ORDER_FINANCIALLY_FINAL'
+        );
+      }
+      if (order.status === OrderStatus.CANCELLED) {
+        throw new AppError('Order is already cancelled', 400, 'ORDER_ALREADY_CANCELLED');
+      }
+      if (order.status === OrderStatus.REFUNDED) {
+        throw new AppError('Order is already refunded', 400, 'ORDER_ALREADY_REFUNDED');
+      }
 
       const updatedOrder = await Order.updateStatusWithReason(client, orderId, OrderStatus.CANCELLED, reason);
 

@@ -2,11 +2,14 @@ import logger from './logger.js';
 
 // Custom error class for application errors
 export class AppError extends Error {
-  constructor(message, statusCode) {
+  constructor(message, statusCode, code = null) {
     super(message);
     this.statusCode = statusCode;
     this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
     this.isOperational = true;
+    if (code) {
+      this.code = code;
+    }
 
     Error.captureStackTrace(this, this.constructor);
   }
@@ -89,11 +92,15 @@ export const globalErrorHandler = (err, req, res, next) => {
   } else {
     // Production response
     if (error.isOperational) {
-      res.status(error.statusCode).json({
+      const response = {
         status: error.status,
         message: error.message,
         requestId
-      });
+      };
+      if (error.code) {
+        response.error = error.code;
+      }
+      res.status(error.statusCode).json(response);
     } else {
       // Programming or other unknown error: don't leak error details
       res.status(500).json({

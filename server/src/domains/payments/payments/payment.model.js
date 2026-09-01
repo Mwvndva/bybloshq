@@ -32,7 +32,7 @@ class Payment {
   static async findByInvoiceId(invoiceId) {
     const { rows } = await pool.query(`
       SELECT 
-        id, invoice_id, amount, currency, status, 
+        id, order_id, invoice_id, amount, currency, status, 
         payment_method, mobile_payment, whatsapp_number, email,
         metadata, created_at, updated_at
       FROM payments 
@@ -44,7 +44,7 @@ class Payment {
   static async findByReference(reference) {
     const { rows } = await pool.query(`
       SELECT 
-        id, invoice_id, amount, currency, status, 
+        id, order_id, invoice_id, amount, currency, status, 
         payment_method, mobile_payment, whatsapp_number, email,
         metadata, created_at, updated_at,
         provider_reference, api_ref
@@ -116,5 +116,6 @@ class Payment {
   }
 }
 
+export { Payment };
 export default Payment;
 

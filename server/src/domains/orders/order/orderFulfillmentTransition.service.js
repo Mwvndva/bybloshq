@@ -72,6 +72,18 @@ class OrderFulfillmentTransitionService {
             await this.grantDigitalAccess(client, order, items);
 
             assertValidTransition(OrderStatus.FULFILLING, OrderStatus.COMPLETED, order.id);
+            const digitalCompletionMetadata = {
+                completed_by: 'system',
+                completion_reason: 'digital_fulfillment_completed',
+                financial_finality: true,
+                completed_at: new Date().toISOString()
+            };
+            await client.query(
+                `UPDATE product_orders
+                 SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+                 WHERE id = $1`,
+                [order.id, JSON.stringify(digitalCompletionMetadata)]
+            );
             const completedOrder = await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.COMPLETED, 'completed');
             const releaseResult = await escrowManager.releaseFunds(client, completedOrder, 'DigitalFulfillment');
 

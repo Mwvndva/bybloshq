@@ -8,11 +8,16 @@ const config: CapacitorConfig = {
     androidScheme: 'https'
   },
   android: {
-    backgroundColor: '#000000'
+    backgroundColor: '#F5F4F0'
   },
   plugins: {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert']
+    },
+    Keyboard: {
+      resize: 'body',
+      style: 'dark',
+      resizeOnFullScreen: true
     },
     SystemBars: {
       insetsHandling: 'css'

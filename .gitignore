@@ -50,6 +50,7 @@ bower_components
 .temp/
 .tmp/
 scratch/
+graphify-out/
 
 # Build directory
 dist/

@@ -25,9 +25,12 @@
     "start": "vite preview --port 3000"
   },
   "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^8.0.0",
+    "@capacitor-community/background-geolocation": "^1.2.26",
     "@capacitor/android": "^8.4.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.4.0",
+    "@capacitor/keyboard": "^8.0.5",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
     "@radix-ui/react-dialog": "^1.1.2",

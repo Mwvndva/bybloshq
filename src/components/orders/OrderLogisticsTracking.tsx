@@ -19,6 +19,7 @@ import {
   isRiderMoving,
 } from '@/features/logistics/utils/mzigoJourney';
 import { MzigoJourneyStepper } from '@/features/logistics/components/MzigoJourneyStepper';
+import { useOrderLiveEtaQuery } from '@/features/logistics/hooks/useOrderLiveEtaQuery';
 import { cn } from '@/shared/utils/formatting';
 
 type TrackingView = 'buyer' | 'seller';
@@ -162,8 +163,21 @@ export function OrderLogisticsTracking({
   const journey = useMemo(() => deriveOrderJourney(order), [order]);
   const riderMoving = isDoorDelivery && isRiderMoving(deliveryLeg);
 
+  // Poll live ETA when order is actively in transit
+  const isTrackingActive = isDoorDelivery && (riderMoving || deliveryLeg?.status === 'out_for_delivery' || pickupLeg?.status === 'started');
+  const { data: liveEta } = useOrderLiveEtaQuery(order.id, Boolean(isTrackingActive));
+
   const fallbackDeadline = addHours(order.createdAt, 24);
-  const etaSource = deliveryLeg?.deadlineAt || logistics?.deadlineAt || fallbackDeadline;
+  const etaSource = liveEta?.estimatedArrival || deliveryLeg?.deadlineAt || logistics?.deadlineAt || fallbackDeadline;
+
+  // Derive movement-based progress bar percentage
+  const dynamicProgressPercent = useMemo(() => {
+    if (journey.isDelivered || order.status === 'COMPLETED') return 100;
+    if (liveEta && typeof liveEta.routeProgress === 'number' && liveEta.routeProgress > 0) {
+      return Math.round(liveEta.routeProgress * 100);
+    }
+    return journey.percentProgress;
+  }, [journey.isDelivered, journey.percentProgress, order.status, liveEta]);
 
   const deliveryAddress = getDeliveryAddress(deliveryLeg, order);
   const deliveryMapLink = mapLink(deliveryLeg?.destinationLat, deliveryLeg?.destinationLng, deliveryAddress);
@@ -186,7 +200,7 @@ export function OrderLogisticsTracking({
         headerRight={
           riderMoving ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/50 bg-yellow-400/20 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200">
-              <Truck className="h-3 w-3 animate-pulse text-yellow-300" /> In Transit
+              <Truck className="h-3 w-3 animate-pulse text-yellow-300" /> {liveEta?.trackingStatus === 'arriving' ? 'Arriving Now' : 'In Transit'}
             </span>
           ) : journey.isDelivered ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-200">
@@ -204,7 +218,7 @@ export function OrderLogisticsTracking({
           <MzigoJourneyStepper journey={journey} />
         </div>
 
-        {/* Progress Bar with glowing fill */}
+        {/* Dynamic Movement Progress Bar */}
         <div className="mt-2.5 overflow-hidden rounded-full bg-white/10 p-0.5">
           <div
             className={cn(
@@ -219,32 +233,45 @@ export function OrderLogisticsTracking({
                       ? 'bg-gradient-to-r from-yellow-500 via-amber-300 to-yellow-400 animate-pulse'
                       : 'bg-yellow-400'
             )}
-            style={{ width: `${Math.min(100, Math.max(10, journey.percentProgress))}%` }}
+            style={{ width: `${Math.min(100, Math.max(8, dynamicProgressPercent))}%` }}
           />
         </div>
 
-        {/* Informative Status & ETA Badge */}
+        {/* Informative Status & Live ETA Badge */}
         <div className="mt-3 flex flex-col gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 shrink-0 text-yellow-300" />
             <span className="text-white">
               {journey.isDelivered
                 ? `${isPickup ? 'Collected' : 'Delivered'} on ${formatDateTime(deliveryLeg?.completedAt || logistics?.completedAt || order.updatedAt)}`
-                : isDoorDelivery
-                  ? (riderMoving ? `Arriving by ${formatDateTime(etaSource)}` : `Est. delivery by ${formatDateTime(etaSource)}`)
-                  : isPickup
-                    ? (order.status === 'READY_FOR_BUYER' || order.status === 'COLLECTION_PENDING'
-                        ? 'Ready for pickup at shop'
-                        : 'Estimated ready within 24 hours')
-                    : isDigital
-                      ? 'Instant access available'
-                      : 'Booking active'}
+                : liveEta && liveEta.trackingStatus === 'arriving'
+                  ? 'Arriving now (within 1 min)'
+                  : liveEta && typeof liveEta.etaMinutes === 'number'
+                    ? `Arriving in ${liveEta.etaMinutes} min (by ${formatDateTime(liveEta.estimatedArrival || etaSource)})`
+                    : isDoorDelivery
+                      ? (riderMoving ? `Arriving by ${formatDateTime(etaSource)}` : `Est. delivery by ${formatDateTime(etaSource)}`)
+                      : isPickup
+                        ? (order.status === 'READY_FOR_BUYER' || order.status === 'COLLECTION_PENDING'
+                            ? 'Ready for pickup at Central Hub'
+                            : 'Estimated ready within 24 hours')
+                        : isDigital
+                          ? 'Instant access available'
+                          : 'Booking active'}
             </span>
           </div>
 
-          <span className="text-xs text-white/70">
-            {journey.detail}
-          </span>
+          <div className="flex items-center gap-2">
+            {liveEta?.isStale && (
+              <span className="text-[11px] text-amber-300">
+                Location update delayed
+              </span>
+            )}
+            <span className="text-xs text-white/70">
+              {liveEta?.lastUpdatedAt && !liveEta.isStale
+                ? 'Updated just now'
+                : journey.detail}
+            </span>
+          </div>
         </div>
 
         {/* Byblos CBD Hub Pickup Card if hub collection */}

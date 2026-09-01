@@ -40,8 +40,21 @@ export function useNotifications(variant: NotificationVariant = 'default', enabl
     staleTime: 15000,
   });
 
+  const unreadCountQueryKey = ['notifications', variant, 'unread-count'] as const;
+  const unreadCountQuery = useQuery({
+    queryKey: unreadCountQueryKey,
+    queryFn: async (): Promise<number> => {
+      const res = await apiClient.get(`${base}/unread-count`);
+      return (res.data?.data?.unreadCount ?? 0) as number;
+    },
+    enabled,
+    refetchInterval: 45000,
+    refetchOnWindowFocus: true,
+    staleTime: 15000,
+  });
+
   const notifications = query.data ?? [];
-  const unreadCount = notifications.filter((n) => !n.read_at).length;
+  const unreadCount = unreadCountQuery.data ?? notifications.filter((n) => !n.read_at).length;
 
   const markReadMutation = useMutation({
     mutationFn: async (id: AppNotification['id']) => {
@@ -51,6 +64,7 @@ export function useNotifications(variant: NotificationVariant = 'default', enabl
       queryClient.setQueryData<AppNotification[]>(queryKey, (current = []) =>
         current.map((n) => (n.id === id ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n))
       );
+      void queryClient.invalidateQueries({ queryKey: unreadCountQueryKey });
     },
   });
 
@@ -62,12 +76,15 @@ export function useNotifications(variant: NotificationVariant = 'default', enabl
       queryClient.setQueryData<AppNotification[]>(queryKey, (current = []) =>
         current.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() }))
       );
+      queryClient.setQueryData<number>(unreadCountQueryKey, 0);
+      void queryClient.invalidateQueries({ queryKey: unreadCountQueryKey });
     },
   });
 
   const refetch = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['notifications', variant] });
-  }, [queryClient, variant]);
+    void queryClient.invalidateQueries({ queryKey: unreadCountQueryKey });
+  }, [queryClient, variant, unreadCountQueryKey]);
 
   // On the native app, refetch the feed the moment a push arrives so the bell
   // badge updates instantly instead of waiting for the poll. No-op on web.

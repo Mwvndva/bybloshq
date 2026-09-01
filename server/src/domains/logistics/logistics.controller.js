@@ -74,6 +74,8 @@ export const getLogisticsDashboardRequests = async (req, res, next) => {
     }
 };
 
+import LogisticsEtaService from './logisticsEta.service.js';
+
 export const updateLogisticsLegStatus = async (req, res, next) => {
     try {
         const partnerId = req.logisticsPartner?.id || req.user?.profile_id || req.user?.id;
@@ -87,6 +89,32 @@ export const updateLogisticsLegStatus = async (req, res, next) => {
             requestId: req.params.requestId,
             legType: req.params.legType,
             status: req.body?.status
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateRiderLocation = async (req, res, next) => {
+    try {
+        const partnerId = req.logisticsPartner?.id || req.user?.profile_id || req.user?.id;
+        const { legId } = req.params;
+        const { latitude, longitude, accuracy, speed, heading, timestamp } = req.body || {};
+
+        const result = await LogisticsEtaService.recordRiderLocation({
+            partnerId,
+            legId,
+            latitude,
+            longitude,
+            accuracy,
+            speed,
+            heading,
+            timestamp
         });
 
         res.status(200).json({

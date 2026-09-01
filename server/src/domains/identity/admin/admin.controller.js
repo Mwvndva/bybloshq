@@ -16,6 +16,7 @@ import eventBus, { AppEvents } from '../../../application/events/eventBus.js';
 import LogisticsDashboardService from '../../logistics/logisticsDashboard.service.js';
 import { getWithdrawalReservedAmount } from '../../../shared/utils/withdrawalUtils.js';
 import { setAuthCookie } from '../../../shared/utils/cookie.utils.js';
+import OrderService from '../../orders/order/OrderService.js';
 
 const paymentService = new PaymentService();
 
@@ -565,6 +566,28 @@ const getPaymentProviderBalances = async (req, res, next) => {
   }
 };
 
+/**
+ * Exceptional administrative reversal of an order.
+ */
+const exceptionalOrderReversal = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason, notes } = req.body;
+    const adminUser = req.user;
+
+    const result = await OrderService.executeExceptionalReversal(id, adminUser, reason, notes);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Order exceptionally reversed',
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error executing exceptional order reversal:', error);
+    next(error);
+  }
+};
+
 export {
   adminLogin,
   getPaymentProviderBalances,
@@ -590,5 +613,6 @@ export {
   getAdminLogisticsRequests,
   adminUpdateLogisticsLegStatus,
   adminResolveLogisticsDispute,
+  exceptionalOrderReversal,
   getMe
 };

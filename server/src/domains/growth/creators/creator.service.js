@@ -564,7 +564,7 @@ class CreatorService {
     return `C${Date.now().toString(36).toUpperCase()}`;
   }
 
-  static async resolveAttribution({ code, sellerId, productSubtotal }) {
+  static async resolveAttribution({ code, sellerId, productSubtotal, buyer = null }) {
     if (!code) return null;
 
     const { rows } = await pool.query(
@@ -573,7 +573,10 @@ class CreatorService {
               scl.creator_id,
               scl.code,
               scl.commission_rate,
-              c.status AS creator_status
+              c.status AS creator_status,
+              c.user_id AS creator_user_id,
+              c.email AS creator_email,
+              c.mpesa_number AS creator_mpesa
        FROM seller_creator_links scl
        JOIN creators c ON c.id = scl.creator_id
        WHERE scl.code = $1
@@ -584,6 +587,48 @@ class CreatorService {
     );
     const link = rows[0];
     if (!link || link.creator_status !== 'active') return null;
+
+    // RULE 1 — CREATOR SELF-REFERRAL PREVENTION
+    // A creator must never receive creator commission from an order where the creator is also the buyer.
+    if (buyer) {
+      let buyerRecord = null;
+      if (buyer.id && (!buyer.email || !buyer.user_id)) {
+        const { rows: bRows } = await pool.query(
+          `SELECT id, user_id, email, mobile_payment, whatsapp_number FROM buyers WHERE id = $1`,
+          [buyer.id]
+        );
+        buyerRecord = bRows[0] || null;
+      }
+
+      const buyerId = buyer.id || buyerRecord?.id;
+      const buyerUserId = buyer.userId || buyer.user_id || buyerRecord?.user_id;
+      const buyerCreatorId = buyer.creatorId || buyer.creator_id;
+      const buyerEmail = (buyer.email || buyerRecord?.email || '').trim().toLowerCase();
+      const buyerPhone = (buyer.mobilePayment || buyer.phone || buyerRecord?.mobile_payment || '').replace(/\D/g, '');
+
+      const creatorId = link.creator_id;
+      const creatorUserId = link.creator_user_id;
+      const creatorEmail = (link.creator_email || '').trim().toLowerCase();
+      const creatorPhone = (link.creator_mpesa || '').replace(/\D/g, '');
+
+      const isSameCreatorId = buyerCreatorId && Number(buyerCreatorId) === Number(creatorId);
+      const isSameUserId = buyerUserId && creatorUserId && Number(buyerUserId) === Number(creatorUserId);
+      const isSameEmail = buyerEmail && creatorEmail && buyerEmail === creatorEmail;
+      const isSamePhone = buyerPhone && creatorPhone && (
+        buyerPhone === creatorPhone ||
+        (buyerPhone.length >= 9 && creatorPhone.length >= 9 && buyerPhone.slice(-9) === creatorPhone.slice(-9))
+      );
+
+      if (isSameCreatorId || isSameUserId || isSameEmail || isSamePhone) {
+        logger.warn('[CreatorAttribution] Self-referral detected and rejected', {
+          creatorId,
+          buyerId,
+          code: link.code,
+          match: { isSameCreatorId, isSameUserId, isSameEmail, isSamePhone }
+        });
+        return null;
+      }
+    }
 
     // Creator commission base is the FULL product subtotal (authoritative Byblos
     // rule): commission is computed before the KES 10 Byblos seller fee, never
@@ -958,4 +1003,5 @@ class CreatorService {
   }
 }
 
+export { CreatorService };
 export default CreatorService;

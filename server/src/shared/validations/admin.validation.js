@@ -17,3 +17,9 @@ export const deleteUser = z.object({ id: id, role: s }).passthrough();
 export const updateWithdrawalStatus = z.object({ id: id, status: s }).passthrough();
 export const adminUpdateLegStatus = z.object({ requestId: id, legType: id, status: s }).passthrough();
 export const resolveDispute = z.object({ requestId: id }).passthrough();
+export const exceptionalOrderReversal = z.object({
+  id: id,
+  reason: z.string().min(5, 'A valid reason of at least 5 characters is required'),
+  notes: s
+}).passthrough();
+

@@ -408,7 +408,7 @@ const CorePaymentService = {
                 }
             }
 
-            const orderId = resolveOrderIdFromMetadata(paymentRow.metadata);
+            const orderId = paymentRow.order_id || resolveOrderIdFromMetadata(paymentRow.metadata);
             if (!orderId) {
                 const manualReviewMetadata = {
                     requires_manual_review: true,

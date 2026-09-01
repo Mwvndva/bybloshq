@@ -18,6 +18,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Android App Links for Byblos production domains -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="byblosafrica.site" />
+                <data android:scheme="https" android:host="www.byblosafrica.site" />
+            </intent-filter>
         </activity>
 
         <provider
@@ -41,11 +49,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Live delivery tracking: couriers share their location via the WebView's
-         navigator.geolocation. Capacitor's BridgeWebChromeClient handles the
-         runtime prompt automatically once these are declared. -->
+    <!-- Live delivery tracking & background courier geolocation -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <!-- Location hardware is OPTIONAL: live tracking is an opt-in extra, so these
          must not become implicit Play Store device requirements. Without these,

@@ -111,8 +111,8 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 boxShadow: `0 16px 40px rgba(0,0,0,0.45), 0 0 24px ${palette.accentSoft}`,
             }}
         >
-            {/* Top ~80%: business photo. */}
-            <div className="h-[80%] w-full overflow-hidden" style={{ background: palette.avatarGradient }}>
+            {/* Top ~66%: business photo. */}
+            <div className="h-[66%] w-full overflow-hidden" style={{ background: palette.avatarGradient }}>
                 {hasAvatar ? (
                     <img
                         src={getImageUrl(avatarUrl)}
@@ -128,10 +128,9 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 )}
             </div>
 
-            {/* Bottom ~20%: shop name, then Instagram + TikTok + Location on one row,
-                left-aligned. Location is disabled when the seller has no coordinates. */}
-            <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-1 px-2 py-1.5">
-                <h3 className="w-full truncate text-[11px] font-black tracking-tight text-white sm:text-xs" title={shopName}>
+            {/* Bottom section: shop name clearly placed above Instagram + TikTok + Location row */}
+            <div className="flex min-h-0 flex-1 flex-col items-start justify-between px-2.5 py-2">
+                <h3 className="w-full truncate text-xs font-black tracking-tight text-white sm:text-sm" title={shopName}>
                     {shopName}
                 </h3>
 
