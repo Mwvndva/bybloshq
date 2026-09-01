@@ -14,6 +14,8 @@ import Order from './order.model.js';
 import logger from '../../../shared/utils/logger.js';
 import * as digitalDownloadRepository from '../../commerce/repositories/digitalDownload.repository.js';
 import path from 'path';
+import https from 'node:https';
+import http from 'node:http';
 import { sanitizeOrder } from '../../../shared/utils/sanitize.js';
 import paymentService from '../../payments/payments/payment.service.js';
 import OrderHubDropoffService from './orderHubDropoff.service.js';
@@ -399,12 +401,59 @@ export const downloadDigitalProduct = async (req, res) => {
             });
         }
 
-        logger.info(`[DOWNLOAD] Generating signed Cloudinary URL for public_id: ${digitalFilePath} (Order: ${orderId})`);
+        const fileName = data.digital_file_name || path.basename(digitalFilePath) || `digital-product-${productId}`;
+        const ext = path.extname(fileName).toLowerCase() || path.extname(digitalFilePath).toLowerCase() || '.bin';
+        const cleanFileName = fileName.endsWith(ext) ? fileName : `${fileName}${ext}`;
+        const mimeType = getMimeType(ext);
 
-        const signedUrl = generateSignedDownloadUrl(digitalFilePath, 300);
-        return res.redirect(302, signedUrl);
+        logger.info(`[DOWNLOAD] Generating signed Cloudinary stream for public_id: ${digitalFilePath} (Order: ${orderId})`);
 
+        const signedUrl = generateSignedDownloadUrl(digitalFilePath, 300, 'raw');
 
+        const clientReq = (signedUrl.startsWith('https:') ? https : http).get(signedUrl, (cloudinaryRes) => {
+            if (cloudinaryRes.statusCode >= 400) {
+                logger.error(`[DOWNLOAD] Cloudinary stream failed with status ${cloudinaryRes.statusCode} for ${digitalFilePath}`);
+                // Try image resource type as fallback if raw failed
+                const fallbackUrl = generateSignedDownloadUrl(digitalFilePath, 300, 'image');
+                return (fallbackUrl.startsWith('https:') ? https : http).get(fallbackUrl, (fallbackRes) => {
+                    if (fallbackRes.statusCode >= 400) {
+                        logger.error(`[DOWNLOAD] Fallback Cloudinary stream failed with status ${fallbackRes.statusCode}`);
+                        if (!res.headersSent) {
+                            return res.status(502).json({ status: 'error', message: 'Storage service temporarily unavailable for this download' });
+                        }
+                        return;
+                    }
+                    res.setHeader('Content-Type', mimeType);
+                    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanFileName)}"`);
+                    if (fallbackRes.headers['content-length']) {
+                        res.setHeader('Content-Length', fallbackRes.headers['content-length']);
+                    }
+                    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
+                    fallbackRes.pipe(res);
+                }).on('error', (fbErr) => {
+                    logger.error('[DOWNLOAD] Fallback stream error:', fbErr.message);
+                    if (!res.headersSent) res.status(500).json({ status: 'error', message: 'Download streaming failed' });
+                });
+            }
+
+            res.setHeader('Content-Type', mimeType);
+            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanFileName)}"`);
+            if (cloudinaryRes.headers['content-length']) {
+                res.setHeader('Content-Length', cloudinaryRes.headers['content-length']);
+            }
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length');
+
+            cloudinaryRes.pipe(res);
+        });
+
+        clientReq.on('error', (streamErr) => {
+            logger.error('[DOWNLOAD] Stream pipeline error:', streamErr.message);
+            if (!res.headersSent) {
+                res.status(500).json({ status: 'error', message: 'Download streaming failed' });
+            }
+        });
+
+        return;
     } catch (error) {
         logger.error('Error in downloadDigitalProduct:', error);
         if (!res.headersSent) {
