@@ -103,19 +103,39 @@ const scheduleFulfillmentRetry = (options = {}) => {
       logger.info(`[${jobId}] Found ${rows.length} payment(s) needing fulfillment retry`);
 
       for (const payment of rows) {
+        // Atomically CLAIM the row before doing any work: clear the retry flags
+        // guarded on them still being set. Under multi-instance, only the worker
+        // whose UPDATE matches (rowCount === 1) proceeds to enqueue — others see
+        // zero rows and skip, so a fulfillment job is never enqueued twice.
+        let claimed = false;
         try {
-          await FulfillmentQueueService.enqueue(null, payment.order_id);
-
-          // P1-1: Clear BOTH keys on success
-          await pool.query(
+          const { rowCount } = await pool.query(
             `UPDATE payments
              SET metadata = metadata - 'needs_fulfillment' - 'needs_completion'
-             WHERE id = $1`,
+             WHERE id = $1
+               AND (metadata->>'needs_fulfillment' = 'true' OR metadata->>'needs_completion' = 'true')`,
             [payment.id]
           );
+          claimed = rowCount === 1;
+        } catch (err) {
+          const e = /** @type {Error} */ (err);
+          logger.error(`[${jobId}] Claim failed for payment ${payment.id}:`, e.message);
+          continue;
+        }
+        if (!claimed) continue; // another worker already claimed this payment
+
+        try {
+          await FulfillmentQueueService.enqueue(null, payment.order_id);
           logger.info(`[${jobId}] Successfully retried fulfillment for payment ${payment.id}`);
         } catch (err) {
           const e = /** @type {Error} */ (err);
+          // Enqueue failed after claiming — restore the flag so the next tick retries.
+          await pool.query(
+            `UPDATE payments
+             SET metadata = COALESCE(metadata, '{}'::jsonb) || '{"needs_fulfillment":"true"}'::jsonb
+             WHERE id = $1`,
+            [payment.id]
+          ).catch(() => {});
           logger.error(`[${jobId}] Retry failed for payment ${payment.id}:`, e.message);
         }
       }

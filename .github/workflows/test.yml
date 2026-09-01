@@ -1,0 +1,130 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (Vitest + coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  backend:
+    name: Backend (node:test unit + integration)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: byblos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Write a CI-specific .env.test pointing at the service containers above
+      # (standard ports 5432/6379). We write the file directly rather than using
+      # `test:setup-env` because migrate.js loads .env.test with `override: true`,
+      # so environment overrides alone would be clobbered by the template's local
+      # docker-compose ports. Secrets here are throwaway test values.
+      - name: Write CI test environment
+        run: |
+          cat > .env.test <<'EOF'
+          NODE_ENV=test
+          PORT=3003
+          APP_NAME=Byblos-Test
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_NAME=byblos_test
+          DB_SSL=false
+          REDIS_URL=redis://localhost:6379
+          JWT_SECRET=test_jwt_secret_value_must_be_at_least_32_characters_long
+          JWT_REFRESH_SECRET=test_jwt_refresh_secret_value_must_be_at_least_32_characters_long
+          JWT_EXPIRES_IN=1h
+          JWT_REFRESH_EXPIRES_IN=1d
+          FRONTEND_URL=http://localhost:3000
+          BACKEND_URL=http://localhost:3003
+          ALLOWED_ORIGINS=http://localhost:3000
+          PAYMENT_PROVIDER=paystack
+          PAYOUT_PROVIDER=paystack
+          PAYSTACK_SECRET_KEY=sk_test_mock_secret_key_for_testing
+          PAYSTACK_PUBLIC_KEY=pk_test_mock_public_key_for_testing
+          PAYSTACK_BASE_URL=http://localhost:3003/mock-paystack
+          EMAIL_FROM_EMAIL=no-reply@byblos.test
+          EMAIL_FROM_NAME=Byblos Test
+          EOF
+
+      # The repo's incremental migrations can't build from an empty DB, so the
+      # test schema is provisioned from the committed snapshot (server/test/
+      # schema.sql). db:test:setup creates the DB if needed, then applies it.
+      - name: Provision test schema
+        run: npm run db:test:setup
+
+      - name: Run unit/contract tests
+        run: npm test
+
+      - name: Run database integration tests
+        run: npm run test:integration

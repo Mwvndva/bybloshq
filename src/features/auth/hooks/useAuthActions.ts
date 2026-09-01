@@ -3,11 +3,12 @@ import type { NavigateFunction } from 'react-router-dom';
 import { toast } from 'sonner';
 import apiClient from '@/infrastructure/http/apiClient';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
+import { clearRoleSession, clearRoleSessionMarkers, enforceSingleActiveRole, markRoleSessionActive, setActiveRole } from '../services/authSession';
 import { registerNativePushNotifications, unregisterNativePushNotifications } from '@/features/notifications/utils/mobileNotifications';
 import { getDashboardPath } from '../utils/authRouting';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { storage } from '@/infrastructure/storage/storage';
+import { classifyApiError } from '@/shared/utils/errorClassification';
 
 
 
@@ -149,9 +150,21 @@ export function useAuthActions({
         }
       }
     } catch (error) {
-      const err = error as AuthRequestError;
-      const message = err.response?.data?.message || err.message || 'Login failed';
-      toast.error('Login Failed', { description: message });
+      try {
+        await clearRoleSession(role);
+        if (isNativeApp()) {
+          await storage.remove(`${role}Token`);
+          await storage.remove(`${role}RefreshToken`);
+        }
+      } catch {
+        // Ignore storage cleanup errors on failed login
+      }
+
+      const classified = classifyApiError(error, 'Invalid email or password');
+      // Do not emit generic error toast for verification redirects (which open dedicated modal)
+      if (classified.code !== 'PENDING_VERIFICATION' && classified.code !== 'EMAIL_NOT_VERIFIED' && classified.code !== 'TERMS_NOT_ACCEPTED') {
+        toast.error('Login Failed', { id: `${role}-login-failed`, description: classified.message });
+      }
       throw error;
     } finally {
       setIsLoading(false);

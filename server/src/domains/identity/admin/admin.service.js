@@ -73,21 +73,21 @@ class AdminService {
       })
     );
 
-    // Fetch top 3 shops by client count
+    // Fetch top 3 shops by total sales
     let topShops = [];
     try {
       const topShopsRes = await pool.query(`
-                SELECT s.id, s.full_name as name, s.shop_name, COALESCE(s.client_count, 0) as client_count
+                SELECT s.id, s.full_name as name, s.shop_name, COALESCE(s.total_sales, 0) as total_sales
                 FROM sellers s
                 WHERE s.user_id IS NOT NULL
-                ORDER BY COALESCE(s.client_count, 0) DESC
+                ORDER BY COALESCE(s.total_sales, 0) DESC
                 LIMIT 3
             `);
       topShops = topShopsRes.rows.map(row => ({
         id: row.id,
         name: row.name,
         shopName: row.shop_name,
-        clientCount: Number.parseInt(row.client_count)
+        totalSales: Number.parseFloat(row.total_sales)
       }));
     } catch (e) {
       logger.error('Failed to fetch top shops:', e);
@@ -584,7 +584,6 @@ class AdminService {
       }
 
       // --- Universal cleanup: runs for ALL roles (Sellers can be Buyers too) ---
-      await client.query('DELETE FROM seller_clients WHERE user_id = $1', [userId]);
 
       const buyerRow = await client.query('SELECT id FROM buyers WHERE user_id = $1 FOR UPDATE', [userId]);
       if (buyerRow.rows.length > 0) {

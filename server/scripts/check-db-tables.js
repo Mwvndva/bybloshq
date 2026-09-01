@@ -1,4 +1,4 @@
-import { pool } from '../src/config/database.js';
+import { pool } from '../src/infrastructure/database/database.js';
 
 async function checkTables() {
   const requiredTables = ['products', 'orders', 'order_items'];

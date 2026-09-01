@@ -1,61 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-type DashboardSection = 'shop' | 'shops' | 'wishlist' | 'orders';
+type DashboardSection = 'shop' | 'notifications' | 'wishlist' | 'orders';
 type BuyerSection = DashboardSection | 'profile';
+
+function sectionFromLocation(pathname: string, search: string): BuyerSection {
+  if (pathname.includes('/buyer/orders')) return 'orders';
+  if (pathname.includes('/buyer/notifications')) return 'notifications';
+  if (pathname.includes('/buyer/wishlist')) return 'wishlist';
+  if (pathname.includes('/buyer/profile')) return 'profile';
+
+  const queryParams = new URLSearchParams(search);
+  const querySection = queryParams.get('section') || queryParams.get('tab');
+  if (querySection && ['shop', 'notifications', 'wishlist', 'orders', 'profile'].includes(querySection)) {
+    return querySection as BuyerSection;
+  }
+  return 'shop';
+}
 
 export function useBuyerActiveSection() {
   const location = useLocation();
-  const [activeSection, setActiveSection] = useState<BuyerSection>(() => {
-    // Priority 1: Pathname (new standard for direct linking)
-    const pathname = location.pathname;
-    if (pathname.includes('/buyer/orders')) return 'orders';
-    if (pathname.includes('/buyer/shops')) return 'shops';
-    if (pathname.includes('/buyer/wishlist')) return 'wishlist';
-    if (pathname.includes('/buyer/profile')) return 'shop';
+  const [activeSection, setActiveSection] = useState<BuyerSection>(
+    () => sectionFromLocation(location.pathname, location.search),
+  );
 
-    // Priority 2: Navigation state
-    const stateSection = (location.state as Record<string, unknown>)?.activeSection as string | undefined;
-    if (stateSection) return stateSection as BuyerSection;
-
-    // Priority 3: Query parameters (legacy support)
-    const queryParams = new URLSearchParams(location.search);
-    const querySection = queryParams.get('section') || queryParams.get('tab');
-    if (querySection === 'profile') return 'shop';
-    if (querySection && ['shop', 'shops', 'wishlist', 'orders'].includes(querySection)) {
-      return querySection as "shop" | "shops" | "wishlist" | "orders";
-    }
-
-    return 'shop';
-  });
-  const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState(false);
-
-  // Sync active section with URL changes
+  // Keep the active section in sync with the URL (direct links, back/forward).
   useEffect(() => {
-    const pathname = location.pathname;
-    const queryParams = new URLSearchParams(location.search);
-    const pathMapping: Record<string, typeof activeSection> = {
-      '/buyer/orders': 'orders',
-      '/buyer/shops': 'shops',
-      '/buyer/wishlist': 'wishlist',
-      '/buyer/profile': 'shop',
-      '/buyer/dashboard': 'shop'
-    };
+    const target = sectionFromLocation(location.pathname, location.search);
+    setActiveSection((prev) => (target !== prev ? target : prev));
+  }, [location.pathname, location.search]);
 
-    const targetSection = pathMapping[pathname];
-    const shouldOpenProfileSidebar = pathname === '/buyer/profile'
-      || queryParams.get('section') === 'profile'
-      || queryParams.get('tab') === 'profile';
-
-    if (shouldOpenProfileSidebar) {
-      setIsProfileSidebarOpen(true);
-    } else {
-      setIsProfileSidebarOpen(false);
-    }
-    if (targetSection && targetSection !== activeSection) {
-      setActiveSection(targetSection);
-    }
-  }, [location.pathname, location.search, activeSection]);
-
-  return { activeSection, setActiveSection, isProfileSidebarOpen, setIsProfileSidebarOpen };
+  return { activeSection, setActiveSection };
 }

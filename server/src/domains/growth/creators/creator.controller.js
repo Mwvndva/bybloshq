@@ -1,10 +1,9 @@
 import CreatorService from './creator.service.js';
 import AuthService from '../../identity/auth/auth.service.js';
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
-import tokenBlacklist from '../../identity/tokens/tokenBlacklist.service.js';
+import { revokeSessionTokens, clearAuthCookies } from '../../../shared/utils/sessionRevocation.js';
 import { sanitizeWithdrawalRequest } from '../../../shared/utils/sanitize.js';
 import { setAuthCookie } from '../../../shared/utils/cookie.utils.js';
-import { getTokenFromRequest, verifyToken } from '../../../shared/utils/jwt.js';
 import { generateRefreshToken } from '../../../shared/utils/refreshToken.js';
 import logger from '../../../shared/utils/logger.js';
 
@@ -137,25 +136,9 @@ export const login = async (req, res, next) => {
 };
 
 export const logout = async (req, res) => {
-  const token = getTokenFromRequest(req);
-  if (token) {
-    try {
-      const decoded = verifyToken(token);
-      await tokenBlacklist.addToken(token, decoded.exp);
-    } catch (err) {
-      logger.debug('[CREATOR_LOGOUT] Could not blacklist token:', err.message);
-    }
-  }
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    expires: new Date(0),
-    path: '/'
-  };
-  res.cookie('jwt', '', cookieOptions);
-  res.cookie('token', '', cookieOptions);
+  // Revoke BOTH the access token and the refresh token so the session truly ends.
+  await revokeSessionTokens(req);
+  clearAuthCookies(res);
   res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 

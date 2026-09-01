@@ -399,6 +399,26 @@ class WithdrawalService {
                     ? getEntityLabel(entity)
                 : mpesaName.trim();
 
+            // Seller payout destination is client-supplied (sellers have no stored
+            // verified M-Pesa number). If it differs from the seller's last
+            // SUCCESSFUL payout number, hold the request for admin review instead of
+            // dispatching — a compromised seller session cannot silently redirect
+            // funds to a new number. Funds are still reserved; first-time and
+            // same-number withdrawals proceed normally.
+            let holdForReview = false;
+            if (entityType === 'seller') {
+                const { rows: prior } = await client.query(
+                    `SELECT mpesa_number FROM withdrawal_requests
+                      WHERE seller_id = $1 AND status IN ('completed','success','paid')
+                      ORDER BY created_at DESC LIMIT 1`,
+                    [entityId]
+                );
+                if (prior.length) {
+                    const priorPhone = payoutService.normalizePhoneForPayout(prior[0].mpesa_number);
+                    if (priorPhone && priorPhone !== normalizedPhone) holdForReview = true;
+                }
+            }
+
             const { rows: existingRequests } = await client.query(
                 `SELECT id, amount, seller_id, creator_id, buyer_id, mpesa_number, mpesa_name, status, idempotency_key,
                         provider_reference, metadata, created_at
@@ -458,7 +478,7 @@ class WithdrawalService {
             const insertResult = await client.query(
                 `INSERT INTO withdrawal_requests 
                     (seller_id, creator_id, buyer_id, amount, mpesa_number, mpesa_name, status, api_call_pending, idempotency_key, metadata, created_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, 'processing', TRUE, $7, $8::jsonb, NOW())
+                 VALUES ($1, $2, $3, $4, $5, $6, $9, $10, $7, $8::jsonb, NOW())
                  RETURNING id, amount, seller_id, creator_id, buyer_id, mpesa_number, mpesa_name, status, idempotency_key, metadata, created_at`,
                 [
                     entityType === 'seller' ? entityId : null,
@@ -472,8 +492,12 @@ class WithdrawalService {
                         withdrawal_fee: withdrawalFee,
                         total_deducted: deductionAmount,
                         entity_type: entityType,
-                        source: entityType === 'buyer_refund' ? 'buyer_refund_withdrawal' : undefined
-                    })
+                        source: entityType === 'buyer_refund' ? 'buyer_refund_withdrawal' : undefined,
+                        held_for_review: holdForReview || undefined,
+                        hold_reason: holdForReview ? 'payout_destination_changed' : undefined
+                    }),
+                    holdForReview ? 'manual_review' : 'processing',
+                    !holdForReview
                 ]
             );
 
@@ -501,8 +525,17 @@ class WithdrawalService {
         // Do NOT await — return the request immediately to caller
         eventBus.dispatchAfterCommit(createdEventId, 'WithdrawalService.createWithdrawalRequest');
 
-        this._callProviderAndUpdate(request, entity, validatedAmount, normalizedPhone)
-            .catch(err => logger.error(`[WithdrawalService] _callProviderAndUpdate failed for request ${request.id}: `, err));
+        // Do not dispatch a held (destination-changed) request to the provider —
+        // it waits for admin review. Funds remain reserved.
+        if (request.status === 'manual_review') {
+            logger.warn('[WithdrawalService] Seller withdrawal held for review — payout destination changed', {
+                withdrawalId: request.id,
+                sellerId: entityId
+            });
+        } else {
+            this._callProviderAndUpdate(request, entity, validatedAmount, normalizedPhone)
+                .catch(err => logger.error(`[WithdrawalService] _callProviderAndUpdate failed for request ${request.id}: `, err));
+        }
 
         return request;
     }

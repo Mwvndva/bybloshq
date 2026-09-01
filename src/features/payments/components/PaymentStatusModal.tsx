@@ -15,6 +15,7 @@ interface Props {
   onSuccess?: () => void;
   isGuest?: boolean;
   email?: string;
+  checkoutToken?: string | null;
   paymentSummary?: {
     productAmount?: number;
     deliveryFee?: number;
@@ -31,6 +32,7 @@ export const PaymentStatusModal = ({
   onSuccess,
   isGuest,
   email,
+  checkoutToken,
   paymentSummary
 }: Props) => {
   const [state, setState] = useState<ModalState>('POLLING');
@@ -69,7 +71,7 @@ export const PaymentStatusModal = ({
 
     const poll = async () => {
       try {
-        const res = (await getOrderStatusRef.current(invoiceId)) as {
+        const res = (await getOrderStatusRef.current({ orderNumber: invoiceId, clientCheckoutToken: checkoutToken })) as {
           paymentStatus?: string;
           paymentRecordStatus?: string;
           status?: string;
@@ -139,7 +141,7 @@ export const PaymentStatusModal = ({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isOpen, invoiceId, state, isGuest, onSuccess, handleAutoLogin]);
+  }, [isOpen, invoiceId, state, isGuest, checkoutToken, onSuccess, handleAutoLogin]);
 
 
 

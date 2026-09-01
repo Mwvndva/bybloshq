@@ -25,7 +25,7 @@ export async function countAvailableProducts(sellerId) {
  * @param {number|string} input.sellerId
  * @param {string[]} input.excludedStatuses  Order statuses excluded from
  *                                           financial aggregates.
- * @returns {Promise<{total_sales: string, net_revenue: string, balance: string, available_balance: string, pending_settlement_balance: string, withdrawal_reserved_balance: string, refund_reserved_balance: string, next_settlement_at: string|null, client_count: number, creator_count: number, creator_generated_sales: string}>}
+ * @returns {Promise<{total_sales: string, net_revenue: string, balance: string, available_balance: string, pending_settlement_balance: string, withdrawal_reserved_balance: string, refund_reserved_balance: string, next_settlement_at: string|null, creator_count: number, creator_generated_sales: string}>}
  */
 export async function findSellerStats({ sellerId, excludedStatuses }) {
   const sql = `
@@ -38,7 +38,6 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       COALESCE(s.withdrawal_reserved_balance, 0) as withdrawal_reserved_balance,
       COALESCE(s.refund_reserved_balance, 0) as refund_reserved_balance,
       next_settlement.next_settlement_at,
-      COALESCE(s.client_count, 0) as client_count,
       COALESCE(creator_links.creator_count, 0) as creator_count,
       COALESCE(creator_sales.creator_generated_sales, 0) as creator_generated_sales
     FROM sellers s

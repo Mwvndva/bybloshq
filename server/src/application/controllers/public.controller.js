@@ -5,6 +5,8 @@ import * as publicCatalogRepository from '../../domains/commerce/repositories/pu
 import * as sellerRepository from '../../domains/commerce/sellers/seller.repository.js';
 import * as publicOrderStatusRepository from '../../domains/orders/repositories/publicOrderStatus.repository.js';
 import { sanitizePublicProduct, sanitizePublicSeller } from '../../shared/utils/sanitize.js';
+import { signAutoLoginToken } from '../../shared/utils/jwt.js';
+import { pool } from '../../infrastructure/database/database.js';
 
 const PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS = 15000;
 const PAYMENT_SUCCESS_STATUSES = new Set(['completed', 'success', 'paid']);
@@ -24,19 +26,6 @@ function parseJson(value, fallback = {}) {
   } catch {
     return fallback;
   }
-}
-
-function extractPublicPaymentFailureReason(row) {
-  const paymentMetadata = parseJson(row.payment_metadata);
-  const orderMetadata = parseJson(row.order_metadata);
-  return paymentMetadata.failure_reason
-    || paymentMetadata.provider_payload?.gateway_response
-    || paymentMetadata.provider_payload?.message
-    || paymentMetadata.provider_payload?.display_text
-    || paymentMetadata.completion_blocked?.provider_payload?.gateway_response
-    || orderMetadata.payment_failure?.provider_status
-    || orderMetadata.payment_failure?.source
-    || null;
 }
 
 async function syncPendingPaymentFromProvider(row) {
@@ -283,7 +272,6 @@ export const getSellers = async (req, res) => {
       id: row.id,
       shopName: row.shop_name,
       shopLink: row.shop_name, // Use shop_name as the link slug
-      bannerUrl: row.banner_image, // Mapped from banner_image
       avatarUrl: row.avatar_url,
       bio: row.bio,
       theme: row.theme, // Mapped from theme
@@ -291,7 +279,8 @@ export const getSellers = async (req, res) => {
       hasPhysicalShop: Boolean(row.physical_address || (row.latitude && row.longitude)),
       latitude: row.latitude,
       longitude: row.longitude,
-      clientCount: row.client_count || 0,
+      instagramLink: row.instagramLink || null,
+      tiktokLink: row.tiktokLink || null,
       totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
       wishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
       knockCount: parseInt(row.knock_count, 10) || 0,
@@ -407,15 +396,45 @@ export const getOrderStatus = async (req, res) => {
 
     order = await syncPendingPaymentFromProvider(order);
 
+    // Unauthenticated, enumerable endpoint (order_number is sequential): expose
+    // only non-sensitive status. Do NOT return the internal PK or raw provider
+    // diagnostic text — surface a generic failure message instead.
+    const paymentFailed = String(order.payment_status || '').toLowerCase() === 'failed';
+
+    // Seamless post-payment login (ownership-proven). This endpoint is enumerable
+    // by order number, so an auto-login token is minted ONLY when the caller also
+    // presents the matching client_checkout_token — the high-entropy secret their
+    // own checkout device holds — AND the order is paid AND the buyer is verified.
+    // Enumerating the order number alone yields nothing. Fresh/unverified guests
+    // get no token and use the verification (magic-link) flow instead.
+    let autoLoginToken = null;
+    const clientToken = req.query.client_checkout_token || req.query.clientCheckoutToken;
+    const paid = ['completed', 'success', 'paid'].includes(String(order.payment_status || '').toLowerCase());
+    if (clientToken && paid && order.order_number) {
+      const { rows } = await pool.query(
+        `SELECT u.id AS user_id
+           FROM product_orders po
+           JOIN buyers b ON b.id = po.buyer_id
+           JOIN users u ON u.id = b.user_id
+          WHERE po.order_number = $1
+            AND po.client_checkout_token = $2
+            AND u.is_verified = true`,
+        [order.order_number, clientToken]
+      );
+      if (rows[0]?.user_id) {
+        autoLoginToken = signAutoLoginToken(rows[0].user_id, 'buyer', 'payment_success');
+      }
+    }
+
     res.status(200).json({
       status: 'success',
       data: {
-        id: order.id,
         orderNumber: order.order_number,
         status: order.status,
         paymentStatus: order.payment_status,
         paymentRecordStatus: order.payment_record_status || null,
-        failureReason: extractPublicPaymentFailureReason(order)
+        failureReason: paymentFailed ? 'Payment was not completed. Please try again.' : null,
+        ...(autoLoginToken ? { autoLoginToken } : {})
       }
     });
   } catch (error) {

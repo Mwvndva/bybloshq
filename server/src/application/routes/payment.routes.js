@@ -13,7 +13,12 @@ const initiateProductSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   email: z.string().email().optional().nullable().or(z.literal('')),
   amount: z.coerce.number().positive('Valid amount is required').optional(),
-  productId: z.coerce.string().min(1, 'Product ID is required'),
+  // Single product (back-compat) OR a per-seller bag via `items` (1–5 lines).
+  productId: z.coerce.string().min(1).optional(),
+  items: z.array(z.object({
+    productId: z.coerce.string().min(1, 'Product ID is required'),
+    quantity: z.coerce.number().int().positive().max(99).optional(),
+  })).min(1).max(5).optional(),
   sellerId: z.coerce.string().optional().nullable(),
   productName: z.string().optional().nullable(),
   customerName: z.string().optional().nullable(),
@@ -27,6 +32,9 @@ const initiateProductSchema = z.object({
   buyerLocation: z.any().optional(),
   delivery: z.any().optional(),
   metadata: z.any().optional(),
+}).refine((d) => Boolean(d.productId) || (Array.isArray(d.items) && d.items.length > 0), {
+  message: 'Either productId or a non-empty items array is required',
+  path: ['productId'],
 });
 
 const checkStatusSchema = z.object({
@@ -80,6 +88,7 @@ publicRouter.post(
 // Check payment status (public)
 publicRouter.get(
   '/status/:invoiceId',
+  paymentRateLimiter,
   validate(checkStatusSchema),
   (req, res, next) => {
     // Map invoiceId to paymentId for backward compatibility
