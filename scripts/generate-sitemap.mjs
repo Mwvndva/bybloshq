@@ -10,7 +10,7 @@ const __dirname = dirname(__filename);
 // Define your website URL
 const siteUrl = 'https://www.byblosafrica.site';
 
-// Define your routes
+// Static routes
 const routes = [
   { url: '/', changefreq: 'daily', priority: 1.0 },
   { url: '/shop', changefreq: 'daily', priority: 0.9 },
@@ -25,15 +25,44 @@ const routes = [
   { url: '/terms', changefreq: 'yearly', priority: 0.3 },
 ];
 
+async function fetchDynamicSellerRoutes() {
+  const dbUrl = process.env.DB_URL || 'postgresql://byblos_user:DgpNqT0uXz7RIPKLGuDSVxDSWyqsK6d2@dpg-d9u7gq3m8hqs73ennd20-a.frankfurt-postgres.render.com/bybloshqdb';
+  try {
+    const pg = await import('../server/node_modules/pg/lib/index.js');
+    const { Pool } = pg.default || pg;
+    const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    const { rows } = await pool.query(
+      `SELECT shop_name, slug FROM sellers WHERE status = 'active'`
+    );
+    await pool.end();
+
+    const dynamicRoutes = [];
+    for (const seller of rows) {
+      const identifier = seller.slug || encodeURIComponent(seller.shop_name);
+      if (identifier) {
+        dynamicRoutes.push({ url: `/shop/${identifier}`, changefreq: 'daily', priority: 0.9 });
+        dynamicRoutes.push({ url: `/${identifier}`, changefreq: 'daily', priority: 0.9 });
+      }
+    }
+    return dynamicRoutes;
+  } catch (error) {
+    console.warn('Could not fetch dynamic seller routes for sitemap:', error.message);
+    return [];
+  }
+}
+
 // Generate sitemap
 async function generateSitemap() {
   try {
+    const dynamicRoutes = await fetchDynamicSellerRoutes();
+    const allRoutes = [...routes, ...dynamicRoutes];
+
     // Create a stream to write to
     const stream = new SitemapStream({ hostname: siteUrl });
     
     // Add all routes to the sitemap
     const xmlString = await streamToPromise(
-      Readable.from(routes).pipe(stream)
+      Readable.from(allRoutes).pipe(stream)
     ).then((data) => data.toString());
 
     // Define the path
@@ -48,7 +77,7 @@ async function generateSitemap() {
     // Write sitemap to file
     writeFileSync(sitemapPath, xmlString);
 
-    console.log('Sitemap generated successfully!');
+    console.log(`Sitemap generated successfully with ${allRoutes.length} URLs!`);
   } catch (error) {
     console.error('Error generating sitemap:', error);
   }
