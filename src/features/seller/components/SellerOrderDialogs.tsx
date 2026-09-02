@@ -80,7 +80,7 @@ export function SellerOrderDialogs({
                     </DialogHeader>
 
                     <form onSubmit={requestPickup} className="min-h-0 flex-1 overflow-y-auto pr-1">
-                        <div className="space-y-4 py-2">
+                        <div className="space-y-4 py-2 pb-8">
                             {pickupOrder && (
                                 <div className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3 text-xs sm:grid-cols-3">
                                     <div>
@@ -157,7 +157,7 @@ export function SellerOrderDialogs({
                             )}
                         </div>
 
-                        <DialogFooter className="sticky bottom-0 mt-3 gap-2 border-t border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#0a0a0a] py-3">
+                        <DialogFooter className="sticky bottom-0 z-20 mt-3 gap-2 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] py-3.5 px-1 shrink-0">
                             <Button
                                 type="button"
                                 variant="outline"

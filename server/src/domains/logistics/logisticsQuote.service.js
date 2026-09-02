@@ -3,10 +3,10 @@ const DEFAULT_RATE_KES_PER_KM = 40;
 const DEFAULT_SELLER_PICKUP_CBD_FEE_KES = 100;
 const DEFAULT_SELLER_PICKUP_CBD_RADIUS_KM = 3;
 const DEFAULT_HUB = Object.freeze({
-    label: 'Byblos CBD Hub',
-    address: 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32',
-    latitude: -1.286389,
-    longitude: 36.817223
+    label: 'MZIGO EGO',
+    address: 'Dynamic mall shop sl32',
+    latitude: -1.2836,
+    longitude: 36.8249
 });
 
 function parseNumber(value, fieldName) {
@@ -25,7 +25,7 @@ function parseOptionalNumber(value, fallback, fieldName) {
 }
 
 function roundMoney(amount) {
-    return Math.round(Number(amount) * 100) / 100;
+    return Math.ceil(Number(amount));
 }
 
 function normalizeLocation(location = {}, label = 'location') {
@@ -38,7 +38,16 @@ function normalizeLocation(location = {}, label = 'location') {
         `${label}.longitude`
     );
 
-    if (latitude < -90 || latitude > 90) {
+    if (latitude === 0 && longitude === 0) {
+        throw new Error(`Valid ${label} coordinates are required`);
+    }
+
+    let finalLat = latitude;
+    if (finalLat > 0 && finalLat < 5 && longitude > 34 && longitude < 42) {
+        finalLat = -finalLat;
+    }
+
+    if (finalLat < -90 || finalLat > 90) {
         throw new Error(`${label}.latitude must be between -90 and 90`);
     }
 
@@ -49,7 +58,7 @@ function normalizeLocation(location = {}, label = 'location') {
     return {
         label: location.label || null,
         address: location.address || location.full_address || location.fullAddress || null,
-        latitude,
+        latitude: finalLat,
         longitude
     };
 }
@@ -60,36 +69,32 @@ function toRadians(degrees) {
 
 class LogisticsQuoteService {
     static getConfiguredHub(env = process.env) {
+        let lat = parseOptionalNumber(
+            env.LOGISTICS_HUB_LATITUDE,
+            DEFAULT_HUB.latitude,
+            'LOGISTICS_HUB_LATITUDE'
+        );
+        const lng = parseOptionalNumber(
+            env.LOGISTICS_HUB_LONGITUDE,
+            DEFAULT_HUB.longitude,
+            'LOGISTICS_HUB_LONGITUDE'
+        );
+        if (lat > 0 && lat < 5 && lng > 34 && lng < 42) {
+            lat = -lat;
+        }
+
         return normalizeLocation({
             label: env.LOGISTICS_HUB_LABEL || DEFAULT_HUB.label,
             address: env.LOGISTICS_HUB_ADDRESS || env.DROPOFF_LOCATION || DEFAULT_HUB.address,
-            latitude: parseOptionalNumber(
-                env.LOGISTICS_HUB_LATITUDE,
-                DEFAULT_HUB.latitude,
-                'LOGISTICS_HUB_LATITUDE'
-            ),
-            longitude: parseOptionalNumber(
-                env.LOGISTICS_HUB_LONGITUDE,
-                DEFAULT_HUB.longitude,
-                'LOGISTICS_HUB_LONGITUDE'
-            )
+            latitude: lat,
+            longitude: lng
         }, 'hub');
     }
 
     static getConfiguredRate(env = process.env) {
-        const legacyDoorDeliveryRate = parseOptionalNumber(
-            env.DOOR_DELIVERY_RATE_KES_PER_KM,
-            DEFAULT_RATE_KES_PER_KM,
-            'DOOR_DELIVERY_RATE_KES_PER_KM'
-        );
-
-        if (legacyDoorDeliveryRate < 0) {
-            throw new Error('DOOR_DELIVERY_RATE_KES_PER_KM cannot be negative');
-        }
-
         const rate = parseOptionalNumber(
             env.LOGISTICS_RATE_KES_PER_KM,
-            legacyDoorDeliveryRate,
+            DEFAULT_RATE_KES_PER_KM,
             'LOGISTICS_RATE_KES_PER_KM'
         );
 
@@ -156,7 +161,7 @@ class LogisticsQuoteService {
             throw new Error('rateKesPerKm cannot be negative');
         }
 
-        return roundMoney(Math.ceil(distance) * rate);
+        return Math.ceil(Math.ceil(distance) * rate);
     }
 
     static quoteBuyerDoorDelivery(buyerLocation, options = {}) {
