@@ -1,6 +1,5 @@
 import { ChevronDown, MapPin } from 'lucide-react';
 import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
-import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 
 const SUPPORTED_CITIES = ['Nairobi'] as const;
 
@@ -30,10 +29,7 @@ export function BuyerDashboardHeader() {
             <ChevronDown className="pointer-events-none absolute right-2 h-3 w-3 text-slate-500 dark:text-white/60" aria-hidden="true" />
           </div>
 
-          <div className="flex items-center gap-2">
-            <NotificationBell variant="default" />
-            <AccountSwitcher />
-          </div>
+          <AccountSwitcher />
         </div>
       </div>
     </header>
