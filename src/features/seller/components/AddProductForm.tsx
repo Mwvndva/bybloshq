@@ -73,6 +73,19 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         toast({ title: 'Missing Info', description: 'Please name your product and select a type.', variant: 'destructive' });
         return;
       }
+      if (formData.product_type === 'service') {
+        const lat = sellerProfile?.latitude ? Number(sellerProfile.latitude) : null;
+        const lng = sellerProfile?.longitude ? Number(sellerProfile.longitude) : null;
+        const hasCoordinates = lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+        if (!hasCoordinates) {
+          toast({
+            title: 'Location Coordinates Required',
+            description: 'To offer services, please pin your exact shop location coordinates in Settings first.',
+            variant: 'destructive'
+          });
+          return;
+        }
+      }
     }
     if (step === 2) {
       if (!imagePreview) {
