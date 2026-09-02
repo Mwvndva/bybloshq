@@ -91,7 +91,8 @@ class EscrowManager {
             return { success: true };
         }
 
-        const availableAt = settlementService.calculateAvailableAt(new Date());
+        const completionTime = order.completed_at || order.completedAt || order.created_at || order.createdAt || new Date();
+        const availableAt = settlementService.calculateAvailableAt(completionTime);
 
         // 3. Create payout row first. This is the idempotency gate.
         // If another transaction already inserted this order_id, do not credit the wallet.
