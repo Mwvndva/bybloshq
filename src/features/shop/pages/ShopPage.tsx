@@ -1,6 +1,6 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Button } from '@/shared/ui/button';
-import { Loader2, Store, Package } from 'lucide-react';
+import { Loader2, Store, Package, ExternalLink, Sparkles } from 'lucide-react';
 import { cn, getImageUrl } from '@/shared/utils/formatting';
 import { BagProvider } from '@/features/shop/bag/BagContext';
 import { BagSheet } from '@/features/shop/components/BagSheet';
@@ -12,8 +12,11 @@ import { SEOHead } from '@/shared/components/SEOHead';
 import { ShopHero } from '../components/ShopHero';
 import { ShopPageThemePicker } from '../components/ShopPageThemePicker';
 import { useShopPage } from './useShopPage';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
+import { getShopUrl } from '@/shared/utils/shopLinks';
 
 const ShopPage = () => {
+  const { shopName: routeShopName } = useParams<{ shopName: string }>();
   const {
     sellerInfo,
     themeClasses,
@@ -21,6 +24,7 @@ const ShopPage = () => {
     setShopPageTheme,
     resolvedShopTheme,
     products,
+    hasDigitalProducts,
     filteredProducts,
     searchQuery,
     setSearchQuery,
@@ -128,6 +132,26 @@ const ShopPage = () => {
           <p className="mt-3 text-center text-xs font-semibold text-[var(--byblos-muted)]">
             Tap a product to add it to your bag
           </p>
+
+          {isNativeApp() && hasDigitalProducts && (
+            <div className="mt-3.5 max-w-md mx-auto">
+              <a
+                href={getShopUrl(sellerInfo?.slug || sellerInfo?.shopName || routeShopName || '')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 w-full p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-950 dark:text-amber-200 hover:bg-amber-500/25 transition-all shadow-sm group text-left"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Sparkles className="h-5 w-5 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold leading-tight">Digital products available on Web</p>
+                    <p className="text-[10px] text-amber-800/80 dark:text-amber-300/80 font-medium">Tap to view & buy downloads on website</p>
+                  </div>
+                </div>
+                <ExternalLink className="h-4 w-4 text-amber-500 group-hover:translate-x-0.5 transition-transform shrink-0" />
+              </a>
+            </div>
+          )}
         </div>
 
         {filteredProducts.length > 0 ? (
