@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, BadgeDollarSign, Clock, Heart, Megaphone, MousePointerClick, Package, PackagePlus, Wallet } from 'lucide-react';
+import { ArrowUpRight, BadgeDollarSign, Clock, Heart, Megaphone, MousePointerClick, Package, PackagePlus, ShoppingBag, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/shared/utils/formatting';
 import { Badge } from '@/shared/ui/badge';
 import { formatOrderStatusLabel, getPendingStatusStyles } from '../dashboardUtils';
@@ -18,6 +18,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const recentOrders = (analytics.recentOrders || []).slice(0, 5);
 
   const balance = analytics.availableBalance ?? analytics.balance;
+  const totalSales = analytics.totalSales || 0;
   const revenue = analytics.totalRevenue || 0;
   const clicks = Number(analytics.clickCount || 0);
   const wishlist = Number(analytics.wishlistCount || 0);
@@ -32,28 +33,29 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
 
   const greeting = useMemo(() => {
     if (revenue > 0) {
-      return { title: `Your shop is live! You've made ${formatCurrency(revenue)} so far 🎉`, sub: 'Keep the momentum going.' };
+      return { title: `Your shop is live! You've earned ${formatCurrency(revenue)} so far 🎉`, sub: 'Keep the momentum going.' };
     }
     return { title: 'Your shop is live! 🎉', sub: 'Your first sale is on its way — here is what to do next.' };
   }, [revenue]);
 
   const metricsBlock = (
     <div className="space-y-3 sm:space-y-4">
-      {/* Balance hero + Revenue companion — the number and the action that
-          spends it sit together, and clearly outrank everything below. */}
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="seller-balance-hero relative overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-6">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/25">
-              <Wallet className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-            </span>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-white/70">Available balance</p>
+      {/* Balance hero + Sales & Revenue companions */}
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="seller-balance-hero relative overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/25">
+                <Wallet className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
+              </span>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-white/70">Available balance</p>
+            </div>
+            <p className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">{formatCurrency(balance)}</p>
           </div>
-          <p className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">{formatCurrency(balance)}</p>
           <button
             type="button"
             onClick={() => { onSelectTab('withdrawals'); }}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-black shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-transform active:scale-95"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-black shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-transform active:scale-95 w-fit"
             style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
           >
             <Wallet className="h-4 w-4" />
@@ -61,17 +63,40 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
           </button>
         </div>
 
-        <div className="flex flex-col justify-center rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="flex items-center gap-2">
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-xl"
-              style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.14)' }}
-            >
-              <BadgeDollarSign className="h-4 w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-            </span>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Total revenue</p>
+        <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-xl"
+                style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.14)' }}
+              >
+                <ShoppingBag className="h-4 w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
+              </span>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Total Sales (Gross)</p>
+            </div>
+            <p className="mt-2 truncate text-xl font-black text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
           </div>
-          <p className="mt-2 truncate text-2xl font-black text-white sm:text-3xl">{formatCurrency(revenue)}</p>
+          <p className="mt-2 text-[10px] text-white/50 leading-tight">
+            Gross order value paid by buyers before fees.
+          </p>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-xl"
+                style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.14)' }}
+              >
+                <BadgeDollarSign className="h-4 w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
+              </span>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Total Revenue (Net)</p>
+            </div>
+            <p className="mt-2 truncate text-xl font-black text-white sm:text-2xl">{formatCurrency(revenue)}</p>
+          </div>
+          <p className="mt-2 text-[10px] text-white/50 leading-tight">
+            Net earnings credited after platform fee deductions.
+          </p>
         </div>
       </div>
 
