@@ -5,6 +5,7 @@ import Order from '../../domains/orders/order/order.model.js';
 import { OrderStatus, PaymentStatus } from '../../shared/constants/enums.js';
 import FulfillmentQueueService from '../../domains/orders/fulfillment/fulfillmentQueue.service.js';
 import InventoryReservationService from '../../domains/commerce/products/inventoryReservation.service.js';
+import escrowManager from '../../domains/orders/escrow/EscrowManager.js';
 
 const RECONCILIATION_LOCK_KEY = 'byblos:reconciliation-engine';
 
@@ -58,6 +59,7 @@ class ReconciliationEngine {
             await this.handleExpiredReservations();
             await this.handleStuckPayments();
             await this.handleMissingFulfillmentJobs();
+            await this.handleUnreleasedCompletedOrders();
             return { skipped: false };
         } catch (err) {
             logger.error('[RECON] Reconciliation run failed:', err);
@@ -214,6 +216,48 @@ class ReconciliationEngine {
         for (const order of missingOrders) {
             logger.info(`[RECON] Re-enqueuing missing fulfillment job for order ${order.id}.`);
             await FulfillmentQueueService.enqueue(null, order.id);
+        }
+    }
+
+    /**
+     * Self-healing worker: Scan for COMPLETED orders that have NO payout record in payouts table
+     * and invoke escrowManager.releaseFunds() to credit the seller.
+     */
+    static async handleUnreleasedCompletedOrders() {
+        const { rows: unreleasedOrders } = await pool.query(
+            `SELECT po.*
+             FROM product_orders po
+             LEFT JOIN payouts p ON p.order_id = po.id
+             WHERE po.status = 'COMPLETED'
+               AND po.payment_status = 'completed'
+               AND p.id IS NULL
+             ORDER BY po.completed_at ASC NULLS LAST
+             LIMIT 50`
+        );
+
+        if (unreleasedOrders.length === 0) return;
+
+        logger.info(`[RECON] Found ${unreleasedOrders.length} COMPLETED orders missing escrow payout release.`);
+
+        for (const order of unreleasedOrders) {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                const { rows: [lockedOrder] } = await client.query(
+                    'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE',
+                    [order.id]
+                );
+                if (lockedOrder && lockedOrder.status === 'COMPLETED') {
+                    const releaseResult = await escrowManager.releaseFunds(client, lockedOrder, 'ReconciliationWorker');
+                    logger.info(`[RECON] Escrow recovery executed for Order ${order.id}:`, releaseResult);
+                }
+                await client.query('COMMIT');
+            } catch (err) {
+                await client.query('ROLLBACK').catch(() => {});
+                logger.error(`[RECON] Failed escrow recovery for Order ${order.id}:`, err.message);
+            } finally {
+                client.release();
+            }
         }
     }
 }
