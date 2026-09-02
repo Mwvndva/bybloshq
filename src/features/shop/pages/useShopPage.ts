@@ -120,10 +120,17 @@ export function useShopPage() {
 
   // Digital products are hidden inside the native app: Google Play requires
   // digital goods to be sold via Play Billing, so they stay web-only.
+  const hasDigitalProducts = products.some(product => {
+    const p = product as unknown as { productType?: string; product_type?: string; isDigital?: boolean; is_digital?: boolean };
+    const pType = String(p.productType || p.product_type || '').toLowerCase();
+    return pType === 'digital' || p.isDigital === true || p.is_digital === true;
+  });
+
   const visibleProducts = isNativeApp()
     ? products.filter(product => {
-        const p = product as { productType?: string; isDigital?: boolean };
-        return p.productType !== 'digital' && !p.isDigital;
+        const p = product as unknown as { productType?: string; product_type?: string; isDigital?: boolean; is_digital?: boolean };
+        const pType = String(p.productType || p.product_type || '').toLowerCase();
+        return pType !== 'digital' && !p.isDigital && !p.is_digital;
       })
     : products;
 
@@ -142,14 +149,14 @@ export function useShopPage() {
   const sellerInitials = getSellerInitials(sellerInfo?.shopName, sellerInfo?.fullName);
   const showSellerAvatar = Boolean(sellerInfo?.avatarUrl && !avatarLoadFailed);
 
-
   return {
     sellerInfo,
     themeClasses,
     shopPageTheme,
     setShopPageTheme,
     resolvedShopTheme,
-    products: visibleProducts,
+    products,
+    hasDigitalProducts,
     filteredProducts,
     searchQuery,
     setSearchQuery,
