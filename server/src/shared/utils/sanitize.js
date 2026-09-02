@@ -45,9 +45,7 @@ const sanitizeLogistics = (logistics) => {
             ? Number.parseFloat(leg.distanceKm ?? leg.distance_km)
             : null,
         originLabel: leg.originLabel || leg.origin_label || null,
-        originAddress: leg.originAddress || leg.origin_address || null,
         destinationLabel: leg.destinationLabel || leg.destination_label || null,
-        destinationAddress: leg.destinationAddress || leg.destination_address || null,
         deadlineAt: leg.deadlineAt || leg.deadline_at || null,
         completedAt: leg.completedAt || leg.completed_at || null
     } : null;
@@ -302,9 +300,6 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         buyerServiceChargeAmount: Number.isFinite(buyerServiceChargeAmount) ? buyerServiceChargeAmount : 0,
         buyerServiceChargeRate: Number.isFinite(buyerServiceChargeRate) ? buyerServiceChargeRate : 0.02,
         fulfillment_type: orderObj.fulfillment_type || orderObj.fulfillmentType || null,
-        location_address: orderObj.location_address || orderObj.locationAddress || null,
-        location_lat: orderObj.location_lat || orderObj.locationLat || null,
-        location_lng: orderObj.location_lng || orderObj.locationLng || null,
         seller: orderObj.seller ? {
             id: orderObj.seller.id,
             shopName: orderObj.seller.shopName,

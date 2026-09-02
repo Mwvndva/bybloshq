@@ -212,13 +212,13 @@ export default function LocationPicker({
                     )}
 
                     {showResults && (
-                        <div className="absolute left-0 right-0 top-full z-[5000] mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white text-slate-800 shadow-2xl">
+                        <div className="absolute left-0 right-0 top-full z-[5000] mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-[#141414] text-slate-900 dark:text-white shadow-2xl">
                             {searchResults.length > 0 ? (
                                 searchResults.map((result, index) => (
                                     <button
                                         key={`${result.provider || 'location'}-${result.id || index}`}
                                         type="button"
-                                        className="w-full border-b border-slate-100 px-3 py-2.5 text-left text-xs leading-snug hover:bg-slate-50 focus:bg-slate-50 focus:outline-none sm:text-sm last:border-0"
+                                        className="w-full border-b border-slate-100 dark:border-white/10 px-3 py-2.5 text-left text-xs leading-snug text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 focus:bg-slate-100 dark:focus:bg-white/10 focus:outline-none sm:text-sm last:border-0"
                                         onMouseDown={(event) => event.preventDefault()}
                                         onClick={() => selectLocation(result)}
                                     >
@@ -226,7 +226,7 @@ export default function LocationPicker({
                                     </button>
                                 ))
                             ) : (
-                                <div className="px-3 py-3 text-xs font-semibold text-slate-500 sm:text-sm">
+                                <div className="px-3 py-3 text-xs font-semibold text-slate-500 dark:text-white/60 sm:text-sm">
                                     {isSearching
                                         ? 'Searching locations...'
                                         : searchError || (hasSearched ? 'No locations found. Try adding Nairobi, Kenya, or a nearby landmark.' : 'Keep typing to search locations.')}

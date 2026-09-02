@@ -98,26 +98,6 @@ function addHours(value: string | Date | undefined, hours: number) {
   return date.toISOString();
 }
 
-function mapLink(lat?: number | string | null, lng?: number | string | null, address?: string | null) {
-  const parsedLat = lat === null || lat === undefined ? NaN : Number(lat);
-  const parsedLng = lng === null || lng === undefined ? NaN : Number(lng);
-  if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
-    return `https://www.google.com/maps?q=${parsedLat},${parsedLng}`;
-  }
-  if (address) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-  }
-  return null;
-}
-
-function getDeliveryAddress(leg?: ApiOrderLogisticsDeliveryLeg | null, order?: ApiOrder) {
-  return leg?.destinationAddress
-    || leg?.destinationLabel
-    || order?.location_address
-    || order?.shippingAddress?.address
-    || 'Delivery address pending';
-}
-
 function Timeline({ events }: { events: NonNullable<ApiOrder['logistics']>['events'] }) {
   if (!events?.length) {
     return (
@@ -178,16 +158,6 @@ export function OrderLogisticsTracking({
     }
     return journey.percentProgress;
   }, [journey.isDelivered, journey.percentProgress, order.status, liveEta]);
-
-  const deliveryAddress = getDeliveryAddress(deliveryLeg, order);
-  const deliveryMapLink = mapLink(deliveryLeg?.destinationLat, deliveryLeg?.destinationLng, deliveryAddress);
-
-  const sellerShopAddress = order.seller?.physicalAddress || order.seller?.location || order.location_address || pickupLeg?.originAddress || 'Shop address pending';
-  const sellerMapLink = mapLink(
-    order.seller?.latitude ?? pickupLeg?.originLat,
-    order.seller?.longitude ?? pickupLeg?.originLng,
-    sellerShopAddress
-  );
 
   return (
     <section className="mt-4 space-y-2 rounded-xl border border-yellow-400/30 bg-yellow-400/[0.08] p-2 text-white sm:p-3">
@@ -297,7 +267,7 @@ export function OrderLogisticsTracking({
         )}
       </CollapsibleSection>
 
-      {/* ── Logistics Details (collapsed by default for courier orders) ── */}
+      {/* ── Logistics Details ── */}
       {isDoorDelivery && (
         <CollapsibleSection
           id={`tracking-logistics-${order.id}`}
@@ -307,25 +277,16 @@ export function OrderLogisticsTracking({
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-lg border border-white/10 bg-black/40 p-3">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
-                <MapPin className="h-3 w-3" />
-                Delivery Address (Buyer)
+                <Truck className="h-3 w-3 text-yellow-300" />
+                Fulfillment Mode
               </p>
-              <p className="mt-1 text-sm font-semibold text-white">{deliveryAddress}</p>
-              {deliveryMapLink && (
-                <a
-                  href={deliveryMapLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-yellow-200 hover:text-yellow-100"
-                >
-                  <Navigation className="h-3 w-3" /> Open map
-                </a>
-              )}
+              <p className="mt-1 text-sm font-semibold text-white">Door Delivery</p>
+              <p className="text-xs text-white/70">Handled by Mzigo Ego</p>
             </div>
 
             <div className="rounded-lg border border-white/10 bg-black/40 p-3">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/55">
-                <Store className="h-3 w-3" />
+                <Store className="h-3 w-3 text-yellow-300" />
                 Central Transit Hub
               </p>
               <p className="mt-1 text-sm font-semibold text-white">{MZIGO_CBD_HUB.name}</p>

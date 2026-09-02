@@ -10,9 +10,9 @@ export interface JourneyStep {
 }
 
 export const MZIGO_CBD_HUB = {
-  name: 'Byblos CBD Hub (Mzigo Ego)',
-  address: 'Shop SL 32, Dynamic Mall, Tom Mboya St, Nairobi',
-  mapLink: 'https://www.google.com/maps/search/?api=1&query=Dynamic+Mall+Tom+Mboya+St+Nairobi',
+  name: 'MZIGO EGO Hub',
+  address: 'Dynamic mall shop sl32, Nairobi',
+  mapLink: 'https://www.google.com/maps/search/?api=1&query=Dynamic+Mall+Nairobi',
 };
 
 export const DOOR_DELIVERY_JOURNEY_STEPS: JourneyStep[] = [

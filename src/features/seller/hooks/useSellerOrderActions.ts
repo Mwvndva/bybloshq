@@ -88,7 +88,11 @@ export function useSellerOrderActions() {
             return;
         }
 
-        if (pickupLocation.lat === null || pickupLocation.lng === null) {
+        if (
+            pickupLocation.lat === null ||
+            pickupLocation.lng === null ||
+            (pickupLocation.lat === 0 && pickupLocation.lng === 0)
+        ) {
             setPickupQuote(null);
             setPickupQuoteError('');
             return;
