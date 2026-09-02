@@ -79,7 +79,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
               <p className="mt-2 truncate text-lg font-black text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
             </div>
             <p className="mt-1.5 text-[9px] sm:text-[10px] text-white/50 leading-tight">
-              Total value of products sold.
+              Total product price value (excludes 2% customer service charge).
             </p>
           </div>
 
