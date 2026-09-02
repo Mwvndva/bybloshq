@@ -94,12 +94,19 @@ export function ShopProductCard({
         )}
       >
         {/* Image — full width, flush to the top. */}
-        <div className="relative aspect-square w-full overflow-hidden bg-black/10">
+        <div className="relative aspect-square w-full overflow-hidden bg-black/10 select-none">
           {image ? (
-            <img src={image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
+            <img src={image} alt={product.name} className="h-full w-full object-cover pointer-events-none" loading="lazy" onContextMenu={(e) => e.preventDefault()} />
           ) : (
             <div className="flex h-full w-full items-center justify-center opacity-40"><Package className="h-8 w-8" /></div>
           )}
+
+          {/* Sleek horizontal watermark banner running across the center */}
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center py-1 bg-black/35 backdrop-blur-[1px]">
+            <p className="w-full text-center text-[10px] sm:text-xs font-black uppercase tracking-widest text-white/80 drop-shadow-md truncate px-2 select-none">
+              @{product.seller?.shopName || product.seller?.fullName || 'Shop'} • Byblos
+            </p>
+          </div>
 
           {isSold && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/55">
@@ -232,18 +239,26 @@ export function ShopProductCard({
             </div>
 
             {/* Main Image View with Front/Back Navigation Buttons */}
-            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-black/10 flex items-center justify-center group/img">
+            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-black/10 flex items-center justify-center group/img select-none">
               {productImages.length > 0 ? (
                 <img
                   src={productImages[activeImageIndex]}
                   alt={`${product.name} - image ${activeImageIndex + 1}`}
-                  className="h-full w-full object-cover transition-all duration-300"
+                  className="h-full w-full object-cover transition-all duration-300 pointer-events-none"
+                  onContextMenu={(e) => e.preventDefault()}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center opacity-40">
                   <Package className="h-12 w-12" />
                 </div>
               )}
+
+              {/* Sleek horizontal watermark banner running across the center */}
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center py-1.5 bg-black/40 backdrop-blur-[1px]">
+                <p className="w-full text-center text-xs sm:text-sm font-black uppercase tracking-widest text-white/85 drop-shadow-md truncate px-3 select-none">
+                  @{product.seller?.shopName || product.seller?.fullName || 'Shop'} • Byblos
+                </p>
+              </div>
 
               {/* Navigation Buttons: Front (Next) and Back (Previous) */}
               {productImages.length > 1 && (
