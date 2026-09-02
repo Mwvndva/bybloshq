@@ -40,8 +40,21 @@ class ProductService {
             throw new Error('Invalid product type');
         }
 
-        if (product_type === 'service' && (!service_options || !service_options.availability_days)) {
-            throw new Error('Availability days are required for services');
+        if (product_type === 'service') {
+            if (!service_options || !service_options.availability_days) {
+                throw new Error('Availability days are required for services');
+            }
+
+            const { rows: sellerRows } = await pool.query(
+                'SELECT latitude, longitude FROM sellers WHERE id = $1',
+                [sellerId]
+            );
+            const seller = sellerRows[0];
+            const lat = seller?.latitude ? Number.parseFloat(seller.latitude) : null;
+            const lng = seller?.longitude ? Number.parseFloat(seller.longitude) : null;
+            if (lat === null || lng === null || !Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+                throw new Error('Pin your shop location coordinates in Settings before offering services');
+            }
         }
 
         const customProduct = product_type === 'physical' && is_custom_product === true;
