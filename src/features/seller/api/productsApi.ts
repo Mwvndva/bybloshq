@@ -113,7 +113,13 @@ export const sellerProductsApi = {
   },
 
   updateProduct: async (id: string, updates: Partial<ApiSellerProduct>): Promise<ApiSellerProduct> => {
-    const response = await sellerApiInstance.patch(`/sellers/products/${id}`, updates);
+    const rawUpdates = updates as Record<string, unknown>;
+    const payload: Record<string, unknown> = {
+      ...updates,
+      sold_at: rawUpdates.soldAt !== undefined ? rawUpdates.soldAt : rawUpdates.sold_at,
+      is_sold: rawUpdates.isSold !== undefined ? rawUpdates.isSold : rawUpdates.is_sold
+    };
+    const response = await sellerApiInstance.patch(`/sellers/products/${id}`, payload);
     return transformProduct(response.data);
   },
 

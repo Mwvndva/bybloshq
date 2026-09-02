@@ -291,16 +291,15 @@ class ProductService {
                     : null;
             }
 
-            // Status & SoldAt logic
-            const hasSoldAt = true; // sold_at column exists per schema (20260208_unified_schema_v3.sql)
+            // Status & SoldAt & IsSold sync
+            const targetStatus = status || (soldAt ? 'sold' : (data.is_sold === false || data.isSold === false ? 'available' : undefined));
+            const targetSoldAt = soldAt !== undefined ? soldAt : (data.sold_at !== undefined ? data.sold_at : (targetStatus === 'available' ? null : undefined));
+            const isMarkedSold = targetStatus === 'sold' || Boolean(targetSoldAt);
 
-            if (hasSoldAt) {
-                if (soldAt !== undefined) {
-                    updateFields.sold_at = soldAt;
-                    updateFields.status = soldAt ? 'sold' : 'available';
-                } else if (status) {
-                    updateFields.status = status;
-                }
+            if (targetStatus !== undefined || targetSoldAt !== undefined || data.is_sold !== undefined || data.isSold !== undefined) {
+                updateFields.status = isMarkedSold ? 'sold' : 'available';
+                updateFields.sold_at = isMarkedSold ? (targetSoldAt || new Date().toISOString()) : null;
+                updateFields.is_sold = isMarkedSold;
             }
 
             const updatedProduct = await ProductModel.update(client, productId, sellerId, updateFields);
