@@ -45,8 +45,8 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       SELECT
         COALESCE(SUM(
           COALESCE(
+            (SELECT SUM(COALESCE(oi.subtotal, oi.product_price * oi.quantity, oi.price * oi.quantity)) FROM order_items oi WHERE oi.order_id = o.id),
             (o.metadata->'pricing'->>'product_subtotal')::numeric,
-            (SELECT SUM(oi.subtotal) FROM order_items oi WHERE oi.order_id = o.id),
             o.total_amount
           )
         ), 0) as total_sales,
@@ -79,8 +79,8 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
     LEFT JOIN LATERAL (
       SELECT COALESCE(SUM(
         COALESCE(
+          (SELECT SUM(COALESCE(oi.subtotal, oi.product_price * oi.quantity, oi.price * oi.quantity)) FROM order_items oi WHERE oi.order_id = o.id),
           (o.metadata->'pricing'->>'product_subtotal')::numeric,
-          (SELECT SUM(oi.subtotal) FROM order_items oi WHERE oi.order_id = o.id),
           o.total_amount
         )
       ), 0) as creator_generated_sales
@@ -118,8 +118,8 @@ export async function findMonthlySales({ sellerId, excludedStatuses }) {
       TO_CHAR(COALESCE(p.completed_at, p.processed_at, o.updated_at, o.created_at), 'YYYY-MM') as month,
       COALESCE(SUM(
         COALESCE(
+          (SELECT SUM(COALESCE(oi.subtotal, oi.product_price * oi.quantity, oi.price * oi.quantity)) FROM order_items oi WHERE oi.order_id = o.id),
           (o.metadata->'pricing'->>'product_subtotal')::numeric,
-          (SELECT SUM(oi.subtotal) FROM order_items oi WHERE oi.order_id = o.id),
           o.total_amount
         )
       ), 0) as sales
