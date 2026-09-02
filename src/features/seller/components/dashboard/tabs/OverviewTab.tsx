@@ -41,7 +41,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const metricsBlock = (
     <div className="space-y-3 sm:space-y-4">
       {/* Balance hero + Sales & Revenue companions */}
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]">
         <div className="seller-balance-hero relative overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -63,40 +63,43 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
           </button>
         </div>
 
-        <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-xl"
-                style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.14)' }}
-              >
-                <ShoppingBag className="h-4 w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-              </span>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Total Sales</p>
+        {/* Total Sales & Total Revenue side-by-side on mobile/Android & desktop */}
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+          <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-5 min-w-0">
+            <div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span
+                  className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.14)' }}
+                >
+                  <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
+                </span>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-white/50 truncate">Total Sales</p>
+              </div>
+              <p className="mt-2 truncate text-lg font-black text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
             </div>
-            <p className="mt-2 truncate text-xl font-black text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
+            <p className="mt-1.5 text-[9px] sm:text-[10px] text-white/50 leading-tight">
+              Total value of products sold.
+            </p>
           </div>
-          <p className="mt-2 text-[10px] text-white/50 leading-tight">
-            Total value of products sold.
-          </p>
-        </div>
 
-        <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-xl"
-                style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.14)' }}
-              >
-                <BadgeDollarSign className="h-4 w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
-              </span>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Total Revenue (Net)</p>
+          <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-5 min-w-0">
+            <div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span
+                  className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.14)' }}
+                >
+                  <BadgeDollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
+                </span>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-white/50 truncate">Total Revenue (Net)</p>
+              </div>
+              <p className="mt-2 truncate text-lg font-black text-white sm:text-2xl">{formatCurrency(revenue)}</p>
             </div>
-            <p className="mt-2 truncate text-xl font-black text-white sm:text-2xl">{formatCurrency(revenue)}</p>
+            <p className="mt-1.5 text-[9px] sm:text-[10px] text-white/50 leading-tight">
+              Net earnings after KSh 10 platform fee per sale.
+            </p>
           </div>
-          <p className="mt-2 text-[10px] text-white/50 leading-tight">
-            Net earnings credited after platform fee deductions.
-          </p>
         </div>
       </div>
 
