@@ -21,7 +21,7 @@ interface AddProductFormStepsProps {
   setExtraFiles: Dispatch<SetStateAction<File[]>>;
   handleImageChange: (e: ChangeEvent<HTMLInputElement>, slot: number) => void;
   uploadProgress: number;
-  sellerProfile: { city?: string | null } | null | undefined;
+  sellerProfile?: { city?: string | null; latitude?: number | null; longitude?: number | null } | null;
 }
 
 export const AddProductFormSteps = ({
@@ -39,6 +39,10 @@ export const AddProductFormSteps = ({
   sellerProfile,
 }: AddProductFormStepsProps) => {
   const allPreviewsCombined = () => [imagePreview, ...extraPreviews].filter(Boolean);
+
+  const lat = sellerProfile?.latitude ? Number(sellerProfile.latitude) : null;
+  const lng = sellerProfile?.longitude ? Number(sellerProfile.longitude) : null;
+  const hasCoordinates = lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
 
   const renderStep1 = () => (
     <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -58,7 +62,7 @@ export const AddProductFormSteps = ({
             type="button"
             onClick={() => setFormData(p => ({ ...p, product_type: type.id as 'physical' | 'digital' | 'service', is_digital: type.id === 'digital' }))}
             className={cn(
-              "flex min-h-[92px] flex-col items-center justify-center rounded-2xl border-2 p-2 text-center transition-all duration-300 group sm:min-h-[120px] sm:p-4",
+              "relative flex min-h-[92px] flex-col items-center justify-center rounded-2xl border-2 p-2 text-center transition-all duration-300 group sm:min-h-[120px] sm:p-4",
               formData.product_type === type.id
                 ? "bg-yellow-400/20 border-yellow-500 text-slate-950 dark:text-white shadow-[0_0_20px_rgba(250,204,21,0.15)] font-bold"
                 : "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-800 dark:text-white/80 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-200/60 dark:hover:bg-white/10"
@@ -67,6 +71,12 @@ export const AddProductFormSteps = ({
             <type.icon className={cn("h-6 w-6 mb-2 transition-transform group-hover:scale-110 sm:h-8 sm:w-8", formData.product_type === type.id ? "text-yellow-600 dark:text-yellow-400" : "text-slate-600 dark:text-white/60")} />
             <span className="text-xs font-bold sm:text-sm">{type.label}</span>
             <span className="mt-1 hidden text-[10px] opacity-70 sm:block">{type.desc}</span>
+            {type.id === 'service' && !hasCoordinates && (
+              <span className="mt-1 inline-flex items-center gap-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-md">
+                <MapPin className="h-2.5 w-2.5" />
+                Pin required
+              </span>
+            )}
           </button>
         ))}
       </div>

@@ -140,6 +140,21 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         digitalFileSize = Number(res.size);
       }
 
+      if (formData.product_type === 'service') {
+        const lat = sellerProfile?.latitude ? Number(sellerProfile.latitude) : null;
+        const lng = sellerProfile?.longitude ? Number(sellerProfile.longitude) : null;
+        const hasCoordinates = lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+        if (!hasCoordinates) {
+          toast({
+            title: 'Location Coordinates Required',
+            description: 'To offer services, please pin your exact shop location coordinates in Settings first.',
+            variant: 'destructive'
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const priceFloat = parseFloat(formData.price || '0');
       if (priceFloat < 50) {
         toast({ title: 'Invalid Price', description: 'Minimum price must be KES 50', variant: 'destructive' });

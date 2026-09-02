@@ -263,6 +263,19 @@ class ProductService {
                 const nextImported = nextProductType === 'physical' && data.is_imported_product === true;
                 const nextImportDays = nextImported ? Number.parseInt(data.import_days ?? existing.import_days, 10) : null;
 
+                if (nextProductType === 'service') {
+                    const { rows: sellerRows } = await pool.query(
+                        'SELECT latitude, longitude FROM sellers WHERE id = $1',
+                        [sellerId]
+                    );
+                    const seller = sellerRows[0];
+                    const lat = seller?.latitude ? Number.parseFloat(seller.latitude) : null;
+                    const lng = seller?.longitude ? Number.parseFloat(seller.longitude) : null;
+                    if (lat === null || lng === null || !Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+                        throw new Error('Pin your shop location coordinates in Settings before offering services');
+                    }
+                }
+
                 if (data.is_custom_product === true && nextProductType !== 'physical') {
                     throw new Error('Only physical products can be custom products');
                 }

@@ -2,6 +2,7 @@ import { useMemo, useState, type ChangeEvent } from 'react';
 import { useToast } from '@/shared/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUpdateProductMutation, useUpdateInventoryMutation, sellerProductQuery } from '@/features/seller/hooks/useSellerProducts';
+import { useSellerProfileQuery } from '@/features/seller/hooks/useSellerProfile';
 import type { ApiSellerProduct, Product } from '@/shared/types';
 import { type ProductEditFormData } from '../components/products-list/ProductEditDialog';
 import { createInitialEditFormData, processImage } from '../components/products-list/productsListUtils';
@@ -15,6 +16,7 @@ interface UseProductsListParams {
 
 export function useProductsList({ products, onDelete, onStatusUpdate, onRefresh }: UseProductsListParams) {
   const { toast } = useToast();
+  const { data: sellerProfile = null } = useSellerProfileQuery();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -200,6 +202,20 @@ export function useProductsList({ products, onDelete, onStatusUpdate, onRefresh 
         toast({
           title: 'Error',
           description: 'Select imported item ready time of 7, 14, 21, or 30 days.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    if (editFormData.product_type === 'service') {
+      const lat = sellerProfile?.latitude ? Number(sellerProfile.latitude) : null;
+      const lng = sellerProfile?.longitude ? Number(sellerProfile.longitude) : null;
+      const hasCoordinates = lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+      if (!hasCoordinates) {
+        toast({
+          title: 'Location Coordinates Required',
+          description: 'To offer services, please pin your exact shop location coordinates in Settings first.',
           variant: 'destructive',
         });
         return;
