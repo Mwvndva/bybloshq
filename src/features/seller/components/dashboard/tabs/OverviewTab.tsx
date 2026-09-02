@@ -31,6 +31,8 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const hasActivity = revenue > 0 || balance > 0 || liveProducts > 0 || clicks > 0 || wishlist > 0 || pendingOverviewOrders.length > 0;
   const [showMetrics, setShowMetrics] = useState(false);
 
+  const platformFee = Math.max(0, totalSales - revenue);
+
   const greeting = useMemo(() => {
     if (revenue > 0) {
       return { title: `Your shop is live! You've earned ${formatCurrency(revenue)} so far 🎉`, sub: 'Keep the momentum going.' };
@@ -76,9 +78,15 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
             </div>
             <p className="mt-2 truncate text-xl font-black text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
           </div>
-          <p className="mt-2 text-[10px] text-white/50 leading-tight">
-            Gross order value paid by buyers before fees.
-          </p>
+          <div className="mt-2 space-y-1 rounded-xl border border-white/10 bg-black/40 p-2.5 text-[10px] text-white/70">
+            <p className="font-semibold text-white/90">Fee Calculation:</p>
+            <p className="tabular-nums">
+              Gross ({formatCurrency(totalSales)}) - Fee ({formatCurrency(platformFee)}) = Net ({formatCurrency(revenue)})
+            </p>
+            <p className="text-[9px] text-white/50 leading-tight">
+              Platform commission is deducted when funds are released to your balance upon buyer confirmation.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
