@@ -260,7 +260,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
         {activeTab === 'withdrawals' && (
           <WithdrawalsTab
-            balance={analytics.balance}
+            balance={analytics.availableBalance ?? analytics.balance}
             pendingSettlementBalance={analytics.pendingSettlementBalance}
             withdrawalReservedBalance={analytics.withdrawalReservedBalance}
             refundReservedBalance={analytics.refundReservedBalance}
