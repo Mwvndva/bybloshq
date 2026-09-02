@@ -1,8 +1,7 @@
 import { ChevronDown, MapPin } from 'lucide-react';
 import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 
-// The only supported city today. Add more here to light the selector up — the UI
-// is already built to switch; no other structural change needed (spec §6).
 const SUPPORTED_CITIES = ['Nairobi'] as const;
 
 export function BuyerDashboardHeader() {
@@ -31,7 +30,10 @@ export function BuyerDashboardHeader() {
             <ChevronDown className="pointer-events-none absolute right-2 h-3 w-3 text-slate-500 dark:text-white/60" aria-hidden="true" />
           </div>
 
-          <AccountSwitcher />
+          <div className="flex items-center gap-2">
+            <NotificationBell variant="default" />
+            <AccountSwitcher />
+          </div>
         </div>
       </div>
     </header>

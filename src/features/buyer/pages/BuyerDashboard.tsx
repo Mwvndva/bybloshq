@@ -18,6 +18,7 @@ import { BuyerDashboardHeader } from '../components/dashboard/BuyerDashboardHead
 import { BuyerDashboardSearch } from '../components/dashboard/BuyerDashboardSearch';
 import { BuyerProfileContent } from '../components/dashboard/BuyerProfileSheet';
 import { NotificationList } from '@/features/notifications/components/NotificationList';
+import { useNotifications } from '@/features/notifications/hooks/useNotifications';
 import { MembershipGate } from '@/features/membership/components/MembershipGate';
 import { useSwipeTabs } from '@/shared/hooks/useSwipeTabs';
 import { useBuyerActiveSection } from '../components/dashboard/hooks/useBuyerActiveSection';
@@ -51,6 +52,7 @@ function BuyerDashboard() {
     isSavingProfile, handleSaveProfile,
   } = useBuyerProfileForm();
   const { hasUnreadOrders, markOrdersViewed } = useBuyerOrdersNotification(!!user);
+  const { unreadCount: unreadNotificationsCount } = useNotifications('default', !!user);
 
   const handleLogout = () => {
     logout();
@@ -81,7 +83,7 @@ function BuyerDashboard() {
     { key: 'shop', label: 'Shops', Icon: Store, path: '/buyer/dashboard' },
     { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },
     { key: 'orders', label: 'Orders', Icon: ShoppingBag, path: '/buyer/orders', badge: hasUnreadOrders },
-    { key: 'notifications', label: 'Alerts', Icon: Bell, path: '/buyer/notifications' },
+    { key: 'notifications', label: 'Alerts', Icon: Bell, path: '/buyer/notifications', badge: unreadNotificationsCount > 0, count: unreadNotificationsCount },
     { key: 'profile', label: 'Profile', Icon: User, path: '/buyer/profile' },
   ] as const;
 
