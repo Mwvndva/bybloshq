@@ -9,6 +9,12 @@ import { Link } from 'react-router-dom';
  */
 const LandingHome = () => (
   <div className="relative flex min-h-[100svh] items-center justify-center bg-[var(--byblos-bg,#000000)] px-6 py-10 text-[var(--byblos-text,#f5f5f5)] selection:bg-yellow-300 selection:text-black transition-colors duration-200">
+    <Link to="/mzigo/login" className="absolute left-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))]" aria-label="Mzigo Ego delivery partner login">
+      <Button className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] p-0 shadow-sm hover:bg-black/[0.08] dark:hover:bg-white/10">
+        <img src="/mzigo-ego.png" alt="Mzigo Ego" className="h-6 w-6 object-contain" />
+      </Button>
+    </Link>
+
     <Link to="/creator/login" className="absolute right-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))]">
       <Button className="h-7 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] px-3 text-[10px] font-bold uppercase tracking-wider text-slate-800 dark:text-white shadow-sm hover:bg-black/[0.08] dark:hover:bg-white/10">
         Creator
