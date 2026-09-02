@@ -1,5 +1,5 @@
 import { useState, type MouseEvent } from 'react';
-import { Heart, Info, Package, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Image as ImageIcon, Info, Package, X } from 'lucide-react';
 import { Card } from '@/shared/ui/card';
 import type { Product } from '@/shared/types';
 import { cn, formatCurrency, getImageUrl } from '@/shared/utils/formatting';
@@ -18,11 +18,9 @@ interface ShopProductCardProps {
 }
 
 /**
- * Minimal product card (spec §17): image, product name, price, and a description
- * button. The card adopts the seller's shop theme — surface follows the shop's
- * dark/light theme (--theme-*), and the name/price/description carry the seller's
- * accent colour (--product-card-accent). Tapping adds the product to the bag; a
- * sold / out-of-stock product is shown disabled with a "Sold" overlay.
+ * Minimal product card (spec §17): image, product name, price, description, and images button.
+ * The card adopts the seller's shop theme — surface follows the shop's dark/light theme (--theme-*),
+ * and the name/price/description/images carry the seller's accent colour (--product-card-accent).
  */
 export function ShopProductCard({
   product,
@@ -33,10 +31,41 @@ export function ShopProductCard({
   onToggleWishlist,
 }: ShopProductCardProps) {
   const [showDescription, setShowDescription] = useState(false);
+  const [showImages, setShowImages] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
   const { isSold } = getProductFlags(product as unknown as ProductWithApiFields);
   const image = product.image_url ? getImageUrl(product.image_url) : null;
   const theme = (product.seller?.theme as Theme) || 'default';
   const themeVars = getProductCardThemeVars(theme);
+
+  // Extract all images array
+  const productImages: string[] = [];
+  if (product.image_url) {
+    productImages.push(getImageUrl(product.image_url));
+  }
+  if (Array.isArray(product.images)) {
+    product.images.forEach((img) => {
+      if (typeof img === 'string' && img.trim()) {
+        const fullUrl = getImageUrl(img);
+        if (!productImages.includes(fullUrl)) productImages.push(fullUrl);
+      }
+    });
+  } else if (typeof product.images === 'string' && product.images.trim()) {
+    try {
+      const parsed = JSON.parse(product.images);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((img) => {
+          if (typeof img === 'string' && img.trim()) {
+            const fullUrl = getImageUrl(img);
+            if (!productImages.includes(fullUrl)) productImages.push(fullUrl);
+          }
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   const stop = (e: MouseEvent) => e.stopPropagation();
 
@@ -101,7 +130,7 @@ export function ShopProductCard({
           )}
         </div>
 
-        {/* Name, price, description button — themed with the seller's accent. */}
+        {/* Name, price, description & images buttons — themed with the seller's accent. */}
         <div className="flex flex-1 flex-col gap-1 p-2 sm:p-2.5">
           <h3 className="truncate text-xs font-black tracking-tight sm:text-sm" style={{ color: 'var(--product-card-accent)' }} title={product.name}>
             {product.name}
@@ -109,20 +138,31 @@ export function ShopProductCard({
           <p className="text-sm font-black tabular-nums sm:text-base" style={{ color: 'var(--product-card-accent)' }}>
             {formatCurrency(product.price)}
           </p>
-          <button
-            type="button"
-            onClick={(e) => { stop(e); setShowDescription(true); }}
-            className="mt-auto inline-flex w-fit items-center gap-1 text-[11px] font-bold underline-offset-2 hover:underline sm:text-xs"
-            style={{ color: 'var(--product-card-accent)' }}
-          >
-            <Info className="h-3 w-3" />
-            Description
-          </button>
+          <div className="mt-auto flex items-center justify-between gap-1 pt-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={(e) => { stop(e); setShowDescription(true); }}
+              className="inline-flex items-center gap-1 text-[11px] font-bold underline-offset-2 hover:underline sm:text-xs bg-transparent border-0 p-0 cursor-pointer"
+              style={{ color: 'var(--product-card-accent)' }}
+            >
+              <Info className="h-3 w-3 shrink-0" />
+              Description
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => { stop(e); setActiveImageIndex(0); setShowImages(true); }}
+              className="inline-flex items-center gap-1 text-[11px] font-bold underline-offset-2 hover:underline sm:text-xs bg-transparent border-0 p-0 cursor-pointer"
+              style={{ color: 'var(--product-card-accent)' }}
+            >
+              <ImageIcon className="h-3 w-3 shrink-0" />
+              Images
+            </button>
+          </div>
         </div>
       </Card>
 
-      {/* Description popup (§18) — translucent, blurred backdrop; closes on the
-          close button or an outside tap; never navigates. */}
+      {/* Description popup (§18) */}
       {showDescription && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={`${product.name} description`}>
           <button type="button" aria-label="Close description" onClick={() => setShowDescription(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
@@ -144,6 +184,119 @@ export function ShopProductCard({
             <p className="max-h-[50vh] overflow-y-auto whitespace-pre-line text-sm leading-relaxed opacity-80">
               {product.description?.trim() || 'No description provided for this product.'}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Images popup — translucent, blurred backdrop; navigation buttons front and back; closes on outside tap or close button */}
+      {showImages && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${product.name} images`}
+        >
+          <button
+            type="button"
+            aria-label="Close images"
+            onClick={() => setShowImages(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+          />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-2xl border p-4 sm:p-5 shadow-2xl overflow-hidden"
+            style={{
+              ...themeVars,
+              backgroundColor: 'var(--product-card-bg, var(--byblos-surface, #ffffff))',
+              color: 'var(--product-card-text, var(--byblos-text, #0f0f0e))',
+              borderColor: 'var(--product-card-border, var(--byblos-border, rgba(0, 0, 0, 0.12)))',
+            }}
+          >
+            {/* Modal Header */}
+            <div className="mb-3 flex items-center justify-between gap-2 border-b pb-2.5 border-[var(--byblos-border,rgba(0,0,0,0.1))]">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm sm:text-base font-black truncate" style={{ color: 'var(--product-card-accent)' }}>
+                  {product.name}
+                </h3>
+                <p className="text-[11px] font-semibold opacity-70">
+                  Image {productImages.length > 0 ? activeImageIndex + 1 : 0} of {productImages.length || 1}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowImages(false)}
+                aria-label="Close"
+                className="-mr-1 -mt-1 rounded-full p-1.5 opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Main Image View with Front/Back Navigation Buttons */}
+            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-black/10 flex items-center justify-center group/img">
+              {productImages.length > 0 ? (
+                <img
+                  src={productImages[activeImageIndex]}
+                  alt={`${product.name} - image ${activeImageIndex + 1}`}
+                  className="h-full w-full object-cover transition-all duration-300"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center opacity-40">
+                  <Package className="h-12 w-12" />
+                </div>
+              )}
+
+              {/* Navigation Buttons: Front (Next) and Back (Previous) */}
+              {productImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      stop(e);
+                      setActiveImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
+                    }}
+                    aria-label="Previous image"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-sm transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      stop(e);
+                      setActiveImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1));
+                    }}
+                    aria-label="Next image"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-sm transition hover:scale-110 hover:bg-black/80 active:scale-95"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail dots / strip */}
+            {productImages.length > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-1.5 overflow-x-auto py-1">
+                {productImages.map((imgUrl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      stop(e);
+                      setActiveImageIndex(idx);
+                    }}
+                    className={cn(
+                      "relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                      activeImageIndex === idx
+                        ? "border-[var(--product-card-accent,#f5c518)] scale-105"
+                        : "border-transparent opacity-60 hover:opacity-100"
+                    )}
+                  >
+                    <img src={imgUrl} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
