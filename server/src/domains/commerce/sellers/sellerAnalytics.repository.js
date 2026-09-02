@@ -32,8 +32,14 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
     SELECT
       COALESCE(financials.total_sales, 0) as total_sales,
       COALESCE(financials.net_revenue, 0) as net_revenue,
-      COALESCE(s.balance, 0) as balance,
-      COALESCE(s.balance, 0) as available_balance,
+      GREATEST(
+        COALESCE(s.balance, 0),
+        COALESCE(settled_payouts.settled_total, 0) - COALESCE(completed_withdrawals.withdrawn_total, 0)
+      ) as balance,
+      GREATEST(
+        COALESCE(s.balance, 0),
+        COALESCE(settled_payouts.settled_total, 0) - COALESCE(completed_withdrawals.withdrawn_total, 0)
+      ) as available_balance,
       GREATEST(COALESCE(s.pending_settlement_balance, 0), COALESCE(pending_payouts.pending_total, 0)) as pending_settlement_balance,
       GREATEST(COALESCE(s.withdrawal_reserved_balance, 0), COALESCE(active_withdrawals.active_total, 0)) as withdrawal_reserved_balance,
       COALESCE(s.refund_reserved_balance, 0) as refund_reserved_balance,
@@ -41,6 +47,18 @@ export async function findSellerStats({ sellerId, excludedStatuses }) {
       COALESCE(creator_links.creator_count, 0) as creator_count,
       COALESCE(creator_sales.creator_generated_sales, 0) as creator_generated_sales
     FROM sellers s
+    LEFT JOIN LATERAL (
+      SELECT COALESCE(SUM(p.amount), 0) as settled_total
+      FROM payouts p
+      WHERE p.seller_id = s.id
+        AND p.settlement_status = 'settled'
+    ) settled_payouts ON true
+    LEFT JOIN LATERAL (
+      SELECT COALESCE(SUM(w.amount + COALESCE((w.metadata->>'withdrawal_fee')::numeric, 0)), 0) as withdrawn_total
+      FROM withdrawal_requests w
+      WHERE w.seller_id = s.id
+        AND w.status = 'completed'
+    ) completed_withdrawals ON true
     LEFT JOIN LATERAL (
       SELECT
         COALESCE(SUM(
