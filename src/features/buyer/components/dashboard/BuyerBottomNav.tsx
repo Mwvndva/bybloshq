@@ -8,6 +8,7 @@ interface BuyerNavItem {
   Icon: LucideIcon;
   path: string;
   badge?: boolean;
+  count?: number;
 }
 
 interface BuyerBottomNavProps {
@@ -41,7 +42,13 @@ export function BuyerBottomNav({ activeNav, navItems, onSelect }: BuyerBottomNav
                 {item.label}
               </span>
               {item.badge && (
-                <div className="absolute top-1.5 right-[50%] translate-x-[10px] w-1.5 h-1.5 rounded-full bg-[#F5C518]" />
+                item.count && item.count > 0 ? (
+                  <span className="absolute top-1 right-[50%] translate-x-[12px] min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-black flex items-center justify-center bg-[#F5C518] text-black shadow-sm">
+                    {item.count > 99 ? '99+' : item.count}
+                  </span>
+                ) : (
+                  <div className="absolute top-1.5 right-[50%] translate-x-[10px] w-2 h-2 rounded-full bg-[#F5C518] ring-2 ring-black" />
+                )
               )}
             </button>
           );
