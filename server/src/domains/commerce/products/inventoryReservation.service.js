@@ -121,8 +121,11 @@ class InventoryReservationService {
 
             const { rows } = await client.query(
                 `UPDATE products AS p
-                 SET quantity = p.quantity - v.qty,
+                 SET quantity = GREATEST(0, p.quantity - v.qty),
                      reserved_quantity = p.reserved_quantity + v.qty,
+                     status = CASE WHEN (p.quantity - v.qty) <= 0 THEN 'sold' ELSE p.status END,
+                     is_sold = CASE WHEN (p.quantity - v.qty) <= 0 THEN true ELSE p.is_sold END,
+                     sold_at = CASE WHEN (p.quantity - v.qty) <= 0 THEN COALESCE(p.sold_at, NOW()) ELSE p.sold_at END,
                      updated_at = NOW()
                  FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
                  WHERE p.id = v.id
@@ -144,31 +147,10 @@ class InventoryReservationService {
             logger.info(`[RESERVATION] Bulk reserved inventory for ${rows.length} product(s)`);
         }
 
+        // Untracked inventory products (track_inventory = false) are never auto-marked as sold upon purchase.
         if (singlePurchase.length > 0) {
-            const ids = singlePurchase.map(item => item.productId);
-            const { rows } = await client.query(
-                `UPDATE products AS p
-                 SET status = 'sold',
-                     updated_at = NOW()
-                 FROM (SELECT UNNEST($1::int[]) AS id) AS v
-                 WHERE p.id = v.id
-                   AND COALESCE(p.track_inventory, false) = false
-                   AND COALESCE(p.is_digital, false) = false
-                   AND COALESCE(LOWER(p.product_type::text), 'physical') NOT IN ('digital', 'service')
-                   AND COALESCE(LOWER(p.status::text), 'available') = 'available'
-                 RETURNING p.id`,
-                [ids]
-            );
-
-            const reservedIds = new Set(rows.map(row => row.id));
-            const failed = singlePurchase.filter(item => !reservedIds.has(item.productId));
-            if (failed.length > 0) {
-                const failedIds = failed.map(item => item.productId).join(', ');
-                throw new Error(`Product(s) ${failedIds} may have just sold out.`);
-            }
-
-            reservedCount += rows.length;
-            logger.info(`[RESERVATION] Marked ${rows.length} single-purchase physical product(s) as sold during checkout`);
+            reservedCount += singlePurchase.length;
+            logger.info(`[RESERVATION] Bypassed status auto-sold update for ${singlePurchase.length} untracked inventory product(s)`);
         }
 
         return reservedCount;
@@ -187,6 +169,9 @@ class InventoryReservationService {
                 `UPDATE products AS p
                  SET quantity = p.quantity + LEAST(COALESCE(p.reserved_quantity, 0), v.qty),
                      reserved_quantity = GREATEST(0, COALESCE(p.reserved_quantity, 0) - v.qty),
+                     status = CASE WHEN (p.quantity + LEAST(COALESCE(p.reserved_quantity, 0), v.qty)) > 0 THEN 'available' ELSE p.status END,
+                     is_sold = CASE WHEN (p.quantity + LEAST(COALESCE(p.reserved_quantity, 0), v.qty)) > 0 THEN false ELSE p.is_sold END,
+                     sold_at = CASE WHEN (p.quantity + LEAST(COALESCE(p.reserved_quantity, 0), v.qty)) > 0 THEN NULL ELSE p.sold_at END,
                      updated_at = NOW()
                  FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
                  WHERE p.id = v.id
@@ -209,32 +194,8 @@ class InventoryReservationService {
         }
 
         if (singlePurchase.length > 0) {
-            const ids = singlePurchase.map(item => item.productId);
-            const { rows } = await client.query(
-                `UPDATE products AS p
-                 SET status = 'available',
-                     updated_at = NOW()
-                 FROM (SELECT UNNEST($1::int[]) AS id) AS v
-                 WHERE p.id = v.id
-                   AND COALESCE(p.track_inventory, false) = false
-                   AND COALESCE(p.is_digital, false) = false
-                   AND COALESCE(LOWER(p.product_type::text), 'physical') NOT IN ('digital', 'service')
-                   AND COALESCE(LOWER(p.status::text), 'available') = 'sold'
-                 RETURNING p.id`,
-                [ids]
-            );
-
-            const releasedIds = new Set(rows.map(r => r.id));
-            const alreadyAvailable = singlePurchase.filter(item => !releasedIds.has(item.productId));
-            if (alreadyAvailable.length > 0) {
-                logger.info('[RESERVATION-RELEASE] Single-purchase product(s) already available or not in sold status (idempotent)', {
-                    alreadyAvailableIds: alreadyAvailable.map(i => i.productId),
-                    releasedCount: rows.length
-                });
-            }
-
-            releasedCount += rows.length;
-            logger.info(`[RESERVATION-RELEASE] Released ${rows.length} single-purchase physical product(s)`);
+            releasedCount += singlePurchase.length;
+            logger.info(`[RESERVATION-RELEASE] Bypassed status release for ${singlePurchase.length} untracked inventory product(s)`);
         }
 
         return releasedCount;
@@ -251,7 +212,10 @@ class InventoryReservationService {
 
             const { rows } = await client.query(
                 `UPDATE products AS p
-                 SET reserved_quantity = p.reserved_quantity - v.qty,
+                 SET reserved_quantity = GREATEST(0, p.reserved_quantity - v.qty),
+                     status = CASE WHEN p.quantity <= 0 THEN 'sold' ELSE p.status END,
+                     is_sold = CASE WHEN p.quantity <= 0 THEN true ELSE p.is_sold END,
+                     sold_at = CASE WHEN p.quantity <= 0 THEN COALESCE(p.sold_at, NOW()) ELSE p.sold_at END,
                      updated_at = NOW()
                  FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
                  WHERE p.id = v.id
@@ -276,31 +240,8 @@ class InventoryReservationService {
         }
 
         if (singlePurchase.length > 0) {
-            const ids = singlePurchase.map(item => item.productId);
-            const { rows } = await client.query(
-                `UPDATE products AS p
-                 SET status = 'sold',
-                     updated_at = NOW()
-                 FROM (SELECT UNNEST($1::int[]) AS id) AS v
-                 WHERE p.id = v.id
-                   AND COALESCE(p.track_inventory, false) = false
-                   AND COALESCE(p.is_digital, false) = false
-                   AND COALESCE(LOWER(p.product_type::text), 'physical') NOT IN ('digital', 'service')
-                 RETURNING p.id`,
-                [ids]
-            );
-
-            if (rows.length !== singlePurchase.length) {
-                logger.error('[RESERVATION-FINALIZE-ERROR] Single-purchase product finalization failed', {
-                    expected: singlePurchase.length,
-                    finalized: rows.length,
-                    ids
-                });
-                throw new Error('Single-purchase product finalization failed');
-            }
-
-            committedCount += rows.length;
-            logger.info(`[RESERVATION-FINALIZED] Confirmed ${rows.length} single-purchase physical product(s) as sold`);
+            committedCount += singlePurchase.length;
+            logger.info(`[RESERVATION-FINALIZED] Confirmed ${singlePurchase.length} untracked inventory product(s) without altering status`);
         }
 
         return committedCount;
