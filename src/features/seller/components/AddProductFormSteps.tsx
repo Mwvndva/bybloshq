@@ -56,7 +56,11 @@ export const AddProductFormSteps = ({
           { id: 'physical', label: 'Physical', icon: Package, desc: 'Shippable goods' },
           { id: 'digital', label: 'Digital', icon: FileText, desc: 'Downloads, Keys' },
           { id: 'service', label: 'Service', icon: Sparkles, desc: 'Bookings, Tasks' }
-        ].filter(type => !(isNativeApp() && type.id === 'digital')).map(type => (
+        ].filter(type => {
+          if (isNativeApp() && type.id === 'digital') return false;
+          if (type.id === 'service' && !hasCoordinates) return false;
+          return true;
+        }).map(type => (
           <button
             key={type.id}
             type="button"

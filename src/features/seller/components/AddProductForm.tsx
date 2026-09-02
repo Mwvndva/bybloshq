@@ -38,6 +38,15 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
 
   const { data: sellerProfile = null } = useSellerProfileQuery();
 
+  useEffect(() => {
+    const lat = sellerProfile?.latitude ? Number(sellerProfile.latitude) : null;
+    const lng = sellerProfile?.longitude ? Number(sellerProfile.longitude) : null;
+    const hasCoordinates = lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+    if (!hasCoordinates && formData.product_type === 'service') {
+      setFormData(prev => ({ ...prev, product_type: 'physical' }));
+    }
+  }, [sellerProfile, formData.product_type]);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'description' && value.length > 300) return;
