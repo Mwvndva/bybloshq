@@ -31,7 +31,8 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   const hasActivity = revenue > 0 || balance > 0 || liveProducts > 0 || clicks > 0 || wishlist > 0 || pendingOverviewOrders.length > 0;
   const [showMetrics, setShowMetrics] = useState(false);
 
-  const platformFee = Math.max(0, totalSales - revenue);
+  const fee2Pct = Math.round(totalSales * 0.02 * 100) / 100;
+  const salesWithoutFee = Math.max(0, Math.round((totalSales - fee2Pct) * 100) / 100);
 
   const greeting = useMemo(() => {
     if (revenue > 0) {
@@ -74,17 +75,17 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
               >
                 <ShoppingBag className="h-4 w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
               </span>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Total Sales (Gross)</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Total Sales (Excl. 2% Fee)</p>
             </div>
-            <p className="mt-2 truncate text-xl font-black text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
+            <p className="mt-2 truncate text-xl font-black text-white sm:text-2xl">{formatCurrency(salesWithoutFee)}</p>
           </div>
           <div className="mt-2 space-y-1 rounded-xl border border-white/10 bg-black/40 p-2.5 text-[10px] text-white/70">
-            <p className="font-semibold text-white/90">Fee Calculation:</p>
+            <p className="font-semibold text-white/90">2% Fee Deduction:</p>
             <p className="tabular-nums">
-              Gross ({formatCurrency(totalSales)}) - Fee ({formatCurrency(platformFee)}) = Net ({formatCurrency(revenue)})
+              Gross ({formatCurrency(totalSales)}) - 2% Fee ({formatCurrency(fee2Pct)}) = Sales ({formatCurrency(salesWithoutFee)})
             </p>
             <p className="text-[9px] text-white/50 leading-tight">
-              Platform commission is deducted when funds are released to your balance upon buyer confirmation.
+              Shows your total sales after deducting the 2% platform service charge.
             </p>
           </div>
         </div>
