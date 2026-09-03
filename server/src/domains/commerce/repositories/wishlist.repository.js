@@ -20,6 +20,8 @@ export async function findByBuyerId(buyerId) {
       p.updated_at as "updatedAt",
       s.id AS "sellerId",
       s.shop_name AS "sellerName",
+      s.shop_name AS "shopName",
+      s.slug AS "sellerSlug",
       p.product_type,
       p.is_digital,
       p.service_options,

@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- provider + its hooks co-located by convention */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import type { Product } from '@/shared/types';
 import { calculateProductServiceCharge, getProductFlags, type ProductWithApiFields } from '@/features/shop/utils/productCardUtils';
 
@@ -57,6 +58,7 @@ export function BagProvider({ seedProduct, children }: { seedProduct?: Product |
     seededRef.current = true;
     setItems((prev) => (prev.some((l) => sameId(l.product.id, seedProduct.id)) ? prev : [...prev, { product: seedProduct, quantity: 1 }]));
     setIsOpen(true);
+    toast.success(`${seedProduct.name} added to your bag`);
   }, [seedProduct]);
 
   const hasProduct = useCallback(

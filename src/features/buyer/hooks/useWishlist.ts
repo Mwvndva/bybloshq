@@ -32,14 +32,20 @@ export function useWishlist() {
   const removeMutation = useRemoveWishlistMutation();
 
   const mapWishlistItemToProduct = useCallback((item: WishlistItem): Product => {
+    const rawShop = String(
+      (item as unknown as Record<string, unknown>).shopName ||
+      item.sellerName ||
+      (item as unknown as Record<string, unknown>).seller_name ||
+      'Shop'
+    );
     const seller: Seller = {
       id: item.sellerId,
-      fullName: (item as unknown as Record<string, unknown>).sellerName as string || 'Unknown Shop',
+      fullName: rawShop,
       email: '',
       phone: '',
       whatsappNumber: '',
       bannerUrl: '',
-      shopName: (item as unknown as Record<string, unknown>).sellerName as string || 'Unknown Shop',
+      shopName: rawShop,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -79,8 +85,15 @@ export function useWishlist() {
   }, [serverWishlist, user, setWishlistIds]);
 
   const addToWishlist = useCallback(async (product: Product) => {
-    if (!user) throw new Error('User must be logged in');
-    if (!product?.id) throw new Error('Invalid product data');
+    if (!user) {
+      toast({
+        title: 'Sign in to save',
+        description: 'Please sign in as a buyer to add items to your wishlist.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!product?.id) return;
 
     // Optimistic update
     addOptimisticAddition(product.id);
@@ -99,14 +112,20 @@ export function useWishlist() {
       } else {
         toast({ title: 'Failed to add to wishlist', description: 'There was an error adding this item.', variant: 'destructive' });
       }
-      throw err;
     } finally {
       clearOptimistic();
     }
   }, [user, addOptimisticAddition, addWishlistId, removeWishlistId, removeOptimisticAddition, clearOptimistic, addMutation, toast]);
 
   const removeFromWishlist = useCallback(async (productId: string) => {
-    if (!user) throw new Error('User must be logged in');
+    if (!user) {
+      toast({
+        title: 'Sign in required',
+        description: 'Please sign in as a buyer to manage your wishlist.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Optimistic update
     addOptimisticRemoval(productId);
@@ -119,7 +138,6 @@ export function useWishlist() {
       // Rollback
       addWishlistId(productId);
       toast({ title: 'Failed to remove', description: 'There was an error removing this item.', variant: 'destructive' });
-      throw err;
     } finally {
       clearOptimistic();
     }
