@@ -86,8 +86,8 @@ class PaystackProviderClient {
         return this.normalizePhoneForCharge(phone);
     }
 
-    normalizePaystackChargePayload(rawPayload = {}, explicitReference = null) {
-        return normalizePaystackChargePayload(rawPayload, explicitReference);
+    normalizePaystackChargePayload(rawPayload = {}, explicitReference = null, fallbackAmount = null) {
+        return normalizePaystackChargePayload(rawPayload, explicitReference, fallbackAmount);
     }
 
     async initiateCharge(paymentData = {}) {
@@ -162,7 +162,14 @@ class PaystackProviderClient {
                 throw new Error(responseData.message || 'Paystack charge request failed');
             }
 
-            const normalized = this.normalizePaystackChargePayload(responseData, reference);
+            const normalized = this.normalizePaystackChargePayload(
+                {
+                    ...responseData,
+                    amount: responseData.data?.amount ?? responseData.amount ?? paystackAmount
+                },
+                reference,
+                paystackAmount
+            );
             const providerReference = normalized.reference || reference;
             if (!providerReference) {
                 throw new Error('Paystack did not return a charge reference');

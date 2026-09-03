@@ -41,20 +41,24 @@ export function normalizePaystackPaymentStatus(input = {}) {
     return PAYMENT_STATUS_MAP.get(rawStatus) || PaymentStatus.PENDING;
 }
 
-export function normalizePaystackPaymentAmount(rawPayload = {}) {
+export function normalizePaystackPaymentAmount(rawPayload = {}, fallbackAmount = null) {
     const data = getProviderPayloadData(rawPayload);
-    const rawAmount = data.amount ?? rawPayload.amount;
+    const rawAmount = data.amount ?? rawPayload.amount ?? fallbackAmount;
     let amountSubunit = Number.parseInt(rawAmount, 10);
 
     if (!Number.isFinite(amountSubunit) || amountSubunit <= 0) {
-        const major = Number.parseFloat(data.amount_major ?? rawPayload.amount_major ?? data.amount ?? rawPayload.amount);
+        const major = Number.parseFloat(data.amount_major ?? rawPayload.amount_major ?? data.amount ?? rawPayload.amount ?? fallbackAmount);
         if (Number.isFinite(major) && major > 0) {
             amountSubunit = Math.round(major * 100);
         }
     }
 
     if (!Number.isFinite(amountSubunit) || amountSubunit <= 0) {
-        throw new Error('Paystack payload missing valid subunit amount');
+        if (fallbackAmount !== null && Number.isFinite(Number(fallbackAmount)) && Number(fallbackAmount) > 0) {
+            amountSubunit = Math.round(Number(fallbackAmount));
+        } else {
+            throw new Error('Paystack payload missing valid subunit amount');
+        }
     }
 
     const amount = amountSubunit / 100;
@@ -62,16 +66,16 @@ export function normalizePaystackPaymentAmount(rawPayload = {}) {
     return {
         amountSubunit,
         amount,
-        rawAmount,
+        rawAmount: rawAmount ?? amountSubunit,
         paystackAmountSubunit: amountSubunit
     };
 }
 
-export function normalizePaystackChargePayload(rawPayload = {}, explicitReference = null) {
+export function normalizePaystackChargePayload(rawPayload = {}, explicitReference = null, fallbackAmount = null) {
     const root = rawPayload || {};
     const details = root.data && typeof root.data === 'object' ? root.data : root;
     const status = normalizePaystackPaymentStatus(root);
-    const { amount, rawAmount, paystackAmountSubunit } = normalizePaystackPaymentAmount(root);
+    const { amount, rawAmount, paystackAmountSubunit } = normalizePaystackPaymentAmount(root, fallbackAmount);
     const reference = explicitReference
         || details.reference
         || root.reference
