@@ -148,11 +148,15 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
                                                     });
                                                     if (!instruction) return null;
                                                     return (
-                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-50 text-blue-950 border border-blue-200' :
-                                                            instruction.color === 'amber' ? 'bg-yellow-50 text-yellow-950 border border-yellow-300' :
-                                                                instruction.color === 'green' ? 'bg-green-50 text-green-950 border border-green-200' :
-                                                                    'bg-red-50 text-red-950 border border-red-200'
-                                                            }`}>
+                                                        <div
+                                                            className={cn(
+                                                                'mt-3 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors',
+                                                                instruction.color === 'blue' && 'bg-blue-50 text-blue-950 border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-500/30',
+                                                                instruction.color === 'amber' && 'bg-amber-50 text-amber-950 border-amber-200 dark:bg-yellow-950/40 dark:text-yellow-200 dark:border-yellow-500/30',
+                                                                instruction.color === 'green' && 'bg-emerald-50 text-emerald-950 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-500/30',
+                                                                instruction.color === 'red' && 'bg-red-50 text-red-950 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-500/30',
+                                                            )}
+                                                        >
                                                             {instruction.text}
                                                         </div>
                                                     );

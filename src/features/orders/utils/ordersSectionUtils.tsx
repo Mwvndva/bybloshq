@@ -132,39 +132,39 @@ export const getPaymentStatusBadge = (status?: string) => {
   switch (statusValue) {
     case 'pending':
       return (
-        <Badge className={`bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
-          <Clock className="h-3 w-3 mr-1" />
+        <span className="bg-amber-600 dark:bg-amber-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
+          <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />
           Pending
-        </Badge>
+        </span>
       );
     case 'success':
     case 'completed':
     case 'paid':
       return (
-        <Badge className={`bg-gradient-to-r from-green-500/90 to-emerald-500/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
-          <CheckCircle className="h-3 w-3 mr-1" />
+        <span className="bg-emerald-600 dark:bg-emerald-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
+          <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
           Paid
-        </Badge>
+        </span>
       );
     case 'failed':
       return (
-        <Badge className={`bg-gradient-to-r from-red-500/90 to-red-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
-          <XCircle className="h-3 w-3 mr-1" />
+        <span className="bg-red-600 dark:bg-red-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
+          <XCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
           Failed
-        </Badge>
+        </span>
       );
     case 'reversed':
       return (
-        <Badge className={`bg-gradient-to-r from-gray-500/90 to-gray-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
-          <XCircle className="h-3 w-3 mr-1" />
+        <span className="bg-gray-600 dark:bg-gray-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
+          <XCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
           Reversed
-        </Badge>
+        </span>
       );
     default:
       return (
-        <Badge className={`bg-gradient-to-r from-gray-500/90 to-gray-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
+        <span className="bg-gray-600 dark:bg-gray-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
           {status}
-        </Badge>
+        </span>
       );
   }
 };
