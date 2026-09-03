@@ -8,11 +8,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import { Edit, EyeOff, Handshake, Loader2, MoreVertical, Package, Trash2 } from 'lucide-react';
+import { Edit, EyeOff, Handshake, Heart, Loader2, MoreVertical, Package, Trash2 } from 'lucide-react';
 import type { Product } from '@/shared/types';
 import type { ApiSellerProduct } from '@/shared/types/api/product';
 type ProductWithApiFields = Product & Partial<ApiSellerProduct>;
 import { cn, formatCurrency } from '@/shared/utils/formatting';
+import { useWishlist } from '@/features/buyer/hooks/useWishlist';
 
 interface SellerProductCardsProps {
   products: ProductWithApiFields[];
@@ -33,6 +34,7 @@ export function SellerProductCards({
   onStatusUpdate,
   onInventoryEdit
 }: SellerProductCardsProps) {
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
       {products.map((product) => (
@@ -97,7 +99,7 @@ export function SellerProductCards({
             </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 space-y-2">
-            <div className="h-24 w-full rounded-xl seller-card-soft overflow-hidden mb-3">
+            <div className="relative h-24 w-full rounded-xl seller-card-soft overflow-hidden mb-3">
               {product.image_url ? (
                 <img
                   src={product.image_url}
@@ -109,6 +111,34 @@ export function SellerProductCards({
                   <EyeOff className="h-6 w-6 text-zinc-400" />
                 </div>
               )}
+              {/* Heart button on top right of seller product card */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isInWishlist(String(product.id))) {
+                    removeFromWishlist(String(product.id));
+                  } else {
+                    addToWishlist(product as Product);
+                  }
+                }}
+                aria-label={isInWishlist(String(product.id)) ? 'Remove from wishlist' : 'Add to wishlist'}
+                className={cn(
+                  'absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95',
+                  isInWishlist(String(product.id))
+                    ? 'bg-white/95 text-red-500 shadow-md dark:bg-zinc-900/90'
+                    : 'bg-white/90 text-slate-400 hover:text-slate-600 dark:bg-black/60 dark:text-zinc-400 dark:hover:text-zinc-200 border border-black/5 dark:border-white/10'
+                )}
+              >
+                <Heart
+                  className={cn(
+                    'h-3.5 w-3.5 transition-colors duration-200',
+                    isInWishlist(String(product.id))
+                      ? 'fill-red-500 text-red-500'
+                      : 'fill-slate-400/20 text-slate-400 dark:text-zinc-400'
+                  )}
+                />
+              </button>
             </div>
 
             <div className="flex items-center justify-between py-1">

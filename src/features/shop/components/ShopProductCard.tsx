@@ -4,6 +4,7 @@ import { Card } from '@/shared/ui/card';
 import type { Product } from '@/shared/types';
 import { cn, formatCurrency, getImageUrl } from '@/shared/utils/formatting';
 import { getProductCardThemeVars, getProductFlags, type ProductWithApiFields, type Theme } from '@/features/shop/utils/productCardUtils';
+import { useWishlist } from '@/features/buyer/hooks/useWishlist';
 
 interface ShopProductCardProps {
   product: Product;
@@ -33,6 +34,20 @@ export function ShopProductCard({
   const [showDescription, setShowDescription] = useState(false);
   const [showImages, setShowImages] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const wishlisted = isWishlisted !== undefined ? isWishlisted : isInWishlist(String(product.id));
+
+  const handleToggleWishlistClick = (e: MouseEvent) => {
+    stop(e);
+    if (onToggleWishlist) {
+      onToggleWishlist();
+    } else if (wishlisted) {
+      removeFromWishlist(String(product.id));
+    } else {
+      addToWishlist(product);
+    }
+  };
 
   const { isSold } = getProductFlags(product as unknown as ProductWithApiFields);
   const image = product.image_url ? getImageUrl(product.image_url) : null;
@@ -114,23 +129,34 @@ export function ShopProductCard({
             </div>
           )}
 
-          {onToggleWishlist && (
-            <button
-              type="button"
-              onClick={(e) => { stop(e); onToggleWishlist(); }}
-              aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-              className="absolute left-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow-sm backdrop-blur-sm transition hover:scale-110"
-            >
-              <Heart className={cn('h-4 w-4', isWishlisted && 'fill-red-500 text-red-500')} />
-            </button>
-          )}
+          {/* Heart button — top right on all products */}
+          <button
+            type="button"
+            onClick={handleToggleWishlistClick}
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={cn(
+              'absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95',
+              wishlisted
+                ? 'bg-white/95 text-red-500 shadow-md dark:bg-zinc-900/90'
+                : 'bg-white/90 text-slate-400 hover:text-slate-600 dark:bg-black/60 dark:text-zinc-400 dark:hover:text-zinc-200 border border-black/5 dark:border-white/10'
+            )}
+          >
+            <Heart
+              className={cn(
+                'h-4 w-4 transition-colors duration-200',
+                wishlisted
+                  ? 'fill-red-500 text-red-500'
+                  : 'fill-slate-400/20 text-slate-400 dark:text-zinc-400'
+              )}
+            />
+          </button>
 
           {inBag && onRemoveFromBag && (
             <button
               type="button"
               onClick={(e) => { stop(e); onRemoveFromBag(); }}
               aria-label={`Remove ${product.name} from bag`}
-              className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-sm backdrop-blur-sm transition hover:scale-110"
+              className="absolute left-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-sm backdrop-blur-sm transition hover:scale-110"
             >
               <X className="h-4 w-4" />
             </button>
