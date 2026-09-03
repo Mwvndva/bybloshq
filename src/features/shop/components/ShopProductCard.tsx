@@ -5,6 +5,7 @@ import type { Product } from '@/shared/types';
 import { cn, formatCurrency, getImageUrl } from '@/shared/utils/formatting';
 import { getProductCardThemeVars, getProductFlags, type ProductWithApiFields, type Theme } from '@/features/shop/utils/productCardUtils';
 import { useWishlist } from '@/features/buyer/hooks/useWishlist';
+import { useIsProductWishlisted } from '@/features/buyer/stores/wishlistStore';
 
 interface ShopProductCardProps {
   product: Product;
@@ -35,8 +36,9 @@ export function ShopProductCard({
   const [showImages, setShowImages] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
-  const wishlisted = isWishlisted !== undefined ? isWishlisted : isInWishlist(String(product.id));
+  const { addToWishlist, removeFromWishlist } = useWishlist();
+  const isAutoWishlisted = useIsProductWishlisted(product.id);
+  const wishlisted = isWishlisted !== undefined ? isWishlisted : isAutoWishlisted;
 
   const handleToggleWishlistClick = (e: MouseEvent) => {
     stop(e);

@@ -32,14 +32,19 @@ export function useWishlist() {
   const removeMutation = useRemoveWishlistMutation();
 
   const mapWishlistItemToProduct = useCallback((item: WishlistItem): Product => {
+    const rawRecord = item as unknown as Record<string, unknown>;
+    const nestedSeller = (rawRecord.seller as Record<string, unknown> | undefined) || {};
     const rawShop = String(
-      (item as unknown as Record<string, unknown>).shopName ||
+      (rawRecord.shopName as string) ||
       item.sellerName ||
-      (item as unknown as Record<string, unknown>).seller_name ||
+      (nestedSeller.shopName as string) ||
+      (nestedSeller.slug as string) ||
+      (rawRecord.seller_name as string) ||
+      (rawRecord.sellerSlug as string) ||
       'Shop'
     );
     const seller: Seller = {
-      id: item.sellerId,
+      id: item.sellerId || (nestedSeller.id as string) || '',
       fullName: rawShop,
       email: '',
       phone: '',
@@ -95,18 +100,20 @@ export function useWishlist() {
     }
     if (!product?.id) return;
 
+    const pid = String(product.id);
+
     // Optimistic update
-    addOptimisticAddition(product.id);
-    addWishlistId(product.id);
+    addOptimisticAddition(pid);
+    addWishlistId(pid);
 
     try {
-      await addMutation.mutateAsync(product.id);
+      await addMutation.mutateAsync(pid);
       toast({ title: 'Added to wishlist', description: `${product.name} has been added to your wishlist.` });
     } catch (err) {
       const error = err as { code?: string; response?: { status?: number }; message?: string };
       // Rollback
-      removeWishlistId(product.id);
-      removeOptimisticAddition(product.id);
+      removeWishlistId(pid);
+      removeOptimisticAddition(pid);
       if (error.code === 'DUPLICATE_WISHLIST_ITEM' || error.response?.status === 409) {
         toast({ title: 'Already in wishlist', description: 'This item is already in your wishlist.', variant: 'default' });
       } else {
@@ -117,7 +124,7 @@ export function useWishlist() {
     }
   }, [user, addOptimisticAddition, addWishlistId, removeWishlistId, removeOptimisticAddition, clearOptimistic, addMutation, toast]);
 
-  const removeFromWishlist = useCallback(async (productId: string) => {
+  const removeFromWishlist = useCallback(async (productId: string | number) => {
     if (!user) {
       toast({
         title: 'Sign in required',
@@ -127,16 +134,18 @@ export function useWishlist() {
       return;
     }
 
+    const pid = String(productId);
+
     // Optimistic update
-    addOptimisticRemoval(productId);
-    removeWishlistId(productId);
+    addOptimisticRemoval(pid);
+    removeWishlistId(pid);
 
     try {
-      await removeMutation.mutateAsync(productId);
+      await removeMutation.mutateAsync(pid);
       toast({ title: 'Removed from wishlist', description: 'The item has been removed from your wishlist.' });
     } catch (err) {
       // Rollback
-      addWishlistId(productId);
+      addWishlistId(pid);
       toast({ title: 'Failed to remove', description: 'There was an error removing this item.', variant: 'destructive' });
     } finally {
       clearOptimistic();
