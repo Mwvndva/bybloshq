@@ -260,6 +260,47 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     queryClient.invalidateQueries({ queryKey: sellerQueryKeys.summary() });
   }, [queryClient]);
 
+  const handleRemoveSocialLink = useCallback(async (field: 'instagramLink' | 'tiktokLink') => {
+    const platformName = field === 'instagramLink' ? 'Instagram' : 'TikTok';
+    const confirmed = window.confirm(`Remove your ${platformName} link?`);
+    if (!confirmed) return;
+
+    setIsSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        [field]: ''
+      };
+
+      if (updateSellerProfile) {
+        await updateSellerProfile(payload);
+      } else {
+        await updateProfileMutation.mutateAsync(payload);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+
+      queryClient.invalidateQueries({ queryKey: sellerQueryKeys.dashboard() });
+      queryClient.invalidateQueries({ queryKey: sellerQueryKeys.summary() });
+
+      toast({
+        title: 'Link removed',
+        description: `Your ${platformName} link has been removed.`,
+      });
+    } catch (error: any) {
+      console.error(`Error removing ${platformName} link:`, error);
+      toast({
+        title: 'Error',
+        description: error.message || `Failed to remove ${platformName} link. Please try again.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [queryClient, toast, updateSellerProfile, updateProfileMutation]);
+
   return {
     cities,
     formData,
@@ -268,6 +309,7 @@ export function useSellerSettingsForm({ sellerProfile, toast, updateSellerProfil
     handleCityChange,
     handleDeleteLocation,
     handleLocationChange,
+    handleRemoveSocialLink,
     handleSaveProfile,
     handleShopLocationChange,
     isCheckingShopName,
