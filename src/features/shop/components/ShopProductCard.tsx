@@ -138,32 +138,42 @@ export function ShopProductCard({
         </div>
 
         {/* Name, price, description & images buttons — themed with the seller's accent. */}
-        <div className="flex flex-1 flex-col gap-1 p-2 sm:p-2.5">
-          <h3 className="truncate text-xs font-black tracking-tight sm:text-sm" style={{ color: 'var(--product-card-accent)' }} title={product.name}>
-            {product.name}
-          </h3>
-          <p className="text-sm font-black tabular-nums sm:text-base" style={{ color: 'var(--product-card-accent)' }}>
-            {formatCurrency(product.price)}
-          </p>
-          <div className="mt-auto flex items-center justify-between gap-1 pt-1.5 flex-wrap">
-            <button
-              type="button"
-              onClick={(e) => { stop(e); setShowDescription(true); }}
-              className="inline-flex items-center gap-1 text-[11px] font-bold underline-offset-2 hover:underline sm:text-xs bg-transparent border-0 p-0 cursor-pointer"
+        <div className="flex flex-1 flex-col justify-between gap-1 p-2 sm:p-2.5">
+          {/* Product name on left, image icon to the right */}
+          <div className="flex items-center justify-between gap-1.5">
+            <h3
+              className="min-w-0 flex-1 truncate text-xs font-black tracking-tight sm:text-sm"
               style={{ color: 'var(--product-card-accent)' }}
+              title={product.name}
             >
-              <Info className="h-3 w-3 shrink-0" />
-              Description
-            </button>
+              {product.name}
+            </h3>
 
             <button
               type="button"
               onClick={(e) => { stop(e); setActiveImageIndex(0); setShowImages(true); }}
-              className="inline-flex items-center gap-1 text-[11px] font-bold underline-offset-2 hover:underline sm:text-xs bg-transparent border-0 p-0 cursor-pointer"
+              aria-label={`View ${product.name} images`}
+              className="inline-flex items-center justify-center bg-transparent border-0 p-0 cursor-pointer hover:opacity-75 transition-opacity shrink-0"
               style={{ color: 'var(--product-card-accent)' }}
             >
-              <ImageIcon className="h-3 w-3 shrink-0" />
-              Images
+              <ImageIcon className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0" />
+            </button>
+          </div>
+
+          {/* Price on left, description icon on right */}
+          <div className="mt-auto flex items-center justify-between gap-1 pt-1">
+            <p className="text-sm font-black tabular-nums sm:text-base" style={{ color: 'var(--product-card-accent)' }}>
+              {formatCurrency(product.price)}
+            </p>
+
+            <button
+              type="button"
+              onClick={(e) => { stop(e); setShowDescription(true); }}
+              aria-label={`View ${product.name} description`}
+              className="inline-flex items-center justify-center bg-transparent border-0 p-0 cursor-pointer hover:opacity-75 transition-opacity shrink-0"
+              style={{ color: 'var(--product-card-accent)' }}
+            >
+              <Info className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0" />
             </button>
           </div>
         </div>
