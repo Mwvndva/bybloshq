@@ -130,7 +130,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
 
             {/* Bottom section: shop name clearly placed above Instagram + TikTok + Location row */}
             <div className="flex min-h-0 flex-1 flex-col items-start justify-between px-2.5 py-2">
-                <h3 className="w-full truncate text-xs font-black tracking-tight text-white sm:text-sm" title={shopName}>
+                <h3 className="w-full truncate text-xs font-normal tracking-tight text-white sm:text-sm" title={shopName}>
                     {shopName}
                 </h3>
 

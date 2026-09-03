@@ -65,7 +65,7 @@ export function SellerProductCards({
           <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
             <div className="flex items-start justify-between pr-8">
               <div className="flex-1">
-                <CardTitle className="text-xs sm:text-sm font-medium text-white mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-normal text-white mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
                 <p className="text-[9px] text-white/60 capitalize mb-1">{product.aesthetic}</p>
                 {product.description && (
                   <p className="text-[10px] text-white/60 line-clamp-2 h-6 leading-tight mb-2">
@@ -143,7 +143,7 @@ export function SellerProductCards({
             </div>
 
             <div className="flex justify-between items-center pt-1">
-              <span className="font-medium text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
+              <span className="font-normal text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
             </div>
 
             {onStatusUpdate && (
