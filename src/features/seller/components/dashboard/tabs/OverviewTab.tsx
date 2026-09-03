@@ -92,7 +92,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
                 >
                   <BadgeDollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
                 </span>
-                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-white/50 truncate">Total Revenue (Net)</p>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-white/50 truncate">Total Revenue</p>
               </div>
               <p className="mt-2 truncate text-lg font-black text-white sm:text-2xl">{formatCurrency(revenue)}</p>
             </div>
