@@ -8,7 +8,7 @@ import { sanitizePublicProduct, sanitizePublicSeller } from '../../shared/utils/
 import { signAutoLoginToken } from '../../shared/utils/jwt.js';
 import { pool } from '../../infrastructure/database/database.js';
 
-const PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS = 15000;
+const PUBLIC_PAYMENT_STATUS_SYNC_INTERVAL_MS = 5000;
 const PAYMENT_SUCCESS_STATUSES = new Set(['completed', 'success', 'paid']);
 const PAYMENT_FAILURE_STATUSES = new Set([
   'failed',
@@ -397,9 +397,14 @@ export const getOrderStatus = async (req, res) => {
     order = await syncPendingPaymentFromProvider(order);
 
     // Unauthenticated, enumerable endpoint (order_number is sequential): expose
-    // only non-sensitive status. Do NOT return the internal PK or raw provider
-    // diagnostic text — surface a generic failure message instead.
-    const paymentFailed = String(order.payment_status || '').toLowerCase() === 'failed';
+    // only non-sensitive status.
+    const paymentFailed = String(order.payment_status || '').toLowerCase() === 'failed'
+      || String(order.payment_record_status || '').toLowerCase() === 'failed'
+      || String(order.status || '').toUpperCase() === 'FAILED';
+    const paymentMeta = parseJson(order.payment_metadata);
+    const failureReason = paymentFailed
+      ? (paymentMeta?.provider_payload?.gateway_response || paymentMeta?.gateway_response || paymentMeta?.failure_reason || 'Payment was not completed. Please try again.')
+      : null;
 
     // Seamless post-payment login (ownership-proven). This endpoint is enumerable
     // by order number, so an auto-login token is minted ONLY when the caller also
@@ -433,7 +438,7 @@ export const getOrderStatus = async (req, res) => {
         status: order.status,
         paymentStatus: order.payment_status,
         paymentRecordStatus: order.payment_record_status || null,
-        failureReason: paymentFailed ? 'Payment was not completed. Please try again.' : null,
+        failureReason,
         ...(autoLoginToken ? { autoLoginToken } : {})
       }
     });

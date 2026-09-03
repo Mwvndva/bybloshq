@@ -10,6 +10,14 @@ export class PaymentService {
     }
 
     /**
+     * Check transaction status directly with the provider (Paystack).
+     */
+    async checkTransactionStatus(reference) {
+        const paystack = new PaystackProviderClient();
+        return paystack.checkTransactionStatus(reference);
+    }
+
+    /**
      * Check payment provider balance.
      */
     async checkBalance() {
