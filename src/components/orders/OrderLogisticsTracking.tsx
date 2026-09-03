@@ -151,13 +151,13 @@ export function OrderLogisticsTracking({
         aria-controls={`logistics-unified-${order.id}`}
         className="flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-white/5"
       >
-        <span className="text-yellow-300">{headerIcon}</span>
-        <span className="text-xs sm:text-sm font-semibold text-white truncate">{headerTitle}</span>
+        <span className="text-yellow-600 dark:text-yellow-400">{headerIcon}</span>
+        <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{headerTitle}</span>
 
         <span className="ml-auto flex items-center gap-2 shrink-0">
           {riderMoving ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/50 bg-yellow-400/20 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200">
-              <Truck className="h-3 w-3 animate-pulse text-yellow-300" />
+            <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/40 bg-yellow-100 text-yellow-900 font-bold dark:border-yellow-400/50 dark:bg-yellow-400/20 dark:text-yellow-200 px-2.5 py-0.5 text-[11px]">
+              <Truck className="h-3 w-3 animate-pulse text-yellow-700 dark:text-yellow-300" />
               {liveEta?.trackingStatus === 'arriving'
                 ? 'Arriving Now'
                 : typeof liveEta?.etaMinutes === 'number'
@@ -165,56 +165,56 @@ export function OrderLogisticsTracking({
                   : 'In Transit'}
             </span>
           ) : journey.isDelivered || order.status === 'COMPLETED' ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-200">
-              <CheckCircle2 className="h-3 w-3 text-emerald-300" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-100 text-emerald-900 font-bold dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-200 px-2.5 py-0.5 text-[11px] shadow-sm">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-300 shrink-0" />
               {isSeller ? 'Delivered & Released' : journey.label}
             </span>
           ) : isPickup && (order.status === 'READY_FOR_BUYER' || order.status === 'COLLECTION_PENDING') ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/50 bg-yellow-400/20 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200">
+            <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/40 bg-yellow-100 text-yellow-900 font-bold dark:border-yellow-400/50 dark:bg-yellow-400/20 dark:text-yellow-200 px-2.5 py-0.5 text-[11px]">
               {isSeller ? 'Waiting for Buyer' : 'Ready for Pickup'}
             </span>
           ) : (
-            <span className="rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-100">
+            <span className="rounded-full border border-slate-200 bg-white/90 text-slate-800 dark:border-white/10 dark:bg-black/70 dark:text-yellow-100 px-2.5 py-0.5 text-[11px] font-semibold">
               {journey.label}
             </span>
           )}
 
-          <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/60 transition-transform duration-200', isOpen && 'rotate-180')} />
+          <ChevronDown className={cn('h-4 w-4 shrink-0 text-slate-500 dark:text-white/60 transition-transform duration-200', isOpen && 'rotate-180')} />
         </span>
       </button>
 
       {/* ── Unified Dropdown Body ── */}
       {isOpen && (
-        <div id={`logistics-unified-${order.id}`} className="space-y-3 border-t border-white/10 p-3 pt-3.5">
+        <div id={`logistics-unified-${order.id}`} className="space-y-3 border-t border-slate-200/60 dark:border-white/10 p-3 pt-3.5">
           {/* Tier 1: Visual Stepper */}
-          <div className="rounded-xl border border-white/10 bg-black/40 px-3 py-3">
+          <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-black/40 px-3 py-3">
             <MzigoJourneyStepper journey={journey} />
           </div>
 
           {/* Dynamic Movement Progress Bar */}
-          <div className="overflow-hidden rounded-full bg-white/10 p-0.5">
+          <div className="overflow-hidden rounded-full bg-slate-200 dark:bg-white/10 p-0.5">
             <div
               className={cn(
                 'h-1.5 rounded-full transition-all duration-500',
                 journey.state === 'attention'
-                  ? 'bg-red-400'
+                  ? 'bg-red-500'
                   : journey.state === 'delayed'
-                    ? 'bg-amber-400'
+                    ? 'bg-amber-500'
                     : journey.isDelivered || order.status === 'COMPLETED'
-                      ? 'bg-emerald-400'
+                      ? 'bg-emerald-500'
                       : riderMoving
                         ? 'bg-gradient-to-r from-yellow-500 via-amber-300 to-yellow-400 animate-pulse'
-                        : 'bg-yellow-400'
+                        : 'bg-yellow-500 dark:bg-yellow-400'
               )}
               style={{ width: `${Math.min(100, Math.max(8, dynamicProgressPercent))}%` }}
             />
           </div>
 
           {/* Live ETA & Status Headline Card */}
-          <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-lg border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-black/40 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-yellow-300" />
-              <span className="text-white font-medium text-xs sm:text-sm">
+              <Clock className="h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-300" />
+              <span className="text-slate-900 dark:text-white font-medium text-xs sm:text-sm">
                 {journey.isDelivered || order.status === 'COMPLETED'
                   ? isSeller
                     ? `Delivered on ${formatDateTime(deliveryLeg?.completedAt || logistics?.completedAt || order.updatedAt)} — Escrow released`
@@ -249,11 +249,11 @@ export function OrderLogisticsTracking({
 
             <div className="flex items-center gap-2">
               {liveEta?.isStale && (
-                <span className="text-[11px] text-amber-300">
+                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-300">
                   Location update delayed
                 </span>
               )}
-              <span className="text-xs text-white/70">
+              <span className="text-xs text-slate-600 dark:text-white/70">
                 {liveEta?.lastUpdatedAt && !liveEta.isStale
                   ? 'Updated just now'
                   : journey.detail}
@@ -264,38 +264,38 @@ export function OrderLogisticsTracking({
           {/* Tier 2: Specs Strip (Door Delivery vs. Hub Collection) */}
           {isDoorDelivery && (
             <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
-              <div className="rounded-lg border border-white/10 bg-black/40 p-2.5 sm:p-3">
-                <p className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-white/55">
-                  <Truck className="h-3 w-3 text-yellow-300" />
+              <div className="rounded-lg border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-black/40 p-2.5 sm:p-3">
+                <p className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-white/55">
+                  <Truck className="h-3 w-3 text-yellow-600 dark:text-yellow-300" />
                   {isSeller ? 'Logistics Type' : 'Fulfillment Mode'}
                 </p>
-                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-white">Door Delivery</p>
-                <p className="text-[11px] text-white/70">
+                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">Door Delivery</p>
+                <p className="text-[11px] text-slate-600 dark:text-white/70">
                   {isSeller ? 'Store ➔ Hub ➔ Buyer' : 'Handled by Mzigo Ego'}
                 </p>
               </div>
 
-              <div className="rounded-lg border border-white/10 bg-black/40 p-2.5 sm:p-3">
-                <p className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-white/55">
-                  <Store className="h-3 w-3 text-yellow-300" />
+              <div className="rounded-lg border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-black/40 p-2.5 sm:p-3">
+                <p className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-white/55">
+                  <Store className="h-3 w-3 text-yellow-600 dark:text-yellow-300" />
                   Central Transit Hub
                 </p>
-                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-white">{MZIGO_CBD_HUB.name}</p>
-                <p className="text-[11px] text-white/70 truncate">{MZIGO_CBD_HUB.address}</p>
+                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{MZIGO_CBD_HUB.name}</p>
+                <p className="text-[11px] text-slate-600 dark:text-white/70 truncate">{MZIGO_CBD_HUB.address}</p>
               </div>
 
-              <div className="rounded-lg border border-white/10 bg-black/40 p-2.5 sm:p-3">
-                <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              <div className="rounded-lg border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-black/40 p-2.5 sm:p-3">
+                <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-white/55">
                   {isSeller ? 'Escrow Status' : 'Delivery Fee'}
                 </p>
-                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-white">
+                <p className="mt-0.5 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
                   {isSeller
                     ? journey.isDelivered || order.status === 'COMPLETED'
                       ? 'Funds Released'
                       : 'Held in Escrow'
                     : formatCurrency(deliveryLeg?.feeAmount || 0, deliveryLeg?.feeCurrency || order.currency)}
                 </p>
-                <p className="text-[11px] text-white/70">
+                <p className="text-[11px] text-slate-600 dark:text-white/70">
                   {isSeller
                     ? journey.isDelivered || order.status === 'COMPLETED'
                       ? 'Settled to wallet'
@@ -308,23 +308,23 @@ export function OrderLogisticsTracking({
 
           {/* Central Hub Collection Point Card if pickup */}
           {isPickup && (
-            <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+            <div className="rounded-lg border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-black/40 p-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-300">
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">
                     <Store className="h-3.5 w-3.5" />
                     Central Hub Collection Point
                   </p>
-                  <p className="mt-1 text-sm font-bold text-white">
+                  <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">
                     {MZIGO_CBD_HUB.name}
                   </p>
-                  <p className="text-xs text-white/70">{MZIGO_CBD_HUB.address} • Mon - Sat (8:00 AM - 7:00 PM)</p>
+                  <p className="text-xs text-slate-600 dark:text-white/70">{MZIGO_CBD_HUB.address} • Mon - Sat (8:00 AM - 7:00 PM)</p>
                   {isSeller ? (
-                    <p className="mt-1 text-xs text-emerald-300 font-medium">
+                    <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
                       Handoff package to Central Hub. Escrow releases automatically once buyer collects.
                     </p>
                   ) : (
-                    <p className="mt-1 text-xs text-yellow-200/90 font-medium">
+                    <p className="mt-1 text-xs text-slate-700 dark:text-yellow-200/90 font-medium">
                       Bring your Order ID or phone number for instant package release.
                     </p>
                   )}
@@ -335,7 +335,7 @@ export function OrderLogisticsTracking({
                     href={MZIGO_CBD_HUB.mapLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 sm:mt-0 inline-flex items-center justify-center gap-1.5 rounded-lg border border-yellow-400/30 bg-yellow-400/10 px-3 py-1.5 text-xs font-semibold text-yellow-200 hover:bg-yellow-400/20 shrink-0 transition-colors"
+                    className="mt-2 sm:mt-0 inline-flex items-center justify-center gap-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-xs font-semibold text-yellow-800 dark:text-yellow-200 hover:bg-yellow-500/20 shrink-0 transition-colors"
                   >
                     <Navigation className="h-3.5 w-3.5" /> Get Directions
                   </a>
@@ -346,15 +346,15 @@ export function OrderLogisticsTracking({
 
           {/* Tier 3: Milestones Timeline & Security Notice */}
           {isPhysical && (
-            <div className="rounded-xl border border-white/10 bg-black/35 p-3">
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/55">
-                <Clock className="h-3.5 w-3.5 text-yellow-300" />
+            <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/60 dark:bg-black/35 p-3">
+              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/55">
+                <Clock className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-300" />
                 {isSeller ? 'Dispatch & Audit Trail' : isDoorDelivery ? 'Fulfillment Milestones' : 'Collection Timeline'}
               </p>
               <Timeline events={logistics?.events || []} />
 
-              <p className="mt-3 flex items-start gap-2 text-xs text-white/70 border-t border-white/5 pt-2.5">
-                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
+              <p className="mt-3 flex items-start gap-2 text-xs text-slate-600 dark:text-white/70 border-t border-slate-200/60 dark:border-white/5 pt-2.5">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
                 {isSeller
                   ? 'Settlement Notice: Your earnings unlock automatically upon verified delivery receipt.'
                   : 'Mzigo Ego Central Hub handles verification, package security, and milestone tracking.'}

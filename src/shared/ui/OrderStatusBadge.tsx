@@ -16,101 +16,101 @@ export function OrderStatusBadge({ status, viewerRole = 'seller', className }: O
   switch (statusValue) {
     case 'COMPLETED':
       content = {
-        icon: <CheckCircle className="h-3 w-3 mr-1" />,
+        icon: <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Completed',
-        style: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
+        style: 'bg-emerald-600 dark:bg-emerald-600',
       };
       break;
     case 'AWAITING_SELLER_ACTION':
       content = {
-        icon: <Clock className="h-3 w-3 mr-1" />,
+        icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: viewerRole === 'buyer' ? 'Awaiting Seller' : 'Seller Action',
-        style: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white',
+        style: 'bg-yellow-600 dark:bg-yellow-600',
       };
       break;
     case 'FULFILLING':
       content = {
-        icon: <Truck className="h-3 w-3 mr-1" />,
+        icon: <Truck className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Fulfilling',
-        style: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white',
+        style: 'bg-amber-600 dark:bg-amber-600',
       };
       break;
     case 'READY_FOR_BUYER':
       content = {
-        icon: <Package className="h-3 w-3 mr-1" />,
+        icon: <Package className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: viewerRole === 'buyer' ? 'Ready for Pickup' : 'Ready for Buyer',
-        style: 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white',
+        style: 'bg-blue-600 dark:bg-blue-600',
       };
       break;
     case 'DELIVERY_COMPLETE':
       content = {
-        icon: <Package className="h-3 w-3 mr-1" />,
+        icon: <Package className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Delivery Complete',
-        style: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white',
+        style: 'bg-purple-600 dark:bg-purple-600',
       };
       break;
     case 'DELIVERY_PENDING':
       content = {
-        icon: <Truck className="h-3 w-3 mr-1" />,
+        icon: <Truck className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Delivery Pending',
-        style: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white',
+        style: 'bg-blue-600 dark:bg-blue-600',
       };
       break;
     case 'SERVICE_PENDING':
       content = {
-        icon: <Clock className="h-3 w-3 mr-1" />,
+        icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Service Pending',
-        style: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white',
+        style: 'bg-purple-600 dark:bg-purple-600',
       };
       break;
     case 'COLLECTION_PENDING':
       content = {
-        icon: <Package className="h-3 w-3 mr-1" />,
+        icon: <Package className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Ready for Collection',
-        style: 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white',
+        style: 'bg-blue-600 dark:bg-blue-600',
       };
       break;
     case 'CONFIRMED':
       content = {
-        icon: <CheckCircle className="h-3 w-3 mr-1" />,
+        icon: <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Confirmed',
-        style: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white',
+        style: 'bg-blue-600 dark:bg-blue-600',
       };
       break;
     case 'FAILED':
       content = {
-        icon: <XCircle className="h-3 w-3 mr-1" />,
+        icon: <XCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Failed',
-        style: 'bg-gradient-to-r from-red-500 to-red-600 text-white',
+        style: 'bg-red-600 dark:bg-red-600',
       };
       break;
     case 'CANCELLED':
       content = {
-        icon: <XCircle className="h-3 w-3 mr-1" />,
+        icon: <XCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: 'Cancelled',
-        style: 'bg-gradient-to-r from-red-500 to-red-600 text-white',
+        style: 'bg-red-600 dark:bg-red-600',
       };
       break;
     case 'PENDING':
     default:
       content = {
-        icon: <Clock className="h-3 w-3 mr-1" />,
+        icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
         label: statusValue ? statusValue.replace(/_/g, ' ') : 'Pending',
-        style: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white',
+        style: 'bg-yellow-600 dark:bg-yellow-600',
       };
       break;
   }
 
   return (
-    <Badge
+    <span
       className={cn(
-        'text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm flex items-center w-fit',
+        'text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center w-fit border-0 !text-white tracking-wide',
         content.style,
         className
       )}
     >
       {content.icon}
       {content.label}
-    </Badge>
+    </span>
   );
 }

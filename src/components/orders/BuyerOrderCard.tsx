@@ -133,11 +133,15 @@ export function BuyerOrderCard({
         </div>
 
         {instruction && (
-          <div className={`mx-4 sm:mx-6 mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-500/15 text-blue-100 border border-blue-400/30' :
-            instruction.color === 'amber' ? 'bg-yellow-400/15 text-yellow-100 border border-yellow-400/30' :
-              instruction.color === 'green' ? 'bg-green-500/15 text-green-100 border border-green-400/30' :
-                'bg-red-500/15 text-red-100 border border-red-400/30'
-            }`}>
+          <div
+            className={cn(
+              'mx-4 sm:mx-6 mt-3 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors',
+              instruction.color === 'blue' && 'bg-blue-50 text-blue-950 border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-500/30',
+              instruction.color === 'amber' && 'bg-amber-50 text-amber-950 border-amber-200 dark:bg-yellow-950/40 dark:text-yellow-200 dark:border-yellow-500/30',
+              instruction.color === 'green' && 'bg-emerald-50 text-emerald-950 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-500/30',
+              instruction.color === 'red' && 'bg-red-50 text-red-950 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-500/30',
+            )}
+          >
             {instruction.text}
           </div>
         )}
