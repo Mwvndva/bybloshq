@@ -103,7 +103,7 @@ export function ShopProductCard({
 
           {/* Sleek horizontal watermark banner running across the center */}
           <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center py-1 bg-black/35 backdrop-blur-[1px]">
-            <p className="w-full text-center text-[10px] sm:text-xs font-black uppercase tracking-widest text-white/80 drop-shadow-md truncate px-2 select-none">
+            <p className="w-full text-center text-[10px] sm:text-xs font-normal uppercase tracking-widest text-white/80 drop-shadow-md truncate px-2 select-none">
               @{product.seller?.shopName || product.seller?.fullName || 'Shop'} • Byblos
             </p>
           </div>
@@ -142,7 +142,7 @@ export function ShopProductCard({
           {/* Product name on left, image icon to the right */}
           <div className="flex items-center justify-between gap-1.5">
             <h3
-              className="min-w-0 flex-1 truncate text-xs font-black tracking-tight sm:text-sm"
+              className="min-w-0 flex-1 truncate text-xs font-normal tracking-tight sm:text-sm"
               style={{ color: 'var(--product-card-accent)' }}
               title={product.name}
             >
@@ -162,7 +162,7 @@ export function ShopProductCard({
 
           {/* Price on left, description icon on right */}
           <div className="mt-auto flex items-center justify-between gap-1 pt-1">
-            <p className="text-sm font-black tabular-nums sm:text-base" style={{ color: 'var(--product-card-accent)' }}>
+            <p className="text-sm font-normal tabular-nums sm:text-base" style={{ color: 'var(--product-card-accent)' }}>
               {formatCurrency(product.price)}
             </p>
 
@@ -193,7 +193,7 @@ export function ShopProductCard({
             }}
           >
             <div className="mb-2 flex items-start justify-between gap-3">
-              <h3 className="text-base font-black" style={{ color: 'var(--product-card-accent)' }}>{product.name}</h3>
+              <h3 className="text-base font-normal" style={{ color: 'var(--product-card-accent)' }}>{product.name}</h3>
               <button type="button" onClick={() => setShowDescription(false)} aria-label="Close" className="-mr-1 -mt-1 rounded-full p-1.5 opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10">
                 <X className="h-4 w-4" />
               </button>
@@ -231,7 +231,7 @@ export function ShopProductCard({
             {/* Modal Header */}
             <div className="mb-3 flex items-center justify-between gap-2 border-b pb-2.5 border-[var(--byblos-border,rgba(0,0,0,0.1))]">
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm sm:text-base font-black truncate" style={{ color: 'var(--product-card-accent)' }}>
+                <h3 className="text-sm sm:text-base font-normal truncate" style={{ color: 'var(--product-card-accent)' }}>
                   {product.name}
                 </h3>
                 <p className="text-[11px] font-semibold opacity-70">
@@ -265,7 +265,7 @@ export function ShopProductCard({
 
               {/* Sleek horizontal watermark banner running across the center */}
               <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center py-1.5 bg-black/40 backdrop-blur-[1px]">
-                <p className="w-full text-center text-xs sm:text-sm font-black uppercase tracking-widest text-white/85 drop-shadow-md truncate px-3 select-none">
+                <p className="w-full text-center text-xs sm:text-sm font-normal uppercase tracking-widest text-white/85 drop-shadow-md truncate px-3 select-none">
                   @{product.seller?.shopName || product.seller?.fullName || 'Shop'} • Byblos
                 </p>
               </div>
