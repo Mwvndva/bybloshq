@@ -1,4 +1,4 @@
-import { useRef, type TouchEvent } from 'react';
+import { useRef, useState, type TouchEvent } from 'react';
 import { Calendar, ChevronDown, Loader2, MapPin, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency, getImageUrl } from '@/shared/utils/formatting';
@@ -25,6 +25,7 @@ export function BagSheet() {
   const bag = useBag();
   const checkout = useBagCheckout(bag);
   const startY = useRef<number | null>(null);
+  const [showPhoneFallback, setShowPhoneFallback] = useState(false);
 
   const shopName = bag.items[0]?.product.seller?.shopName || 'Shop';
   const theme = (bag.items[0]?.product.seller?.theme as Theme) || 'default';
@@ -36,7 +37,21 @@ export function BagSheet() {
     isPhysicalProduct: canDoorDeliver,
     isCustomProduct: false,
     purchaseDetails: { shopName, productName: bag.count > 1 ? `${bag.count} products` : (bag.items[0]?.product.name || 'Your bag'), productPrice: bag.subtotal },
+    initialPhone: checkout.registeredPaystackPhone,
   });
+
+  const handlePaymentInitiate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (phoneCheck.doorDeliveryEnabled && !phoneCheck.validateDoorDelivery()) {
+      return;
+    }
+
+    if (checkout.hasRegisteredPaymentNumber && !showPhoneFallback) {
+      checkout.initiateDirectPayment(undefined, phoneCheck.buildDeliveryPayload());
+    } else {
+      phoneCheck.handleSubmit(e);
+    }
+  };
 
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => { startY.current = e.touches[0]?.clientY ?? null; };
   const handleTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
@@ -74,7 +89,7 @@ export function BagSheet() {
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <button type="button" aria-label="Close bag" onClick={bag.close} className="absolute inset-0 bg-black/50 backdrop-blur-xs" />
           <form
-            onSubmit={phoneCheck.handleSubmit}
+            onSubmit={handlePaymentInitiate}
             className="relative flex max-h-[92vh] flex-col rounded-t-3xl border-t shadow-2xl"
             style={{ backgroundColor: 'var(--byblos-surface, #ffffff)', color: 'var(--byblos-text, #0f0f0e)', borderColor: 'var(--byblos-border, rgba(0,0,0,0.12))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
@@ -164,11 +179,53 @@ export function BagSheet() {
               )}
 
               {/* Mobile payment number. */}
-              <div className="space-y-1.5">
-                <label htmlFor="bag-phone" className="text-xs font-bold opacity-70">M-Pesa number</label>
-                <Input id="bag-phone" type="tel" inputMode="tel" placeholder="e.g. 0712345678" value={phoneCheck.phone} onChange={(e) => phoneCheck.setPhone(e.target.value)} className="h-11 rounded-xl bg-[var(--byblos-surface-soft,rgba(0,0,0,0.03))] border-[var(--byblos-border,rgba(0,0,0,0.1))] text-[var(--byblos-text)]" />
-                {phoneCheck.error && <p className="text-xs font-medium text-red-500">{phoneCheck.error}</p>}
-              </div>
+              {checkout.hasRegisteredPaymentNumber && !showPhoneFallback ? (
+                <div
+                  className="rounded-2xl border p-3.5 space-y-1.5 bg-black/5 dark:bg-white/5"
+                  style={{ borderColor: 'var(--byblos-border, rgba(0,0,0,0.12))' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold opacity-70">M-Pesa payment number</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPhoneFallback(true)}
+                      className="text-xs font-bold underline-offset-2 hover:underline"
+                      style={{ color: 'var(--theme-accent, #f5c518)' }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <p className="text-base font-black tracking-wide font-mono text-[var(--byblos-text)]">
+                    {checkout.registeredPaystackPhone}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="bag-phone" className="text-xs font-bold opacity-70">M-Pesa number</label>
+                    {checkout.hasRegisteredPaymentNumber && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPhoneFallback(false)}
+                        className="text-xs font-bold underline-offset-2 hover:underline"
+                        style={{ color: 'var(--theme-accent, #f5c518)' }}
+                      >
+                        Use registered number
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    id="bag-phone"
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="e.g. 0712345678"
+                    value={phoneCheck.phone}
+                    onChange={(e) => phoneCheck.setPhone(e.target.value)}
+                    className="h-11 rounded-xl bg-[var(--byblos-surface-soft,rgba(0,0,0,0.03))] border-[var(--byblos-border,rgba(0,0,0,0.1))] text-[var(--byblos-text)]"
+                  />
+                  {phoneCheck.error && <p className="text-xs font-medium text-red-500">{phoneCheck.error}</p>}
+                </div>
+              )}
 
               <p className="flex items-start gap-2 text-[11px] opacity-70">
                 <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: 'var(--theme-accent, #f5c518)' }} />

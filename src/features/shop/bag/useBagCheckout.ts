@@ -2,12 +2,13 @@ import { useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useGlobalAuth } from '@/features/auth/contexts';
+import type { BuyerProfile } from '@/features/auth/types/authTypes';
 import { useToast } from '@/shared/hooks/use-toast';
 import { useCheckBuyerByPhoneMutation } from '@/features/buyer/hooks/mutations/useBuyerAuthMutations';
 import { useSaveBuyerInfoMutation } from '@/features/buyer/hooks/mutations/useSaveBuyerInfoMutation';
 import { useInitiateProductMutation } from '@/features/buyer/hooks/useBuyerPayments';
 import { useAsyncLock } from '@/shared/hooks/useAsyncLock';
-import { calculateBuyerPayableTotal, calculateProductServiceCharge, createCheckoutAttemptToken, getProductFlags, normalizePhone, type ProductWithApiFields } from '@/features/shop/utils/productCardUtils';
+import { calculateBuyerPayableTotal, calculateProductServiceCharge, createCheckoutAttemptToken, getProductFlags, normalizePhone, normalizePhoneForPaystack, type ProductWithApiFields } from '@/features/shop/utils/productCardUtils';
 import { toBuyerLocationPayload, type BuyerLocationPayload } from '@/infrastructure/location/location';
 import type { DoorDeliverySelection } from '@/shared/components/PhoneCheckModal';
 import type { BuyerInfo } from '@/shared/components/BuyerInfoModal';
@@ -29,7 +30,19 @@ interface PaymentModalData {
 export function useBagCheckout(bag: BagContextValue) {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isAuthenticated } = useGlobalAuth();
+  const { isAuthenticated, user: globalUser } = useGlobalAuth();
+  const buyerProfile = globalUser?.role === 'buyer' ? (globalUser.profile as BuyerProfile) : null;
+  const rawRegisteredNumber = String(
+    buyerProfile?.mobilePayment ||
+    buyerProfile?.phone ||
+    (globalUser as unknown as Record<string, unknown>)?.mobilePayment ||
+    (globalUser as unknown as Record<string, unknown>)?.mobile_payment ||
+    (globalUser as unknown as Record<string, unknown>)?.phone ||
+    ''
+  ).trim();
+  const registeredPaystackPhone = rawRegisteredNumber ? normalizePhoneForPaystack(rawRegisteredNumber) : '';
+  const hasRegisteredPaymentNumber = Boolean(registeredPaystackPhone && registeredPaystackPhone.length >= 10);
+
   const checkBuyerByPhoneMutation = useCheckBuyerByPhoneMutation();
   const saveBuyerInfoMutation = useSaveBuyerInfoMutation();
   const initiateProductMutation = useInitiateProductMutation();
@@ -154,7 +167,57 @@ export function useBagCheckout(bag: BagContextValue) {
     }
   };
 
-  // Called by the inline phone form (usePhoneCheck) — checks the buyer then pays.
+  // Direct payment initiation for existing buyers with registered mobile payment number.
+  // Bypasses the phone check step completely; normalizes number for Paystack and initiates payment.
+  const initiateDirectPayment = async (
+    customPhone?: string,
+    delivery?: DoorDeliverySelection & { customInstructions?: string }
+  ) => {
+    doorDeliveryRef.current = anyPhysical && !hasService && delivery?.doorDelivery ? delivery : null;
+    if (hasService && !booking) {
+      toast({ title: 'Booking required', description: 'Please set the service date, time and location first.', variant: 'destructive' });
+      return;
+    }
+
+    const targetPhone = customPhone || registeredPaystackPhone;
+    if (!targetPhone) {
+      toast({ title: 'Phone Number Required', description: 'Please enter your mobile payment number.', variant: 'destructive' });
+      return;
+    }
+
+    const paystackPhone = normalizePhoneForPaystack(targetPhone);
+    setCurrentPhone(paystackPhone);
+
+    const buyerEmail = buyerProfile?.email || globalUser?.email;
+    const buyerName = buyerProfile?.fullName || globalUser?.email?.split('@')[0] || 'Buyer';
+
+    if (buyerEmail && buyerEmail.trim() !== '') {
+      await runWithLock(async () => {
+        await executePayment({
+          fullName: buyerName,
+          email: buyerEmail,
+          mobilePayment: paystackPhone,
+          city: buyerProfile?.city,
+          location: buyerProfile?.location,
+          latitude: buyerProfile?.latitude,
+          longitude: buyerProfile?.longitude,
+        });
+      });
+    } else {
+      // Fallback: If buyer has no email on profile, prompt for email
+      toast({ title: 'Email Required', description: 'Please provide your email address to receive the receipt.' });
+      setInitialBuyerData({
+        fullName: buyerName,
+        city: buyerProfile?.city,
+        location: buyerProfile?.location,
+        email: '',
+      });
+      setShouldSkipSave(false);
+      setIsBuyerModalOpen(true);
+    }
+  };
+
+  // Called by the inline phone form (usePhoneCheck) — checks the buyer then pays (fallback).
   const handlePhoneSubmit = async (phone: string, delivery?: DoorDeliverySelection & { customInstructions?: string }) => {
     doorDeliveryRef.current = anyPhysical && !hasService && delivery?.doorDelivery ? delivery : null;
     if (hasService && !booking) {
@@ -163,12 +226,19 @@ export function useBagCheckout(bag: BagContextValue) {
     }
     try {
       const normalizedPhone = normalizePhone(phone);
+      const paystackPhone = normalizePhoneForPaystack(phone);
       const result = await checkBuyerByPhoneMutation.mutateAsync(normalizedPhone);
-      setCurrentPhone(normalizedPhone);
+      setCurrentPhone(paystackPhone);
       if (result.exists && result.buyer) {
         if (result.buyer.hasEmail || (result.buyer.email && result.buyer.email.trim() !== '')) {
           await runWithLock(async () => {
-            await executePayment({ fullName: result.buyer!.fullName || '', email: result.buyer!.email || '', mobilePayment: result.buyer!.mobilePayment || normalizedPhone, city: result.buyer!.city, location: result.buyer!.location });
+            await executePayment({
+              fullName: result.buyer!.fullName || '',
+              email: result.buyer!.email || '',
+              mobilePayment: paystackPhone,
+              city: result.buyer!.city,
+              location: result.buyer!.location,
+            });
           });
         } else {
           toast({ title: 'Email Required', description: 'Please provide your email address to receive the receipt.' });
@@ -209,6 +279,10 @@ export function useBagCheckout(bag: BagContextValue) {
     anyPhysical, hasService, booking,
     isBookingModalOpen, setIsBookingModalOpen, handleBookingConfirm,
     handlePhoneSubmit, handleBuyerInfoSubmit, setIsBuyerModalOpen,
+    initiateDirectPayment,
+    buyerProfile,
+    hasRegisteredPaymentNumber,
+    registeredPaystackPhone,
     closePaymentModal: () => setPaymentModalData((p) => ({ ...p, isOpen: false })),
   };
 }

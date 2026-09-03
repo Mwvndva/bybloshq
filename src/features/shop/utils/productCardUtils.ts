@@ -115,6 +115,30 @@ export const normalizePhone = (phone: string): string => {
   return normalized;
 };
 
+/**
+ * Normalizes any phone number into Paystack's required M-Pesa format (+254XXXXXXXXX).
+ */
+export const normalizePhoneForPaystack = (phone: string): string => {
+  if (!phone) return '';
+  const digits = phone.toString().replace(/\D/g, '');
+  if (digits.startsWith('254') && digits.length === 12) {
+    return `+${digits}`;
+  }
+  if (digits.startsWith('0') && digits.length === 10) {
+    return `+254${digits.substring(1)}`;
+  }
+  if (digits.length === 9 && /^[17]/.test(digits)) {
+    return `+254${digits}`;
+  }
+  if (/^254[17]\d{8}$/.test(digits)) {
+    return `+${digits}`;
+  }
+  if (phone.trim().startsWith('+254')) {
+    return phone.trim();
+  }
+  return `+${digits}`;
+};
+
 export const getProductFlags = (product: ProductWithApiFields) => {
   const productType = String(product.product_type || product.productType || '').toLowerCase();
   const isDigital = productType === 'digital' || product.is_digital || product.isDigital;
