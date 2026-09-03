@@ -5,7 +5,7 @@ import { Input } from '@/shared/ui/input';
 import { exportWithdrawalsToCSV } from '@/shared/utils/exportUtils';
 import { getWithdrawalFee, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS } from '../dashboardUtils';
 import type { ApiWithdrawalRequest } from '@/shared/types/api/withdrawal';
-import { formatKes, formatSettlementTime } from './withdrawalsTab.utils';
+import { formatKes, formatSettlementDate, formatSettlementTimeOnly } from './withdrawalsTab.utils';
 import { WithdrawalHistoryCard } from './WithdrawalHistoryCard';
 import { WithdrawalRequestForm } from './WithdrawalRequestForm';
 
@@ -55,9 +55,12 @@ export function WithdrawalsTab({
   const totalDeducted = Number.isFinite(requestedAmount) && requestedAmount >= MIN_WITHDRAWAL_AMOUNT
     ? requestedAmount + withdrawalFee
     : 0;
-  const nextSettlementLabel = nextSettlementAt
-    ? formatSettlementTime(nextSettlementAt)
+  const nextSettlementDate = nextSettlementAt
+    ? formatSettlementDate(nextSettlementAt)
     : 'Pending schedule';
+  const nextSettlementTime = nextSettlementAt
+    ? formatSettlementTimeOnly(nextSettlementAt)
+    : null;
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
@@ -107,9 +110,12 @@ export function WithdrawalsTab({
               {formatKes(pendingSettlementBalance)}
             </p>
           </div>
-          <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-white/40 truncate" title={`Next: ${nextSettlementLabel}`}>
-            Next: {nextSettlementLabel}
-          </p>
+          <div className="mt-1 text-[9px] sm:text-[10px] font-semibold text-white/40 min-w-0" title={`Next: ${nextSettlementDate}${nextSettlementTime ? ` at ${nextSettlementTime}` : ''}`}>
+            <p className="truncate">Next: {nextSettlementDate}</p>
+            {nextSettlementTime && (
+              <p className="truncate text-white/60 font-medium">at {nextSettlementTime}</p>
+            )}
+          </div>
         </div>
 
         <div className="rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-white/10 bg-[#0a0a0a] shadow-sm flex flex-col justify-between min-w-0">
