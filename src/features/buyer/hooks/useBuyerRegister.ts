@@ -122,10 +122,10 @@ export function useBuyerRegister() {
     e.preventDefault();
     setErrors({}); // Clear previous errors
 
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.mobilePayment || !formData.whatsappNumber || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.mobilePayment || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields including location and phone numbers",
+        description: "Please fill in all required fields including location and phone number",
         variant: 'destructive',
       });
       return;
