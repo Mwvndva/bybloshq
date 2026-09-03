@@ -186,7 +186,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                     type="button"
                     onClick={() => {
                       if (currentStep === 1) {
-                        if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email || !formData.whatsappNumber) {
+                        if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email) {
                           toast({ title: "Missing Information", description: "Please fill in all details", variant: 'destructive' });
                           return;
                         }

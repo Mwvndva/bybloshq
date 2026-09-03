@@ -188,7 +188,7 @@ export function useSellerRegistration(onSuccess?: () => void) {
     // Validate form - Check all required fields (physicalAddress is only required if hasPhysicalShop is true)
     const isPhysicalAddressRequired = hasPhysicalShop === true;
     const isMissingFields = !formData.firstName || !formData.lastName || !formData.shopName || !formData.email ||
-      !formData.whatsappNumber || !formData.password || !formData.confirmPassword ||
+      !formData.password || !formData.confirmPassword ||
       !formData.city || !formData.location || (isPhysicalAddressRequired && !formData.physicalAddress);
 
     if (isMissingFields) {

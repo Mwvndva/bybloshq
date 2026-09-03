@@ -134,7 +134,7 @@ export const BuyerRegisterSteps = ({
 
                     <div className="space-y-0.5 sm:space-y-2">
                       <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                        WhatsApp Number
+                        <span>WhatsApp Number <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px] sm:text-xs">(Optional)</span></span>
                         <span className="text-[8px] sm:text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold">For Order Updates</span>
                       </Label>
                       <div className="relative">
@@ -145,10 +145,9 @@ export const BuyerRegisterSteps = ({
                           id="whatsappNumber"
                           name="whatsappNumber"
                           type="tel"
-                          placeholder="e.g. 0712345678"
+                          placeholder="e.g. 0712345678 (Optional)"
                           value={formData.whatsappNumber}
                           onChange={handleInputChange}
-                          required
                           className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.whatsappNumber ? 'border-red-500' : ''}`}
                         />
                       </div>

@@ -126,16 +126,15 @@ export const SellerRegistrationSteps = ({
 
                     <div className="space-y-0.5 sm:space-y-2">
                       <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                        WhatsApp Number
+                        WhatsApp Number <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px] sm:text-xs">(Optional)</span>
                       </Label>
                       <Input
                         id="whatsappNumber"
                         name="whatsappNumber"
                         type="tel"
-                        placeholder="07... or 01..."
+                        placeholder="07... or 01... (Optional)"
                         value={formData.whatsappNumber}
                         onChange={handleInputChange}
-                        required
                         className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-white/5 border-slate-300 dark:border-white/15 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                       />
                     </div>
