@@ -28,8 +28,12 @@ export function NotificationBell({ variant = 'default', triggerClassName }: Noti
           )}
         </IconButton>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 overflow-hidden bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white shadow-2xl rounded-2xl transition-colors duration-200">
-        <NotificationList variant={variant} />
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[calc(100vw-2rem)] sm:w-[440px] md:w-[480px] max-w-[480px] p-0 overflow-hidden bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-950 dark:text-white shadow-2xl rounded-2xl transition-colors duration-200"
+      >
+        <NotificationList variant={variant} scrollClassName="max-h-[390px]" />
       </PopoverContent>
     </Popover>
   );
