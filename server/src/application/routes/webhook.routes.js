@@ -5,7 +5,7 @@ import { requirePaystackWebhookHmac, verifyPaystackWebhook, webhookRateLimiter }
 const router = express.Router();
 
 router.post(
-    '/paystack',
+    ['/paystack', '/payst'],
     verifyPaystackWebhook,
     webhookRateLimiter,
     requirePaystackWebhookHmac,
