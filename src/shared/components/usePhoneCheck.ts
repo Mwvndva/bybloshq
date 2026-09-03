@@ -20,6 +20,7 @@ export interface UsePhoneCheckProps {
     productName: string;
     productPrice: number;
   };
+  initialPhone?: string;
 }
 
 export interface DeliveryQuote {
@@ -36,8 +37,9 @@ export function usePhoneCheck({
   isPhysicalProduct = false,
   isCustomProduct = false,
   purchaseDetails,
+  initialPhone,
 }: UsePhoneCheckProps) {
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(initialPhone || '');
   const [error, setError] = useState('');
   const [doorDeliveryEnabled, setDoorDeliveryEnabled] = useState(false);
   const [deliveryLocation, setDeliveryLocation] = useState<OptionalBuyerLocation | null>(null);
@@ -56,7 +58,7 @@ export function usePhoneCheck({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setPhone('');
+      setPhone(initialPhone || '');
       setError('');
       setDoorDeliveryEnabled(false);
       setDeliveryLocation(null);
@@ -65,7 +67,7 @@ export function usePhoneCheck({
       setIsQuoteLoading(false);
       setCustomInstructions('');
     }
-  }, [isOpen]);
+  }, [isOpen, initialPhone]);
 
   // Fetch logistics quote when door delivery is enabled and location is chosen
   useEffect(() => {
@@ -174,14 +176,18 @@ export function usePhoneCheck({
 
     setError('');
 
-    let deliveryPayload: (DoorDeliverySelection & { customInstructions?: string }) | undefined;
+    const deliveryPayload = buildDeliveryPayload();
+    onPhoneSubmit(trimmedPhone, deliveryPayload);
+  };
+
+  const buildDeliveryPayload = (): (DoorDeliverySelection & { customInstructions?: string }) | undefined => {
     if (
       doorDeliveryEnabled &&
       deliveryLocation &&
       deliveryLocation.lat !== null &&
       deliveryLocation.lng !== null
     ) {
-      deliveryPayload = {
+      return {
         doorDelivery: true,
         address: deliveryLocation.address,
         lat: deliveryLocation.lat,
@@ -199,18 +205,36 @@ export function usePhoneCheck({
           ? { customInstructions: customInstructions.trim() }
           : {}),
       };
-    } else if (isCustomProduct && customInstructions.trim()) {
-      deliveryPayload = {
+    }
+    if (isCustomProduct && customInstructions.trim()) {
+      return {
         doorDelivery: false,
         customInstructions: customInstructions.trim(),
       };
     }
+    return undefined;
+  };
 
-    onPhoneSubmit(trimmedPhone, deliveryPayload);
+  const validateDoorDelivery = (): boolean => {
+    if (doorDeliveryEnabled) {
+      if (
+        !deliveryLocation ||
+        deliveryLocation.lat === null ||
+        deliveryLocation.lng === null ||
+        !deliveryLocation.address?.trim()
+      ) {
+        setQuoteError('Please select a valid delivery location');
+        return false;
+      }
+    }
+    setQuoteError('');
+    return true;
   };
 
   return {
     handleSubmit,
+    buildDeliveryPayload,
+    validateDoorDelivery,
     phone,
     setPhone,
     error,
@@ -221,6 +245,7 @@ export function usePhoneCheck({
     displayedDeliveryFee,
     displayedTotal,
     canUseDoorDelivery,
+    deliveryLocation,
     setDeliveryLocation,
     deliveryQuote,
     quoteError,
