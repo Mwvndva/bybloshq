@@ -6,6 +6,7 @@ import { OrderStatus, PaymentStatus } from '../../shared/constants/enums.js';
 import FulfillmentQueueService from '../../domains/orders/fulfillment/fulfillmentQueue.service.js';
 import InventoryReservationService from '../../domains/commerce/products/inventoryReservation.service.js';
 import escrowManager from '../../domains/orders/escrow/EscrowManager.js';
+import settlementService from '../../domains/orders/escrow/settlement.service.js';
 
 const RECONCILIATION_LOCK_KEY = 'byblos:reconciliation-engine';
 
@@ -36,7 +37,11 @@ class ReconciliationEngine {
             await this.runOnce();
         });
 
-        logger.info('[RECON] Reconciliation Engine initialized (5-minute schedule).');
+        setImmediate(() => {
+            this.runOnce().catch(err => logger.error('[RECON] Initial startup run failed:', err));
+        });
+
+        logger.info('[RECON] Reconciliation Engine initialized (5-minute schedule + startup run).');
     }
 
     static async runOnce() {
@@ -60,6 +65,7 @@ class ReconciliationEngine {
             await this.handleStuckPayments();
             await this.handleMissingFulfillmentJobs();
             await this.handleUnreleasedCompletedOrders();
+            await this.handleCompletedRefunds();
             return { skipped: false };
         } catch (err) {
             logger.error('[RECON] Reconciliation run failed:', err);
@@ -255,6 +261,118 @@ class ReconciliationEngine {
             } catch (err) {
                 await client.query('ROLLBACK').catch(() => {});
                 logger.error(`[RECON] Failed escrow recovery for Order ${order.id}:`, err.message);
+            } finally {
+                client.release();
+            }
+        }
+    }
+
+    /**
+     * Self-healing worker: Scan for completed refund_requests where the buyer's
+     * refund balance has not yet been credited, and atomically credit the wallet.
+     * Reconciles retroactively (e.g. previously confirmed manual refunds) and continuously.
+     */
+    static async handleCompletedRefunds() {
+        const { rows: uncreditedRefunds } = await pool.query(
+            `SELECT rr.id, rr.buyer_id, rr.order_id, rr.amount
+             FROM refund_requests rr
+             WHERE rr.status = 'completed'
+               AND (
+                 rr.payment_details IS NULL
+                 OR rr.payment_details->>'credited_to_buyer' IS NULL
+                 OR rr.payment_details->>'credited_to_buyer' != 'true'
+               )
+             ORDER BY rr.id ASC
+             LIMIT 50`
+        );
+
+        if (uncreditedRefunds.length === 0) return;
+
+        logger.info(`[RECON] Found ${uncreditedRefunds.length} completed refund(s) missing wallet credit reconciliation.`);
+
+        for (const refund of uncreditedRefunds) {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+
+                const { rows: [locked] } = await client.query(
+                    `SELECT id, buyer_id, order_id, amount, status, payment_details
+                     FROM refund_requests
+                     WHERE id = $1
+                       AND status = 'completed'
+                       AND (
+                         payment_details IS NULL
+                         OR payment_details->>'credited_to_buyer' IS NULL
+                         OR payment_details->>'credited_to_buyer' != 'true'
+                       )
+                     FOR UPDATE SKIP LOCKED`,
+                    [refund.id]
+                );
+
+                if (!locked) {
+                    await client.query('ROLLBACK');
+                    continue;
+                }
+
+                const refundAmount = Number.parseFloat(locked.amount);
+                if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+                    logger.warn(`[RECON] Skipping refund ${locked.id} due to invalid amount: ${locked.amount}`);
+                    await client.query('ROLLBACK');
+                    continue;
+                }
+
+                // 1. Atomically credit the buyer's refund balance
+                await client.query(
+                    `UPDATE buyers
+                     SET refunds = COALESCE(refunds, 0) + $1,
+                         updated_at = NOW()
+                     WHERE id = $2`,
+                    [refundAmount, locked.buyer_id]
+                );
+
+                // 2. Mark as credited in payment_details
+                const creditMetadata = {
+                    credited_to_buyer: true,
+                    credited_amount: refundAmount,
+                    credited_by: 'reconciliation_worker',
+                    reconciled_at: new Date().toISOString()
+                };
+
+                await client.query(
+                    `UPDATE refund_requests
+                     SET payment_details = COALESCE(payment_details, '{}'::jsonb) || $1::jsonb,
+                         updated_at = NOW()
+                     WHERE id = $2`,
+                    [JSON.stringify(creditMetadata), locked.id]
+                );
+
+                // 3. Ensure order is marked refunded and reverse seller settlement if applicable
+                if (locked.order_id) {
+                    await client.query(
+                        `UPDATE product_orders
+                         SET status = 'REFUNDED'::order_status,
+                             payment_status = 'cancelled'::payment_status,
+                             updated_at = NOW()
+                         WHERE id = $1 AND status != 'REFUNDED'`,
+                        [locked.order_id]
+                    ).catch(() => {});
+
+                    try {
+                        await settlementService.reverseOrderSettlementForRefund(
+                            client,
+                            locked.order_id,
+                            'reconciliation_worker_refund'
+                        );
+                    } catch (settleErr) {
+                        logger.warn(`[RECON] Settlement reversal for order ${locked.order_id} failed:`, settleErr.message);
+                    }
+                }
+
+                await client.query('COMMIT');
+                logger.info(`[RECON] Successfully credited ${refundAmount} to buyer ${locked.buyer_id} for completed refund request ${locked.id}`);
+            } catch (err) {
+                await client.query('ROLLBACK').catch(() => {});
+                logger.error(`[RECON] Failed reconciling completed refund ${refund.id}:`, err.message);
             } finally {
                 client.release();
             }
