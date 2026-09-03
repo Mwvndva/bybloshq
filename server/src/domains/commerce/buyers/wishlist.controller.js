@@ -13,7 +13,20 @@ export const getWishlist = async (req, res) => {
     }
 
     const wishlist = await wishlistRepository.findByBuyerId(buyerId);
-    const sanitizedItems = wishlist.map(item => sanitizePublicProduct(item));
+    const sanitizedItems = wishlist.map(item => {
+      const sanitized = sanitizePublicProduct(item);
+      const shopName = item.shopName || item.sellerName || '';
+      sanitized.sellerId = item.sellerId;
+      sanitized.sellerName = item.sellerName || shopName;
+      sanitized.shopName = shopName;
+      sanitized.sellerSlug = item.sellerSlug || null;
+      sanitized.seller = {
+        id: item.sellerId,
+        shopName: shopName,
+        slug: item.sellerSlug || null,
+      };
+      return sanitized;
+    });
 
     // Return the data in the expected format
     res.status(200).json({
