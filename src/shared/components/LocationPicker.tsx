@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocationMarker, MapSizeInvalidator, MapFlyTo } from './locationPickerParts';
@@ -179,6 +179,15 @@ export default function LocationPicker({
         onLocationChange(selection.address, selection.coordinates);
     };
 
+    const handleClearDetailedAddress = () => {
+        setAddress('');
+        const selection = createLocationSelection(
+            '',
+            markerPosition ? { lat: markerPosition[0], lng: markerPosition[1] } : null
+        );
+        onLocationChange(selection.address, selection.coordinates);
+    };
+
     const handleMapClick = (lat: number, lng: number) => {
         const newPos: [number, number] = [lat, lng];
         setMarkerPosition(newPos);
@@ -193,15 +202,15 @@ export default function LocationPicker({
                     {label}
                 </Label>
                 <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-slate-400" />
+                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-3.5 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 md:h-5 md:w-5 text-slate-400" />
                     </div>
                     <Input
                         id="location-search"
                         type="text"
                         value={searchQuery}
                         onChange={handleSearchChange}
-                    className="pl-12 md:pl-12 h-11 bg-white border-slate-200 text-slate-950 placeholder:text-slate-400"
+                        className="pl-12 md:pl-12 h-11 bg-white border-slate-200 text-slate-950 placeholder:text-slate-400"
                         placeholder={placeholder}
                         autoComplete="off"
                     />
@@ -238,17 +247,40 @@ export default function LocationPicker({
             </div>
 
             <div>
-                <Label htmlFor="address-detailed" className="text-sm font-semibold text-slate-700 block mb-2">
-                    {detailedLabel}
-                </Label>
-                <Input
-                    id="address-detailed"
-                    type="text"
-                    value={address}
-                    onChange={handleManualAddressChange}
-                    className="h-11 bg-white border-slate-200 text-slate-950 placeholder:text-slate-400"
-                    placeholder="e.g. Building Name, Floor, Office/House No"
-                />
+                <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="address-detailed" className="text-sm font-semibold text-slate-700 block">
+                        {detailedLabel}
+                    </Label>
+                    {address && (
+                        <button
+                            type="button"
+                            onClick={handleClearDetailedAddress}
+                            className="text-xs font-semibold text-red-500 hover:text-red-600 dark:text-red-400 flex items-center gap-1"
+                        >
+                            <X className="h-3 w-3" /> Clear
+                        </button>
+                    )}
+                </div>
+                <div className="relative">
+                    <Input
+                        id="address-detailed"
+                        type="text"
+                        value={address}
+                        onChange={handleManualAddressChange}
+                        className="h-11 bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 pr-9"
+                        placeholder="e.g. Building Name, Floor, Office/House No"
+                    />
+                    {address && (
+                        <button
+                            type="button"
+                            onClick={handleClearDetailedAddress}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                            title="Clear address text"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className={cn("h-56 w-full rounded-xl overflow-hidden border border-white/10 shadow-inner z-0 relative sm:h-64", mapClassName)}>

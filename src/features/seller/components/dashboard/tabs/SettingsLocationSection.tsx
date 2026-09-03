@@ -137,7 +137,19 @@ export function SettingsLocationSection({
             </div>
 
             <div className="seller-card-soft p-4">
-              <p className="seller-label mb-2">Physical Shop Address</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="seller-label">Physical Shop Address</p>
+                {isEditing && (formData.physicalAddress || formData.latitude || formData.longitude) ? (
+                  <button
+                    type="button"
+                    onClick={() => handleShopLocationChange('', null)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
+                    title="Clear physical shop address"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Clear Address
+                  </button>
+                ) : null}
+              </div>
               {isEditing ? (
                 <div className="mt-2 space-y-3">
                   <ShopLocationPicker
@@ -164,16 +176,34 @@ export function SettingsLocationSection({
               ) : (
                 <div className="space-y-2">
                   {sellerProfile?.physicalAddress ? (
-                    <>
-                      <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
-                        {sellerProfile.physicalAddress}
-                      </p>
-                      <p className="text-xs text-white/40">
-                        {sellerProfile.latitude && sellerProfile.longitude
-                          ? `Coordinates: ${Number(sellerProfile.latitude).toFixed(6)}, ${Number(sellerProfile.longitude).toFixed(6)}`
-                          : 'No map location pinned'}
-                      </p>
-                    </>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
+                          {sellerProfile.physicalAddress}
+                        </p>
+                        <p className="text-xs text-white/40">
+                          {sellerProfile.latitude && sellerProfile.longitude
+                            ? `Coordinates: ${Number(sellerProfile.latitude).toFixed(6)}, ${Number(sellerProfile.longitude).toFixed(6)}`
+                            : 'No map location pinned'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDeleteLocation}
+                        disabled={isDeletingLocation || isSaving}
+                        className="self-start sm:self-auto h-8 px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs font-semibold gap-1.5 shrink-0"
+                        title="Remove physical shop address"
+                      >
+                        {isDeletingLocation ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                        Remove Address
+                      </Button>
+                    </div>
                   ) : (
                     <p className="text-xs sm:text-sm lg:text-base font-semibold text-white/40 italic">
                       No physical address set
