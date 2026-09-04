@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, LogOut, Wallet } from 'lucide-react';
+import { Clock, Info, Loader2, LogOut, Wallet } from 'lucide-react';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
 import { toast } from 'sonner';
@@ -16,9 +16,27 @@ import { Input } from '@/shared/ui/input';
 import { copyLinkedTextToClipboard, resolveShareOrigin } from '@/shared/utils/shopLinks';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
-import { money, MIN_WITHDRAWAL_AMOUNT, WITHDRAWAL_FEE_TIERS, getWithdrawalFee, getErrorMessage,
-  type AnalysisPeriod, type ApiError, type CreatorProfile, type ShopRequest, type LinkedShop,
-  type AnalysisRow, type WithdrawalRow, type LeaderboardRow, type DashboardData, type ReferralData } from '@/features/creator/utils/creatorDashboardUtils';
+import {
+  money,
+  MIN_WITHDRAWAL_AMOUNT,
+  WITHDRAWAL_FEE_TIERS,
+  getWithdrawalFee,
+  getMaxWithdrawableAmount,
+  formatSettlementDate,
+  formatSettlementTimeOnly,
+  getErrorMessage,
+  type AnalysisPeriod,
+  type ApiError,
+  type CreatorProfile,
+  type ShopRequest,
+  type LinkedShop,
+  type AnalysisRow,
+  type WithdrawalRow,
+  type LeaderboardRow,
+  type DashboardData,
+  type ReferralData,
+  type CreatorClearance
+} from '@/features/creator/utils/creatorDashboardUtils';
 import { CreatorEarningsHero } from '@/features/creator/components/CreatorEarningsHero';
 import { CreatorAnalysisCharts } from '@/features/creator/components/CreatorAnalysisCharts';
 import { CreatorLinkedShops } from '@/features/creator/components/CreatorLinkedShops';
@@ -81,13 +99,16 @@ export default function CreatorDashboard() {
     const amount = Number(withdrawalAmount);
     const withdrawalFee = getWithdrawalFee(amount);
     const totalDeduction = amount + withdrawalFee;
-    const balance = Number(dashboard?.creator?.balance || 0);
     if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) {
-      toast.error('Minimum withdrawal is KSh 50.');
+      toast.error(`Minimum withdrawal is KSh ${MIN_WITHDRAWAL_AMOUNT}.`);
       return;
     }
-    if (balance < totalDeduction) {
-      toast.error(`Your balance must cover the withdrawal and KSh ${withdrawalFee} charge.`);
+    if (availableBalance < totalDeduction) {
+      if (isClearing && totalBalance >= totalDeduction) {
+        toast.error(`Funds are currently clearing under standard T+2 holding. Available to withdraw now: KSh ${availableBalance.toLocaleString()}`);
+      } else {
+        toast.error(`Your available balance must cover the withdrawal and KSh ${withdrawalFee} charge.`);
+      }
       return;
     }
 
@@ -140,11 +161,21 @@ export default function CreatorDashboard() {
   }
 
   const creator = dashboard?.creator || {};
+  const clearance = dashboard?.clearance;
+  const totalBalance = Number(clearance?.totalBalance ?? creator.balance ?? 0);
+  const availableBalance = Number(clearance?.availableBalance ?? creator.balance ?? 0);
+  const clearingBalance = Number(clearance?.clearingBalance ?? 0);
+  const isClearing = Boolean(clearance?.isClearing);
+  const nextAvailableAt = clearance?.nextAvailableAt;
+  const formattedClearingDate = nextAvailableAt ? formatSettlementDate(nextAvailableAt) : 'Pending schedule';
+  const formattedClearingTime = nextAvailableAt ? formatSettlementTimeOnly(nextAvailableAt) : '';
+  const maxWithdrawable = getMaxWithdrawableAmount(availableBalance);
+
   const referralLink = `${resolveShareOrigin()}/seller/register?ref=${referral?.referralCode || ''}`;
   const requestedAmount = Number(withdrawalAmount || 0);
   const withdrawalFee = getWithdrawalFee(requestedAmount);
   const totalDeduction = requestedAmount >= MIN_WITHDRAWAL_AMOUNT ? requestedAmount + withdrawalFee : 0;
-  const hasEnoughBalance = Number(creator.balance || 0) >= totalDeduction;
+  const hasEnoughBalance = availableBalance >= totalDeduction;
 
   // This-period momentum for the hero — the latest analysis row.
   const latestPeriod = chartData.length ? chartData[chartData.length - 1] : undefined;
@@ -171,7 +202,11 @@ export default function CreatorDashboard() {
         <CreatorEarningsHero
           firstName={creator.firstName}
           totalEarnings={Number(creator.totalEarnings || 0)}
-          balance={Number(creator.balance || 0)}
+          balance={totalBalance}
+          availableBalance={availableBalance}
+          clearingBalance={clearingBalance}
+          nextAvailableAt={nextAvailableAt}
+          isClearing={isClearing}
           monthEarnings={monthEarnings}
           monthSales={monthSales}
           monthClicks={monthClicks}
@@ -225,39 +260,135 @@ export default function CreatorDashboard() {
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <CreatorAnalysisCharts chartData={chartData} analysisPeriod={analysisPeriod} setAnalysisPeriod={setAnalysisPeriod} />
 
-          <div ref={withdrawRef} className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
-            <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-yellow-500 dark:text-yellow-300" />
-              <h2 className="text-base font-black text-slate-950 dark:text-white">Get paid</h2>
+          <div ref={withdrawRef} className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 sm:p-5 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/30 bg-yellow-400/15">
+                  <Wallet className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-slate-950 dark:text-white">Get paid</h2>
+                  <p className="text-xs text-slate-500 dark:text-white/50">To {creator.mpesaNumber || 'your registered M-Pesa'}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">Available</div>
+                <div className="text-base font-black text-emerald-600 dark:text-emerald-400">{money(availableBalance)}</div>
+              </div>
             </div>
-            <p className="mt-2 text-sm font-medium text-slate-600 dark:text-white/50">Paid to {creator.mpesaNumber || 'your M-Pesa number'}.</p>
+
+            {/* ── T+2 Clearance Banner ───────────────────────────────────────── */}
+            {isClearing && (
+              <div className="mt-4 rounded-2xl border border-blue-400/25 bg-blue-50/80 dark:bg-blue-500/10 p-3.5 space-y-2 text-xs text-blue-900 dark:text-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
+                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-pulse" />
+                    <span>T+2 Clearance Active</span>
+                  </div>
+                  <span className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                    2 Business Days
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  <strong>{money(clearingBalance)}</strong> is clearing from recent referral earnings. Funds unlock for withdrawal on{' '}
+                  <span className="font-semibold text-blue-950 dark:text-white">{formattedClearingDate}</span>
+                  {formattedClearingTime ? ` at ${formattedClearingTime}` : ''}.
+                </p>
+                <div className="flex items-center justify-between pt-0.5 border-t border-blue-200/50 dark:border-blue-500/20 text-[11px]">
+                  <span className="text-blue-700 dark:text-blue-300">Next unlock:</span>
+                  <span className="font-bold text-blue-950 dark:text-white">
+                    {formattedClearingDate}{formattedClearingTime ? ` (${formattedClearingTime})` : ''}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* ── Withdrawal Fee Information ─────────────────────────────────── */}
+            <div className="mt-4 rounded-2xl border border-yellow-400/25 bg-yellow-400/10 p-3 text-xs">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-slate-900 dark:text-white">M-Pesa Withdrawal Fees</span>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-white/60">Min: KSh {MIN_WITHDRAWAL_AMOUNT}</span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-slate-600 dark:text-white/60 leading-tight">
+                    Carrier charges are deducted from your balance alongside the withdrawal amount.
+                  </p>
+                  <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold">
+                    {WITHDRAWAL_FEE_TIERS.map((tier) => (
+                      <div key={tier.label} className="rounded-xl border border-yellow-400/20 bg-white/70 dark:bg-black/30 p-1.5 text-slate-800 dark:text-white">
+                        <div className="text-[9px] text-slate-500 dark:text-white/50">{tier.label}</div>
+                        <div className="mt-0.5 text-yellow-600 dark:text-yellow-300 font-black">Fee: KSh {tier.fee}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Withdrawal Form ────────────────────────────────────────────── */}
             <div className="mt-4 space-y-3">
-              <Input
-                type="number"
-                min={MIN_WITHDRAWAL_AMOUNT}
-                value={withdrawalAmount}
-                onChange={(event) => setWithdrawalAmount(event.target.value)}
-                placeholder="Amount in KSh"
-                className="h-11 border-slate-300 dark:border-white/10 bg-white dark:bg-black/40 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40"
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min={MIN_WITHDRAWAL_AMOUNT}
+                  value={withdrawalAmount}
+                  onChange={(event) => setWithdrawalAmount(event.target.value)}
+                  placeholder="Amount in KSh"
+                  className="h-11 pr-16 border-slate-300 dark:border-white/10 bg-white dark:bg-black/40 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 font-bold"
+                />
+                {maxWithdrawable > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawalAmount(String(maxWithdrawable))}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md bg-yellow-400/20 hover:bg-yellow-400/30 px-2 py-1 text-[11px] font-black text-yellow-700 dark:text-yellow-300 transition-colors"
+                  >
+                    Max
+                  </button>
+                )}
+              </div>
+
               {requestedAmount >= MIN_WITHDRAWAL_AMOUNT && (
-                <div className="rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-xs font-bold">
+                <div className="rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-xs font-bold space-y-1.5">
                   <div className="flex justify-between gap-3">
                     <span className="text-slate-600 dark:text-white/55">Withdrawal charge</span>
                     <span className="text-slate-950 dark:text-white">{money(withdrawalFee)}</span>
                   </div>
-                  <div className="mt-2 flex justify-between gap-3">
+                  <div className="flex justify-between gap-3">
                     <span className="text-slate-600 dark:text-white/55">Total deducted</span>
-                    <span className={hasEnoughBalance ? 'text-yellow-600 dark:text-yellow-100 font-extrabold' : 'text-red-600 dark:text-red-300 font-extrabold'}>{money(totalDeduction)}</span>
+                    <span className={hasEnoughBalance ? 'text-yellow-600 dark:text-yellow-100 font-extrabold' : 'text-red-600 dark:text-red-300 font-extrabold'}>
+                      {money(totalDeduction)}
+                    </span>
                   </div>
+                  {hasEnoughBalance && (
+                    <div className="flex justify-between gap-3 text-[11px] pt-1 border-t border-yellow-400/20 text-slate-500 dark:text-white/50">
+                      <span>Remaining available</span>
+                      <span>{money(Math.max(0, availableBalance - totalDeduction))}</span>
+                    </div>
+                  )}
                 </div>
               )}
+
               <Button
                 onClick={handleWithdrawal}
-                disabled={withdrawing || requestedAmount < MIN_WITHDRAWAL_AMOUNT || !hasEnoughBalance}
+                disabled={withdrawing || requestedAmount < MIN_WITHDRAWAL_AMOUNT || !hasEnoughBalance || availableBalance < MIN_WITHDRAWAL_AMOUNT}
                 className="h-11 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {withdrawing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Withdraw to M-Pesa'}
+                {withdrawing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : isClearing && availableBalance < MIN_WITHDRAWAL_AMOUNT ? (
+                  `Clearing (Available ${formattedClearingDate})`
+                ) : availableBalance >= MIN_WITHDRAWAL_AMOUNT ? (
+                  'Withdraw to M-Pesa'
+                ) : totalBalance > 0 ? (
+                  `Min Withdrawal KSh ${MIN_WITHDRAWAL_AMOUNT}`
+                ) : (
+                  'No Balance Available'
+                )}
               </Button>
             </div>
             <div className="mt-4 space-y-2">

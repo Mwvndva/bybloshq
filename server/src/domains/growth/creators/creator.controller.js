@@ -308,9 +308,8 @@ export const trackLinkClick = async (req, res, next) => {
 
 export const requestWithdrawal = async (req, res, next) => {
   try {
-    const request = await WithdrawalService.createWithdrawalRequest({
-      entityId: req.user.creatorId,
-      entityType: 'creator',
+    const request = await CreatorService.createWithdrawalRequest({
+      creatorId: req.user.creatorId,
       amount: req.body.amount,
       idempotencyKey: req.get('Idempotency-Key') || req.body.idempotencyKey
     });

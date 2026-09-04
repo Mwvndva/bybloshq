@@ -92,16 +92,25 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
 
             {/* T+2 Clearance Banner */}
             {!isLoadingPending && isClearing && (
-              <div className="rounded-xl border border-blue-400/25 bg-blue-50 dark:bg-blue-500/10 p-3 space-y-1.5 text-xs text-blue-900 dark:text-blue-200">
-                <div className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>T+2 Clearance Active</span>
+              <div className="rounded-xl border border-blue-400/25 bg-blue-50 dark:bg-blue-500/10 p-3 space-y-2 text-xs text-blue-900 dark:text-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
+                    <Clock className="h-3.5 w-3.5 animate-pulse" />
+                    <span>T+2 Clearance Active</span>
+                  </div>
+                  <span className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[9px] font-bold text-blue-700 dark:text-blue-300">
+                    2 Business Days
+                  </span>
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  <strong>{formatCurrency(clearingBalance)}</strong> is clearing from recent refunds. Funds unlock on{' '}
-                  <span className="font-semibold">{formattedClearingDate}</span>
-                  {formattedClearingTime ? ` at ${formattedClearingTime}` : ''}.
+                  <strong>{formatCurrency(clearingBalance)}</strong> is clearing from recent refunds.
                 </p>
+                <div className="rounded-lg bg-white/80 dark:bg-black/40 border border-blue-200 dark:border-blue-500/20 px-2.5 py-1.5 flex items-center justify-between text-[11px]">
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">Next Refund Available:</span>
+                  <span className="font-bold text-blue-950 dark:text-white">
+                    {formattedClearingDate}{formattedClearingTime ? ` at ${formattedClearingTime}` : ''}
+                  </span>
+                </div>
                 {availableBalance > 0 && (
                   <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
                     Ready to withdraw now: {formatCurrency(availableBalance)}
@@ -225,10 +234,10 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
 
           {/* T+2 Clearance Detail Card */}
           {!isLoadingPending && isClearing && (
-            <div className="rounded-2xl border border-blue-200 dark:border-blue-500/20 bg-blue-50/80 dark:bg-blue-500/10 p-4 space-y-2">
+            <div className="rounded-2xl border border-blue-200 dark:border-blue-500/20 bg-blue-50/80 dark:bg-blue-500/10 p-4 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-blue-900 dark:text-blue-200">
-                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-pulse" />
                   <span>T+2 Clearance Holding Period</span>
                 </div>
                 <Badge className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border-0 text-[10px]">
@@ -238,9 +247,17 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
               <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed font-medium">
                 Refunds are held for 2 business days from the moment they are credited before withdrawal to M-Pesa is enabled.
               </p>
-              <div className="pt-1 flex items-center justify-between text-xs font-bold text-blue-950 dark:text-blue-100">
-                <span>Clearing: {formatCurrency(clearingBalance)}</span>
-                <span>Unlocks: {formattedClearingDate}{formattedClearingTime ? ` at ${formattedClearingTime}` : ''}</span>
+              <div className="rounded-xl bg-white/80 dark:bg-zinc-900/60 border border-blue-200 dark:border-blue-500/20 p-3 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">Currently Clearing:</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-300">{formatCurrency(clearingBalance)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">Next Refund Available:</span>
+                  <span className="font-extrabold text-blue-950 dark:text-white">
+                    {formattedClearingDate}{formattedClearingTime ? ` at ${formattedClearingTime}` : ''}
+                  </span>
+                </div>
               </div>
             </div>
           )}
