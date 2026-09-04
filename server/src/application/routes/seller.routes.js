@@ -4,6 +4,7 @@ import logger from '../../shared/utils/logger.js';
 import * as sellerController from '../../domains/commerce/sellers/seller.controller.js';
 import * as productController from '../../domains/commerce/products/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
+import * as orderController from '../../domains/orders/order/order.controller.js';
 import {
   inviteCreator,
   listSellerInvites,
