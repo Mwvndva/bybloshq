@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, ChevronRight, Share2 } from 'lucide-react';
+import { ArrowUpRight, ChevronRight, Clock, Share2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
-import { money } from '@/features/creator/utils/creatorDashboardUtils';
+import { money, formatSettlementDate } from '@/features/creator/utils/creatorDashboardUtils';
 
 interface CreatorEarningsHeroProps {
   firstName?: string;
   totalEarnings: number;
   balance: number;
+  availableBalance?: number;
+  clearingBalance?: number;
+  nextAvailableAt?: string | null;
+  isClearing?: boolean;
   monthEarnings: number;
   monthSales: number;
   monthClicks: number;
@@ -57,6 +61,10 @@ export function CreatorEarningsHero({
   firstName,
   totalEarnings,
   balance,
+  availableBalance,
+  clearingBalance,
+  nextAvailableAt,
+  isClearing,
   monthEarnings,
   monthSales,
   monthClicks,
@@ -133,9 +141,25 @@ export function CreatorEarningsHero({
         <button
           type="button"
           onClick={onGoToWithdraw}
-          className="mt-3 inline-flex items-center gap-1 rounded-lg text-sm font-bold text-slate-700 transition-colors hover:text-slate-950 dark:text-white/70 dark:hover:text-white"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg text-sm font-bold text-slate-700 transition-colors hover:text-slate-950 dark:text-white/70 dark:hover:text-white"
         >
-          Balance {money(balance)} ready
+          {isClearing && (availableBalance ?? 0) === 0 ? (
+            <>
+              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-pulse" />
+              <span>
+                Clearing {money(clearingBalance ?? 0)} · Available {nextAvailableAt ? formatSettlementDate(nextAvailableAt) : 'soon'}
+              </span>
+            </>
+          ) : isClearing && (availableBalance ?? 0) > 0 ? (
+            <>
+              <span>Available {money(availableBalance ?? 0)} ready</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-white/40">
+                ({money(clearingBalance ?? 0)} clearing)
+              </span>
+            </>
+          ) : (
+            <span>Balance {money(balance)} ready</span>
+          )}
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>

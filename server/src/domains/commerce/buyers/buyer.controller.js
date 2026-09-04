@@ -539,9 +539,9 @@ export async function getBuyerRefundClearance(buyerId) {
   const allEvents = [
     ...refundRequestsResult.rows.map(rr => ({
       amount: Number.parseFloat(rr.amount || 0),
-      creditedAt: rr.payment_details?.credited_at
-        ? new Date(rr.payment_details.credited_at)
-        : new Date(rr.processed_at || rr.updated_at || rr.requested_at)
+      creditedAt: (rr.payment_details?.credited_at || rr.payment_details?.reconciled_at)
+        ? new Date(rr.payment_details.credited_at || rr.payment_details.reconciled_at)
+        : new Date(rr.updated_at || rr.processed_at || rr.requested_at)
     })),
     ...refundedOrdersResult.rows.map(po => ({
       amount: Number.parseFloat(po.amount || 0),

@@ -8,6 +8,7 @@ import Fees from '../../../shared/config/fees.js';
 import logger from '../../../shared/utils/logger.js';
 import notificationService from '../../communication/notifications/notification.service.js';
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
+import { addBusinessDays } from '../../orders/escrow/settlement.service.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
 const INVITE_EXPIRY_DAYS = 14;
@@ -838,10 +839,74 @@ class CreatorService {
     };
   }
 
+  static async getCreatorClearance(creatorId) {
+    const { rows: creatorRows } = await pool.query(
+      `SELECT id, balance, withdrawal_reserved_balance, first_name, last_name, mpesa_number FROM creators WHERE id = $1`,
+      [creatorId]
+    );
+    const creator = creatorRows[0];
+    if (!creator) return null;
+
+    const totalBalance = Number.parseFloat(creator.balance || 0);
+
+    const [salesEarningsResult, referralEarningsResult] = await Promise.all([
+      pool.query(
+        `SELECT id, amount, created_at
+         FROM creator_earnings
+         WHERE creator_id = $1
+         ORDER BY created_at DESC
+         LIMIT 50`,
+        [creatorId]
+      ),
+      pool.query(
+        `SELECT id, amount, created_at
+         FROM creator_referral_earnings
+         WHERE referrer_creator_id = $1
+         ORDER BY created_at DESC
+         LIMIT 50`,
+        [creatorId]
+      )
+    ]);
+
+    const allEarnings = [
+      ...salesEarningsResult.rows.map(e => ({ amount: Number.parseFloat(e.amount || 0), createdAt: new Date(e.created_at) })),
+      ...referralEarningsResult.rows.map(e => ({ amount: Number.parseFloat(e.amount || 0), createdAt: new Date(e.created_at) }))
+    ];
+
+    let unclearedAmount = 0;
+    let nextAvailableAt = null;
+    const now = new Date();
+
+    for (const earning of allEarnings) {
+      if (!Number.isFinite(earning.amount) || earning.amount <= 0) continue;
+      const availableTime = addBusinessDays(earning.createdAt, 2);
+      if (now < availableTime) {
+        unclearedAmount += earning.amount;
+        if (!nextAvailableAt || availableTime < nextAvailableAt) {
+          nextAvailableAt = availableTime;
+        }
+      }
+    }
+
+    const clearingBalance = Math.min(totalBalance, Math.round(unclearedAmount * 100) / 100);
+    const availableBalance = Math.max(0, Math.round((totalBalance - clearingBalance) * 100) / 100);
+
+    return {
+      totalBalance,
+      availableBalance,
+      clearingBalance,
+      nextAvailableAt: nextAvailableAt ? nextAvailableAt.toISOString() : null,
+      isClearing: clearingBalance > 0
+    };
+  }
+
   static async getDashboard(creatorId, period = 'monthly') {
     const analysisPeriod = this.getAnalysisPeriod(period);
-    const { rows: creatorRows } = await pool.query(`SELECT * FROM creators WHERE id = $1`, [creatorId]);
-    const creator = creatorRows[0];
+    const [creatorRowsResult, clearance] = await Promise.all([
+      pool.query(`SELECT * FROM creators WHERE id = $1`, [creatorId]),
+      this.getCreatorClearance(creatorId)
+    ]);
+    const creator = creatorRowsResult.rows[0];
     if (!creator) throw new Error('Creator profile not found.');
 
     const { rows: shops } = await pool.query(
@@ -961,6 +1026,7 @@ class CreatorService {
 
     return {
       creator,
+      clearance,
       shops,
       shopRequests,
       earnings,
@@ -994,6 +1060,29 @@ class CreatorService {
   }
 
   static async createWithdrawalRequest({ creatorId, amount, idempotencyKey }) {
+    const clearance = await this.getCreatorClearance(creatorId);
+    const withdrawalAmount = Number.parseFloat(amount);
+    const withdrawalFee = Fees.calculateWithdrawalFee(withdrawalAmount);
+    const totalDeducted = withdrawalAmount + withdrawalFee;
+
+    if (clearance && totalDeducted > clearance.availableBalance) {
+      if (clearance.isClearing && totalDeducted <= clearance.totalBalance) {
+        const nextDateStr = clearance.nextAvailableAt
+          ? new Date(clearance.nextAvailableAt).toLocaleDateString('en-KE', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+          : 'soon';
+        const error = new Error(
+          `Your withdrawal of KES ${withdrawalAmount.toLocaleString()} requires KES ${totalDeducted.toLocaleString()} from your balance (including KES ${withdrawalFee} withdrawal charge). KES ${clearance.clearingBalance.toLocaleString()} is currently clearing under the standard T+2 holding period and will be ready for withdrawal on ${nextDateStr}.`
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+      const error = new Error(
+        `Insufficient available balance. Available: KES ${clearance.availableBalance.toLocaleString()}, Required: KES ${totalDeducted.toLocaleString()} (including KES ${withdrawalFee} withdrawal charge).`
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
     return WithdrawalService.createWithdrawalRequest({
       entityId: creatorId,
       entityType: 'creator',
