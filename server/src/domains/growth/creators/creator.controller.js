@@ -15,6 +15,8 @@ const sanitizeCreator = (creator = {}) => ({
   email: creator.email,
   mpesaNumber: creator.mpesa_number,
   whatsappNumber: creator.whatsapp_number,
+  instagramLink: creator.instagram_link || null,
+  tiktokLink: creator.tiktok_link || null,
   balance: Number(creator.balance || 0),
   totalSales: Number(creator.total_sales || 0),
   totalEarnings: Number(creator.total_earnings || 0),
@@ -220,6 +222,15 @@ export const resetPassword = async (req, res) => {
 export const getProfile = async (req, res, next) => {
   try {
     const creator = await CreatorService.findByUserId(req.user.userId || req.user.id);
+    res.status(200).json({ status: 'success', data: { creator: sanitizeCreator(creator) } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const creator = await CreatorService.updateProfile(req.user.creatorId, req.body);
     res.status(200).json({ status: 'success', data: { creator: sanitizeCreator(creator) } });
   } catch (error) {
     next(error);

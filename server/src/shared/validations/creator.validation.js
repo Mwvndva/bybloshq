@@ -19,3 +19,8 @@ export const denyShopRequest = z.object({ inviteId: id }).passthrough();
 export const generateReferralCode = z.object({}).passthrough();
 export const requestWithdrawal = z.object({ amount: n, mpesaNumber: s, mpesaName: s }).passthrough();
 export const requestCollaboration = z.object({ sellerId: id }).passthrough();
+export const updateProfile = z.object({
+  instagramLink: z.string().nullable().optional(),
+  tiktokLink: z.string().nullable().optional(),
+  whatsappNumber: z.string().nullable().optional()
+}).passthrough();

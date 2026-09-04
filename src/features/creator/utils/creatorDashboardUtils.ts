@@ -12,9 +12,16 @@ export const getWithdrawalFee = (amount: number) => {
 export type AnalysisPeriod = 'daily' | 'weekly' | 'monthly';
 export type ApiError = { response?: { data?: { message?: string } }; message?: string };
 export type CreatorProfile = {
+  id?: number;
+  userId?: number;
   balance?: number;
   firstName?: string;
+  lastName?: string;
+  email?: string;
   mpesaNumber?: string;
+  whatsappNumber?: string;
+  instagramLink?: string | null;
+  tiktokLink?: string | null;
   totalEarnings?: number;
   totalSales?: number;
 };

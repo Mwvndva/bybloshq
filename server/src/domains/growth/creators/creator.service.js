@@ -1197,7 +1197,9 @@ class CreatorService {
               c.last_name,
               c.email,
               c.mpesa_number,
-              c.whatsapp_number
+              c.whatsapp_number,
+              c.instagram_link,
+              c.tiktok_link
        FROM creator_shop_requests csr
        JOIN creators c ON c.id = csr.creator_id
        WHERE csr.seller_id = $1 AND csr.status = 'pending'
@@ -1218,6 +1220,8 @@ class CreatorService {
               c.last_name,
               c.email,
               c.whatsapp_number,
+              c.instagram_link,
+              c.tiktok_link,
               COUNT(DISTINCT ce.id) AS sales_count,
               COALESCE(SUM(ce.amount), 0) AS earnings_paid,
               COALESCE(SUM(ce.base_amount), 0) AS revenue_generated
@@ -1245,8 +1249,8 @@ class CreatorService {
         creatorName: `${r.first_name} ${r.last_name || ''}`.trim(),
         email: r.email,
         whatsappNumber: r.whatsapp_number || r.mpesa_number,
-        instagramLink: null,
-        tiktokLink: null,
+        instagramLink: r.instagram_link || null,
+        tiktokLink: r.tiktok_link || null,
         message: r.message,
         createdAt: r.created_at,
         status: r.status
@@ -1257,8 +1261,8 @@ class CreatorService {
         creatorName: `${a.first_name} ${a.last_name || ''}`.trim(),
         email: a.email,
         whatsappNumber: a.whatsapp_number,
-        instagramLink: null,
-        tiktokLink: null,
+        instagramLink: a.instagram_link || null,
+        tiktokLink: a.tiktok_link || null,
         code: a.code,
         commissionRate: Number(a.commission_rate),
         clickCount: Number(a.click_count || 0),
@@ -1398,6 +1402,37 @@ class CreatorService {
     } finally {
       client.release();
     }
+  }
+
+  static async updateProfile(creatorId, updates = {}) {
+    const fields = [];
+    const values = [creatorId];
+    let idx = 2;
+
+    if (updates.instagramLink !== undefined) {
+      fields.push(`instagram_link = $${idx++}`);
+      values.push(updates.instagramLink ? String(updates.instagramLink).trim() : null);
+    }
+    if (updates.tiktokLink !== undefined) {
+      fields.push(`tiktok_link = $${idx++}`);
+      values.push(updates.tiktokLink ? String(updates.tiktokLink).trim() : null);
+    }
+    if (updates.whatsappNumber !== undefined) {
+      fields.push(`whatsapp_number = $${idx++}`);
+      values.push(updates.whatsappNumber ? String(updates.whatsappNumber).trim() : null);
+    }
+
+    if (fields.length === 0) {
+      const { rows } = await pool.query('SELECT * FROM creators WHERE id = $1', [creatorId]);
+      return rows[0];
+    }
+
+    fields.push(`updated_at = NOW()`);
+    const { rows } = await pool.query(
+      `UPDATE creators SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+    return rows[0];
   }
 }
 
