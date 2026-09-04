@@ -9,7 +9,6 @@ export interface CreatorRegistrationPayload {
   whatsappNumber: string;
   password: string;
   confirmPassword: string;
-  referralCode?: string;
 }
 
 export const register = async (payload: CreatorRegistrationPayload) => {

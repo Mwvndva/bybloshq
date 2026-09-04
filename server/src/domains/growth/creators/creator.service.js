@@ -357,14 +357,10 @@ class CreatorService {
         );
       }
 
-      const referredBy = data.referralCode
-        ? await this.findCreatorByReferralCode(data.referralCode, client)
-        : null;
-
       const { rows: creatorRows } = await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, referred_by_creator_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
         [
           user.id,
@@ -372,8 +368,7 @@ class CreatorService {
           String(data.lastName).trim(),
           email,
           String(data.mpesaNumber).trim(),
-          data.whatsappNumber ? String(data.whatsappNumber).trim() : null,
-          referredBy?.id || null
+          data.whatsappNumber ? String(data.whatsappNumber).trim() : null
         ]
       );
       const creator = creatorRows[0];
@@ -477,22 +472,17 @@ class CreatorService {
         );
       }
 
-      const referredBy = data.referralCode
-        ? await this.findCreatorByReferralCode(data.referralCode, client)
-        : null;
-
       await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, referred_by_creator_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           user.id,
           String(data.firstName).trim(),
           String(data.lastName).trim(),
           email,
           String(data.mpesaNumber).trim(),
-          data.whatsappNumber ? String(data.whatsappNumber).trim() : null,
-          referredBy?.id || null
+          data.whatsappNumber ? String(data.whatsappNumber).trim() : null
         ]
       );
 
@@ -536,13 +526,6 @@ class CreatorService {
     return AuthService.resendVerificationEmail(email, 'creator');
   }
 
-  static async findCreatorByReferralCode(code, client = pool) {
-    const { rows } = await client.query(
-      `SELECT * FROM creators WHERE referral_code = $1 AND status = 'active' LIMIT 1`,
-      [String(code || '').trim().toUpperCase()]
-    );
-    return rows[0] || null;
-  }
 
   static async generateReferralCode(creatorId) {
     const code = `CR${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
