@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 export function useRefundRequestMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { amount: number }) => buyerApi.requestRefund(data),
+    mutationFn: (data: { amount: number; mpesaNumber?: string; mpesaName?: string }) => buyerApi.requestRefund(data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: buyerQueryKeys.refunds() });
       queryClient.invalidateQueries({ queryKey: buyerQueryKeys.profile() });

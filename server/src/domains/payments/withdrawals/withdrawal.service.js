@@ -390,13 +390,13 @@ class WithdrawalService {
             const payoutPhone = entityType === 'creator'
                 ? entity.mpesa_number
                 : entityType === 'buyer_refund'
-                    ? entity.mobile_payment || entity.whatsapp_number
+                    ? (mpesaNumber?.trim() || entity.mobile_payment || entity.whatsapp_number)
                     : mpesaNumber;
             normalizedPhone = payoutService.normalizePhoneForPayout(payoutPhone);
             const normalizedName = entityType === 'creator'
                 ? getEntityLabel(entity)
                 : entityType === 'buyer_refund'
-                    ? getEntityLabel(entity)
+                    ? (mpesaName?.trim() || getEntityLabel(entity))
                 : mpesaName.trim();
 
             // Seller payout destination is client-supplied (sellers have no stored

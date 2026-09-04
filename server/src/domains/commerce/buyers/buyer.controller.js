@@ -12,6 +12,9 @@ import { revokeSessionTokens, clearAuthCookies } from '../../../shared/utils/ses
 import OrderModel from "../../orders/order/order.model.js";
 import { OrderStatus } from "../../../shared/constants/enums.js";
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
+import { pool } from '../../../infrastructure/database/database.js';
+import { addBusinessDays } from '../../orders/escrow/settlement.service.js';
+import Fees from '../../../shared/config/fees.js';
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res, next) => {
@@ -502,21 +505,97 @@ export const checkBuyerByPhone = async (req, res, next) => {
 };
 
 /**
- * Get buyer's pending refund requests
+ * Helper to compute a buyer's T+2 refund clearance state.
+ * T+2 holding period applies 2 business days from the moment a refund is credited.
+ */
+export async function getBuyerRefundClearance(buyerId) {
+  const [buyerResult, refundRequestsResult, refundedOrdersResult] = await Promise.all([
+    pool.query(`SELECT refunds, mobile_payment, whatsapp_number, full_name FROM buyers WHERE id = $1`, [buyerId]),
+    pool.query(
+      `SELECT id, amount, processed_at, updated_at, requested_at, payment_details
+       FROM refund_requests
+       WHERE buyer_id = $1 AND status = 'completed'
+       ORDER BY COALESCE(processed_at, updated_at, requested_at) DESC`,
+      [buyerId]
+    ),
+    pool.query(
+      `SELECT id, total_amount AS amount, updated_at
+       FROM product_orders
+       WHERE buyer_id = $1 AND status = 'REFUNDED'
+         AND id NOT IN (SELECT order_id FROM refund_requests WHERE buyer_id = $1 AND order_id IS NOT NULL)
+       ORDER BY updated_at DESC`,
+      [buyerId]
+    )
+  ]);
+
+  const buyer = buyerResult.rows[0];
+  const totalRefunds = Number.parseFloat(buyer?.refunds || 0);
+
+  let unclearedAmount = 0;
+  let nextAvailableAt = null;
+  const now = new Date();
+
+  // Aggregate all completed refund events
+  const allEvents = [
+    ...refundRequestsResult.rows.map(rr => ({
+      amount: Number.parseFloat(rr.amount || 0),
+      creditedAt: rr.payment_details?.credited_at
+        ? new Date(rr.payment_details.credited_at)
+        : new Date(rr.processed_at || rr.updated_at || rr.requested_at)
+    })),
+    ...refundedOrdersResult.rows.map(po => ({
+      amount: Number.parseFloat(po.amount || 0),
+      creditedAt: new Date(po.updated_at)
+    }))
+  ];
+
+  for (const event of allEvents) {
+    if (!Number.isFinite(event.amount) || event.amount <= 0) continue;
+    const availableTime = addBusinessDays(event.creditedAt, 2);
+    if (now < availableTime) {
+      unclearedAmount += event.amount;
+      if (!nextAvailableAt || availableTime < nextAvailableAt) {
+        nextAvailableAt = availableTime;
+      }
+    }
+  }
+
+  const clearingBalance = Math.min(totalRefunds, unclearedAmount);
+  const availableBalance = Math.max(0, totalRefunds - clearingBalance);
+
+  return {
+    totalRefunds,
+    availableBalance,
+    clearingBalance,
+    nextAvailableAt: nextAvailableAt ? nextAvailableAt.toISOString() : null,
+    isClearing: clearingBalance > 0,
+    buyerPhone: buyer?.mobile_payment || buyer?.whatsapp_number || '',
+    buyerName: buyer?.full_name || ''
+  };
+}
+
+/**
+ * Get buyer's pending refund requests and T+2 clearance status
  */
 export const getPendingRefundRequests = async (req, res, next) => {
   try {
     const buyerId = req.user.buyerId;
-    const { rows: pendingRequests } = await WithdrawalService.getRefundWithdrawalsForBuyer(buyerId, {
-      status: 'processing',
-      limit: 50
-    });
+    const [pendingWithdrawalsResult, clearance] = await Promise.all([
+      WithdrawalService.getRefundWithdrawalsForBuyer(buyerId, {
+        status: 'processing',
+        limit: 50
+      }),
+      getBuyerRefundClearance(buyerId)
+    ]);
+
+    const pendingRequests = pendingWithdrawalsResult.rows;
 
     res.status(200).json({
       status: 'success',
       data: {
         pendingRequests: pendingRequests.map(request => sanitizeWithdrawalRequest(request)),
-        hasPending: pendingRequests.length > 0
+        hasPending: pendingRequests.length > 0,
+        ...clearance
       }
     });
   } catch (error) {
@@ -527,34 +606,61 @@ export const getPendingRefundRequests = async (req, res, next) => {
 
 /**
  * Request refund withdrawal
- * Uses buyer's existing details from database
+ * Enforces minimum withdrawal amount (KSh 50), withdrawal charges, and T+2 clearance.
  */
 export const requestRefund = async (req, res, next) => {
   try {
-    const { amount } = req.body;
+    const { amount, mpesaNumber, mpesaName } = req.body;
     const buyerId = req.user.buyerId;
 
-    logger.info('Refund request from buyer:', buyerId, 'Amount:', amount);
-
-    if (!amount || amount <= 0) {
-      return next(new AppError('Invalid refund amount', 400));
+    const withdrawalAmount = Number.parseFloat(amount);
+    if (!Number.isFinite(withdrawalAmount) || withdrawalAmount < Fees.MIN_WITHDRAWAL_AMOUNT) {
+      return next(new AppError(`Minimum withdrawal amount is KES ${Fees.MIN_WITHDRAWAL_AMOUNT}`, 400));
     }
+
+    const withdrawalFee = Fees.calculateWithdrawalFee(withdrawalAmount);
+    const totalDeducted = withdrawalAmount + withdrawalFee;
+
+    const clearance = await getBuyerRefundClearance(buyerId);
+
+    if (totalDeducted > clearance.availableBalance) {
+      if (totalDeducted <= clearance.totalRefunds && clearance.clearingBalance > 0) {
+        const nextDateStr = clearance.nextAvailableAt
+          ? new Date(clearance.nextAvailableAt).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' })
+          : 'soon';
+        return next(new AppError(
+          `Your withdrawal of KES ${withdrawalAmount.toLocaleString()} requires KES ${totalDeducted.toLocaleString()} from your balance (including KES ${withdrawalFee} withdrawal charge). KES ${clearance.clearingBalance.toLocaleString()} is currently clearing under the standard T+2 holding period and will be ready for withdrawal on ${nextDateStr}.`,
+          400
+        ));
+      }
+      return next(new AppError(
+        `Insufficient available balance. Available: KES ${clearance.availableBalance.toLocaleString()}, Required: KES ${totalDeducted.toLocaleString()} (including KES ${withdrawalFee} withdrawal charge).`,
+        400
+      ));
+    }
+
+    const payoutPhone = mpesaNumber || clearance.buyerPhone;
+    const payoutName = mpesaName || clearance.buyerName;
 
     const request = await WithdrawalService.createWithdrawalRequest({
       entityId: buyerId,
       entityType: 'buyer_refund',
-      amount,
-      idempotencyKey: req.get('Idempotency-Key') || req.body.idempotencyKey
+      amount: withdrawalAmount,
+      mpesaNumber: payoutPhone,
+      mpesaName: payoutName,
+      idempotencyKey: req.get('Idempotency-Key') || req.body.idempotencyKey || `refund-w-${buyerId}-${Date.now()}`
     });
 
-    logger.info('Refund withdrawal request created:', request.id);
+    logger.info(`Refund withdrawal request created: ${request.id} for buyer ${buyerId}, amount: ${withdrawalAmount}, fee: ${withdrawalFee}, total: ${totalDeducted}`);
 
     res.status(201).json({
       status: 'success',
       message: 'Refund withdrawal submitted successfully. You will be notified once processed.',
       data: {
         requestId: request.id,
-        withdrawal: sanitizeWithdrawalRequest(request)
+        withdrawal: sanitizeWithdrawalRequest(request),
+        withdrawalFee,
+        totalDeducted
       }
     });
   } catch (error) {
