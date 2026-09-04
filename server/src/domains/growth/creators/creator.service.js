@@ -1080,8 +1080,8 @@ class CreatorService {
       `SELECT s.id,
               s.shop_name,
               s.slug,
-              s.logo_url,
-              s.business_photo_url,
+              s.avatar_url,
+              s.bio,
               s.location,
               s.physical_address,
               s.creator_commission_rate,
@@ -1093,7 +1093,7 @@ class CreatorService {
        LEFT JOIN (
          SELECT seller_id, COUNT(id) AS total_products
          FROM products
-         WHERE is_deleted = false
+         WHERE status = 'available'
          GROUP BY seller_id
        ) p_count ON p_count.seller_id = s.id
        LEFT JOIN seller_creator_links scl
@@ -1101,7 +1101,7 @@ class CreatorService {
        LEFT JOIN creator_shop_requests csr
          ON csr.seller_id = s.id AND csr.creator_id = $1
        WHERE s.is_creator_marketplace_enabled = TRUE
-         AND s.is_deleted = FALSE
+         AND (s.status IS NULL OR s.status != 'deleted')
        ORDER BY s.updated_at DESC, s.id DESC`,
       [creatorId]
     );
@@ -1110,7 +1110,9 @@ class CreatorService {
       id: r.id,
       shopName: r.shop_name,
       slug: r.slug || r.shop_name,
-      logoUrl: r.logo_url || r.business_photo_url,
+      logoUrl: r.avatar_url,
+      avatarUrl: r.avatar_url,
+      bio: r.bio,
       location: r.location,
       physicalAddress: r.physical_address,
       creatorCommissionRate: Number(r.creator_commission_rate || 0.01),
@@ -1125,7 +1127,7 @@ class CreatorService {
     const sellerResult = await pool.query(
       `SELECT id, shop_name, user_id, is_creator_marketplace_enabled, creator_commission_rate
        FROM sellers
-       WHERE id = $1 AND is_deleted = FALSE
+       WHERE id = $1 AND (status IS NULL OR status != 'deleted')
        LIMIT 1`,
       [sellerId]
     );
@@ -1195,9 +1197,7 @@ class CreatorService {
               c.last_name,
               c.email,
               c.mpesa_number,
-              c.whatsapp_number,
-              c.instagram_link,
-              c.tiktok_link
+              c.whatsapp_number
        FROM creator_shop_requests csr
        JOIN creators c ON c.id = csr.creator_id
        WHERE csr.seller_id = $1 AND csr.status = 'pending'
@@ -1218,8 +1218,6 @@ class CreatorService {
               c.last_name,
               c.email,
               c.whatsapp_number,
-              c.instagram_link,
-              c.tiktok_link,
               COUNT(DISTINCT ce.id) AS sales_count,
               COALESCE(SUM(ce.amount), 0) AS earnings_paid,
               COALESCE(SUM(ce.base_amount), 0) AS revenue_generated
@@ -1247,8 +1245,8 @@ class CreatorService {
         creatorName: `${r.first_name} ${r.last_name || ''}`.trim(),
         email: r.email,
         whatsappNumber: r.whatsapp_number || r.mpesa_number,
-        instagramLink: r.instagram_link,
-        tiktokLink: r.tiktok_link,
+        instagramLink: null,
+        tiktokLink: null,
         message: r.message,
         createdAt: r.created_at,
         status: r.status
@@ -1259,8 +1257,8 @@ class CreatorService {
         creatorName: `${a.first_name} ${a.last_name || ''}`.trim(),
         email: a.email,
         whatsappNumber: a.whatsapp_number,
-        instagramLink: a.instagram_link,
-        tiktokLink: a.tiktok_link,
+        instagramLink: null,
+        tiktokLink: null,
         code: a.code,
         commissionRate: Number(a.commission_rate),
         clickCount: Number(a.click_count || 0),
