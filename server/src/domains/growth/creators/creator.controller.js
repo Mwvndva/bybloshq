@@ -233,6 +233,7 @@ export const getDashboard = async (req, res, next) => {
       status: 'success',
       data: {
         creator: sanitizeCreator(dashboard.creator),
+        clearance: dashboard.clearance,
         shops: dashboard.shops,
         shopRequests: dashboard.shopRequests,
         earnings: dashboard.earnings,

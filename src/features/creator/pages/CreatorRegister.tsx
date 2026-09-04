@@ -31,7 +31,6 @@ export default function CreatorRegister() {
   const navigate = useNavigate();
   const { user: authUser } = useGlobalAuth();
   const token = params.get('token') || '';
-  const referralCode = params.get('ref') || '';
   const [invite, setInvite] = useState<CreatorInvite | null>(null);
   const [loading, setLoading] = useState(false);
   const [existingAccountPrompt, setExistingAccountPrompt] = useState(false);
@@ -116,8 +115,7 @@ export default function CreatorRegister() {
     try {
       const result = await registerMutation.mutateAsync({
         token: token || undefined,
-        ...form,
-        referralCode: referralCode || undefined
+        ...form
       });
       const resObj = result as { status?: string; message?: string; data?: { status?: string; email?: string } };
       const registrationStatus = resObj?.data?.status;

@@ -25,7 +25,6 @@ export function useCreatorRegisterMutation() {
       whatsappNumber: string;
       password: string;
       confirmPassword: string;
-      referralCode?: string;
     }) => creatorApi.register(args),
   });
 }
