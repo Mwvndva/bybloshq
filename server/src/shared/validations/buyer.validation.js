@@ -21,6 +21,9 @@ export const resendVerification = z.object({ email: s }).passthrough();
 export const checkPhone = z.object({ phone: s }).passthrough();
 export const saveInfo = z.object({ email: s, phone: s, fullName: s }).passthrough();
 export const autoLogin = z.object({ autoLoginToken: s, token: s }).passthrough();
-export const updateProfile = z.object({}).passthrough();
-export const refundRequest = z.object({ amount: n }).passthrough();
+export const refundRequest = z.object({
+  amount: n,
+  mpesaNumber: s,
+  mpesaName: s
+}).passthrough();
 export const orderCollected = z.object({ orderId: id }).passthrough();
