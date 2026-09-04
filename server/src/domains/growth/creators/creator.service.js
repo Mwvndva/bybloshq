@@ -9,6 +9,7 @@ import logger from '../../../shared/utils/logger.js';
 import notificationService from '../../communication/notifications/notification.service.js';
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
 import { addBusinessDays } from '../../orders/escrow/settlement.service.js';
+import { AppError } from '../../../shared/utils/errorHandler.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
 const INVITE_EXPIRY_DAYS = 14;
@@ -1072,6 +1073,333 @@ class CreatorService {
       amount,
       idempotencyKey
     });
+  }
+
+  static async getAvailableShops(creatorId) {
+    const { rows } = await pool.query(
+      `SELECT s.id,
+              s.shop_name,
+              s.slug,
+              s.logo_url,
+              s.business_photo_url,
+              s.location,
+              s.physical_address,
+              s.creator_commission_rate,
+              s.theme,
+              COALESCE(p_count.total_products, 0) AS product_count,
+              COALESCE(scl.status, csr.status, 'none') AS collaboration_status,
+              scl.code AS link_code
+       FROM sellers s
+       LEFT JOIN (
+         SELECT seller_id, COUNT(id) AS total_products
+         FROM products
+         WHERE is_deleted = false
+         GROUP BY seller_id
+       ) p_count ON p_count.seller_id = s.id
+       LEFT JOIN seller_creator_links scl
+         ON scl.seller_id = s.id AND scl.creator_id = $1 AND scl.status = 'active'
+       LEFT JOIN creator_shop_requests csr
+         ON csr.seller_id = s.id AND csr.creator_id = $1
+       WHERE s.is_creator_marketplace_enabled = TRUE
+         AND s.is_deleted = FALSE
+       ORDER BY s.updated_at DESC, s.id DESC`,
+      [creatorId]
+    );
+
+    return rows.map((r) => ({
+      id: r.id,
+      shopName: r.shop_name,
+      slug: r.slug || r.shop_name,
+      logoUrl: r.logo_url || r.business_photo_url,
+      location: r.location,
+      physicalAddress: r.physical_address,
+      creatorCommissionRate: Number(r.creator_commission_rate || 0.01),
+      productCount: Number(r.product_count || 0),
+      theme: r.theme || 'default',
+      collaborationStatus: r.collaboration_status,
+      linkCode: r.link_code || null
+    }));
+  }
+
+  static async requestCollaboration(creatorId, sellerId, message = '') {
+    const sellerResult = await pool.query(
+      `SELECT id, shop_name, user_id, is_creator_marketplace_enabled, creator_commission_rate
+       FROM sellers
+       WHERE id = $1 AND is_deleted = FALSE
+       LIMIT 1`,
+      [sellerId]
+    );
+    const seller = sellerResult.rows[0];
+    if (!seller) throw new AppError('Seller shop not found.', 404);
+    if (!seller.is_creator_marketplace_enabled) {
+      throw new AppError('This shop is not currently accepting creator collaboration requests.', 400);
+    }
+
+    const activeLink = await pool.query(
+      `SELECT id, code FROM seller_creator_links WHERE seller_id = $1 AND creator_id = $2 AND status = 'active' LIMIT 1`,
+      [sellerId, creatorId]
+    );
+    if (activeLink.rows[0]) {
+      throw new AppError('You already have an active collaboration link for this shop.', 400);
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO creator_shop_requests (creator_id, seller_id, status, message, updated_at)
+       VALUES ($1, $2, 'pending', $3, NOW())
+       ON CONFLICT (creator_id, seller_id)
+       DO UPDATE SET status = 'pending', message = EXCLUDED.message, updated_at = NOW()
+       RETURNING *`,
+      [creatorId, sellerId, String(message || '').trim() || null]
+    );
+
+    // Notify seller
+    const creatorResult = await pool.query(
+      `SELECT id, first_name, last_name, email FROM creators WHERE id = $1 LIMIT 1`,
+      [creatorId]
+    );
+    const creator = creatorResult.rows[0];
+    const creatorName = creator ? `${creator.first_name} ${creator.last_name || ''}`.trim() : 'A creator';
+
+    if (seller.user_id) {
+      notificationService.send({
+        recipientUserId: seller.user_id,
+        recipientRole: 'seller',
+        type: 'creator_collaboration_request',
+        title: 'New Creator Request',
+        body: `${creatorName} requested to promote your shop on commission. Review their request in your Creators tab.`,
+        data: { path: '/seller/dashboard?tab=creators', requestId: rows[0].id },
+        channels: ['in_app', 'push']
+      }).catch((err) => logger.warn('[Feed] Seller creator collaboration notification failed', { sellerId, error: err.message }));
+    }
+
+    return rows[0];
+  }
+
+  static async getSellerCreatorsDashboard(sellerId) {
+    const sellerResult = await pool.query(
+      `SELECT id, shop_name, slug, is_creator_marketplace_enabled, creator_commission_rate
+       FROM sellers WHERE id = $1 LIMIT 1`,
+      [sellerId]
+    );
+    const seller = sellerResult.rows[0];
+    if (!seller) throw new AppError('Seller not found', 404);
+
+    // Incoming pending requests from creators
+    const { rows: incomingRequests } = await pool.query(
+      `SELECT csr.id,
+              csr.status,
+              csr.message,
+              csr.created_at,
+              c.id AS creator_id,
+              c.first_name,
+              c.last_name,
+              c.email,
+              c.mpesa_number,
+              c.whatsapp_number,
+              c.instagram_link,
+              c.tiktok_link
+       FROM creator_shop_requests csr
+       JOIN creators c ON c.id = csr.creator_id
+       WHERE csr.seller_id = $1 AND csr.status = 'pending'
+       ORDER BY csr.created_at DESC`,
+      [sellerId]
+    );
+
+    // Active collaborating creators
+    const { rows: activeCreators } = await pool.query(
+      `SELECT scl.id,
+              scl.code,
+              scl.commission_rate,
+              scl.status,
+              scl.created_at,
+              scl.click_count,
+              c.id AS creator_id,
+              c.first_name,
+              c.last_name,
+              c.email,
+              c.whatsapp_number,
+              c.instagram_link,
+              c.tiktok_link,
+              COUNT(DISTINCT ce.id) AS sales_count,
+              COALESCE(SUM(ce.amount), 0) AS earnings_paid,
+              COALESCE(SUM(ce.base_amount), 0) AS revenue_generated
+       FROM seller_creator_links scl
+       JOIN creators c ON c.id = scl.creator_id
+       LEFT JOIN creator_earnings ce ON ce.seller_creator_link_id = scl.id
+       WHERE scl.seller_id = $1 AND scl.status = 'active'
+       GROUP BY scl.id, c.id
+       ORDER BY scl.created_at DESC`,
+      [sellerId]
+    );
+
+    // Direct invites
+    const manualInvites = await this.listSellerInvites(sellerId);
+
+    const baseUrl = process.env.FRONTEND_URL || '';
+    const slug = seller.slug || seller.shop_name;
+
+    return {
+      isCreatorMarketplaceEnabled: Boolean(seller.is_creator_marketplace_enabled),
+      creatorCommissionRate: Number(seller.creator_commission_rate || 0.01),
+      incomingRequests: incomingRequests.map((r) => ({
+        id: r.id,
+        creatorId: r.creator_id,
+        creatorName: `${r.first_name} ${r.last_name || ''}`.trim(),
+        email: r.email,
+        whatsappNumber: r.whatsapp_number || r.mpesa_number,
+        instagramLink: r.instagram_link,
+        tiktokLink: r.tiktok_link,
+        message: r.message,
+        createdAt: r.created_at,
+        status: r.status
+      })),
+      activeCreators: activeCreators.map((a) => ({
+        id: a.id,
+        creatorId: a.creator_id,
+        creatorName: `${a.first_name} ${a.last_name || ''}`.trim(),
+        email: a.email,
+        whatsappNumber: a.whatsapp_number,
+        instagramLink: a.instagram_link,
+        tiktokLink: a.tiktok_link,
+        code: a.code,
+        commissionRate: Number(a.commission_rate),
+        clickCount: Number(a.click_count || 0),
+        salesCount: Number(a.sales_count || 0),
+        revenueGenerated: Number(a.revenue_generated || 0),
+        earningsPaid: Number(a.earnings_paid || 0),
+        createdAt: a.created_at,
+        shopUrl: `${baseUrl}/${slug}?creator=${a.code}`
+      })),
+      manualInvites
+    };
+  }
+
+  static async updateSellerCreatorListing(sellerId, { isCreatorMarketplaceEnabled, creatorCommissionRate }) {
+    const updates = [];
+    const values = [sellerId];
+    let paramIndex = 2;
+
+    if (isCreatorMarketplaceEnabled !== undefined) {
+      updates.push(`is_creator_marketplace_enabled = $${paramIndex++}`);
+      values.push(Boolean(isCreatorMarketplaceEnabled));
+    }
+
+    if (creatorCommissionRate !== undefined) {
+      const normalizedRate = normalizeCommissionRate(creatorCommissionRate);
+      updates.push(`creator_commission_rate = $${paramIndex++}`);
+      values.push(normalizedRate);
+    }
+
+    if (updates.length === 0) return null;
+
+    updates.push(`updated_at = NOW()`);
+
+    const { rows } = await pool.query(
+      `UPDATE sellers
+       SET ${updates.join(', ')}
+       WHERE id = $1
+       RETURNING id, shop_name, is_creator_marketplace_enabled, creator_commission_rate`,
+      values
+    );
+
+    return {
+      isCreatorMarketplaceEnabled: Boolean(rows[0].is_creator_marketplace_enabled),
+      creatorCommissionRate: Number(rows[0].creator_commission_rate)
+    };
+  }
+
+  static async respondToCreatorCollaborationRequest(sellerId, requestId, action) {
+    const normalizedAction = String(action || '').trim().toLowerCase();
+    if (!['accept', 'deny'].includes(normalizedAction)) {
+      throw new AppError('Choose accept or deny.', 400);
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const { rows } = await client.query(
+        `SELECT csr.*, s.shop_name, s.slug, s.creator_commission_rate, c.user_id AS creator_user_id, c.first_name, c.last_name
+         FROM creator_shop_requests csr
+         JOIN sellers s ON s.id = csr.seller_id
+         JOIN creators c ON c.id = csr.creator_id
+         WHERE csr.id = $1 AND csr.seller_id = $2
+         FOR UPDATE`,
+        [requestId, sellerId]
+      );
+      const request = rows[0];
+      if (!request) throw new AppError('Collaboration request not found.', 404);
+
+      if (normalizedAction === 'deny') {
+        await client.query(
+          `UPDATE creator_shop_requests
+           SET status = 'denied', updated_at = NOW()
+           WHERE id = $1`,
+          [requestId]
+        );
+        await client.query('COMMIT');
+        return { status: 'denied', requestId };
+      }
+
+      // Action is 'accept'
+      const existingLink = await client.query(
+        `SELECT id, code FROM seller_creator_links
+         WHERE seller_id = $1 AND creator_id = $2
+         LIMIT 1`,
+        [sellerId, request.creator_id]
+      );
+
+      const code = existingLink.rows[0]?.code || await this.generateLinkCode(client);
+      const commissionRate = normalizeCommissionRate(request.creator_commission_rate);
+
+      await client.query(
+        `INSERT INTO seller_creator_links (seller_id, creator_id, code, commission_rate, status)
+         VALUES ($1, $2, $3, $4, 'active')
+         ON CONFLICT (seller_id, creator_id)
+         DO UPDATE SET commission_rate = EXCLUDED.commission_rate,
+                       status = 'active',
+                       updated_at = NOW()
+         RETURNING *`,
+        [sellerId, request.creator_id, code, commissionRate]
+      );
+
+      await client.query(
+        `UPDATE creator_shop_requests
+         SET status = 'accepted', updated_at = NOW()
+         WHERE id = $1`,
+        [requestId]
+      );
+
+      await client.query('COMMIT');
+
+      // Notify creator
+      if (request.creator_user_id) {
+        notificationService.send({
+          recipientUserId: request.creator_user_id,
+          recipientRole: 'creator',
+          type: 'creator_request_accepted',
+          title: 'Collaboration Approved!',
+          body: `${request.shop_name} accepted your collaboration request. Your tracking link is ready in "Your links"!`,
+          data: { path: '/creator/dashboard', code },
+          channels: ['in_app', 'push']
+        }).catch((err) => logger.warn('[Feed] Creator collaboration acceptance notification failed', { error: err.message }));
+      }
+
+      const baseUrl = process.env.FRONTEND_URL || '';
+      const slug = request.slug || request.shop_name;
+
+      return {
+        status: 'accepted',
+        requestId,
+        code,
+        shopUrl: `${baseUrl}/${slug}?creator=${code}`
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

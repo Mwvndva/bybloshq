@@ -40,6 +40,8 @@ import {
 import { CreatorEarningsHero } from '@/features/creator/components/CreatorEarningsHero';
 import { CreatorAnalysisCharts } from '@/features/creator/components/CreatorAnalysisCharts';
 import { CreatorLinkedShops } from '@/features/creator/components/CreatorLinkedShops';
+import { CreatorHowItWorks } from '@/features/creator/components/CreatorHowItWorks';
+import { CreatorAvailableShops } from '@/features/creator/components/CreatorAvailableShops';
 
 
 import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
@@ -199,6 +201,8 @@ export default function CreatorDashboard() {
 
       <div className="space-y-5 px-4 py-6 sm:px-6 lg:px-8" style={{ paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))' }}>
 
+        <CreatorHowItWorks />
+
         <CreatorEarningsHero
           firstName={creator.firstName}
           totalEarnings={Number(creator.totalEarnings || 0)}
@@ -214,6 +218,8 @@ export default function CreatorDashboard() {
           onCopyLink={() => copy(referralLink)}
           onGoToWithdraw={goToWithdraw}
         />
+
+        <CreatorAvailableShops />
 
         {(dashboard?.shopRequests || []).length > 0 && (
           <section className="rounded-3xl border border-yellow-400/30 bg-yellow-400/10 p-4">

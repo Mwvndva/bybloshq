@@ -11,6 +11,8 @@ import { useSellerDashboardData } from '../components/dashboard/hooks/useSellerD
 import { useSellerOrders } from '../components/dashboard/hooks/useSellerOrders';
 import { useSellerSettingsForm } from '../components/dashboard/hooks/useSellerSettingsForm';
 import { useSellerWithdrawals } from '../components/dashboard/hooks/useSellerWithdrawals';
+import { CreatorsTab } from '../components/dashboard/tabs/CreatorsTab';
+import { useSellerCreatorsQuery } from '@/features/seller/hooks/useSellerCreators';
 import { OrdersTab } from '../components/dashboard/tabs/OrdersTab';
 import { OverviewTab } from '../components/dashboard/tabs/OverviewTab';
 import { ProductsTab } from '../components/dashboard/tabs/ProductsTab';
@@ -33,6 +35,7 @@ const SELLER_TABS_ORDER: readonly SellerTabId[] = [
   'products',
   'orders',
   'withdrawals',
+  'creators',
   'settings',
 ];
 
@@ -52,8 +55,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // in Settings — which invalidates ['seller-profile'] — updates the accent
   // immediately instead of only after a full reload.
   const { data: liveSellerProfile } = useSellerProfileQuery(!!sellerProfile);
+  const { data: creatorDashboardData } = useSellerCreatorsQuery(!!sellerProfile);
   useShopAccentOnly(((liveSellerProfile?.theme ?? sellerProfile?.theme) as Theme) || 'default');
 
+  const pendingCreatorsCount = creatorDashboardData?.incomingRequests?.length || 0;
   const [activeTab, setActiveTab] = useState<SellerTabId>('overview');
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
   const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
@@ -253,6 +258,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         <SellerDashboardTabs
           activeTab={activeTab}
           hasUnreadOrders={hasUnreadOrders}
+          pendingCreatorsCount={pendingCreatorsCount}
           onSelectTab={handleSelectTab}
         />
 
@@ -268,6 +274,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             {...withdrawals}
           />
         )}
+
+        {activeTab === 'creators' && <CreatorsTab />}
 
         {activeTab === 'overview' && (
           <OverviewTab

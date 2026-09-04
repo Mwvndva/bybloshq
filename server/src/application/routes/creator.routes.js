@@ -36,6 +36,8 @@ router.post('/shop-requests/:inviteId/accept', validate(V.acceptShopRequest), cr
 router.post('/shop-requests/:inviteId/deny', validate(V.denyShopRequest), creatorController.denyShopRequest);
 router.get('/referral/dashboard', creatorController.getReferralDashboard);
 router.post('/referral/generate-code', validate(V.generateReferralCode), creatorController.generateReferralCode);
+router.get('/available-shops', creatorController.getAvailableShops);
+router.post('/shops/:sellerId/request', validate(V.requestCollaboration), creatorController.requestCollaboration);
 router.post('/withdrawals', withdrawalRateLimiter, validate(V.requestWithdrawal), creatorController.requestWithdrawal);
 
 export default router;

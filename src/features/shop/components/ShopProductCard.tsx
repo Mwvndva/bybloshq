@@ -17,6 +17,7 @@ interface ShopProductCardProps {
   /** Wishlist context: a filled heart that removes the item from the wishlist. */
   isWishlisted?: boolean;
   onToggleWishlist?: () => void;
+  isReadOnly?: boolean;
 }
 
 /**
@@ -31,6 +32,7 @@ export function ShopProductCard({
   onRemoveFromBag,
   isWishlisted,
   onToggleWishlist,
+  isReadOnly = false,
 }: ShopProductCardProps) {
   const [showDescription, setShowDescription] = useState(false);
   const [showImages, setShowImages] = useState(false);
@@ -91,7 +93,7 @@ export function ShopProductCard({
       <Card
         role="button"
         tabIndex={isSold ? -1 : 0}
-        aria-label={isSold ? `${product.name} — sold` : `Add ${product.name} to bag`}
+        aria-label={isSold ? `${product.name} — sold` : isReadOnly ? product.name : `Add ${product.name} to bag`}
         aria-disabled={isSold}
         onClick={isSold ? undefined : onTap}
         onKeyDown={(e) => {
@@ -131,27 +133,29 @@ export function ShopProductCard({
             </div>
           )}
 
-          {/* Heart button — top right on all products */}
-          <button
-            type="button"
-            onClick={handleToggleWishlistClick}
-            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-            className={cn(
-              'absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95',
-              wishlisted
-                ? 'bg-white/95 text-red-500 shadow-md dark:bg-zinc-900/90'
-                : 'bg-white/90 text-slate-400 hover:text-slate-600 dark:bg-black/60 dark:text-zinc-400 dark:hover:text-zinc-200 border border-black/5 dark:border-white/10'
-            )}
-          >
-            <Heart
+          {/* Heart button — top right on all products (hidden in creator read-only preview) */}
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={handleToggleWishlistClick}
+              aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
               className={cn(
-                'h-4 w-4 transition-colors duration-200',
+                'absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95',
                 wishlisted
-                  ? 'fill-red-500 text-red-500'
-                  : 'fill-slate-400/20 text-slate-400 dark:text-zinc-400'
+                  ? 'bg-white/95 text-red-500 shadow-md dark:bg-zinc-900/90'
+                  : 'bg-white/90 text-slate-400 hover:text-slate-600 dark:bg-black/60 dark:text-zinc-400 dark:hover:text-zinc-200 border border-black/5 dark:border-white/10'
               )}
-            />
-          </button>
+            >
+              <Heart
+                className={cn(
+                  'h-4 w-4 transition-colors duration-200',
+                  wishlisted
+                    ? 'fill-red-500 text-red-500'
+                    : 'fill-slate-400/20 text-slate-400 dark:text-zinc-400'
+                )}
+              />
+            </button>
+          )}
 
           {inBag && onRemoveFromBag && (
             <button

@@ -9,7 +9,6 @@ import { ThemeSelector } from '../../ThemeSelector';
 import { getSellerInitials } from '../dashboardUtils';
 import { getShopUrl, getShopUsername } from '@/shared/utils/shopLinks';
 import type { SellerSettingsFormData } from '../types';
-import { SellerAmbassadorInvites } from './SellerAmbassadorInvites';
 import { SectionHeader, SocialInput } from './settingsTab.parts';
 import { SettingsLocationSection } from './SettingsLocationSection';
 import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
@@ -227,7 +226,14 @@ export function SettingsTab({
         }}
       />
 
-      <SellerAmbassadorInvites formData={formData} setFormData={setFormData} isEditing={isEditing} toggleEdit={toggleEdit} />
+      <section className="rounded-2xl border border-yellow-400/25 bg-yellow-400/[0.06] p-4 sm:p-5 flex items-center justify-between gap-4">
+        <div>
+          <h4 className="text-base font-black text-white">Creator Partnerships</h4>
+          <p className="mt-0.5 text-xs text-white/60">
+            Marketplace listings, commission rates, and incoming creator collaboration requests have moved to the dedicated <strong>Creators</strong> tab.
+          </p>
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-white/10 bg-[#000000] p-4 shadow-sm sm:p-5 lg:p-6">
         <SectionHeader title="Account" description="Sign out of your seller account on this device." />
