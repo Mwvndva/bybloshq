@@ -278,15 +278,15 @@ export default function CreatorDashboard() {
             </div>
 
             {/* ── T+2 Clearance Banner ───────────────────────────────────────── */}
-            {isClearing && (
+            {isClearing ? (
               <div className="mt-4 rounded-2xl border border-blue-400/25 bg-blue-50/80 dark:bg-blue-500/10 p-3.5 space-y-2 text-xs text-blue-900 dark:text-blue-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
                     <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-pulse" />
-                    <span>T+2 Clearance Active</span>
+                    <span>T+2 Clearance Active (2 Business Days)</span>
                   </div>
                   <span className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
-                    2 Business Days
+                    T+2 Holding
                   </span>
                 </div>
                 <p className="text-[11px] leading-relaxed">
@@ -295,11 +295,16 @@ export default function CreatorDashboard() {
                   {formattedClearingTime ? ` at ${formattedClearingTime}` : ''}.
                 </p>
                 <div className="flex items-center justify-between pt-0.5 border-t border-blue-200/50 dark:border-blue-500/20 text-[11px]">
-                  <span className="text-blue-700 dark:text-blue-300">Next unlock:</span>
+                  <span className="text-blue-700 dark:text-blue-300 font-medium">Next withdrawal available:</span>
                   <span className="font-bold text-blue-950 dark:text-white">
-                    {formattedClearingDate}{formattedClearingTime ? ` (${formattedClearingTime})` : ''}
+                    {formattedClearingDate}{formattedClearingTime ? ` at ${formattedClearingTime}` : ''}
                   </span>
                 </div>
+              </div>
+            ) : (
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-white/40">
+                <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span>Earnings unlock 2 business days (T+2) after each sale or referral.</span>
               </div>
             )}
 
@@ -309,7 +314,7 @@ export default function CreatorDashboard() {
                 <Info className="h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-slate-900 dark:text-white">M-Pesa Withdrawal Fees</span>
+                    <span className="font-black text-slate-900 dark:text-white">M-Pesa Withdrawal Fees & T+2 Clearance</span>
                     <span className="text-[10px] font-bold text-slate-600 dark:text-white/60">Min: KSh {MIN_WITHDRAWAL_AMOUNT}</span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-slate-600 dark:text-white/60 leading-tight">
@@ -322,6 +327,10 @@ export default function CreatorDashboard() {
                         <div className="mt-0.5 text-yellow-600 dark:text-yellow-300 font-black">Fee: KSh {tier.fee}</div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-yellow-400/20 text-[10px] text-slate-600 dark:text-white/60 leading-tight">
+                    <span className="font-bold text-slate-900 dark:text-white">T+2 Clearance Schedule: </span>
+                    Earnings are held for <strong>2 business days (T+2)</strong> before becoming available for M-Pesa withdrawal.
                   </div>
                 </div>
               </div>
