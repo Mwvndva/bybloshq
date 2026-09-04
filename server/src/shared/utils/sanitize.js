@@ -224,7 +224,11 @@ export const sanitizePublicSeller = (seller) => {
         knockCount: Number.parseInt(sellerObj.knockCount || sellerObj.knock_count || 0),
         instagramLink: sellerObj.instagramLink || sellerObj.instagram_link || null,
         tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link || null,
-        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link || null
+        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link || null,
+        creatorCommissionRate: sellerObj.creatorCommissionRate !== undefined
+            ? Number.parseFloat(sellerObj.creatorCommissionRate)
+            : (sellerObj.creator_commission_rate !== undefined ? Number.parseFloat(sellerObj.creator_commission_rate) : null),
+        isCreatorMarketplaceEnabled: Boolean(sellerObj.isCreatorMarketplaceEnabled ?? sellerObj.is_creator_marketplace_enabled)
         // STRICTLY REMOVED: email, phone, whatsappNumber, fullName, balance, revenue, internal IDs, coordinates
     };
 };

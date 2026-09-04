@@ -68,7 +68,7 @@ export function CreatorAvailableShops() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {shops.map((shop) => {
               const commissionPercent = (shop.creatorCommissionRate * 100).toFixed(1).replace(/\.0$/, '');
-              const previewUrl = `/${shop.slug || shop.shopName}?view=creator-preview`;
+              const previewUrl = `/${shop.slug || shop.shopName}?view=creator-preview&rate=${shop.creatorCommissionRate}`;
               const isRequesting = requestingShopId === shop.id;
 
               return (

@@ -40,6 +40,10 @@ const ShopPage = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const isCreatorPreview = searchParams.get('view') === 'creator-preview';
+  const previewRateParam = searchParams.get('rate');
+  const previewRate = previewRateParam ? parseFloat(previewRateParam) : null;
+  const effectiveCommissionRate = sellerInfo?.creatorCommissionRate ?? (previewRate !== null && !isNaN(previewRate) ? previewRate : 0.01);
+  const formattedCommissionPercent = (effectiveCommissionRate * 100).toFixed(1).replace(/\.0$/, '');
   const bagAdd = (location.state as { bagAdd?: Product } | null)?.bagAdd ?? null;
 
   if (isLoading) {
@@ -105,7 +109,7 @@ const ShopPage = () => {
               <span>
                 Creator Preview Mode · {sellerInfo?.shopName || 'This shop'} offers{' '}
                 <strong className="text-white underline decoration-yellow-400">
-                  {((sellerInfo?.creatorCommissionRate || 0.05) * 100).toFixed(1)}% commission
+                  {formattedCommissionPercent}% commission
                 </strong>{' '}
                 per sale. (Purchases & wishlist are disabled).
               </span>
