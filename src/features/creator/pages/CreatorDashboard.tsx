@@ -42,6 +42,7 @@ import { CreatorAnalysisCharts } from '@/features/creator/components/CreatorAnal
 import { CreatorLinkedShops } from '@/features/creator/components/CreatorLinkedShops';
 import { CreatorHowItWorks } from '@/features/creator/components/CreatorHowItWorks';
 import { CreatorAvailableShops } from '@/features/creator/components/CreatorAvailableShops';
+import { CreatorSocialProfiles } from '@/features/creator/components/CreatorSocialProfiles';
 
 
 import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
@@ -218,6 +219,8 @@ export default function CreatorDashboard() {
           onCopyLink={() => copy(referralLink)}
           onGoToWithdraw={goToWithdraw}
         />
+
+        <CreatorSocialProfiles profile={creator} />
 
         <CreatorAvailableShops />
 

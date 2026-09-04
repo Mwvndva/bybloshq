@@ -31,6 +31,7 @@ router.use(requireCreatorProfile);
 
 router.post('/logout', creatorController.logout);
 router.get('/profile', creatorController.getProfile);
+router.patch('/profile', validate(V.updateProfile), creatorController.updateProfile);
 router.get('/dashboard', creatorController.getDashboard);
 router.post('/shop-requests/:inviteId/accept', validate(V.acceptShopRequest), creatorController.acceptShopRequest);
 router.post('/shop-requests/:inviteId/deny', validate(V.denyShopRequest), creatorController.denyShopRequest);
