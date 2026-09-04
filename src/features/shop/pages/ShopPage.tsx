@@ -38,6 +38,8 @@ const ShopPage = () => {
 
   // A wishlist tap navigates here with the product to pre-add to the bag.
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isCreatorPreview = searchParams.get('view') === 'creator-preview';
   const bagAdd = (location.state as { bagAdd?: Product } | null)?.bagAdd ?? null;
 
   if (isLoading) {
@@ -95,6 +97,34 @@ const ShopPage = () => {
         description={sellerInfo?.bio || `Shop ${sellerInfo?.shopName || 'products'} on Byblos. Browse quality items and order securely.`}
         image={sellerInfo?.avatarUrl ? getImageUrl(sellerInfo.avatarUrl) : undefined}
       />
+      {isCreatorPreview && (
+        <div className="sticky top-0 z-50 border-b border-yellow-400/30 bg-black/90 px-4 py-2.5 backdrop-blur-md shadow-lg">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+            <div className="flex items-center gap-2 text-yellow-400 font-bold">
+              <Sparkles className="h-4 w-4 shrink-0" />
+              <span>
+                Creator Preview Mode · {sellerInfo?.shopName || 'This shop'} offers{' '}
+                <strong className="text-white underline decoration-yellow-400">
+                  {((sellerInfo?.creatorCommissionRate || 0.05) * 100).toFixed(1)}% commission
+                </strong>{' '}
+                per sale. (Purchases & wishlist are disabled).
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="h-8 border-white/20 bg-white/10 text-white hover:bg-white/20 text-xs font-bold"
+              >
+                <Link to="/creator/dashboard">
+                  &larr; Back to Creator Dashboard
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Light/Dark/System theme picker — top-right, small, no border touching */}
       <ShopPageThemePicker theme={shopPageTheme} onThemeChange={setShopPageTheme} />
       <ShopHero
@@ -130,7 +160,9 @@ const ShopPage = () => {
             />
           </div>
           <p className="mt-3 text-center text-xs font-semibold text-[var(--byblos-muted)]">
-            Tap a product to add it to your bag
+            {isCreatorPreview
+              ? 'Creator Preview · Tap any product to inspect items you can promote'
+              : 'Tap a product to add it to your bag'}
           </p>
 
           {isNativeApp() && hasDigitalProducts && (
@@ -185,7 +217,7 @@ const ShopPage = () => {
 
                 return (
                   <div key={product.id}>
-                    <ShopBagProductCard product={productWithSeller} />
+                    <ShopBagProductCard product={productWithSeller} isReadOnly={isCreatorPreview} />
                   </div>
                 );
               })}
@@ -216,7 +248,7 @@ const ShopPage = () => {
 
       </main>
     </div>
-    <BagSheet />
+    {!isCreatorPreview && <BagSheet />}
     </BagProvider>
   );
 };

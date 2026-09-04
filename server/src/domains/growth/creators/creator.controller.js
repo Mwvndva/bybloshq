@@ -319,3 +319,60 @@ export const requestWithdrawal = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getAvailableShops = async (req, res, next) => {
+  try {
+    const shops = await CreatorService.getAvailableShops(req.user.creatorId);
+    res.status(200).json({ status: 'success', data: { shops } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requestCollaboration = async (req, res, next) => {
+  try {
+    const request = await CreatorService.requestCollaboration(
+      req.user.creatorId,
+      Number(req.params.sellerId),
+      req.body.message
+    );
+    res.status(201).json({ status: 'success', message: 'Collaboration request sent.', data: { request } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSellerCreatorsDashboard = async (req, res, next) => {
+  try {
+    const dashboard = await CreatorService.getSellerCreatorsDashboard(req.user.sellerId);
+    res.status(200).json({ status: 'success', data: dashboard });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateCreatorListing = async (req, res, next) => {
+  try {
+    const result = await CreatorService.updateSellerCreatorListing(req.user.sellerId, {
+      isCreatorMarketplaceEnabled: req.body.isCreatorMarketplaceEnabled,
+      creatorCommissionRate: req.body.creatorCommissionRate
+    });
+    res.status(200).json({ status: 'success', message: 'Creator settings updated.', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const respondToCreatorRequest = async (req, res, next) => {
+  try {
+    const result = await CreatorService.respondToCreatorCollaborationRequest(
+      req.user.sellerId,
+      Number(req.params.requestId),
+      req.body.action
+    );
+    res.status(200).json({ status: 'success', message: `Request ${result.status}.`, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+

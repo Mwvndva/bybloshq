@@ -4,8 +4,13 @@ import logger from '../../shared/utils/logger.js';
 import * as sellerController from '../../domains/commerce/sellers/seller.controller.js';
 import * as productController from '../../domains/commerce/products/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
-import * as orderController from '../../domains/orders/order/order.controller.js';
-import { inviteCreator, listSellerInvites } from '../../domains/growth/creators/creator.controller.js';
+import {
+  inviteCreator,
+  listSellerInvites,
+  getSellerCreatorsDashboard,
+  updateCreatorListing,
+  respondToCreatorRequest
+} from '../../domains/growth/creators/creator.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect, hasPermission } from '../middleware/auth.js';
 import referralRoutes from './referral.routes.js';
@@ -140,7 +145,10 @@ router.post('/withdrawal-request', withdrawalRateLimiter, createWithdrawal);
 router.get('/withdrawal-requests', getWithdrawals);
 router.get('/withdrawal-requests/:id', getWithdrawalById);
 
-// Creator invites
+// Creator management & marketplace
+router.get('/creators/dashboard', getSellerCreatorsDashboard);
+router.patch('/creators/listing', updateCreatorListing);
+router.post('/creators/requests/:requestId/respond', respondToCreatorRequest);
 router.get('/creator-invites', listSellerInvites);
 router.post('/creator-invites', inviteCreator);
 

@@ -9,12 +9,16 @@ import { ShopProductCard } from './ShopProductCard';
  * adds the product (spec §19), and an in-bag product shows the remove (x) control.
  * Services are added to the bag too, then booked in the bag checkout.
  */
-export function ShopBagProductCard({ product }: { product: Product }) {
+export function ShopBagProductCard({ product, isReadOnly = false }: { product: Product; isReadOnly?: boolean }) {
   const bag = useBag();
   const { isSold } = getProductFlags(product as unknown as ProductWithApiFields);
-  const inBag = bag.hasProduct(product.id);
+  const inBag = !isReadOnly && bag.hasProduct(product.id);
 
   const handleTap = () => {
+    if (isReadOnly) {
+      toast.info('Creator Preview: Purchases and cart additions are disabled while inspecting this shop.');
+      return;
+    }
     if (isSold) {
       toast.error('This product is sold.');
       return;
@@ -32,7 +36,8 @@ export function ShopBagProductCard({ product }: { product: Product }) {
       product={product}
       onTap={handleTap}
       inBag={inBag}
-      onRemoveFromBag={() => bag.removeProduct(product.id)}
+      isReadOnly={isReadOnly}
+      onRemoveFromBag={isReadOnly ? undefined : () => bag.removeProduct(product.id)}
     />
   );
 }

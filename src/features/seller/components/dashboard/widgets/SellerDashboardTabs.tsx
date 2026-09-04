@@ -1,4 +1,4 @@
-import { BarChart3, Package, Settings, ShoppingBag, Wallet } from 'lucide-react';
+import { BarChart3, Package, Settings, ShoppingBag, Users, Wallet } from 'lucide-react';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import type { SellerTabId } from '../types';
 
@@ -7,6 +7,7 @@ const tabIcons = {
   products: Package,
   orders: ShoppingBag,
   withdrawals: Wallet,
+  creators: Users,
   settings: Settings
 };
 
@@ -15,16 +16,18 @@ const tabs: Array<{ id: SellerTabId; label: string }> = [
   { id: 'products', label: 'Products' },
   { id: 'orders', label: 'Orders' },
   { id: 'withdrawals', label: 'Withdrawals' },
+  { id: 'creators', label: 'Creators' },
   { id: 'settings', label: 'Settings' },
 ];
 
 interface SellerDashboardTabsProps {
   activeTab: SellerTabId;
   hasUnreadOrders: boolean;
+  pendingCreatorsCount?: number;
   onSelectTab: (tab: SellerTabId) => void;
 }
 
-export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }: SellerDashboardTabsProps) {
+export function SellerDashboardTabs({ activeTab, hasUnreadOrders, pendingCreatorsCount = 0, onSelectTab }: SellerDashboardTabsProps) {
   // On the native app the tabs live in a fixed bottom navigation bar and show
   // icons only. It is `fixed`, so it never pushes or overlaps page content — the
   // dashboard adds matching bottom padding (see SellerDashboard) so the last
@@ -62,6 +65,9 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
                   {id === 'orders' && hasUnreadOrders && (
                     <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--byblos-surface,#0a0a0a)] bg-red-500 animate-pulse" />
                   )}
+                  {id === 'creators' && pendingCreatorsCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--byblos-surface,#0a0a0a)] bg-yellow-400 animate-pulse" />
+                  )}
                 </span>
                 <span className="mt-1 text-[10px] leading-tight tracking-tight truncate max-w-full text-center">
                   {label}
@@ -94,6 +100,11 @@ export function SellerDashboardTabs({ activeTab, hasUnreadOrders, onSelectTab }:
 
               {id === 'orders' && hasUnreadOrders && (
                 <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full border-2 border-black animate-pulse" />
+              )}
+              {id === 'creators' && pendingCreatorsCount > 0 && (
+                <span className="ml-1.5 rounded-full bg-yellow-400 px-1.5 py-0.2 text-[10px] font-black text-black">
+                  {pendingCreatorsCount}
+                </span>
               )}
             </button>
           );
