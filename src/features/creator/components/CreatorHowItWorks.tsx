@@ -49,7 +49,7 @@ export function CreatorHowItWorks() {
               How Byblos Creators Works
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50">
-              Promote verified shops, earn passive income, and withdraw safely.
+              Two earning streams: Invite sellers for lifetime KSh 3 royalties + collaborate with shops for up to 20% commission.
             </p>
           </div>
         </div>
