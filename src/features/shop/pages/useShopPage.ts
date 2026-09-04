@@ -86,6 +86,12 @@ export function useShopPage() {
       physicalAddress: seller.physicalAddress,
       latitude: seller.latitude,
       longitude: seller.longitude,
+      creatorCommissionRate: (seller as Record<string, unknown>).creatorCommissionRate !== undefined
+        ? Number((seller as Record<string, unknown>).creatorCommissionRate)
+        : ((seller as Record<string, unknown>).creator_commission_rate !== undefined
+          ? Number((seller as Record<string, unknown>).creator_commission_rate)
+          : undefined),
+      isCreatorMarketplaceEnabled: Boolean((seller as Record<string, unknown>).isCreatorMarketplaceEnabled ?? (seller as Record<string, unknown>).is_creator_marketplace_enabled),
       createdAt: seller.createdAt || new Date().toISOString()
     };
 
