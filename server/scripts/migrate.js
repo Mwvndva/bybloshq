@@ -10,6 +10,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 const UNIFIED_SCHEMA_FILE = path.resolve(__dirname, '../migrations/20260814195000_unified_runtime_schema.sql');
+// Full schema snapshot (structure + pgmigrations bookkeeping). Shared with the
+// test tooling as the single source of truth. Used to bootstrap a genuinely
+// EMPTY database, because the incremental migrations do not replay cleanly from
+// zero (ordering: some early migrations reference tables created later). This
+// is the same reason CI provisions from this snapshot rather than replaying.
+const SCHEMA_SNAPSHOT_FILE = path.resolve(__dirname, '../test/schema.sql');
 
 // Task 1: Correct the Import using createRequire for robust CJS handling
 const migrate = require('node-pg-migrate').default || require('node-pg-migrate');
@@ -88,8 +94,22 @@ async function run() {
         console.log(`[${new Date().toISOString()}] [SUCCESS] Connection established.`);
 
         const hasUsers = await tableExists(pool, 'users');
+        const hasPgmigrations = await tableExists(pool, 'pgmigrations');
         const hasRefundRequests = await tableExists(pool, 'refund_requests');
-        if (hasUsers && !hasRefundRequests && fs.existsSync(UNIFIED_SCHEMA_FILE)) {
+
+        if (!hasUsers && !hasPgmigrations && fs.existsSync(SCHEMA_SNAPSHOT_FILE)) {
+            // FRESH / EMPTY database: incremental migrations can't build from
+            // zero (ordering), so provision from the full schema snapshot — the
+            // same known-good path CI uses. The snapshot also records
+            // pgmigrations 1..N (and advances its sequence), so the
+            // node-pg-migrate run below then applies ONLY migrations newer than
+            // the snapshot. Guarded on both `users` and `pgmigrations` being
+            // absent so this only ever fires on a truly empty database.
+            console.log(`[${new Date().toISOString()}] [INFO] Empty database detected — applying full schema snapshot (test/schema.sql) to bootstrap...`);
+            const snapshotSql = fs.readFileSync(SCHEMA_SNAPSHOT_FILE, 'utf8');
+            await pool.query(snapshotSql);
+            console.log(`[${new Date().toISOString()}] [SUCCESS] Schema snapshot applied; incremental migrations newer than the snapshot (if any) will run next.`);
+        } else if (hasUsers && !hasRefundRequests && fs.existsSync(UNIFIED_SCHEMA_FILE)) {
             console.log(`[${new Date().toISOString()}] [INFO] Applying unified runtime schema bootstrap...`);
             const unifiedSchemaSql = fs.readFileSync(UNIFIED_SCHEMA_FILE, 'utf8');
             await pool.query(unifiedSchemaSql);

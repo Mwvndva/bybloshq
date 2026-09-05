@@ -4,13 +4,25 @@ const REQUIRED_ENV_VARS = [
     'FRONTEND_URL',
     'BACKEND_URL',
     'NODE_ENV',
-    'EMAIL_FROM_EMAIL',
+    'EMAIL_FROM_EMAIL'
+];
+
+// Account-seeding credentials. These are consumed ONLY by the standalone ops
+// scripts that create/reset those accounts (scripts/seed-admin.js,
+// scripts/reset-admin-password.js, scripts/seed-marketing-admin.js — each of
+// which validates its own inputs and exits if they are missing), and by the
+// lazy on-login Mzigo bootstrap (which reads MZIGO_EGO_EMAIL/MZIGO_EGO_PASSWORD
+// and no-ops when they are unset). The running API/worker never read them, so
+// they must NOT block boot — a fresh server with no accounts seeded yet is a
+// valid, runnable state. We surface a non-fatal advisory so operators still get
+// a nudge to run the seed scripts, without the app refusing to start.
+const ACCOUNT_SEED_ENV_VARS = [
     'ADMIN_EMAIL',
     'ADMIN_PASSWORD',
     'MARKETING_EMAIL',
     'MARKETING_PASSWORD',
-    'MZIGO_EMAIL',
-    'MZIGO_PASSWORD'
+    'MZIGO_EGO_EMAIL',
+    'MZIGO_EGO_PASSWORD'
 ];
 
 
@@ -42,7 +54,11 @@ const OPTIONAL_ENV_VARS = [
     'LOGISTICS_HUB_ADDRESS',
     'LOGISTICS_HUB_LATITUDE',
     'LOGISTICS_HUB_LONGITUDE',
-    'LOGISTICS_RATE_KES_PER_KM'
+    'LOGISTICS_RATE_KES_PER_KM',
+    // Real-time ops alerting (shared/utils/alerting.js). When unset, critical
+    // errors/fraud events are still logged and persisted — just not pushed.
+    'ALERT_WEBHOOK_URL',
+    'ALERT_ENV_LABEL'
 ];
 
 export function validateEnvironment() {
@@ -77,6 +93,16 @@ export function validateEnvironment() {
         console.error('CRITICAL: Missing required environment variables:');
         missing.forEach(v => console.error(`- ${v}`));
         process.exit(1);
+    }
+
+    // Non-fatal: the app runs fine without seeded accounts, but warn so a fresh
+    // deploy remembers to run the seed scripts before expecting admin/marketing/
+    // logistics logins to work.
+    const missingSeedCreds = ACCOUNT_SEED_ENV_VARS.filter(v => !process.env[v]);
+    if (missingSeedCreds.length > 0) {
+        console.warn('NOTE: Account-seeding credentials not set (the app still boots):');
+        missingSeedCreds.forEach(v => console.warn(`- ${v}`));
+        console.warn('  Set these and run the matching seed script (scripts/seed-admin.js, scripts/seed-marketing-admin.js) to create those logins; MZIGO_EGO_* bootstraps the Mzigo partner on first login.');
     }
 
     const isProduction = process.env.NODE_ENV === 'production';

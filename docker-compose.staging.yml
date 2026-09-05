@@ -1,0 +1,65 @@
+# =============================================================================
+# Staging overlay for docker-compose.yml
+# =============================================================================
+# Usage (from the repo root, on the staging host):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+#
+# This overlay does NOT redefine the stack — it inherits the full production
+# topology from docker-compose.yml (postgres + one-shot migrate + redis +
+# backend + worker + frontend + nginx) unchanged, so staging exercises the
+# exact same shape a production deploy does. It only:
+#
+#   1. Renames every container, the named volumes, and the network with a
+#      `-staging` suffix, so a staging stack can run on the same host as (or
+#      simply never collide with) a production stack, and keeps a completely
+#      separate Postgres data volume — staging never shares production's data.
+#   2. Turns ON the split `worker` container (the `split-workers` profile),
+#      because staging should verify that the API and the background worker
+#      both boot and coexist, which is how production is intended to run.
+#
+# Everything else — image builds, migrate-before-backend ordering, health
+# checks, env_file: .env — is inherited verbatim. Point `.env` on the staging
+# host at server/.env.staging.example (copied and filled in), which selects a
+# separate database, Paystack TEST keys, and the staging domain.
+#
+# Compose merges named-volume/network definitions by KEY, so renaming the
+# containers is what actually isolates staging; the volume/network re-keys
+# below make that isolation explicit and self-documenting.
+# =============================================================================
+
+services:
+  postgres:
+    container_name: byblos-postgres-staging
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+
+  migrate:
+    container_name: byblos-migrate-staging
+
+  redis:
+    container_name: byblos-redis-staging
+    volumes:
+      - redis_data_staging:/data
+
+  backend:
+    container_name: byblos-backend-staging
+
+  # Enabled on staging so we verify the worker boots alongside the API. In the
+  # base file this service is gated behind the `split-workers` profile; naming
+  # it here does not by itself lift the profile, so bring the stack up with the
+  # profile enabled:
+  #   COMPOSE_PROFILES=split-workers docker compose \
+  #     -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+  worker:
+    container_name: byblos-worker-staging
+
+  frontend:
+    container_name: byblos-frontend-staging
+
+  nginx:
+    container_name: byblos-nginx-staging
+
+volumes:
+  postgres_data_staging:
+  redis_data_staging:
