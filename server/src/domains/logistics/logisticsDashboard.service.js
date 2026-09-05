@@ -348,6 +348,25 @@ class LogisticsDashboardService {
         return rows[0];
     }
 
+    /**
+     * A pickup leg reaching 'dropped_at_hub' only means the buyer can collect
+     * from the hub when the order has no door-delivery leg to wait for.
+     * When a delivery leg exists (buyer paid for door delivery on top of the
+     * seller's paid pickup), the order must stay in its current status until
+     * that delivery leg is 'delivered' (see markOrderReadyForBuyerAfterDeliveredLeg).
+     * Caller must already hold the row lock on the request/leg.
+     */
+    static async _markReadyForBuyerIfNoDeliveryLegPending(client, requestId, orderId, source) {
+        const { rows } = await client.query(
+            `SELECT 1 FROM logistics_legs WHERE logistics_request_id = $1 AND leg_type = 'delivery' LIMIT 1`,
+            [requestId]
+        );
+        if (rows.length > 0) {
+            return null;
+        }
+        return markOrderReadyForBuyerAfterDeliveredLeg(client, orderId, source);
+    }
+
     static async updateLegStatus({
         partner,
         partnerId,
@@ -410,7 +429,9 @@ class LogisticsDashboardService {
             if (record.leg_status === internalStatus) {
                 const readyOrder = normalizedLegType === 'delivery' && internalStatus === 'delivered'
                     ? await markOrderReadyForBuyerAfterDeliveredLeg(client, record.order_id, 'mzigo_delivery_idempotent')
-                    : null;
+                    : normalizedLegType === 'pickup' && internalStatus === 'dropped_at_hub'
+                        ? await this._markReadyForBuyerIfNoDeliveryLegPending(client, record.request_id, record.order_id, 'mzigo_pickup_dropped_at_hub_idempotent')
+                        : null;
                 await client.query('COMMIT');
                 return {
                     updated: false,
@@ -460,7 +481,9 @@ class LogisticsDashboardService {
             const requestStatus = await this.reconcileRequestStatusLocked(client, record.request_id);
             const readyOrder = normalizedLegType === 'delivery' && internalStatus === 'delivered'
                 ? await markOrderReadyForBuyerAfterDeliveredLeg(client, record.order_id, 'mzigo_delivery_delivered')
-                : null;
+                : normalizedLegType === 'pickup' && internalStatus === 'dropped_at_hub'
+                    ? await this._markReadyForBuyerIfNoDeliveryLegPending(client, record.request_id, record.order_id, 'mzigo_pickup_dropped_at_hub')
+                    : null;
 
             await client.query(
                 `INSERT INTO logistics_tracking_events

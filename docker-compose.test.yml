@@ -1,0 +1,42 @@
+##
+# Throwaway Postgres + Redis for local test runs, mirroring the service
+# containers .github/workflows/test.yml spins up in CI. Used via:
+#   npm run db:test:up    (from server/)
+#   npm run db:test:setup
+#   npm test / npm run test:integration
+#   npm run db:test:down
+#
+# Not used by CI itself — GitHub Actions uses its own `services:` blocks —
+# this exists so a developer without a native local Postgres install can run
+# the same test suite the same way. Ports match server/.env.test.
+##
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: byblos-test-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: byblos_test
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    tmpfs:
+      # No persistent volume on purpose — this is a disposable test database,
+      # reset freely via `npm run db:test:reset`.
+      - /var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: byblos-test-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

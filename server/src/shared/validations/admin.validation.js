@@ -22,4 +22,10 @@ export const exceptionalOrderReversal = z.object({
   reason: z.string().min(5, 'A valid reason of at least 5 characters is required'),
   notes: s
 }).passthrough();
+export const resolveFlaggedCreatorEarning = z.object({
+  earningType: z.enum(['sales', 'referral'], { errorMap: () => ({ message: "earningType must be 'sales' or 'referral'" }) }),
+  id: id,
+  action: z.enum(['release', 'reverse'], { errorMap: () => ({ message: "action must be 'release' or 'reverse'" }) }),
+  notes: s
+}).passthrough();
 

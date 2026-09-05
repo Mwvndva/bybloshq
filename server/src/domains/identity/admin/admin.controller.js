@@ -17,6 +17,7 @@ import LogisticsDashboardService from '../../logistics/logisticsDashboard.servic
 import { getWithdrawalReservedAmount } from '../../../shared/utils/withdrawalUtils.js';
 import { setAuthCookie } from '../../../shared/utils/cookie.utils.js';
 import OrderService from '../../orders/order/OrderService.js';
+import CreatorService from '../../growth/creators/creator.service.js';
 
 const paymentService = new PaymentService();
 
@@ -588,6 +589,51 @@ const exceptionalOrderReversal = async (req, res, next) => {
   }
 };
 
+/**
+ * List creator earnings held for self-dealing review (see
+ * CreatorService._detectPostHocSelfDealing). Never shown to the creator or
+ * buyer — admin-only visibility into the T+2 review-hold queue.
+ */
+const listFlaggedCreatorEarnings = async (req, res, next) => {
+  try {
+    const { limit } = req.query;
+    const earnings = await CreatorService.listFlaggedEarnings({ limit });
+    res.status(200).json({ status: 'success', results: earnings.length, data: earnings });
+  } catch (error) {
+    logger.error('Error listing flagged creator earnings:', error);
+    next(error);
+  }
+};
+
+/**
+ * Resolve one flagged creator earning: 'release' (reviewed, legitimate) or
+ * 'reverse' (confirmed self-dealing — claws back this earning only).
+ */
+const resolveFlaggedCreatorEarning = async (req, res, next) => {
+  try {
+    const { earningType, id } = req.params;
+    const { action, notes } = req.body;
+    const adminId = req.user?.id;
+
+    const result = await CreatorService.resolveFlaggedEarning({
+      earningType,
+      earningId: id,
+      adminId,
+      action,
+      notes
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: `Flagged earning ${action === 'reverse' ? 'reversed' : 'released'}.`,
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error resolving flagged creator earning:', error);
+    next(error instanceof AppError ? error : new AppError(error.message || 'Failed to resolve flagged earning', 500));
+  }
+};
+
 export {
   adminLogin,
   getPaymentProviderBalances,
@@ -614,5 +660,7 @@ export {
   adminUpdateLogisticsLegStatus,
   adminResolveLogisticsDispute,
   exceptionalOrderReversal,
+  listFlaggedCreatorEarnings,
+  resolveFlaggedCreatorEarning,
   getMe
 };

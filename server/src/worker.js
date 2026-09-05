@@ -4,6 +4,16 @@ import { validateEnvironment } from './shared/config/validateEnv.js';
 import { testConnection } from './infrastructure/database/database.js';
 import servicesLoader from './application/bootstrap/services.js';
 import cronLoader from './application/bootstrap/cron.js';
+import { reportError } from './shared/utils/alerting.js';
+
+// Best-effort real-time alert on a fatal crash, then exit — bounded so the
+// webhook can never hang the shutdown.
+function alertThenExit(err, title) {
+    Promise.race([
+        reportError(err, { title }),
+        new Promise((resolve) => setTimeout(resolve, 2000))
+    ]).finally(() => process.exit(1));
+}
 
 dotenv.config();
 
@@ -35,7 +45,7 @@ async function startWorker() {
 
 startWorker().catch(error => {
     logger.error('[Worker] Failed to start:', error);
-    process.exit(1);
+    alertThenExit(error, 'Worker failed to start (fatal)');
 });
 
 const shutdown = async (signal) => {
@@ -54,9 +64,9 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('unhandledRejection', (error) => {
     logger.error('[Worker] Unhandled rejection:', error);
-    process.exit(1);
+    alertThenExit(error, 'Worker unhandled promise rejection (fatal)');
 });
 process.on('uncaughtException', (error) => {
     logger.error('[Worker] Uncaught exception:', error);
-    process.exit(1);
+    alertThenExit(error, 'Worker uncaught exception (fatal)');
 });

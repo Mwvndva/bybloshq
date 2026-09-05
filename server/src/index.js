@@ -4,17 +4,28 @@ import dotenv from 'dotenv';
 import logger from './shared/utils/logger.js';
 import { validateEnvironment } from './shared/config/validateEnv.js';
 import loaders from './application/bootstrap/index.js';
+import { reportError } from './shared/utils/alerting.js';
+
+// Best-effort real-time alert on a fatal crash, then exit. The 2s race ensures
+// we never hang the shutdown waiting on the webhook — the process still exits
+// promptly even if the alert can't be delivered.
+function alertThenExit(err, title) {
+  Promise.race([
+    reportError(err, { title }),
+    new Promise((resolve) => setTimeout(resolve, 2000))
+  ]).finally(() => process.exit(1));
+}
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', err);
-  process.exit(1);
+  alertThenExit(err, 'Uncaught exception (fatal)');
 });
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (err) => {
   logger.error('UNHANDLED REJECTION! 💥 Shutting down...', err);
-  process.exit(1);
+  alertThenExit(err, 'Unhandled promise rejection (fatal)');
 });
 
 // Load environment variables
@@ -66,22 +77,11 @@ async function startServer() {
   server.keepAliveTimeout = 600000;
   server.headersTimeout = 601000; // slightly more than keepAliveTimeout
 
-  // Handle Unhandled Rejections
-  process.on('unhandledRejection', (err) => {
-    logger.error('💥 UNHANDLED REJECTION! Shutting down...');
-    logger.error(err.name, err.message);
-    server.close(async () => {
-      try {
-        const { pool } = await import('./infrastructure/database/database.js');
-        await pool.end();
-        logger.info('📦 Database pool closed');
-      } catch (poolErr) {
-        logger.error('❌ Error closing pool:', poolErr);
-      }
-      logger.info('Graceful shutdown complete');
-      process.exit(1);
-    });
-  });
+  // NOTE: the fatal `unhandledRejection` handler is registered once at the top
+  // of this file (it alerts, then exits). A second in-server handler used to be
+  // registered here too, but since the top-level handler exits the process
+  // synchronously its graceful-close callback never ran — so it was removed to
+  // avoid a double-fire and dead code.
 
   // Handle SIGTERM
   process.on('SIGTERM', () => {
@@ -110,5 +110,5 @@ async function startServer() {
 
 startServer().catch(err => {
   logger.error('❌ Failed to start server:', err);
-  process.exit(1);
+  alertThenExit(err, 'Server failed to start (fatal)');
 });

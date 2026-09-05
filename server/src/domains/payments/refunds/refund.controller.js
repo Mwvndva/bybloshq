@@ -160,6 +160,18 @@ export const confirmRefundRequest = async (req, res, next) => {
       } catch (settleErr) {
         logger.warn(`[REFUND] Order ${lockedRequest.order_id} settlement reversal fallback:`, settleErr.message);
       }
+
+      // FIX (audit P1-1): this endpoint previously reversed the seller's escrow
+      // settlement but never clawed back the creator commission / referral
+      // reward already credited on this order — the platform refunded the
+      // buyer in full while still paying the creator for a sale that no
+      // longer exists. Mirror OrderService.executeExceptionalReversal, which
+      // already performs both reversals together.
+      try {
+        await settlementService.reverseCreatorEarningsForRefund(client, lockedRequest.order_id, 'manual_admin_refund');
+      } catch (creatorReversalErr) {
+        logger.warn(`[REFUND] Order ${lockedRequest.order_id} creator earnings reversal fallback:`, creatorReversalErr.message);
+      }
     }
 
     await client.query('COMMIT');
