@@ -31,6 +31,7 @@ import { normalizePaystackChargePayload } from '../../../shared/utils/paystackPa
 import { releaseOrderReservations } from '../../../shared/utils/reservationRelease.js';
 import { PaymentStatus } from '../../../shared/constants/enums.js';
 import withdrawalService from '../withdrawals/withdrawal.service.js';
+import { reportAlert } from '../../../shared/utils/alerting.js';
 
 const FULFILLABLE_ORDER_STATUSES = new Set(['CREATED', 'RESERVED', 'HELD', 'PAYMENT_PENDING', 'PENDING']);
 const PAID_TERMINAL_ORDER_STATUSES = new Set([
@@ -164,6 +165,23 @@ async function recordFraudEvent(event) {
                 JSON.stringify(event.details || {})
             ]
         );
+
+        // Real-time push for payment-integrity events (amount mismatch, missing
+        // order reference, etc.) so they surface immediately, not only on the
+        // next Detections-tab visit. Fire-and-forget; reportAlert never throws.
+        reportAlert({
+            level: 'error',
+            title: `Payment fraud event: ${event.eventType}`,
+            message: `A ${event.eventType} fraud event was recorded on a payment.`,
+            context: {
+                eventType: event.eventType,
+                orderId: event.orderId ?? null,
+                paymentId: event.paymentId ?? null,
+                providerReference: event.providerReference ?? null,
+                expectedAmount: event.expectedAmount ?? null,
+                providerAmount: event.providerAmount ?? null
+            }
+        });
     } catch (error) {
         logger.error('[CorePaymentService] Failed to persist fraud event', {
             original: event,

@@ -8,8 +8,9 @@ import Fees from '../../../shared/config/fees.js';
 import logger from '../../../shared/utils/logger.js';
 import notificationService from '../../communication/notifications/notification.service.js';
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
-import { addBusinessDays } from '../../orders/escrow/settlement.service.js';
 import { AppError } from '../../../shared/utils/errorHandler.js';
+import { computeCreatorReferralReward, isSelfReferral, computeClearance } from './creatorMoney.utils.js';
+import { recordFraudEvent } from '../../../shared/utils/fraudEvents.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
 const INVITE_EXPIRY_DAYS = 14;
@@ -575,9 +576,22 @@ class CreatorService {
 
     // RULE 1 — CREATOR SELF-REFERRAL PREVENTION
     // A creator must never receive creator commission from an order where the creator is also the buyer.
+    //
+    // FIX (audit P1-3): `buyer.userId`/`buyer.creatorId` are now populated by
+    // normalizeOrderInput directly from the authenticated `req.user` (server-
+    // verified JWT + DB cross-role lookup) — not from anything the client can
+    // supply — so a logged-in creator can no longer dodge this check by
+    // submitting a guest email/phone that doesn't match their creator profile.
+    // A fully unauthenticated guest checkout with fresh contact info that
+    // doesn't match the creator's registered identity cannot be caught here —
+    // Byblos has no device/session signal for a request that never
+    // authenticates. This is an ACCEPTED RISK (decision 2026-09-05): the
+    // reward is capped at the platform fee and the post-hoc check
+    // (_detectPostHocSelfDealing) still catches guests that later resolve to
+    // the creator's own buyer profile. See docs/OPEN_DECISIONS.md.
     if (buyer) {
       let buyerRecord = null;
-      if (buyer.id && (!buyer.email || !buyer.user_id)) {
+      if (buyer.id && (!buyer.userId && !buyer.user_id)) {
         const { rows: bRows } = await pool.query(
           `SELECT id, user_id, email, mobile_payment, whatsapp_number FROM buyers WHERE id = $1`,
           [buyer.id]
@@ -588,28 +602,25 @@ class CreatorService {
       const buyerId = buyer.id || buyerRecord?.id;
       const buyerUserId = buyer.userId || buyer.user_id || buyerRecord?.user_id;
       const buyerCreatorId = buyer.creatorId || buyer.creator_id;
-      const buyerEmail = (buyer.email || buyerRecord?.email || '').trim().toLowerCase();
-      const buyerPhone = (buyer.mobilePayment || buyer.phone || buyerRecord?.mobile_payment || '').replace(/\D/g, '');
+      const buyerEmail = buyer.email || buyerRecord?.email || '';
+      const buyerPhone = buyer.mobilePayment || buyer.phone || buyerRecord?.mobile_payment || '';
 
-      const creatorId = link.creator_id;
-      const creatorUserId = link.creator_user_id;
-      const creatorEmail = (link.creator_email || '').trim().toLowerCase();
-      const creatorPhone = (link.creator_mpesa || '').replace(/\D/g, '');
+      const selfReferralMatch = isSelfReferral({
+        buyerCreatorId,
+        buyerUserId,
+        buyerEmail,
+        buyerPhone,
+        creatorId: link.creator_id,
+        creatorUserId: link.creator_user_id,
+        creatorEmail: link.creator_email,
+        creatorPhone: link.creator_mpesa
+      });
 
-      const isSameCreatorId = buyerCreatorId && Number(buyerCreatorId) === Number(creatorId);
-      const isSameUserId = buyerUserId && creatorUserId && Number(buyerUserId) === Number(creatorUserId);
-      const isSameEmail = buyerEmail && creatorEmail && buyerEmail === creatorEmail;
-      const isSamePhone = buyerPhone && creatorPhone && (
-        buyerPhone === creatorPhone ||
-        (buyerPhone.length >= 9 && creatorPhone.length >= 9 && buyerPhone.slice(-9) === creatorPhone.slice(-9))
-      );
-
-      if (isSameCreatorId || isSameUserId || isSameEmail || isSamePhone) {
+      if (selfReferralMatch) {
         logger.warn('[CreatorAttribution] Self-referral detected and rejected', {
-          creatorId,
+          creatorId: link.creator_id,
           buyerId,
-          code: link.code,
-          match: { isSameCreatorId, isSameUserId, isSameEmail, isSamePhone }
+          code: link.code
         });
         return null;
       }
@@ -637,6 +648,61 @@ class CreatorService {
     };
   }
 
+  /**
+   * Post-hoc self-dealing re-check, run at credit time (escrow release) using
+   * fresh DB state rather than whatever the checkout request carried.
+   *
+   * FIX (T+2 review-hold — closes the loop the anonymous-guest-checkout gap
+   * left open): the checkout-time check in resolveAttribution can only
+   * compare against what a guest typed into the checkout form. If that
+   * doesn't match the creator's registered identity, the earning gets
+   * created normally. This re-check adds one signal checkout-time couldn't
+   * use: whether the order's buyer IS the creator's own long-standing buyer
+   * profile (matched by the stable `buyers.id` relationship via
+   * `creators.user_id`, not fuzzy field comparison) — and re-runs the same
+   * email/phone/user-id checks against current DB state in case anything
+   * changed between checkout and order completion.
+   *
+   * This does not block or alter the credit — it only decides whether the
+   * resulting earning should be flagged so getCreatorClearance holds it
+   * indefinitely instead of releasing it after the normal T+2 window.
+   *
+   * @returns {Promise<{ flagged: boolean }>}
+   */
+  static async _detectPostHocSelfDealing(client, { creatorId, buyerId }) {
+    const { rows: creatorRows } = await client.query(
+      `SELECT id, user_id, email, mpesa_number, whatsapp_number FROM creators WHERE id = $1`,
+      [creatorId]
+    );
+    const creatorRow = creatorRows[0];
+    if (!creatorRow) return { flagged: false };
+
+    const [buyerRowResult, creatorOwnBuyerResult] = await Promise.all([
+      buyerId
+        ? client.query(`SELECT id, user_id, email, mobile_payment, whatsapp_number FROM buyers WHERE id = $1`, [buyerId])
+        : Promise.resolve({ rows: [] }),
+      creatorRow.user_id
+        ? client.query(`SELECT id FROM buyers WHERE user_id = $1 LIMIT 1`, [creatorRow.user_id])
+        : Promise.resolve({ rows: [] })
+    ]);
+    const buyerRow = buyerRowResult.rows[0] || null;
+    const creatorOwnBuyerId = creatorOwnBuyerResult.rows[0]?.id || null;
+
+    const flagged = isSelfReferral({
+      buyerId,
+      creatorOwnBuyerId,
+      buyerUserId: buyerRow?.user_id || null,
+      buyerEmail: buyerRow?.email || null,
+      buyerPhone: buyerRow?.mobile_payment || buyerRow?.whatsapp_number || null,
+      creatorId: creatorRow.id,
+      creatorUserId: creatorRow.user_id,
+      creatorEmail: creatorRow.email,
+      creatorPhone: creatorRow.mpesa_number || creatorRow.whatsapp_number
+    });
+
+    return { flagged };
+  }
+
   static async creditCreatorForOrder(client, { order, paymentId }) {
     const metadata = typeof order.metadata === 'string'
       ? JSON.parse(order.metadata || '{}')
@@ -646,6 +712,21 @@ class CreatorService {
 
     const amount = roundMoney(attribution.commission_amount);
     if (amount <= 0) return null;
+
+    const buyerId = order.buyer_id ?? order.buyerId ?? null;
+    const { flagged } = await this._detectPostHocSelfDealing(client, {
+      creatorId: attribution.creator_id,
+      buyerId
+    });
+
+    const earningMetadata = {
+      source: 'escrow_release',
+      ...(flagged ? {
+        flagged_for_review: true,
+        flag_reason: 'post_hoc_self_referral_match',
+        flagged_at: new Date().toISOString()
+      } : {})
+    };
 
     const { rows: inserted } = await client.query(
       `INSERT INTO creator_earnings
@@ -662,12 +743,16 @@ class CreatorService {
         amount,
         Number(attribution.commission_rate || DEFAULT_CREATOR_COMMISSION_RATE),
         roundMoney(attribution.commission_base_amount || 0),
-        JSON.stringify({ source: 'escrow_release' })
+        JSON.stringify(earningMetadata)
       ]
     );
 
     if (!inserted.length) return null;
 
+    // Balance/notification behavior is unchanged either way — flagging is
+    // invisible to the buyer and creator by design (see the remediation
+    // report). Only getCreatorClearance's withdrawal-eligibility check and
+    // the admin review queue know about the flag.
     await client.query(
       `UPDATE creators
        SET balance = balance + $1,
@@ -677,6 +762,30 @@ class CreatorService {
        WHERE id = $2`,
       [amount, attribution.creator_id]
     );
+
+    if (flagged) {
+      logger.warn('[CreatorAttribution] Post-hoc self-dealing match at credit time; earning held for review', {
+        creatorId: attribution.creator_id,
+        orderId: order.id,
+        buyerId,
+        earningId: inserted[0].id
+      });
+      await recordFraudEvent({
+        orderId: order.id,
+        eventType: 'creator_self_referral_suspected',
+        expectedAmount: amount,
+        payload: {
+          creator_id: attribution.creator_id,
+          buyer_id: buyerId,
+          seller_creator_link_id: attribution.seller_creator_link_id || null,
+          creator_earning_id: inserted[0].id
+        },
+        details: {
+          stage: 'escrow_release_credit',
+          detected_at: new Date().toISOString()
+        }
+      });
+    }
 
     await this.notifyCreatorSaleSuccess(client, {
       creatorId: attribution.creator_id,
@@ -720,6 +829,14 @@ class CreatorService {
    * Hardened Creator-Refers-Seller Logic:
    * Credits a creator KSh 3 per product sold when a seller they referred to Byblos completes an order.
    * Note: The KSh 3 reward per product is deducted from the platform's KSh 10 flat commission fee.
+   *
+   * FIX (audit P2-1): the reward was previously `units * 3` with no ceiling, so
+   * any order with 4+ units of a product paid out MORE in referral reward than
+   * the entire flat KES-10 platform fee it is funded from (e.g. 5 units = 15
+   * KES paid from a 10 KES fee) — a guaranteed per-order loss on that revenue
+   * line. The reward is capped at the flat platform fee actually collected on
+   * the order so it can never exceed its funding source. All money math below
+   * stays in integer cents to avoid floating-point rounding drift.
    */
   static async creditCreatorReferralForSeller(client, { order }) {
     const sellerId = order.seller_id ?? order.sellerId;
@@ -733,11 +850,24 @@ class CreatorService {
     if (!referrerId) return null;
 
     const units = Math.max(Number(order.total_quantity || 1), 1);
-    const rewardRate = Number(Fees.REFERRAL_REWARD_PER_PRODUCT || 3);
-    const amountCents = Math.round(units * rewardRate * 100);
-    const amount = amountCents / 100;
+    const { amount, amountCents, uncappedAmount, capped } = computeCreatorReferralReward({
+      units,
+      rewardRatePerUnit: Fees.REFERRAL_REWARD_PER_PRODUCT || 3,
+      platformFeeAmount: Fees.PLATFORM_COMMISSION_AMOUNT || 10
+    });
 
-    if (amount <= 0) return null;
+    if (capped) {
+      logger.warn('[CreatorService] Referral reward capped at platform flat fee', {
+        orderId: order.id,
+        sellerId,
+        referrerId,
+        units,
+        uncappedAmount,
+        cappedAmount: amount
+      });
+    }
+
+    if (amount <= 0 || amountCents <= 0) return null;
 
     // Deducted from platform flat commission (KSh 10)
     const { rows: inserted } = await client.query(
@@ -835,7 +965,7 @@ class CreatorService {
 
     const [salesEarningsResult, referralEarningsResult] = await Promise.all([
       pool.query(
-        `SELECT id, amount, created_at
+        `SELECT id, amount, created_at, metadata
          FROM creator_earnings
          WHERE creator_id = $1
          ORDER BY created_at DESC
@@ -843,7 +973,7 @@ class CreatorService {
         [creatorId]
       ),
       pool.query(
-        `SELECT id, amount, created_at
+        `SELECT id, amount, created_at, metadata
          FROM creator_referral_earnings
          WHERE referrer_creator_id = $1
          ORDER BY created_at DESC
@@ -852,36 +982,216 @@ class CreatorService {
       )
     ]);
 
+    // FIX (self-referral review-hold follow-up): an earning flagged by the
+    // post-hoc self-dealing check in creditCreatorForOrder must never clear
+    // just because 2 business days passed — it stays uncleared until an
+    // admin resolves it via resolveFlaggedEarning. See computeClearance.
+    const toEarning = (e) => ({
+      amount: Number.parseFloat(e.amount || 0),
+      createdAt: new Date(e.created_at),
+      flaggedForReview: (e.metadata || {}).flagged_for_review === true
+    });
     const allEarnings = [
-      ...salesEarningsResult.rows.map(e => ({ amount: Number.parseFloat(e.amount || 0), createdAt: new Date(e.created_at) })),
-      ...referralEarningsResult.rows.map(e => ({ amount: Number.parseFloat(e.amount || 0), createdAt: new Date(e.created_at) }))
+      ...salesEarningsResult.rows.map(toEarning),
+      ...referralEarningsResult.rows.map(toEarning)
     ];
 
-    let unclearedAmount = 0;
-    let nextAvailableAt = null;
-    const now = new Date();
-
-    for (const earning of allEarnings) {
-      if (!Number.isFinite(earning.amount) || earning.amount <= 0) continue;
-      const availableTime = addBusinessDays(earning.createdAt, 2);
-      if (now < availableTime) {
-        unclearedAmount += earning.amount;
-        if (!nextAvailableAt || availableTime < nextAvailableAt) {
-          nextAvailableAt = availableTime;
-        }
-      }
-    }
-
-    const clearingBalance = Math.min(totalBalance, Math.round(unclearedAmount * 100) / 100);
-    const availableBalance = Math.max(0, Math.round((totalBalance - clearingBalance) * 100) / 100);
+    const { availableBalance, clearingBalance, flaggedAmount, hasFlaggedHolds, nextAvailableAt, isClearing } =
+      computeClearance({ totalBalance, earnings: allEarnings });
 
     return {
       totalBalance,
       availableBalance,
       clearingBalance,
-      nextAvailableAt: nextAvailableAt ? nextAvailableAt.toISOString() : null,
-      isClearing: clearingBalance > 0
+      flaggedAmount,
+      hasFlaggedHolds,
+      nextAvailableAt,
+      isClearing
     };
+  }
+
+  /**
+   * Admin queue of creator earnings held for self-dealing review (see
+   * _detectPostHocSelfDealing / creditCreatorForOrder). Never exposed to the
+   * creator or buyer — admin-only, by design.
+   */
+  static async listFlaggedEarnings({ limit = 50 } = {}) {
+    const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 200);
+
+    const [salesRows, referralRows] = await Promise.all([
+      pool.query(
+        `SELECT ce.id, 'sales' AS earning_type, ce.creator_id, ce.order_id, ce.amount,
+                ce.created_at, ce.metadata, ce.status,
+                CONCAT_WS(' ', c.first_name, c.last_name) AS creator_name,
+                po.order_number, po.buyer_id
+         FROM creator_earnings ce
+         JOIN creators c ON c.id = ce.creator_id
+         JOIN product_orders po ON po.id = ce.order_id
+         WHERE ce.metadata->>'flagged_for_review' = 'true'
+         ORDER BY ce.created_at DESC
+         LIMIT $1`,
+        [safeLimit]
+      ),
+      pool.query(
+        `SELECT cre.id, 'referral' AS earning_type, cre.referrer_creator_id AS creator_id, cre.order_id, cre.amount,
+                cre.created_at, cre.metadata, cre.status,
+                CONCAT_WS(' ', c.first_name, c.last_name) AS creator_name,
+                po.order_number, po.buyer_id
+         FROM creator_referral_earnings cre
+         JOIN creators c ON c.id = cre.referrer_creator_id
+         JOIN product_orders po ON po.id = cre.order_id
+         WHERE cre.metadata->>'flagged_for_review' = 'true'
+         ORDER BY cre.created_at DESC
+         LIMIT $1`,
+        [safeLimit]
+      )
+    ]);
+
+    return [...salesRows.rows, ...referralRows.rows]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, safeLimit);
+  }
+
+  /**
+   * Reverse exactly one earning row's balance impact — NOT the whole order.
+   *
+   * settlementService.reverseCreatorEarningsForRefund reverses every earning
+   * type tied to an order_id at once, which is correct for a full-order
+   * refund but wrong here: an admin resolving ONE flagged sales-commission
+   * row must not also reverse an unrelated creator-refers-seller reward that
+   * happens to share the same order_id. Mirrors the same balance-safe
+   * pattern (lock, compare, decrement-or-record-deficit) scoped to one row.
+   */
+  static async _reverseSingleEarning(client, { table, creatorIdColumn, totalsColumn, earning }, source) {
+    const amount = Number.parseFloat(earning.amount || 0);
+    if (!(amount > 0)) {
+      return { adjusted: false, reason: 'invalid_amount' };
+    }
+
+    const creatorId = earning[creatorIdColumn];
+    const { rows: creatorRows } = await client.query(
+      `SELECT id, balance FROM creators WHERE id = $1 FOR UPDATE`,
+      [creatorId]
+    );
+    if (!creatorRows.length) {
+      return { adjusted: false, reason: 'creator_not_found' };
+    }
+
+    const currentBalance = Number.parseFloat(creatorRows[0].balance || 0);
+    if (currentBalance >= amount) {
+      await client.query(
+        `UPDATE creators
+         SET balance = balance - $1,
+             ${totalsColumn} = GREATEST(${totalsColumn} - $1, 0),
+             updated_at = NOW()
+         WHERE id = $2`,
+        [amount, creatorId]
+      );
+      await client.query(
+        `UPDATE ${table} SET status = 'reversed' WHERE id = $1`,
+        [earning.id]
+      );
+      return { adjusted: true, amount, creatorId };
+    }
+
+    // Already withdrawn (or otherwise insufficient) — record the deficit
+    // instead of taking the creator's balance negative.
+    await client.query(
+      `UPDATE ${table} SET status = 'reversal_compensation_required' WHERE id = $1`,
+      [earning.id]
+    );
+    logger.error(`[CreatorService] Admin reversal deficit for ${table} ${earning.id}: creator ${creatorId} balance insufficient`, {
+      source,
+      shortfall: amount - currentBalance
+    });
+    return { adjusted: false, reason: 'creator_balance_insufficient', shortfall: amount - currentBalance, creatorId };
+  }
+
+  /**
+   * Admin resolution of a flagged earning.
+   *   action: 'release' — reviewed and found legitimate; clears the flag so
+   *           the earning becomes subject to the normal T+2 rule again (and
+   *           immediately available if that window has already elapsed).
+   *   action: 'reverse' — confirmed self-dealing; claws back this SPECIFIC
+   *           earning only (see _reverseSingleEarning), so a creator who
+   *           already withdrew the money gets a recorded deficit instead of
+   *           a silent write-off, without touching any unrelated earning
+   *           that happens to share the same order.
+   */
+  static async resolveFlaggedEarning({ earningType, earningId, adminId, action, notes = null }) {
+    if (!['sales', 'referral'].includes(earningType)) {
+      throw new AppError("earningType must be 'sales' or 'referral'.", 400);
+    }
+    if (!['release', 'reverse'].includes(action)) {
+      throw new AppError("action must be 'release' or 'reverse'.", 400);
+    }
+
+    const table = earningType === 'sales' ? 'creator_earnings' : 'creator_referral_earnings';
+    const creatorIdColumn = earningType === 'sales' ? 'creator_id' : 'referrer_creator_id';
+    const totalsColumn = earningType === 'sales' ? 'total_earnings' : 'total_referral_earnings';
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const { rows } = await client.query(
+        `SELECT id, order_id, amount, metadata, status, ${creatorIdColumn} FROM ${table} WHERE id = $1 FOR UPDATE`,
+        [earningId]
+      );
+      const earning = rows[0];
+      if (!earning) {
+        throw new AppError('Flagged earning not found.', 404);
+      }
+      if ((earning.metadata || {}).flagged_for_review !== true) {
+        throw new AppError('This earning is not currently flagged for review.', 400);
+      }
+      if (earning.status === 'reversed' || earning.status === 'reversal_compensation_required') {
+        throw new AppError(`This earning is already ${earning.status}.`, 400);
+      }
+
+      let reversalResult = null;
+      if (action === 'reverse') {
+        reversalResult = await this._reverseSingleEarning(
+          client,
+          { table, creatorIdColumn, totalsColumn, earning },
+          'admin_self_referral_review'
+        );
+      }
+
+      const resolutionMetadata = {
+        review_resolution: action === 'release' ? 'released' : 'reversed',
+        reviewed_by: adminId || null,
+        reviewed_at: new Date().toISOString(),
+        review_notes: notes || null,
+        // Clear the hold either way — a reversed row is already excluded
+        // from clearance by its own 'reversed'/'reversal_compensation_required'
+        // status, so it doesn't need the indefinite hold on top of that.
+        flagged_for_review: false
+      };
+
+      await client.query(
+        `UPDATE ${table}
+         SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+         WHERE id = $1`,
+        [earningId, JSON.stringify(resolutionMetadata)]
+      );
+
+      await client.query('COMMIT');
+
+      logger.info(`[CreatorService] Admin ${adminId} resolved flagged ${earningType} earning ${earningId}: ${action}`, {
+        earningId,
+        earningType,
+        orderId: earning.order_id,
+        action
+      });
+
+      return { earningId, earningType, action, reversalResult };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   static async getDashboard(creatorId, period = 'monthly') {

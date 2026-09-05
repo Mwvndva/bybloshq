@@ -1,0 +1,40 @@
+-- CRITICAL FIX: the legacy handle_order_completion_trigger (added in
+-- 20250930150000_add_product_orders_tables.sql, before EscrowManager /
+-- settlement.service.js existed) has been silently blocking every seller's
+-- escrow release since whenever the modern escrow system was introduced.
+--
+-- Sequence that was happening on EVERY order completion (digital
+-- auto-complete, or a buyer confirming receipt/collection for a physical or
+-- service order):
+--   1. Application code runs `UPDATE product_orders SET status = 'COMPLETED' ...`
+--      (Order.updateStatusWithSideEffects / OrderService._buyerComplete).
+--   2. This AFTER UPDATE trigger fires FIRST (same transaction) and inserts
+--      its own incomplete `payouts` row: no `payment_id`, no `platform_fee`,
+--      no `available_at`, no `settlement_status` ('pending_settlement' vs
+--      plain 'pending') -- fields the real settlement/withdrawal pipeline
+--      depends on. It also fires `pg_notify('payout_scheduled', ...)`, which
+--      nothing in the application has ever listened for (verified: zero
+--      matches for `payout_scheduled` or `handle_order_completion` anywhere
+--      under server/src).
+--   3. EscrowManager.releaseFunds then runs its own
+--      `INSERT INTO payouts (...) ON CONFLICT (order_id) DO NOTHING` as its
+--      idempotency gate. Because the trigger's row already exists for this
+--      order_id, this insert returns zero rows, so EscrowManager logs
+--      "Payout for Order N already exists. Skipping wallet credit." and
+--      returns early -- the seller's `pending_settlement_balance` is NEVER
+--      credited, and creator commission/referral crediting (also inside
+--      that same guarded block) never runs either.
+--
+-- This was invisible in prior integration tests because they exercised
+-- EscrowManager.releaseFunds against orders inserted directly with
+-- status='COMPLETED' (an INSERT, which this trigger -- AFTER UPDATE OF
+-- status -- never fires for). It only surfaced when testing the real
+-- completion transition (PAID -> ... -> COMPLETED via an UPDATE), which is
+-- exactly how every real order completes in production.
+--
+-- Fix: drop the trigger and its now-orphaned function. EscrowManager (settlement
+-- windows, platform fee accounting, creator commission + referral crediting,
+-- proper idempotency) is the real, current, fully-featured payout mechanism;
+-- this trigger predates it and duplicates none of its correctness.
+DROP TRIGGER IF EXISTS handle_order_completion_trigger ON product_orders;
+DROP FUNCTION IF EXISTS handle_order_completion();

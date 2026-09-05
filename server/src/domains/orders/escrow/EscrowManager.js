@@ -1,6 +1,11 @@
 import logger from '../../../shared/utils/logger.js';
 import CreatorService from '../../growth/creators/creator.service.js';
 import settlementService from './settlement.service.js';
+import {
+    toCents as pureToCents,
+    roundMoney as pureRoundMoney,
+    calculatePlatformRetainedAmount as pureCalculatePlatformRetainedAmount
+} from './escrowMoney.utils.js';
 
 class EscrowManager {
     /**
@@ -20,12 +25,26 @@ class EscrowManager {
             return { success: false, reason: 'order_not_completed' };
         }
 
-        // 1. Fetch or resolve payment ID
-        const paymentResult = await client.query(
-            "SELECT id FROM payments WHERE invoice_id = $1 OR metadata->>'order_id' = $2::text LIMIT 1",
-            [order.order_number, String(orderId)]
+        // 1. Fetch or resolve payment ID. Prefer the authoritative
+        // `payments.order_id` foreign key (populated on insert since the
+        // payments_order_id_fkey migration); fall back to the legacy
+        // invoice_id/metadata match only for any pre-migration record that
+        // was never backfilled, so this stays safe for older data without
+        // relying on a JSONB scan for every new order.
+        let paymentId = null;
+        const directPaymentResult = await client.query(
+            'SELECT id FROM payments WHERE order_id = $1 ORDER BY id DESC LIMIT 1',
+            [orderId]
         );
-        const paymentId = paymentResult.rows[0]?.id;
+        paymentId = directPaymentResult.rows[0]?.id || null;
+
+        if (!paymentId) {
+            const legacyPaymentResult = await client.query(
+                "SELECT id FROM payments WHERE invoice_id = $1 OR metadata->>'order_id' = $2::text ORDER BY id DESC LIMIT 1",
+                [order.order_number, String(orderId)]
+            );
+            paymentId = legacyPaymentResult.rows[0]?.id || null;
+        }
 
         const { rows: logisticsHolds } = await client.query(
             `SELECT lr.status AS request_status,
@@ -78,7 +97,14 @@ class EscrowManager {
 
         const sellerPayoutAmount = Math.round(rawPayout * 100) / 100;
         const totalAmount = Math.round(rawTotal * 100) / 100;
-        const platformFeeAmount = this.calculatePlatformRetainedAmount(order, totalAmount, sellerPayoutAmount);
+        const { amount: platformFeeAmount, wasNegative: platformFeeWasNegative } = pureCalculatePlatformRetainedAmount(order, totalAmount, sellerPayoutAmount);
+        if (platformFeeWasNegative) {
+            logger.warn(`[EscrowManager] Negative platform fee computed for Order ${orderId}; clamped to 0. Check order pricing fields.`, {
+                orderId,
+                totalAmount,
+                sellerPayoutAmount
+            });
+        }
         const sellerId = order.seller_id ?? order.sellerId;
 
         if (!sellerId) {
@@ -161,47 +187,20 @@ class EscrowManager {
         return { success: true, alreadyReleased: false, availableAt };
     }
 
+    // Kept as thin delegators to escrowMoney.utils.js (moved there so the
+    // money math can be unit tested without a database connection — this
+    // module transitively imports the live DB pool via CreatorService, which
+    // throws at import time if DB_* env vars aren't set). Behavior unchanged.
     toCents(amount) {
-        return Math.round(Number(amount || 0) * 100);
+        return pureToCents(amount);
     }
 
     roundMoney(amount) {
-        return this.toCents(amount) / 100;
-    }
-
-    getOrderMetadata(order) {
-        if (!order?.metadata) return {};
-        if (typeof order.metadata === 'string') {
-            try {
-                return JSON.parse(order.metadata);
-            } catch {
-                return {};
-            }
-        }
-        return order.metadata;
+        return pureRoundMoney(amount);
     }
 
     calculatePlatformRetainedAmount(order, totalAmount, sellerPayoutAmount) {
-        const metadata = this.getOrderMetadata(order);
-        const hasCheckoutPricing = Boolean(
-            metadata?.pricing?.payable_total !== undefined
-            || metadata?.pricing?.buyer_delivery_fee !== undefined
-            || metadata?.pricing?.buyer_service_charge !== undefined
-        );
-
-        if (hasCheckoutPricing) {
-            const buyerDeliveryFeeCents = this.toCents(metadata?.pricing?.buyer_delivery_fee || 0);
-            const totalCents = this.toCents(totalAmount);
-            const sellerPayoutCents = this.toCents(sellerPayoutAmount);
-            const retainedCents = totalCents - sellerPayoutCents - buyerDeliveryFeeCents;
-
-            if (retainedCents >= 0) {
-                return retainedCents / 100;
-            }
-        }
-
-        const feeVal = order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount);
-        return this.toCents(feeVal) / 100;
+        return pureCalculatePlatformRetainedAmount(order, totalAmount, sellerPayoutAmount).amount;
     }
 }
 
