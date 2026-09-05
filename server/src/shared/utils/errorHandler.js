@@ -1,4 +1,5 @@
 import logger from './logger.js';
+import { reportError } from './alerting.js';
 
 // Custom error class for application errors
 export class AppError extends Error {
@@ -78,6 +79,17 @@ export const globalErrorHandler = (err, req, res, next) => {
         statusCode: error.statusCode
       });
     }
+    // Push a real-time alert for genuine (non-operational) server errors only —
+    // operational 4xx/404/413 above are expected and intentionally excluded so
+    // the channel stays signal, not noise. Fire-and-forget; never blocks the
+    // response and never throws.
+    reportError(err, {
+      title: 'Unhandled API error',
+      requestId,
+      method: req.method,
+      path: req.originalUrl,
+      statusCode: error.statusCode
+    });
   }
 
   // Send response based on environment

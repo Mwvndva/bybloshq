@@ -37,10 +37,10 @@ RUN npm ci --omit=dev
 # Copy source code
 COPY . .
 
-# Run migrations at runtime, not build time (optional, but build-time npm install is redundant)
-
-# Expose port
-EXPOSE 3002
+# Expose the port the app actually listens on. docker-compose injects PORT=3000
+# and the nginx upstream + compose health check both target :3000, so the image
+# default matches that to avoid a stale/misleading value.
+EXPOSE 3000
 
 # Create necessary directories and ensure node user can write to them
 RUN mkdir -p uploads && chown -R node:node /app
@@ -49,7 +49,13 @@ RUN mkdir -p uploads && chown -R node:node /app
 USER node
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=20s \
-    CMD wget -qO- http://localhost:${PORT:-3002}/api/health || exit 1
+    CMD wget -qO- http://localhost:${PORT:-3000}/api/health || exit 1
 
-# Start the application (run migrations automatically on boot)
-CMD ["sh", "-c", "npm run migrate && npm start"]
+# Migrations are NOT run here. Every real deploy path runs them separately and
+# exactly once: docker-compose has a dedicated one-shot `migrate` service that
+# backend/worker wait on (depends_on: service_completed_successfully), and Render
+# uses `preDeployCommand: npm run migrate` (see server/render.yaml). Running
+# `npm run migrate` in this CMD too would re-run migrations on every backend
+# replica's boot (a needless race under horizontal scaling). If you ever run
+# this image standalone (bare `docker run`), run `npm run migrate` first.
+CMD ["npm", "start"]
