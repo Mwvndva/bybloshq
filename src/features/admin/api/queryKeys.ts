@@ -15,6 +15,7 @@ export const adminQueryKeys = {
   monthlyMetrics: () => [...adminQueryKeys.all, 'monthlyMetrics'] as const,
   monthlyFinancialData: () => [...adminQueryKeys.all, 'monthlyFinancialData'] as const,
   refunds: (status?: string) => [...adminQueryKeys.all, 'refunds', status || 'all'] as const,
+  flaggedEarnings: () => [...adminQueryKeys.all, 'flaggedEarnings'] as const,
 };
 
 

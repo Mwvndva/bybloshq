@@ -15,15 +15,6 @@ export interface LogisticsPartner {
   whatsappNumber?: string;
 }
 
-export function isLogisticsSessionActive(): boolean {
-  return sessionStorage.getItem(LOGISTICS_ACTIVE_KEY) === 'true' || localStorage.getItem(LOGISTICS_ACTIVE_KEY) === 'true' || localStorage.getItem('logisticsSessionActive') === 'true';
-}
-
-// Deprecated token getter maintained for backwards compatibility
-export function getLogisticsToken(): string | null {
-  return isLogisticsSessionActive() ? 'cookie-session' : null;
-}
-
 export function getStoredLogisticsPartner(): LogisticsPartner | null {
   const raw = sessionStorage.getItem(LOGISTICS_PARTNER_KEY) || localStorage.getItem(LOGISTICS_PARTNER_KEY);
   if (!raw) return null;
