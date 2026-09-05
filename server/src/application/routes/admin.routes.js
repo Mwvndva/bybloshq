@@ -38,6 +38,15 @@ router.patch('/sellers/:id/status', validate(V.updateSellerStatus), adminControl
 router.get('/creators', adminController.getAllCreators);
 router.delete('/creators/:id', validate(V.deleteCreator), adminController.deleteCreator);
 
+// Creator self-dealing review queue (T+2 review-hold — see creator.service.js
+// _detectPostHocSelfDealing). Admin-only; never exposed to the creator/buyer.
+router.get('/creators/flagged-earnings', adminController.listFlaggedCreatorEarnings);
+router.patch(
+  '/creators/flagged-earnings/:earningType/:id/resolve',
+  validate(V.resolveFlaggedCreatorEarning),
+  adminController.resolveFlaggedCreatorEarning
+);
+
 // Buyer management
 router.get('/buyers', adminController.getAllBuyers);
 router.get('/buyers/:id', adminController.getBuyerById);

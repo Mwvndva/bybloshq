@@ -9,6 +9,7 @@ import { getCreators, deleteCreator } from './creators';
 import { getWithdrawalRequests, updateWithdrawalRequestStatus } from './withdrawals';
 import { getFinancialMetrics, getMonthlyFinancialData, getPaymentProviderBalances, getRefundRequests, confirmRefund, rejectRefund } from './financial';
 import { getLogisticsRequests, updateLogisticsLegStatus, resolveLogisticsDispute } from './logistics';
+import { getFlaggedEarnings, resolveFlaggedEarning } from './detections';
 
 export * from './instance';
 export * from './auth';
@@ -21,6 +22,7 @@ export * from './creators';
 export * from './withdrawals';
 export * from './financial';
 export * from './logistics';
+export * from './detections';
 
 export const adminApi = {
   login,
@@ -48,7 +50,9 @@ export const adminApi = {
   resolveLogisticsDispute,
   getRefundRequests,
   confirmRefund,
-  rejectRefund
+  rejectRefund,
+  getFlaggedEarnings,
+  resolveFlaggedEarning
 };
 
 export default adminApi;
