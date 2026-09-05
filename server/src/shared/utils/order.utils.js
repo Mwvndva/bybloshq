@@ -99,6 +99,17 @@ export async function normalizeOrderInput(req) {
         finalMobilePayment = user.mobile_payment;
     }
 
+    // FIX (audit P1-3 / self-referral): these identity fields come exclusively
+    // from `req.user`, which the `protect` auth middleware populates from a
+    // verified JWT plus a server-side cross-role DB lookup — never from
+    // client-supplied body fields. Previously this object carried no user/
+    // creator identity at all, so CreatorService.resolveAttribution's
+    // self-referral check could only match on client-suppliable email/phone,
+    // which a creator can trivially avoid by checking out with a different
+    // (but real, so still payable via STK) phone/email. Populating these here
+    // lets the self-referral check catch ANY authenticated session that also
+    // holds the creator profile behind the attribution link, even on that
+    // buyer's very first order (before a `buyers` row exists for them).
     const buyer = {
         id: buyerId, // Correctly point to buyers.id
         name: finalName || 'Customer',
@@ -106,7 +117,10 @@ export async function normalizeOrderInput(req) {
         mobilePayment: finalMobilePayment || 'N/A',
         email,
         city: buyerCity,
-        location: buyerArea
+        location: buyerArea,
+        userId: user?.id ?? null,
+        creatorId: user?.creatorId ?? null,
+        sellerId: user?.sellerId ?? null
     };
 
     // 3. Resolve Service/Product Info
