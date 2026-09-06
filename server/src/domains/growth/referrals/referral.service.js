@@ -9,6 +9,7 @@ import Fees from '../../../shared/config/fees.js';
 import logger from '../../../shared/utils/logger.js';
 import { AppError } from '../../../shared/utils/errorHandler.js';
 import domainEventDispatcher, { AppEvents, DomainEvents } from '../../../shared/core/domainEventDispatcher.js';
+import { MAX_ACTIVE_INVITES } from '../creators/creatorLimits.js';
 const eventBus = domainEventDispatcher;
 
 /**
@@ -130,6 +131,21 @@ class ReferralService {
             }
 
             const creatorId = creatorResult.rows[0].id;
+
+            // Cap invited businesses: a creator earns the referral reward from at
+            // most MAX_ACTIVE_INVITES sellers. Beyond that, the seller still
+            // registers normally — the referral is simply not attributed, so no
+            // KSh reward is created. Counts only currently-attributed sellers, so
+            // leaving one (referred_by_creator_id -> NULL) frees a slot.
+            const inviteCount = await dbClient.query(
+                'SELECT COUNT(*)::int AS n FROM sellers WHERE referred_by_creator_id = $1',
+                [creatorId]
+            );
+            if (inviteCount.rows[0].n >= MAX_ACTIVE_INVITES) {
+                logger.info(`[REFERRAL] Creator ${creatorId} at invite cap (${MAX_ACTIVE_INVITES}); seller ${newSellerId} not attributed for code ${normalizedCode}`);
+                return null;
+            }
+
             const updateResult = await dbClient.query(
                 'UPDATE sellers SET referred_by_creator_id = $1 WHERE id = $2 AND referred_by_creator_id IS NULL RETURNING id',
                 [creatorId, newSellerId]

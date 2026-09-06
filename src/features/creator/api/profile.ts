@@ -11,6 +11,7 @@ export interface UpdateCreatorProfilePayload {
   instagramLink?: string | null;
   tiktokLink?: string | null;
   whatsappNumber?: string | null;
+  mpesaNumber?: string | null;
 }
 
 export const updateProfile = async (payload: UpdateCreatorProfilePayload) => {

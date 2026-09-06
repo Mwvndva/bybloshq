@@ -23,3 +23,13 @@ export const requestCollaboration = async (sellerId: number, message?: string) =
   const response = await apiClient.post(`/creators/shops/${sellerId}/request`, { message });
   return response.data;
 };
+
+export const leavePromotedShop = async (sellerId: number) => {
+  const response = await apiClient.post(`/creators/shops/${sellerId}/leave`);
+  return response.data;
+};
+
+export const leaveInvitedBusiness = async (sellerId: number) => {
+  const response = await apiClient.post(`/creators/invited-businesses/${sellerId}/leave`);
+  return response.data;
+};

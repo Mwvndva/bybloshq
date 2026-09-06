@@ -10,6 +10,26 @@ import notificationService from '../../communication/notifications/notification.
 import WithdrawalService from '../../payments/withdrawals/withdrawal.service.js';
 import { AppError } from '../../../shared/utils/errorHandler.js';
 import { computeCreatorReferralReward, isSelfReferral, computeClearance } from './creatorMoney.utils.js';
+import { addBusinessDays } from '../../orders/escrow/settlement.service.js';
+import { normalizeKenyanPhone } from '../../../shared/utils/phone.js';
+import { MAX_ACTIVE_PROMOTIONS } from './creatorLimits.js';
+
+/**
+ * Number of shops a creator is actively promoting, excluding one seller (so the
+ * link being (re)activated for that seller isn't counted against itself). Used
+ * to enforce MAX_ACTIVE_PROMOTIONS. Runs on the provided client so it sees the
+ * FOR UPDATE-locked state inside the accept transactions.
+ */
+async function countActivePromotions(client, creatorId, excludeSellerId = null) {
+  const { rows } = await client.query(
+    `SELECT COUNT(*)::int AS n
+       FROM seller_creator_links
+      WHERE creator_id = $1 AND status = 'active'
+        AND ($2::int IS NULL OR seller_id <> $2)`,
+    [creatorId, excludeSellerId]
+  );
+  return rows[0].n;
+}
 import { recordFraudEvent } from '../../../shared/utils/fraudEvents.js';
 
 const DEFAULT_CREATOR_COMMISSION_RATE = Number(Fees.CREATOR_COMMISSION_RATE || 0.01);
@@ -25,7 +45,8 @@ const normalizeCommissionRate = (rate) => {
 const CREATOR_ANALYSIS_PERIODS = {
   daily: { unit: 'day', interval: '30 days', labelFormat: 'YYYY-MM-DD' },
   weekly: { unit: 'week', interval: '12 weeks', labelFormat: 'IYYY "W"IW' },
-  monthly: { unit: 'month', interval: '12 months', labelFormat: 'YYYY-MM' }
+  monthly: { unit: 'month', interval: '12 months', labelFormat: 'YYYY-MM' },
+  yearly: { unit: 'year', interval: '5 years', labelFormat: 'YYYY' }
 };
 
 class CreatorService {
@@ -112,6 +133,20 @@ class CreatorService {
     const invite = rows[0];
     if (existingCreator) {
       await this.sendExistingCreatorShopRequestEmail(invite, seller, existingCreator);
+      // In-app indicator + device push so the creator sees the request without
+      // waiting on email. Fire-and-forget: notification failure must not fail
+      // the invite.
+      if (existingCreator.user_id) {
+        notificationService.send({
+          recipientUserId: existingCreator.user_id,
+          recipientRole: 'creator',
+          type: 'creator_shop_request_received',
+          title: 'New shop request',
+          body: `${seller?.shop_name || 'A seller'} wants you to promote their shop. Review it in your dashboard.`,
+          data: { path: '/creator/dashboard', inviteId: invite.id },
+          channels: ['in_app', 'push']
+        }).catch((err) => logger.warn('[Feed] Creator shop-request received notification failed', { error: err.message }));
+      }
       return this.decorateInvite({
         ...invite,
         first_name: existingCreator.first_name,
@@ -252,6 +287,11 @@ class CreatorService {
         return { status: 'declined', invite: this.decorateInvite({ ...denied.rows[0], shop_name: invite.shop_name }) };
       }
 
+      const activeCount = await countActivePromotions(client, creatorId, invite.seller_id);
+      if (activeCount >= MAX_ACTIVE_PROMOTIONS) {
+        throw new AppError(`You can promote at most ${MAX_ACTIVE_PROMOTIONS} shops at once. Leave one to accept this.`, 400);
+      }
+
       const existing = await client.query(
         `SELECT id, code FROM seller_creator_links
          WHERE seller_id = $1 AND creator_id = $2
@@ -279,6 +319,135 @@ class CreatorService {
       );
       await client.query('COMMIT');
       return { status: 'accepted', invite: this.decorateInvite({ ...accepted.rows[0], code, shop_name: invite.shop_name, commission_rate: commissionRate }) };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Creator leaves a shop they are promoting: terminate the active
+   * seller_creator_link (stops all future commission) — but only once every
+   * sale contract that ran through this collaboration is settled. Any order
+   * attributed to this creator+seller that is not in a terminal state blocks
+   * the exit so in-flight commission can never be orphaned.
+   */
+  static async leavePromotedShop(creatorId, sellerId) {
+    const sid = Number(sellerId);
+    if (!Number.isInteger(sid)) throw new AppError('Invalid shop.', 400);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const linkRes = await client.query(
+        `SELECT id FROM seller_creator_links
+          WHERE creator_id = $1 AND seller_id = $2 AND status = 'active'
+          FOR UPDATE`,
+        [creatorId, sid]
+      );
+      if (!linkRes.rows[0]) {
+        throw new AppError('You are not actively promoting this shop.', 404);
+      }
+
+      const openRes = await client.query(
+        `SELECT COUNT(*)::int AS n
+           FROM product_orders po
+          WHERE po.seller_id = $2
+            AND (po.metadata -> 'creator_attribution' ->> 'creator_id')::int = $1
+            AND po.status NOT IN ('COMPLETED', 'CANCELLED', 'FAILED', 'EXPIRED', 'REFUNDED')`,
+        [creatorId, sid]
+      );
+      const openCount = openRes.rows[0].n;
+      if (openCount > 0) {
+        throw new AppError(
+          `Complete ${openCount} open order${openCount === 1 ? '' : 's'} before leaving this shop.`,
+          409
+        );
+      }
+
+      await client.query(
+        `UPDATE seller_creator_links
+            SET status = 'left', updated_at = NOW()
+          WHERE id = $1`,
+        [linkRes.rows[0].id]
+      );
+
+      await client.query('COMMIT');
+      return { status: 'left', sellerId: sid };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Creator leaves a business they invited: detach the referral so no future
+   * KSh reward accrues, and cancel only the still-PENDING (T+2-clearing)
+   * referral earnings from that business — reversing their amount out of the
+   * creator's balance. Earnings that have already cleared (or been withdrawn)
+   * are left untouched.
+   */
+  static async leaveInvitedBusiness(creatorId, sellerId) {
+    const sid = Number(sellerId);
+    if (!Number.isInteger(sid)) throw new AppError('Invalid business.', 400);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const sellerRes = await client.query(
+        `SELECT id FROM sellers WHERE id = $1 AND referred_by_creator_id = $2 FOR UPDATE`,
+        [sid, creatorId]
+      );
+      if (!sellerRes.rows[0]) {
+        throw new AppError('You have not invited this business.', 404);
+      }
+
+      const { rows: earnings } = await client.query(
+        `SELECT id, amount, created_at
+           FROM creator_referral_earnings
+          WHERE referrer_creator_id = $1 AND referred_seller_id = $2
+            AND status = 'credited'
+          FOR UPDATE`,
+        [creatorId, sid]
+      );
+
+      const now = new Date();
+      const pending = earnings.filter((e) => now < addBusinessDays(new Date(e.created_at), 2));
+      const pendingIds = pending.map((e) => e.id);
+      const pendingTotal = roundMoney(pending.reduce((sum, e) => sum + Number(e.amount || 0), 0));
+
+      if (pendingIds.length > 0) {
+        await client.query(
+          `UPDATE creator_referral_earnings
+              SET status = 'cancelled',
+                  metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+            WHERE id = ANY($1::int[])`,
+          [pendingIds, JSON.stringify({ cancelled_reason: 'creator_left_invited_business', cancelled_at: now.toISOString() })]
+        );
+        await client.query(
+          `UPDATE creators
+              SET balance = GREATEST(0, balance - $1),
+                  total_referral_earnings = GREATEST(0, total_referral_earnings - $1),
+                  updated_at = NOW()
+            WHERE id = $2`,
+          [pendingTotal, creatorId]
+        );
+      }
+
+      await client.query(
+        `UPDATE sellers SET referred_by_creator_id = NULL
+          WHERE id = $1 AND referred_by_creator_id = $2`,
+        [sid, creatorId]
+      );
+
+      await client.query('COMMIT');
+      return { status: 'left', sellerId: sid, cancelledPending: pendingTotal, cancelledCount: pendingIds.length };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -986,6 +1155,7 @@ class CreatorService {
           `SELECT ${columns}
            FROM creator_earnings
            WHERE creator_id = $1
+             AND status = 'credited'
            ORDER BY created_at DESC
            LIMIT 50`,
           [creatorId]
@@ -994,6 +1164,7 @@ class CreatorService {
           `SELECT ${columns}
            FROM creator_referral_earnings
            WHERE referrer_creator_id = $1
+             AND status = 'credited'
            ORDER BY created_at DESC
            LIMIT 50`,
           [creatorId]
@@ -1019,6 +1190,25 @@ class CreatorService {
     const { availableBalance, clearingBalance, flaggedAmount, hasFlaggedHolds, nextAvailableAt, isClearing } =
       computeClearance({ totalBalance, earnings: allEarnings });
 
+    // Split lifetime earnings by source so the withdrawal panel can show
+    // commission (sales) vs invited-business (referral) streams separately.
+    // SUM over all active rows (not the 50-row clearance sample), net of any
+    // reversed/cancelled earnings.
+    const [commissionSumRes, referralSumRes] = await Promise.all([
+      pool.query(
+        `SELECT COALESCE(SUM(amount), 0)::float8 AS s
+           FROM creator_earnings WHERE creator_id = $1 AND status = 'credited'`,
+        [creatorId]
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount), 0)::float8 AS s
+           FROM creator_referral_earnings WHERE referrer_creator_id = $1 AND status = 'credited'`,
+        [creatorId]
+      )
+    ]).catch(() => [{ rows: [{ s: 0 }] }, { rows: [{ s: 0 }] }]);
+    const commissionEarnings = roundMoney(Number(commissionSumRes.rows[0].s));
+    const referralEarnings = roundMoney(Number(referralSumRes.rows[0].s));
+
     return {
       totalBalance,
       availableBalance,
@@ -1026,7 +1216,9 @@ class CreatorService {
       flaggedAmount,
       hasFlaggedHolds,
       nextAvailableAt,
-      isClearing
+      isClearing,
+      commissionEarnings,
+      referralEarnings
     };
   }
 
@@ -1225,6 +1417,7 @@ class CreatorService {
 
     const { rows: shops } = await pool.query(
       `SELECT scl.id,
+              scl.seller_id,
               scl.code,
               scl.commission_rate,
               scl.status,
@@ -1239,7 +1432,7 @@ class CreatorService {
        LEFT JOIN creator_earnings ce ON ce.seller_creator_link_id = scl.id
        WHERE scl.creator_id = $1
          AND scl.status = 'active'
-       GROUP BY scl.id, s.shop_name, s.slug, s.full_name
+       GROUP BY scl.id, scl.seller_id, s.shop_name, s.slug, s.full_name
        ORDER BY scl.created_at DESC`,
       [creatorId]
     );
@@ -1276,34 +1469,41 @@ class CreatorService {
               period_start,
               SUM(sales_count)::int AS sales,
               SUM(sales_value)::numeric AS sales_value,
-              SUM(earnings)::numeric AS earnings,
+              SUM(commission_earnings)::numeric AS commission_earnings,
+              SUM(referral_earnings)::numeric AS referral_earnings,
+              (SUM(commission_earnings) + SUM(referral_earnings))::numeric AS earnings,
               SUM(clicks)::int AS clicks
        FROM (
          SELECT DATE_TRUNC('${analysisPeriod.unit}', ce.created_at) AS period_start,
                 COUNT(*) AS sales_count,
                 COALESCE(SUM(po.total_amount), 0) AS sales_value,
-                COALESCE(SUM(ce.amount), 0) AS earnings,
+                COALESCE(SUM(ce.amount), 0) AS commission_earnings,
+                0 AS referral_earnings,
                 0 AS clicks
          FROM creator_earnings ce
          JOIN product_orders po ON po.id = ce.order_id
          WHERE ce.creator_id = $1
+           AND ce.status = 'credited'
            AND ce.created_at >= NOW() - INTERVAL '${analysisPeriod.interval}'
          GROUP BY DATE_TRUNC('${analysisPeriod.unit}', ce.created_at)
          UNION ALL
          SELECT DATE_TRUNC('${analysisPeriod.unit}', cre.created_at) AS period_start,
                 0 AS sales_count,
                 0 AS sales_value,
-                COALESCE(SUM(cre.amount), 0) AS earnings,
+                0 AS commission_earnings,
+                COALESCE(SUM(cre.amount), 0) AS referral_earnings,
                 0 AS clicks
          FROM creator_referral_earnings cre
          WHERE cre.referrer_creator_id = $1
+           AND cre.status = 'credited'
            AND cre.created_at >= NOW() - INTERVAL '${analysisPeriod.interval}'
          GROUP BY DATE_TRUNC('${analysisPeriod.unit}', cre.created_at)
          UNION ALL
          SELECT DATE_TRUNC('${analysisPeriod.unit}', clc.created_at) AS period_start,
                 0 AS sales_count,
                 0 AS sales_value,
-                0 AS earnings,
+                0 AS commission_earnings,
+                0 AS referral_earnings,
                 COUNT(*) AS clicks
          FROM creator_link_clicks clc
          WHERE clc.creator_id = $1
@@ -1311,6 +1511,25 @@ class CreatorService {
          GROUP BY DATE_TRUNC('${analysisPeriod.unit}', clc.created_at)
        ) series
        GROUP BY period_start
+       ORDER BY period_start`,
+      [creatorId, analysisPeriod.labelFormat]
+    );
+
+    // Per-business referral (invited-business) earnings over the same periods,
+    // so the "how you're doing" business graph can switch between individual
+    // invited businesses (or all) within one line chart.
+    const { rows: businessEarnings } = await pool.query(
+      `SELECT TO_CHAR(DATE_TRUNC('${analysisPeriod.unit}', cre.created_at), $2) AS period,
+              DATE_TRUNC('${analysisPeriod.unit}', cre.created_at) AS period_start,
+              cre.referred_seller_id AS seller_id,
+              s.shop_name,
+              SUM(cre.amount)::numeric AS earnings
+       FROM creator_referral_earnings cre
+       JOIN sellers s ON s.id = cre.referred_seller_id
+       WHERE cre.referrer_creator_id = $1
+         AND cre.status = 'credited'
+         AND cre.created_at >= NOW() - INTERVAL '${analysisPeriod.interval}'
+       GROUP BY period_start, cre.referred_seller_id, s.shop_name
        ORDER BY period_start`,
       [creatorId, analysisPeriod.labelFormat]
     );
@@ -1345,6 +1564,7 @@ class CreatorService {
       shopRequests,
       earnings,
       analysis,
+      businessEarnings,
       analysisPeriod: analysisPeriod.key,
       monthly: analysis,
       leaderboard,
@@ -1473,6 +1693,11 @@ class CreatorService {
     );
     if (activeLink.rows[0]) {
       throw new AppError('You already have an active collaboration link for this shop.', 400);
+    }
+
+    const activePromotions = await countActivePromotions(pool, creatorId, sellerId);
+    if (activePromotions >= MAX_ACTIVE_PROMOTIONS) {
+      throw new AppError(`You can promote at most ${MAX_ACTIVE_PROMOTIONS} shops at once. Leave one before requesting another.`, 400);
     }
 
     const { rows } = await pool.query(
@@ -1674,6 +1899,11 @@ class CreatorService {
       }
 
       // Action is 'accept'
+      const activeCount = await countActivePromotions(client, request.creator_id, sellerId);
+      if (activeCount >= MAX_ACTIVE_PROMOTIONS) {
+        throw new AppError(`This creator is already promoting the maximum of ${MAX_ACTIVE_PROMOTIONS} shops. They must leave one before you can accept.`, 400);
+      }
+
       const existingLink = await client.query(
         `SELECT id, code FROM seller_creator_links
          WHERE seller_id = $1 AND creator_id = $2
@@ -1748,8 +1978,23 @@ class CreatorService {
       values.push(updates.tiktokLink ? String(updates.tiktokLink).trim() : null);
     }
     if (updates.whatsappNumber !== undefined) {
+      const raw = updates.whatsappNumber ? String(updates.whatsappNumber).trim() : '';
+      if (raw && !normalizeKenyanPhone(raw)) {
+        throw new AppError('Enter a valid WhatsApp number (e.g. 0712345678).', 400);
+      }
       fields.push(`whatsapp_number = $${idx++}`);
-      values.push(updates.whatsappNumber ? String(updates.whatsappNumber).trim() : null);
+      values.push(raw ? normalizeKenyanPhone(raw) : null);
+    }
+    if (updates.mpesaNumber !== undefined) {
+      const raw = updates.mpesaNumber ? String(updates.mpesaNumber).trim() : '';
+      // The M-Pesa number receives real payouts, so require a valid KE mobile.
+      // Clearing it (null) is disallowed — a creator always needs a payout number.
+      const normalized = normalizeKenyanPhone(raw);
+      if (!normalized) {
+        throw new AppError('Enter a valid M-Pesa number (e.g. 0712345678).', 400);
+      }
+      fields.push(`mpesa_number = $${idx++}`);
+      values.push(normalized);
     }
 
     if (fields.length === 0) {
