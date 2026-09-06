@@ -93,15 +93,17 @@ export function CreatorWithdrawalPanel({ creator, clearance, withdrawals }: Crea
         </div>
       </div>
 
-      {/* Earnings split: commission vs invited-business */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      {/* Earnings split: commission vs invited-business — lifetime earned, not
+          the withdrawable balance (which nets out past withdrawals + T+2 holds). */}
+      <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">Earned to date</p>
+      <div className="mt-1.5 grid grid-cols-2 gap-2">
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50">Commission earnings</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50">Commission</p>
           <p className="mt-0.5 text-sm font-black text-slate-900 dark:text-white">{money(commissionEarnings)}</p>
           <p className="text-[10px] text-slate-400 dark:text-white/40">From promoted shops</p>
         </div>
         <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50">Invited-business earnings</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50">Invited business</p>
           <p className="mt-0.5 text-sm font-black text-slate-900 dark:text-white">{money(referralEarnings)}</p>
           <p className="text-[10px] text-slate-400 dark:text-white/40">From businesses you invited</p>
         </div>

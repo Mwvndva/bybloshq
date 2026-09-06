@@ -190,6 +190,49 @@ describe('creator leave — invited business', () => {
   });
 });
 
+describe('seller removes a creator', () => {
+  test('blocks while an order is open, then succeeds once terminal', async (t) => {
+    let creator, seller, buyer, user, order;
+    t.after(async () => {
+      if (creator) await cleanupCreatorFinancials(creator.id);
+      if (order) await cleanupOrder(order.id).catch(() => {});
+      if (creator) await cleanupCreator(creator.id).catch(() => {});
+      if (seller) await cleanupSeller(seller.id).catch(() => {});
+      if (buyer) await cleanupBuyer(buyer.id).catch(() => {});
+      if (user) await cleanupUser(user.id).catch(() => {});
+    });
+
+    user = await createUser({});
+    buyer = await createBuyer({ userId: user.id });
+    seller = await createSeller({});
+    creator = await createCreator({});
+    const link = await createSellerCreatorLink({ sellerId: seller.id, creatorId: creator.id });
+
+    order = await createCompletedOrder({
+      buyerId: buyer.id,
+      sellerId: seller.id,
+      totalAmount: 1000,
+      sellerPayoutAmount: 900,
+      status: 'PAID',
+      paymentStatus: 'completed',
+      metadata: { creator_attribution: { creator_id: creator.id, seller_creator_link_id: link.id } }
+    });
+
+    await assert.rejects(
+      () => CreatorService.sellerRemoveCreator(seller.id, creator.id),
+      /Complete 1 open order/
+    );
+
+    await pool.query(`UPDATE product_orders SET status = 'COMPLETED' WHERE id = $1`, [order.id]);
+
+    const res = await CreatorService.sellerRemoveCreator(seller.id, creator.id);
+    assert.equal(res.status, 'removed');
+
+    const { rows } = await pool.query('SELECT status FROM seller_creator_links WHERE id = $1', [link.id]);
+    assert.equal(rows[0].status, 'removed', 'link is terminated by the seller');
+  });
+});
+
 describe('creator clearance — earnings split', () => {
   test('returns commission and invited-business earnings separately', async (t) => {
     let creator, seller, buyer, user, order1, order2;

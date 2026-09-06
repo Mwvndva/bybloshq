@@ -3,6 +3,7 @@ import {
   getSellerCreatorsDashboard,
   updateCreatorListing,
   respondToCreatorRequest,
+  removeSellerCreator,
   type SellerCreatorsDashboardData
 } from '../api/creatorsApi';
 
@@ -34,6 +35,17 @@ export function useRespondToCreatorRequestMutation() {
   return useMutation({
     mutationFn: ({ requestId, action }: { requestId: number; action: 'accept' | 'deny' }) =>
       respondToCreatorRequest(requestId, action),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seller', 'creators-dashboard'] });
+    },
+  });
+}
+
+export function useRemoveSellerCreatorMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (creatorId: number) => removeSellerCreator(creatorId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seller', 'creators-dashboard'] });
     },

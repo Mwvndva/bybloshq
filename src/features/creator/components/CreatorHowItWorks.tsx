@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, Store, Send, Link as LinkIcon, DollarSign, Wallet, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 
 export function CreatorHowItWorks() {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const steps = [
     {

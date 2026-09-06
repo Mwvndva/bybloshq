@@ -456,6 +456,63 @@ class CreatorService {
     }
   }
 
+  /**
+   * Seller removes a creator who is promoting their shop: terminates the
+   * seller_creator_link (stops future commission). Mirrors the creator's own
+   * leavePromotedShop guard — blocked while any order attributed to this
+   * creator+seller is still open, so in-flight commission is never orphaned.
+   */
+  static async sellerRemoveCreator(sellerId, creatorId) {
+    const cid = Number(creatorId);
+    if (!Number.isInteger(cid)) throw new AppError('Invalid creator.', 400);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const linkRes = await client.query(
+        `SELECT id FROM seller_creator_links
+          WHERE seller_id = $1 AND creator_id = $2 AND status = 'active'
+          FOR UPDATE`,
+        [sellerId, cid]
+      );
+      if (!linkRes.rows[0]) {
+        throw new AppError('This creator is not actively promoting your shop.', 404);
+      }
+
+      const openRes = await client.query(
+        `SELECT COUNT(*)::int AS n
+           FROM product_orders po
+          WHERE po.seller_id = $1
+            AND (po.metadata -> 'creator_attribution' ->> 'creator_id')::int = $2
+            AND po.status NOT IN ('COMPLETED', 'CANCELLED', 'FAILED', 'EXPIRED', 'REFUNDED')`,
+        [sellerId, cid]
+      );
+      const openCount = openRes.rows[0].n;
+      if (openCount > 0) {
+        throw new AppError(
+          `Complete ${openCount} open order${openCount === 1 ? '' : 's'} with this creator before removing them.`,
+          409
+        );
+      }
+
+      await client.query(
+        `UPDATE seller_creator_links
+            SET status = 'removed', updated_at = NOW()
+          WHERE id = $1`,
+        [linkRes.rows[0].id]
+      );
+
+      await client.query('COMMIT');
+      return { status: 'removed', creatorId: cid };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   static async getInviteByToken(token) {
     const { rows } = await pool.query(
       `SELECT sci.*, s.shop_name, s.full_name AS seller_name, s.creator_commission_rate
@@ -1652,6 +1709,9 @@ class CreatorService {
          ON csr.seller_id = s.id AND csr.creator_id = $1
        WHERE s.is_creator_marketplace_enabled = TRUE
          AND (s.status IS NULL OR s.status != 'deleted')
+         -- Dedupe: shops the creator is already actively promoting are shown in
+         -- the "Your links" section, so keep them out of the browse list.
+         AND scl.id IS NULL
        ORDER BY s.updated_at DESC, s.id DESC`,
       [creatorId]
     );

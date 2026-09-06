@@ -371,6 +371,15 @@ export const requestCollaboration = async (req, res, next) => {
   }
 };
 
+export const removeSellerCreator = async (req, res, next) => {
+  try {
+    const result = await CreatorService.sellerRemoveCreator(req.user.sellerId, Number(req.params.creatorId));
+    res.status(200).json({ status: 'success', message: 'Creator removed.', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getSellerCreatorsDashboard = async (req, res, next) => {
   try {
     const dashboard = await CreatorService.getSellerCreatorsDashboard(req.user.sellerId);

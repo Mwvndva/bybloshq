@@ -11,16 +11,22 @@ import {
   TrendingUp,
   Percent,
   MessageSquare,
-  Instagram
+  Instagram,
+  Info,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { copyLinkedTextToClipboard } from '@/shared/utils/shopLinks';
+import { socialUrl } from '@/features/shop/utils/socialLinks';
+import instagramLogo from '@/assets/social/instagram.png';
+import tiktokLogo from '@/assets/social/tiktok.png';
 import {
   useSellerCreatorsQuery,
   useUpdateCreatorListingMutation,
-  useRespondToCreatorRequestMutation
+  useRespondToCreatorRequestMutation,
+  useRemoveSellerCreatorMutation
 } from '@/features/seller/hooks/useSellerCreators';
 import { useInviteCreatorMutation } from '@/features/seller/hooks/useSellerProfile';
 
@@ -30,6 +36,7 @@ export function CreatorsTab() {
   const { data, isLoading, refetch } = useSellerCreatorsQuery();
   const updateListingMutation = useUpdateCreatorListingMutation();
   const respondMutation = useRespondToCreatorRequestMutation();
+  const removeCreatorMutation = useRemoveSellerCreatorMutation();
   const inviteMutation = useInviteCreatorMutation();
 
   const [isMarketplaceEnabled, setIsMarketplaceEnabled] = useState(false);
@@ -39,6 +46,21 @@ export function CreatorsTab() {
   const [directInviteEmail, setDirectInviteEmail] = useState('');
   const [invitingDirect, setInvitingDirect] = useState(false);
   const [respondingId, setRespondingId] = useState<number | null>(null);
+  const [removingCreatorId, setRemovingCreatorId] = useState<number | null>(null);
+
+  const handleRemoveCreator = async (creatorId: number, creatorName: string) => {
+    setRemovingCreatorId(creatorId);
+    try {
+      await removeCreatorMutation.mutateAsync(creatorId);
+      toast.success(`${creatorName} removed.`);
+      refetch();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(error.response?.data?.message || error.message || 'Could not remove creator.');
+    } finally {
+      setRemovingCreatorId(null);
+    }
+  };
 
   useEffect(() => {
     if (data) {
@@ -231,6 +253,11 @@ export function CreatorsTab() {
                 {updateListingMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Settings'}
               </Button>
             </div>
+
+            <p className="mt-3 flex items-start gap-1.5 text-[11px] text-slate-500 dark:text-white/50 leading-relaxed">
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-yellow-500" />
+              <span>Changing this only affects creators who join from now on. Creators already promoting keep the rate they joined at (shown next to each in Active Creators below).</span>
+            </p>
           </div>
         </div>
       </section>
@@ -382,8 +409,41 @@ export function CreatorsTab() {
                   key={creator.id}
                   className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
-                    <p className="font-black text-slate-900 dark:text-white text-base">{creator.creatorName}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-black text-slate-900 dark:text-white text-base truncate">{creator.creatorName}</p>
+                      {/* Social logos: clickable when linked, disabled when not */}
+                      {creator.instagramLink ? (
+                        <a
+                          href={socialUrl('instagram', creator.instagramLink) || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${creator.creatorName} on Instagram`}
+                          className="rounded-md p-0.5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                        >
+                          <img src={instagramLogo} alt="Instagram" className="h-4 w-4 object-contain" />
+                        </a>
+                      ) : (
+                        <span aria-label="No Instagram linked" title="No Instagram linked" className="p-0.5 cursor-not-allowed">
+                          <img src={instagramLogo} alt="" className="h-4 w-4 object-contain opacity-30 grayscale" />
+                        </span>
+                      )}
+                      {creator.tiktokLink ? (
+                        <a
+                          href={socialUrl('tiktok', creator.tiktokLink) || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${creator.creatorName} on TikTok`}
+                          className="rounded-md p-0.5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                        >
+                          <img src={tiktokLogo} alt="TikTok" className="h-4 w-4 object-contain" />
+                        </a>
+                      ) : (
+                        <span aria-label="No TikTok linked" title="No TikTok linked" className="p-0.5 cursor-not-allowed">
+                          <img src={tiktokLogo} alt="" className="h-4 w-4 object-contain opacity-30 grayscale" />
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 text-xs text-slate-500 dark:text-white/50">
                       Code: <span className="font-mono text-yellow-400 font-bold">{creator.code}</span> · Cut:{' '}
                       <span className="font-bold text-slate-900 dark:text-white">{(creator.commissionRate * 100).toFixed(1)}%</span>
@@ -401,15 +461,27 @@ export function CreatorsTab() {
                     </div>
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleCopyLink(creator.shopUrl, creator.creatorName)}
-                    className="h-9 self-start sm:self-center border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] text-slate-900 dark:text-white hover:bg-white/10 text-xs font-bold"
-                  >
-                    <Copy className="h-3.5 w-3.5 mr-1.5" />
-                    Copy Tracking Link
-                  </Button>
+                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleCopyLink(creator.shopUrl, creator.creatorName)}
+                      className="h-9 border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] text-slate-900 dark:text-white hover:bg-white/10 text-xs font-bold"
+                    >
+                      <Copy className="h-3.5 w-3.5 mr-1.5" />
+                      Copy Link
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleRemoveCreator(creator.creatorId, creator.creatorName)}
+                      disabled={removingCreatorId === creator.creatorId}
+                      aria-label={`Remove ${creator.creatorName}`}
+                      className="h-9 border-red-300 dark:border-red-500/30 bg-white dark:bg-transparent text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10"
+                    >
+                      {removingCreatorId === creator.creatorId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
