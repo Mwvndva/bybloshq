@@ -10,7 +10,8 @@ import {
   listSellerInvites,
   getSellerCreatorsDashboard,
   updateCreatorListing,
-  respondToCreatorRequest
+  respondToCreatorRequest,
+  removeSellerCreator
 } from '../../domains/growth/creators/creator.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect, hasPermission } from '../middleware/auth.js';
@@ -150,6 +151,7 @@ router.get('/withdrawal-requests/:id', getWithdrawalById);
 router.get('/creators/dashboard', getSellerCreatorsDashboard);
 router.patch('/creators/listing', updateCreatorListing);
 router.post('/creators/requests/:requestId/respond', respondToCreatorRequest);
+router.delete('/creators/:creatorId', removeSellerCreator);
 router.get('/creator-invites', listSellerInvites);
 router.post('/creator-invites', inviteCreator);
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Check, Loader2, Sparkles, Link2 } from 'lucide-react';
+import { ExternalLink, Check, Loader2, Sparkles, Link2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -46,6 +46,19 @@ export function CreatorSocialProfiles({ profile }: CreatorSocialProfilesProps) {
     }
   };
 
+  const handleRemove = async (network: 'instagram' | 'tiktok') => {
+    try {
+      await updateMutation.mutateAsync(
+        network === 'instagram' ? { instagramLink: null } : { tiktokLink: null }
+      );
+      if (network === 'instagram') setInstagram(''); else setTiktok('');
+      toast.success(`${network === 'instagram' ? 'Instagram' : 'TikTok'} link removed.`);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(error.response?.data?.message || error.message || 'Failed to remove link.');
+    }
+  };
+
   return (
     <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-5 sm:p-6 shadow-sm transition-colors duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -84,17 +97,31 @@ export function CreatorSocialProfiles({ profile }: CreatorSocialProfilesProps) {
                   Instagram Profile
                 </label>
               </div>
-              {instagramHref && (
-                <a
-                  href={instagramHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-bold text-pink-600 hover:text-pink-500 transition-colors"
-                >
-                  <span>Test Link</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
+              <div className="flex items-center gap-2">
+                {instagramHref && (
+                  <a
+                    href={instagramHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[11px] font-bold text-pink-600 hover:text-pink-500 transition-colors"
+                  >
+                    <span>Test Link</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                {profile?.instagramLink && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemove('instagram')}
+                    disabled={updateMutation.isPending}
+                    aria-label="Remove Instagram link"
+                    className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>Remove</span>
+                  </button>
+                )}
+              </div>
             </div>
             <Input
               type="text"
@@ -117,17 +144,31 @@ export function CreatorSocialProfiles({ profile }: CreatorSocialProfilesProps) {
                   TikTok Profile
                 </label>
               </div>
-              {tiktokHref && (
-                <a
-                  href={tiktokHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-bold text-cyan-600 hover:text-cyan-500 transition-colors"
-                >
-                  <span>Test Link</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
+              <div className="flex items-center gap-2">
+                {tiktokHref && (
+                  <a
+                    href={tiktokHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[11px] font-bold text-cyan-600 hover:text-cyan-500 transition-colors"
+                  >
+                    <span>Test Link</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                {profile?.tiktokLink && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemove('tiktok')}
+                    disabled={updateMutation.isPending}
+                    aria-label="Remove TikTok link"
+                    className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>Remove</span>
+                  </button>
+                )}
+              </div>
             </div>
             <Input
               type="text"

@@ -121,16 +121,11 @@ export const updateProfile = async (req, res) => {
       return res.status(500).json({ status: 'error', message: 'Failed to update profile' });
     }
 
-    if (req.body.creatorCommissionRate !== undefined) {
-      await query(
-        `UPDATE seller_creator_links
-         SET commission_rate = $1,
-             updated_at = NOW()
-         WHERE seller_id = $2
-           AND status = 'active'`,
-        [req.body.creatorCommissionRate, sellerId]
-      );
-    }
+    // Intentionally does NOT propagate the new rate to existing active links:
+    // a creator keeps the commission rate they joined at. The new rate is
+    // snapshotted onto each link at accept time (see respondToShopRequest /
+    // respondToCreatorCollaborationRequest), so only creators who join from now
+    // on use the updated value.
 
     // Invalidate auth cache so next request gets fresh seller data
     const currentToken = getTokenFromRequest(req);
