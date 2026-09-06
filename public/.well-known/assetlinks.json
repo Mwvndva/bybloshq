@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "space.bybloshq.app",
+      "sha256_cert_fingerprints": [
+        "A9:43:F7:6A:95:26:F5:BE:63:B4:DB:1B:65:B5:07:3A:A7:ED:A2:66:EB:58:A4:FC:DF:43:7F:1A:CE:AB:FB:18",
+        "02:48:F5:02:D1:17:5F:F7:A9:CF:5C:15:45:B2:4B:C2:F8:A3:2F:EC:22:42:F2:28:97:59:EB:2B:31:40:E1:F2"
+      ]
+    }
+  }
+]
