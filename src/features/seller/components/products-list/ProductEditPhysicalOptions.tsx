@@ -13,8 +13,8 @@ export function ProductEditPhysicalOptions({ formData, onFormDataChange }: Produ
                 <div className="rounded-xl seller-card-soft p-3 space-y-3">
                   <label className="flex items-center justify-between gap-3 cursor-pointer">
                     <span>
-                      <span className="block text-white text-xs font-semibold">Custom product</span>
-                      <span className="block text-[10px] text-white/60 font-medium">Require buyer instructions and show production time.</span>
+                      <span className="block text-slate-900 dark:text-white text-xs font-semibold">Custom product</span>
+                      <span className="block text-[10px] text-slate-500 dark:text-white/60 font-medium">Require buyer instructions and show production time.</span>
                     </span>
                     <input
                       type="checkbox"
@@ -24,10 +24,10 @@ export function ProductEditPhysicalOptions({ formData, onFormDataChange }: Produ
                     />
                   </label>
 
-                  <label className="flex items-center justify-between gap-3 border-t border-white/10 pt-3 cursor-pointer">
+                  <label className="flex items-center justify-between gap-3 border-t border-slate-200 dark:border-white/10 pt-3 cursor-pointer">
                     <span>
-                      <span className="block text-white text-xs font-semibold">Imported / pre-order item</span>
-                      <span className="block text-[10px] text-white/60 font-medium">Show buyers when the item is expected to be ready.</span>
+                      <span className="block text-slate-900 dark:text-white text-xs font-semibold">Imported / pre-order item</span>
+                      <span className="block text-[10px] text-slate-500 dark:text-white/60 font-medium">Show buyers when the item is expected to be ready.</span>
                     </span>
                     <input
                       type="checkbox"
@@ -48,9 +48,9 @@ export function ProductEditPhysicalOptions({ formData, onFormDataChange }: Produ
                           <SelectTrigger className="seller-field h-9 rounded-lg">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#0a0a0a] border-white/10 text-white z-[110]">
+                          <SelectContent className="bg-white dark:bg-[#0a0a0a] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white z-[110]">
                             {[1, 2, 3, 4, 5].map(day => (
-                              <SelectItem key={day} value={String(day)} className="text-white focus:bg-[var(--theme-button-bg,#f5c518)] focus:text-[var(--theme-button-text,#000000)]">
+                              <SelectItem key={day} value={String(day)} className="text-slate-900 dark:text-white focus:bg-[var(--theme-button-bg,#f5c518)] focus:text-[var(--theme-button-text,#000000)]">
                                 {day} {day === 1 ? 'day' : 'days'}
                               </SelectItem>
                             ))}
@@ -79,9 +79,9 @@ export function ProductEditPhysicalOptions({ formData, onFormDataChange }: Produ
                         <SelectTrigger className="seller-field h-9 rounded-lg">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#0a0a0a] border-white/10 text-white z-[110]">
+                        <SelectContent className="bg-white dark:bg-[#0a0a0a] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white z-[110]">
                           {[7, 14, 21, 30].map(day => (
-                            <SelectItem key={day} value={String(day)} className="text-white focus:bg-[var(--theme-button-bg,#f5c518)] focus:text-[var(--theme-button-text,#000000)]">
+                            <SelectItem key={day} value={String(day)} className="text-slate-900 dark:text-white focus:bg-[var(--theme-button-bg,#f5c518)] focus:text-[var(--theme-button-text,#000000)]">
                               {day} days
                             </SelectItem>
                           ))}

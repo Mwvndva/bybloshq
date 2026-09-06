@@ -75,7 +75,7 @@ function ProfileDetail({
           placeholder={placeholder}
           inputMode="tel"
           autoComplete="tel"
-          className="mt-2 h-9 border border-slate-300 dark:border-white/10 bg-white dark:bg-[#141414] text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus-visible:ring-[#F5C518]"
+          className="mt-2 h-9 border border-slate-300 dark:border-white/10 bg-white dark:bg-[#141414] text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 dark:text-white/40 focus-visible:ring-[#F5C518]"
         />
       ) : (
         <div className="mt-2 break-words text-sm font-bold leading-5 text-slate-950 dark:text-white">
@@ -181,7 +181,7 @@ export function BuyerProfileContent({
       <div className="space-y-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black p-4">
         <Button
           onClick={onLogout}
-          className="h-10 w-full justify-center gap-2 bg-red-600 font-bold text-white hover:bg-red-500"
+          className="h-10 w-full justify-center gap-2 bg-red-600 font-bold text-slate-900 dark:text-white hover:bg-red-500"
         >
           <LogOut className="h-4 w-4" />
           Logout

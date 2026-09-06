@@ -23,7 +23,7 @@ export function SellerProfileHero({ sellerProfile, shopUsername, onCopyShopLink,
   const initial = shopName.charAt(0).toUpperCase();
 
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-[#0a0a0a] shadow-[0_18px_50px_rgba(0,0,0,0.5)]">
+    <div className="relative w-full overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-[0_18px_50px_rgba(0,0,0,0.5)]">
       {/* Shop Accent Header */}
       <div className="relative h-20 w-full sm:h-28 lg:h-32">
         <div
@@ -37,7 +37,7 @@ export function SellerProfileHero({ sellerProfile, shopUsername, onCopyShopLink,
         {/* Business profile photo container with lower-right pencil overlay */}
         <div className="relative z-10 -mt-10 sm:-mt-14">
           <div
-            className="h-20 w-20 overflow-hidden rounded-full bg-[#141414] shadow-lg sm:h-24 sm:w-24"
+            className="h-20 w-20 overflow-hidden rounded-full bg-white dark:bg-[#141414] shadow-lg sm:h-24 sm:w-24"
             style={{
               border: '4px solid var(--theme-accent, #f5c518)',
               boxShadow: '0 0 0 4px rgba(var(--theme-accent-rgb, 245, 158, 11), 0.18), 0 10px 25px rgba(0,0,0,0.55)'
@@ -82,13 +82,13 @@ export function SellerProfileHero({ sellerProfile, shopUsername, onCopyShopLink,
         )}
 
         {/* Shop name */}
-        <h2 className="mt-3 text-center text-xl font-black tracking-tight text-white sm:text-2xl [overflow-wrap:anywhere]">
+        <h2 className="mt-3 text-center text-xl font-black tracking-tight text-slate-900 dark:text-white sm:text-2xl [overflow-wrap:anywhere]">
           {shopName}
         </h2>
 
         {/* Shop bio — sits directly below the shop name. */}
         {bio && (
-          <p className="mt-1.5 max-w-md text-center text-xs font-medium leading-5 text-white/60 sm:text-sm [overflow-wrap:anywhere]">
+          <p className="mt-1.5 max-w-md text-center text-xs font-medium leading-5 text-slate-500 dark:text-white/60 sm:text-sm [overflow-wrap:anywhere]">
             {bio}
           </p>
         )}

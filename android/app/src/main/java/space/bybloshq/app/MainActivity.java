@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
+import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -24,6 +25,13 @@ public class MainActivity extends BridgeActivity {
 
         WebView webView = getBridge().getWebView();
         if (webView != null) {
+            // Make the WebView background follow the OS light/dark mode, matching
+            // the already night-qualified splash/window/status-bar. Without this,
+            // the Capacitor config's static light backgroundColor (#F5F4F0) shows
+            // for a frame on a dark cold launch, flashing before the web content
+            // paints its resolved theme. byblos_launch_background is #F5F4F0 in
+            // values/ and #000000 in values-night/.
+            webView.setBackgroundColor(ContextCompat.getColor(this, R.color.byblos_launch_background));
             CookieManager.getInstance().setAcceptCookie(true);
             CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
         }

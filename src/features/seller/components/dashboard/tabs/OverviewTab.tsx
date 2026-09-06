@@ -42,15 +42,15 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
     <div className="space-y-3 sm:space-y-4">
       {/* Balance hero + Sales & Revenue companions */}
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]">
-        <div className="seller-balance-hero relative overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-6 flex flex-col justify-between">
+        <div className="seller-balance-hero relative overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10 p-5 sm:p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/25">
                 <Wallet className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
               </span>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-white/70">Available balance</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-white/70">Available balance</p>
             </div>
-            <p className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">{formatCurrency(balance)}</p>
+            <p className="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">{formatCurrency(balance)}</p>
           </div>
           <button
             type="button"
@@ -65,7 +65,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
 
         {/* Total Sales & Total Revenue side-by-side on mobile/Android & desktop */}
         <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-          <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-5 min-w-0">
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-3.5 sm:p-5 min-w-0">
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span
@@ -74,16 +74,16 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
                 >
                   <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
                 </span>
-                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-white/50 truncate">Total Sales</p>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-white/50 truncate">Total Sales</p>
               </div>
-              <p className="mt-2 truncate text-lg font-black text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
+              <p className="mt-2 truncate text-lg font-black text-slate-900 dark:text-white sm:text-2xl">{formatCurrency(totalSales)}</p>
             </div>
-            <p className="mt-1.5 text-[9px] sm:text-[10px] text-white/50 leading-tight">
+            <p className="mt-1.5 text-[9px] sm:text-[10px] text-slate-500 dark:text-white/50 leading-tight">
               Total product price value (excludes 2% customer service charge).
             </p>
           </div>
 
-          <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-5 min-w-0">
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-3.5 sm:p-5 min-w-0">
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span
@@ -92,11 +92,11 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
                 >
                   <BadgeDollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: 'var(--theme-accent, #f5c518)' }} />
                 </span>
-                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-white/50 truncate">Total Revenue</p>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-white/50 truncate">Total Revenue</p>
               </div>
-              <p className="mt-2 truncate text-lg font-black text-white sm:text-2xl">{formatCurrency(revenue)}</p>
+              <p className="mt-2 truncate text-lg font-black text-slate-900 dark:text-white sm:text-2xl">{formatCurrency(revenue)}</p>
             </div>
-            <p className="mt-1.5 text-[9px] sm:text-[10px] text-white/50 leading-tight">
+            <p className="mt-1.5 text-[9px] sm:text-[10px] text-slate-500 dark:text-white/50 leading-tight">
               Net earnings after KSh 10 platform fee per sale.
             </p>
           </div>
@@ -105,18 +105,18 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
 
       {/* Shop activity — lighter-weight secondary stats. */}
       <div>
-        <p className="mb-2 px-0.5 text-[11px] font-bold uppercase tracking-wide text-white/40">Shop activity</p>
+        <p className="mb-2 px-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-white/40">Shop activity</p>
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           {[
             { label: 'Clicks', value: clicks.toLocaleString(), icon: MousePointerClick },
             { label: 'Wishlist', value: wishlist.toLocaleString(), icon: Heart },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-3">
-              <div className="flex items-center gap-1.5 text-white/45">
+            <div key={label} className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.02] px-3.5 py-3">
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-white/45">
                 <Icon className="h-3.5 w-3.5" />
                 <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
               </div>
-              <p className="mt-1 text-lg font-black tabular-nums text-white">{value}</p>
+              <p className="mt-1 text-lg font-black tabular-nums text-slate-900 dark:text-white">{value}</p>
             </div>
           ))}
         </div>
@@ -125,12 +125,12 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
       {/* Status chips — Live products is a state, not a KPI. Creator sales
           only appears once there is something to show. */}
       <div className="flex flex-wrap items-center gap-2.5">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-xs font-bold text-white/80">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] px-3.5 py-1.5 text-xs font-bold text-slate-500 dark:text-white/80">
           <Package className="h-3.5 w-3.5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
           {liveProducts.toLocaleString()} live {liveProducts === 1 ? 'product' : 'products'}
         </span>
         {creatorSales > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-bold text-white/80">
+          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:text-white/80">
             <Megaphone className="h-3 w-3" style={{ color: 'var(--theme-accent, #f5c518)' }} />
             {formatCurrency(creatorSales)} creator sales
           </span>
@@ -142,8 +142,8 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="px-1 sm:px-0">
-        <h2 className="text-lg font-black text-white sm:text-xl lg:text-2xl">{greeting.title}</h2>
-        <p className="mt-1 text-xs font-medium text-white/60 sm:text-sm">{greeting.sub}</p>
+        <h2 className="text-lg font-black text-slate-900 dark:text-white sm:text-xl lg:text-2xl">{greeting.title}</h2>
+        <p className="mt-1 text-xs font-medium text-slate-500 dark:text-white/60 sm:text-sm">{greeting.sub}</p>
       </div>
 
       <SellerReminders sellerProfile={sellerProfile} totalProducts={liveProducts} onSelectTab={onSelectTab} />
@@ -152,15 +152,15 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
         metricsBlock
       ) : (
         <>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center sm:p-8">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-6 text-center sm:p-8">
             <span
               className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl"
               style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.16)' }}
             >
               <PackagePlus className="h-6 w-6" style={{ color: 'var(--theme-accent, #f5c518)' }} />
             </span>
-            <p className="mt-3 text-base font-black text-white sm:text-lg">Add your first product to start getting clicks</p>
-            <p className="mx-auto mt-1 max-w-sm text-xs text-white/60 sm:text-sm">
+            <p className="mt-3 text-base font-black text-slate-900 dark:text-white sm:text-lg">Add your first product to start getting clicks</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500 dark:text-white/60 sm:text-sm">
               Once buyers start engaging, your balance, revenue and activity will show up right here.
             </p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
@@ -176,7 +176,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
               <button
                 type="button"
                 onClick={() => { setShowMetrics((v) => !v); }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-2.5 text-xs font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:text-sm"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/15 px-4 py-2.5 text-xs font-bold text-slate-500 dark:text-white/70 transition-colors hover:bg-white/10 hover:text-slate-900 dark:text-white sm:text-sm"
               >
                 {showMetrics ? 'Hide metrics' : 'Show metrics'}
                 <ArrowUpRight className={`h-3.5 w-3.5 transition-transform ${showMetrics ? 'rotate-90' : ''}`} />
@@ -188,7 +188,7 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
       )}
 
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
           <div className="flex items-center gap-3 p-4">
             <span
               className="flex h-9 w-9 items-center justify-center rounded-xl"
@@ -196,29 +196,29 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
             >
               <Clock className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
             </span>
-            <h3 className="text-base font-black text-white sm:text-lg">Action Needed</h3>
+            <h3 className="text-base font-black text-slate-900 dark:text-white sm:text-lg">Action Needed</h3>
           </div>
           <div className="space-y-2 px-4 pb-4">
             {pendingOverviewOrders.length > 0 ? (
               pendingOverviewOrders.map((order) => (
-                <div key={order.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.06]">
+                <div key={order.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-3 transition-colors hover:bg-slate-100 dark:bg-white/[0.06]">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-bold text-white sm:text-base" title={order.orderNumber}>
+                        <span className="truncate text-sm font-bold text-slate-900 dark:text-white sm:text-base" title={order.orderNumber}>
                           {order.orderNumber}
                         </span>
                         <Badge className={`border text-[10px] font-bold ${getPendingStatusStyles(order.status)}`}>
                           {formatOrderStatusLabel(order.status)}
                         </Badge>
                       </div>
-                      <p className="mt-1 truncate text-xs text-white/60">
+                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-white/60">
                         {(order.items || []).map((item) => `${item.quantity}x ${item.product_name}`).join(', ') || 'Order items pending'}
                       </p>
                     </div>
                     <div className="shrink-0 sm:text-right">
-                      <p className="text-sm font-black text-white">{formatCurrency(order.totalAmount)}</p>
-                      <p className="text-[11px] text-white/70">
+                      <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(order.totalAmount)}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-white/70">
                         {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </p>
                     </div>
@@ -226,37 +226,37 @@ export function OverviewTab({ analytics, pendingOverviewOrders, sellerProfile, o
                 </div>
               ))
             ) : (
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-center">
-                <p className="text-sm text-white/70">No paid orders need action right now.</p>
+              <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-5 text-center">
+                <p className="text-sm text-slate-500 dark:text-white/70">No paid orders need action right now.</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
           <div className="p-4">
-            <h3 className="text-base font-black text-white sm:text-lg">Recent Activity</h3>
+            <h3 className="text-base font-black text-slate-900 dark:text-white sm:text-lg">Recent Activity</h3>
           </div>
           <div className="space-y-2 px-4 pb-4">
             {recentOrders.length > 0 ? (
               recentOrders.map((order) => (
-                <div key={order.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <div key={order.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] px-3 py-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-xs font-black text-white">{order.orderNumber}</p>
-                    <p className="shrink-0 text-xs font-black text-white">{formatCurrency(order.totalAmount)}</p>
+                    <p className="truncate text-xs font-black text-slate-900 dark:text-white">{order.orderNumber}</p>
+                    <p className="shrink-0 text-xs font-black text-slate-900 dark:text-white">{formatCurrency(order.totalAmount)}</p>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <Badge className={`border text-[9px] font-bold ${getPendingStatusStyles(order.status)}`}>
                       {formatOrderStatusLabel(order.status)}
                     </Badge>
-                    <p className="shrink-0 text-[10px] text-white/40">
+                    <p className="shrink-0 text-[10px] text-slate-500 dark:text-white/40">
                       {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-sm text-white/50">
+              <p className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] px-3 py-4 text-center text-sm text-slate-500 dark:text-white/50">
                 No paid order activity yet.
               </p>
             )}

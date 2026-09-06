@@ -24,7 +24,7 @@ import {
 } from '@/features/seller/hooks/useSellerCreators';
 import { useInviteCreatorMutation } from '@/features/seller/hooks/useSellerProfile';
 
-const inputClass = 'h-11 border-white/10 bg-[#141414] text-white placeholder:text-white/40';
+const inputClass = 'h-11 border-slate-200 dark:border-white/10 bg-white dark:bg-[#141414] text-slate-900 dark:text-white placeholder:text-slate-500 dark:text-white/40';
 
 export function CreatorsTab() {
   const { data, isLoading, refetch } = useSellerCreatorsQuery();
@@ -113,9 +113,9 @@ export function CreatorsTab() {
   if (isLoading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-[#0a0a0a] px-5 py-3 shadow-xl">
+        <div className="flex items-center gap-3 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] px-5 py-3 shadow-xl">
           <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
-          <span className="text-sm font-semibold text-white/80">Loading creators...</span>
+          <span className="text-sm font-semibold text-slate-500 dark:text-white/80">Loading creators...</span>
         </div>
       </div>
     );
@@ -128,15 +128,15 @@ export function CreatorsTab() {
   return (
     <div className="space-y-6">
       {/* ── Section 1: Marketplace Listing & Commission ── */}
-      <section className="rounded-3xl border border-white/10 bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3.5">
             <div className="rounded-2xl p-3 bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 shrink-0">
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Creator Marketplace</h2>
-              <p className="mt-1 text-xs sm:text-sm text-white/60 leading-relaxed max-w-2xl">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">Creator Marketplace</h2>
+              <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-white/60 leading-relaxed max-w-2xl">
                 List your shop in the Byblos Creator Marketplace so verified creators can discover your brand, inspect your products, and request to promote them.
               </p>
             </div>
@@ -146,7 +146,7 @@ export function CreatorsTab() {
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
               isMarketplaceEnabled
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                : 'bg-white/5 text-white/50 border border-white/10'
+                : 'bg-white/5 text-slate-500 dark:text-white/50 border border-slate-200 dark:border-white/10'
             }`}>
               <span className={`h-2 w-2 rounded-full ${isMarketplaceEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-white/40'}`} />
               {isMarketplaceEnabled ? 'Marketplace Active' : 'Not Listed'}
@@ -156,10 +156,10 @@ export function CreatorsTab() {
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">
           {/* Marketplace toggle card */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-col justify-between">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.02] p-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <label htmlFor="marketplace-toggle" className="text-sm font-bold text-white cursor-pointer">
+                <label htmlFor="marketplace-toggle" className="text-sm font-bold text-slate-900 dark:text-white cursor-pointer">
                   List Shop for Creator Requests
                 </label>
                 <button
@@ -182,23 +182,23 @@ export function CreatorsTab() {
                   />
                 </button>
               </div>
-              <p className="mt-2 text-xs text-white/50 leading-relaxed">
+              <p className="mt-2 text-xs text-slate-500 dark:text-white/50 leading-relaxed">
                 When enabled, creators can preview your shop in read-only mode and send you collaboration requests. You can accept or decline each request.
               </p>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-white/5 text-[11px] text-white/40">
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/5 text-[11px] text-slate-500 dark:text-white/40">
               Zero upfront fees — pay only after a successful sale.
             </div>
           </div>
 
           {/* Commission setting card */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.02] p-4">
             <div className="flex items-center gap-2 text-yellow-400 font-bold text-xs uppercase tracking-wider">
               <Percent className="h-4 w-4" />
               <span>Creator Commission Cut</span>
             </div>
-            <p className="mt-1 text-xs text-white/50">
+            <p className="mt-1 text-xs text-slate-500 dark:text-white/50">
               The percentage of each delivered sale paid to the promoting creator.
             </p>
 
@@ -217,7 +217,7 @@ export function CreatorsTab() {
                   className={`${inputClass} pr-10 font-black text-lg`}
                   placeholder="5"
                 />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 font-black text-sm">
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-white/40 font-black text-sm">
                   %
                 </span>
               </div>
@@ -236,15 +236,15 @@ export function CreatorsTab() {
       </section>
 
       {/* ── Section 2: Incoming Creator Collaboration Requests ── */}
-      <section className="rounded-3xl border border-white/10 bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="rounded-xl p-2 bg-blue-500/10 border border-blue-500/20 text-blue-400">
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">Incoming Creator Requests</h3>
-              <p className="text-xs text-white/50">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Incoming Creator Requests</h3>
+              <p className="text-xs text-slate-500 dark:text-white/50">
                 Creators requesting to promote your shop on commission.
               </p>
             </div>
@@ -258,10 +258,10 @@ export function CreatorsTab() {
 
         <div className="mt-4">
           {incomingRequests.length === 0 ? (
-            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-center">
-              <Users className="h-10 w-10 mx-auto text-white/20 mb-2" />
-              <p className="text-sm font-bold text-white/70">No pending creator requests</p>
-              <p className="mt-1 text-xs text-white/40 max-w-md mx-auto">
+            <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-white/[0.02] p-6 text-center">
+              <Users className="h-10 w-10 mx-auto text-slate-500 dark:text-white/20 mb-2" />
+              <p className="text-sm font-bold text-slate-500 dark:text-white/70">No pending creator requests</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-white/40 max-w-md mx-auto">
                 Make sure your shop is listed in the Creator Marketplace above so creators can discover you and send requests.
               </p>
             </div>
@@ -270,12 +270,12 @@ export function CreatorsTab() {
               {incomingRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="space-y-1.5 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-black text-base text-white">{req.creatorName}</span>
-                      <span className="text-xs text-white/40">· {req.email}</span>
+                      <span className="font-black text-base text-slate-900 dark:text-white">{req.creatorName}</span>
+                      <span className="text-xs text-slate-500 dark:text-white/40">· {req.email}</span>
                       {req.whatsappNumber && (
                         <span className="text-xs text-emerald-400 font-semibold">
                           WA: {req.whatsappNumber}
@@ -284,13 +284,13 @@ export function CreatorsTab() {
                     </div>
 
                     {req.message && (
-                      <p className="text-xs text-white/70 bg-white/[0.04] p-2.5 rounded-xl border border-white/5 flex items-start gap-2">
+                      <p className="text-xs text-slate-500 dark:text-white/70 bg-slate-100 dark:bg-white/[0.04] p-2.5 rounded-xl border border-slate-200 dark:border-white/5 flex items-start gap-2">
                         <MessageSquare className="h-3.5 w-3.5 shrink-0 mt-0.5 text-yellow-400" />
                         <span>&ldquo;{req.message}&rdquo;</span>
                       </p>
                     )}
 
-                    <div className="flex items-center gap-3 pt-1 text-xs text-white/50">
+                    <div className="flex items-center gap-3 pt-1 text-xs text-slate-500 dark:text-white/50">
                       {req.instagramLink && (
                         <a
                           href={req.instagramLink.startsWith('http') ? req.instagramLink : `https://${req.instagramLink}`}
@@ -339,7 +339,7 @@ export function CreatorsTab() {
                       variant="outline"
                       onClick={() => handleRespondToRequest(req.id, 'deny')}
                       disabled={respondingId === req.id}
-                      className="h-10 px-3 border-white/10 bg-transparent text-white/70 hover:text-white hover:bg-white/5"
+                      className="h-10 px-3 border-slate-200 dark:border-white/10 bg-transparent text-slate-500 dark:text-white/70 hover:text-slate-900 dark:text-white hover:bg-white/5"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -352,15 +352,15 @@ export function CreatorsTab() {
       </section>
 
       {/* ── Section 3: Active Collaborating Creators ── */}
-      <section className="rounded-3xl border border-white/10 bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="rounded-xl p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">Active Creators ({activeCreators.length})</h3>
-              <p className="text-xs text-white/50">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Active Creators ({activeCreators.length})</h3>
+              <p className="text-xs text-slate-500 dark:text-white/50">
                 Creators actively sharing links to your shop.
               </p>
             </div>
@@ -369,9 +369,9 @@ export function CreatorsTab() {
 
         <div className="mt-4">
           {activeCreators.length === 0 ? (
-            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-center">
-              <p className="text-sm font-bold text-white/70">No active creators yet</p>
-              <p className="mt-1 text-xs text-white/40">
+            <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-white/[0.02] p-6 text-center">
+              <p className="text-sm font-bold text-slate-500 dark:text-white/70">No active creators yet</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-white/40">
                 Accepted creator requests will appear here with live click and sales metrics.
               </p>
             </div>
@@ -380,16 +380,16 @@ export function CreatorsTab() {
               {activeCreators.map((creator) => (
                 <div
                   key={creator.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="font-black text-white text-base">{creator.creatorName}</p>
-                    <p className="mt-0.5 text-xs text-white/50">
+                    <p className="font-black text-slate-900 dark:text-white text-base">{creator.creatorName}</p>
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-white/50">
                       Code: <span className="font-mono text-yellow-400 font-bold">{creator.code}</span> · Cut:{' '}
-                      <span className="font-bold text-white">{(creator.commissionRate * 100).toFixed(1)}%</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{(creator.commissionRate * 100).toFixed(1)}%</span>
                     </p>
                     <div className="mt-2 flex items-center gap-3 text-xs">
-                      <span className="rounded-lg bg-white/5 px-2 py-1 text-white/80">
+                      <span className="rounded-lg bg-white/5 px-2 py-1 text-slate-500 dark:text-white/80">
                         <strong>{creator.clickCount}</strong> clicks
                       </span>
                       <span className="rounded-lg bg-white/5 px-2 py-1 text-emerald-400">
@@ -405,7 +405,7 @@ export function CreatorsTab() {
                     type="button"
                     variant="outline"
                     onClick={() => handleCopyLink(creator.shopUrl, creator.creatorName)}
-                    className="h-9 self-start sm:self-center border-white/10 bg-white/[0.04] text-white hover:bg-white/10 text-xs font-bold"
+                    className="h-9 self-start sm:self-center border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] text-slate-900 dark:text-white hover:bg-white/10 text-xs font-bold"
                   >
                     <Copy className="h-3.5 w-3.5 mr-1.5" />
                     Copy Tracking Link
@@ -418,14 +418,14 @@ export function CreatorsTab() {
       </section>
 
       {/* ── Section 4: Direct Creator Email Invite ── */}
-      <section className="rounded-3xl border border-white/10 bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-5 sm:p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="rounded-xl p-2 bg-yellow-400/10 border border-yellow-400/20 text-yellow-400">
             <MailPlus className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-white">Direct Email Invite</h3>
-            <p className="text-xs text-white/50">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">Direct Email Invite</h3>
+            <p className="text-xs text-slate-500 dark:text-white/50">
               Invite an influencer or partner directly by their email address.
             </p>
           </div>
@@ -450,12 +450,12 @@ export function CreatorsTab() {
         </div>
 
         {manualInvites.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-white/5">
-            <p className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2">Sent Email Invites</p>
+          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/5">
+            <p className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider mb-2">Sent Email Invites</p>
             <div className="space-y-2">
               {manualInvites.slice(0, 5).map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <span className="text-white/80 font-medium">{inv.creatorName || inv.email}</span>
+                <div key={inv.id} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-white/80 font-medium">{inv.creatorName || inv.email}</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                     inv.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-yellow-500/20 text-yellow-300'
                   }`}>

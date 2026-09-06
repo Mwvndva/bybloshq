@@ -73,18 +73,18 @@ export function SellerProductCards({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
       {products.map((product) => (
-        <Card key={product.id} className="relative group bg-[#0a0a0a] border border-white/10 text-white rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
+        <Card key={product.id} className="relative group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
           <div className="absolute right-2 top-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <IconButton variant="ghost" aria-label="Product options" className="h-11 w-11 text-white/60 hover:bg-white/10 hover:text-white">
+                <IconButton variant="ghost" aria-label="Product options" className="h-11 w-11 text-slate-500 dark:text-white/60 hover:bg-white/10 hover:text-slate-900 dark:text-white">
                   <MoreVertical className="h-4 w-4" />
                 </IconButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#0a0a0a] border border-white/10 text-white">
+              <DropdownMenuContent align="end" className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white">
                 <DropdownMenuItem
                   onClick={() => onEdit(product.id)}
-                  className="flex items-center gap-2 cursor-pointer text-white hover:bg-white/10"
+                  className="flex items-center gap-2 cursor-pointer text-slate-900 dark:text-white hover:bg-white/10"
                 >
                   <Edit className="h-4 w-4 text-emerald-400" />
                   <span>Edit</span>
@@ -102,10 +102,10 @@ export function SellerProductCards({
           <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
             <div className="flex items-start justify-between pr-8">
               <div className="flex-1">
-                <CardTitle className="text-xs sm:text-sm font-normal text-white mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
-                <p className="text-[9px] text-white/60 capitalize mb-1">{product.aesthetic}</p>
+                <CardTitle className="text-xs sm:text-sm font-normal text-slate-900 dark:text-white mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
+                <p className="text-[9px] text-slate-500 dark:text-white/60 capitalize mb-1">{product.aesthetic}</p>
                 {product.description && (
-                  <p className="text-[10px] text-white/60 line-clamp-2 h-6 leading-tight mb-2">
+                  <p className="text-[10px] text-slate-500 dark:text-white/60 line-clamp-2 h-6 leading-tight mb-2">
                     {product.description}
                   </p>
                 )}
@@ -151,7 +151,7 @@ export function SellerProductCards({
             </div>
 
             <div className="flex items-center justify-between py-1">
-              <span className="text-[10px] text-white/60">Stock:</span>
+              <span className="text-[10px] text-slate-500 dark:text-white/60">Stock:</span>
               <div className="flex items-center gap-2">
                 {product.track_inventory ? (
                   <Badge
@@ -168,13 +168,13 @@ export function SellerProductCards({
                     {product.quantity ?? 0}
                   </Badge>
                 ) : (
-                  <span className="text-[10px] text-white/60 italic">Not tracked</span>
+                  <span className="text-[10px] text-slate-500 dark:text-white/60 italic">Not tracked</span>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onInventoryEdit(product)}
-                  className="h-5 px-1.5 text-[10px] text-white/60 hover:text-emerald-300 hover:bg-emerald-500/10"
+                  className="h-5 px-1.5 text-[10px] text-slate-500 dark:text-white/60 hover:text-emerald-300 hover:bg-emerald-500/10"
                 >
                   Edit
                 </Button>
@@ -182,7 +182,7 @@ export function SellerProductCards({
             </div>
 
             <div className="flex justify-between items-center pt-1">
-              <span className="font-normal text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
+              <span className="font-normal text-slate-900 dark:text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
             </div>
 
             {onStatusUpdate && (
