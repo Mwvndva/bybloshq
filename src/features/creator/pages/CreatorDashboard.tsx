@@ -1,63 +1,63 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Info, Loader2, LogOut, Wallet } from 'lucide-react';
+import { Loader2, LogOut, UserRound } from 'lucide-react';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { AccountSwitcher } from '@/features/auth/components/AccountSwitcher';
 import { toast } from 'sonner';
 import { useCreatorDashboardQuery } from '@/features/creator/hooks/queries/useCreatorDashboardQuery';
 import { useCreatorReferralDashboardQuery } from '@/features/creator/hooks/queries/useCreatorReferralDashboardQuery';
 import { useAcceptShopRequestMutation } from '@/features/creator/hooks/mutations/useAcceptShopRequestMutation';
-import { useCreatorWithdrawalMutation } from '@/features/creator/hooks/mutations/useCreatorWithdrawalMutation';
 import { useDenyShopRequestMutation } from '@/features/creator/hooks/mutations/useDenyShopRequestMutation';
 import { useCreatorLogoutMutation } from '@/features/creator/hooks/mutations/useCreatorAuthMutations';
+import { useLeavePromotedShopMutation } from '@/features/creator/hooks/mutations/useLeavePromotedShopMutation';
+import { useLeaveInvitedBusinessMutation } from '@/features/creator/hooks/mutations/useLeaveInvitedBusinessMutation';
 import { clearRoleSession } from '@/features/auth/services/authSession';
 import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
 import { copyLinkedTextToClipboard, resolveShareOrigin } from '@/shared/utils/shopLinks';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
+import { useThemeScope } from '@/shared/hooks/useAppTheme';
 import {
   money,
-  MIN_WITHDRAWAL_AMOUNT,
-  WITHDRAWAL_FEE_TIERS,
-  getWithdrawalFee,
-  getMaxWithdrawableAmount,
-  formatSettlementDate,
-  formatSettlementTimeOnly,
   getErrorMessage,
-  type AnalysisPeriod,
-  type ApiError,
-  type CreatorProfile,
-  type ShopRequest,
-  type LinkedShop,
-  type AnalysisRow,
-  type WithdrawalRow,
-  type LeaderboardRow,
-  type DashboardData,
-  type ReferralData,
-  type CreatorClearance
+  MAX_PROMOTED_SHOPS,
+  MAX_INVITED_BUSINESSES,
+  type AnalysisPeriod
 } from '@/features/creator/utils/creatorDashboardUtils';
 import { CreatorEarningsHero } from '@/features/creator/components/CreatorEarningsHero';
 import { CreatorAnalysisCharts } from '@/features/creator/components/CreatorAnalysisCharts';
 import { CreatorLinkedShops } from '@/features/creator/components/CreatorLinkedShops';
 import { CreatorHowItWorks } from '@/features/creator/components/CreatorHowItWorks';
 import { CreatorAvailableShops } from '@/features/creator/components/CreatorAvailableShops';
-import { CreatorSocialProfiles } from '@/features/creator/components/CreatorSocialProfiles';
+import { CreatorProfileSheet } from '@/features/creator/components/CreatorProfileSheet';
 
-
-import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
-import { useThemeScope } from '@/shared/hooks/useAppTheme';
+type DashboardTab = 'performance' | 'shops';
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
-  const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>('monthly');
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
-  const withdrawRef = useRef<HTMLDivElement>(null);
-  const { theme, setTheme } = useThemeScope('creator');
+  useThemeScope('creator');
 
-  // Dismiss active dialog on Android back
+  const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>('monthly');
+  const [tab, setTab] = useState<DashboardTab>('performance');
+  const [respondingRequestId, setRespondingRequestId] = useState<number | null>(null);
+  const [leavingShopSellerId, setLeavingShopSellerId] = useState<number | null>(null);
+  const [leavingBusinessSellerId, setLeavingBusinessSellerId] = useState<number | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetFocusWithdrawals, setSheetFocusWithdrawals] = useState(false);
+
+  const dashboardQuery = useCreatorDashboardQuery(analysisPeriod);
+  const referralQuery = useCreatorReferralDashboardQuery();
+  const logoutMutation = useCreatorLogoutMutation();
+  const acceptRequestMutation = useAcceptShopRequestMutation();
+  const denyRequestMutation = useDenyShopRequestMutation();
+  const leaveShopMutation = useLeavePromotedShopMutation();
+  const leaveBusinessMutation = useLeaveInvitedBusinessMutation();
+
+  const dashboard = dashboardQuery.data || null;
+  const referral = referralQuery.data || null;
+  const loading = dashboardQuery.isLoading || referralQuery.isLoading;
+
+  // Dismiss the shop-request dialog on Android back.
   useEffect(() => {
     if (!isNativeApp() || respondingRequestId === null) return;
     return registerModalDismiss(() => {
@@ -65,17 +65,6 @@ export default function CreatorDashboard() {
       return true;
     });
   }, [respondingRequestId]);
-
-  const dashboardQuery = useCreatorDashboardQuery(analysisPeriod);
-  const referralQuery = useCreatorReferralDashboardQuery();
-  const logoutMutation = useCreatorLogoutMutation();
-  const withdrawalMutation = useCreatorWithdrawalMutation();
-  const acceptRequestMutation = useAcceptShopRequestMutation();
-  const denyRequestMutation = useDenyShopRequestMutation();
-
-  const dashboard = dashboardQuery.data || null;
-  const referral = referralQuery.data || null;
-  const loading = dashboardQuery.isLoading || referralQuery.isLoading;
 
   const copy = async (value: string, label?: string) => {
     if (label) {
@@ -98,35 +87,6 @@ export default function CreatorDashboard() {
     }
   };
 
-  const handleWithdrawal = async () => {
-    const amount = Number(withdrawalAmount);
-    const withdrawalFee = getWithdrawalFee(amount);
-    const totalDeduction = amount + withdrawalFee;
-    if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) {
-      toast.error(`Minimum withdrawal is KSh ${MIN_WITHDRAWAL_AMOUNT}.`);
-      return;
-    }
-    if (availableBalance < totalDeduction) {
-      if (isClearing && totalBalance >= totalDeduction) {
-        toast.error(`Funds are currently clearing under standard T+2 holding. Available to withdraw now: KSh ${availableBalance.toLocaleString()}`);
-      } else {
-        toast.error(`Your available balance must cover the withdrawal and KSh ${withdrawalFee} charge.`);
-      }
-      return;
-    }
-
-    setWithdrawing(true);
-    try {
-      await withdrawalMutation.mutateAsync(amount);
-      toast.success('Withdrawal request sent.');
-      setWithdrawalAmount('');
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Could not request withdrawal.'));
-    } finally {
-      setWithdrawing(false);
-    }
-  };
-
   const handleShopRequest = async (inviteId: number, action: 'accept' | 'deny') => {
     setRespondingRequestId(inviteId);
     try {
@@ -144,13 +104,32 @@ export default function CreatorDashboard() {
     }
   };
 
-  const chartData = useMemo(() => (dashboard?.analysis || dashboard?.monthly || []).map((row) => ({
-    period: row.period || row.month,
-    sales: Number(row.sales || 0),
-    salesValue: Number(row.sales_value || row.salesValue || 0),
-    earnings: Number(row.earnings || 0),
-    clicks: Number(row.clicks || 0)
-  })), [dashboard?.analysis, dashboard?.monthly]);
+  const handleLeaveShop = async (sellerId: number) => {
+    setLeavingShopSellerId(sellerId);
+    try {
+      await leaveShopMutation.mutateAsync(sellerId);
+      toast.success('You have left this shop.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Could not leave this shop.'));
+    } finally {
+      setLeavingShopSellerId(null);
+    }
+  };
+
+  const handleLeaveBusiness = async (sellerId: number) => {
+    setLeavingBusinessSellerId(sellerId);
+    try {
+      await leaveBusinessMutation.mutateAsync(sellerId);
+      toast.success('You have left this business.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Could not leave this business.'));
+    } finally {
+      setLeavingBusinessSellerId(null);
+    }
+  };
+
+  const analysis = useMemo(() => dashboard?.analysis || dashboard?.monthly || [], [dashboard?.analysis, dashboard?.monthly]);
+  const businessEarnings = useMemo(() => dashboard?.businessEarnings || [], [dashboard?.businessEarnings]);
 
   if (loading) {
     return (
@@ -170,277 +149,201 @@ export default function CreatorDashboard() {
   const clearingBalance = Number(clearance?.clearingBalance ?? 0);
   const isClearing = Boolean(clearance?.isClearing);
   const nextAvailableAt = clearance?.nextAvailableAt;
-  const formattedClearingDate = nextAvailableAt ? formatSettlementDate(nextAvailableAt) : 'Pending schedule';
-  const formattedClearingTime = nextAvailableAt ? formatSettlementTimeOnly(nextAvailableAt) : '';
-  const maxWithdrawable = getMaxWithdrawableAmount(availableBalance);
 
   const referralLink = `${resolveShareOrigin()}/seller/register?ref=${referral?.referralCode || ''}`;
-  const requestedAmount = Number(withdrawalAmount || 0);
-  const withdrawalFee = getWithdrawalFee(requestedAmount);
-  const totalDeduction = requestedAmount >= MIN_WITHDRAWAL_AMOUNT ? requestedAmount + withdrawalFee : 0;
-  const hasEnoughBalance = availableBalance >= totalDeduction;
+  const invitedBusinesses = referral?.referredSellers || [];
+  const linkedShops = dashboard?.shops || [];
+  const shopRequests = dashboard?.shopRequests || [];
 
-  // This-period momentum for the hero — the latest analysis row.
-  const latestPeriod = chartData.length ? chartData[chartData.length - 1] : undefined;
+  const latestPeriod = analysis.length ? analysis[analysis.length - 1] : undefined;
   const monthEarnings = Number(latestPeriod?.earnings || 0);
   const monthSales = Number(latestPeriod?.sales || 0);
   const monthClicks = Number(latestPeriod?.clicks || 0);
 
-  const goToWithdraw = () => {
-    withdrawRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const openWithdrawals = () => {
+    setSheetFocusWithdrawals(true);
+    setSheetOpen(true);
   };
+  const openProfile = () => {
+    setSheetFocusWithdrawals(false);
+    setSheetOpen(true);
+  };
+
+  const tabButton = (value: DashboardTab, label: string, badge?: number) => (
+    <button
+      type="button"
+      onClick={() => setTab(value)}
+      className={`relative flex-1 rounded-xl px-4 py-2.5 text-sm font-black capitalize transition-all ${
+        tab === value
+          ? 'bg-yellow-400 text-black shadow-sm'
+          : 'text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'
+      }`}
+    >
+      {label}
+      {badge ? (
+        <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+          {badge}
+        </span>
+      ) : null}
+    </button>
+  );
 
   return (
     <main className="dashboard-layout text-slate-950 dark:text-white transition-colors duration-200 bg-[var(--byblos-bg,#000000)]" style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh', height: '100svh', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
       <header className="sticky top-0 z-50 bg-[var(--byblos-bg,#000000)] pt-safe-top px-4 py-3 sm:px-6 flex items-center justify-between gap-3 transition-colors duration-200">
         <NotificationBell triggerClassName="text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-white/10" />
         <div className="flex items-center gap-2">
-          <ThemeSegmentedPill value={theme} onChange={setTheme} showLabels={false} />
           <AccountSwitcher />
+          <button
+            type="button"
+            onClick={openProfile}
+            aria-label="Open profile"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 dark:border-white/15 bg-slate-100 dark:bg-white/[0.06] text-slate-800 dark:text-white transition-colors hover:bg-slate-200 dark:hover:bg-white/10"
+          >
+            <UserRound className="h-5 w-5" />
+          </button>
         </div>
       </header>
 
+      <div className="px-4 pt-3 sm:px-6 lg:px-8">
+        <div className="flex gap-1 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-black/30 p-1">
+          {tabButton('performance', 'Performance')}
+          {tabButton('shops', 'Shops', shopRequests.length)}
+        </div>
+      </div>
+
       <div className="space-y-5 px-4 py-6 sm:px-6 lg:px-8" style={{ paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))' }}>
+        {tab === 'performance' ? (
+          <>
+            <CreatorHowItWorks />
 
-        <CreatorHowItWorks />
+            <CreatorEarningsHero
+              firstName={creator.firstName}
+              totalEarnings={Number(creator.totalEarnings || 0)}
+              balance={totalBalance}
+              availableBalance={availableBalance}
+              clearingBalance={clearingBalance}
+              nextAvailableAt={nextAvailableAt}
+              isClearing={isClearing}
+              monthEarnings={monthEarnings}
+              monthSales={monthSales}
+              monthClicks={monthClicks}
+              referralLink={referralLink}
+              onCopyLink={() => copy(referralLink)}
+              onGoToWithdraw={openWithdrawals}
+            />
 
-        <CreatorEarningsHero
-          firstName={creator.firstName}
-          totalEarnings={Number(creator.totalEarnings || 0)}
-          balance={totalBalance}
-          availableBalance={availableBalance}
-          clearingBalance={clearingBalance}
-          nextAvailableAt={nextAvailableAt}
-          isClearing={isClearing}
-          monthEarnings={monthEarnings}
-          monthSales={monthSales}
-          monthClicks={monthClicks}
-          referralLink={referralLink}
-          onCopyLink={() => copy(referralLink)}
-          onGoToWithdraw={goToWithdraw}
-        />
+            <CreatorAnalysisCharts
+              analysis={analysis}
+              businessEarnings={businessEarnings}
+              analysisPeriod={analysisPeriod}
+              setAnalysisPeriod={setAnalysisPeriod}
+            />
 
-        <CreatorSocialProfiles profile={creator} />
-
-        <CreatorAvailableShops />
-
-        {(dashboard?.shopRequests || []).length > 0 && (
-          <section className="rounded-3xl border border-yellow-400/30 bg-yellow-400/10 p-4">
-            <h2 className="text-xl font-black text-slate-950 dark:text-white">Shop requests</h2>
-            <p className="mt-1 text-sm font-medium text-yellow-700 dark:text-yellow-100/70">Accept a seller request to start earning on that shop.</p>
-            <div className="mt-4 grid gap-3">
-              {(dashboard?.shopRequests || []).map((request) => (
-                <div key={request.id} className="rounded-2xl border border-yellow-400/30 bg-white dark:bg-black/30 p-4 text-slate-950 dark:text-white">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-black">{request.shop_name}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/40">
-                        Invited by {request.seller_name || 'seller'}
-                      </p>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <Button
-                        type="button"
-                        onClick={() => handleShopRequest(request.id, 'accept')}
-                        disabled={respondingRequestId === request.id}
-                        className="h-9 bg-yellow-400 font-black text-black hover:bg-yellow-300"
-                      >
-                        {respondingRequestId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Accept'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleShopRequest(request.id, 'deny')}
-                        disabled={respondingRequestId === request.id}
-                        className="h-9 border-slate-300 dark:border-white/10 bg-white dark:bg-transparent text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-white/5"
-                      >
-                        Deny
-                      </Button>
-                    </div>
+            <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-black text-slate-950 dark:text-white">Invited businesses</h2>
+                <span className="rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-slate-600 dark:text-white/60">
+                  {invitedBusinesses.length}/{MAX_INVITED_BUSINESSES} invited
+                </span>
+              </div>
+              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-white/45">
+                Businesses you invited earn you KSh 3 per sale. Leaving cancels only pending (still-clearing) earnings.
+              </p>
+              <div className="mt-4 grid gap-3">
+                {invitedBusinesses.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 p-4 text-sm font-medium text-slate-500 dark:text-white/45">
+                    Share your referral link (in the earnings card above) to invite up to {MAX_INVITED_BUSINESSES} businesses.
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <CreatorLinkedShops shops={dashboard?.shops || []} onCopy={copy} />
-
-        <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-          <CreatorAnalysisCharts chartData={chartData} analysisPeriod={analysisPeriod} setAnalysisPeriod={setAnalysisPeriod} />
-
-          <div ref={withdrawRef} className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-4 sm:p-5 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-yellow-400/30 bg-yellow-400/15">
-                  <Wallet className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                </div>
-                <div>
-                  <h2 className="text-base font-black text-slate-950 dark:text-white">Get paid</h2>
-                  <p className="text-xs text-slate-500 dark:text-white/50">To {creator.mpesaNumber || 'your registered M-Pesa'}</p>
-                </div>
+                ) : invitedBusinesses.map((biz) => {
+                  const sid = Number(biz.id);
+                  const isLeaving = leavingBusinessSellerId === sid;
+                  return (
+                    <div key={biz.id} className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 p-4 text-slate-950 dark:text-white">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-black text-slate-950 dark:text-white">{biz.shop_name || `Business ${biz.id}`}</p>
+                          <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-white/40">Earned {money(biz.earnings)}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleLeaveBusiness(sid)}
+                          disabled={isLeaving}
+                          className="border-red-300 dark:border-red-500/30 bg-white dark:bg-transparent text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10"
+                        >
+                          {isLeaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><LogOut className="mr-2 h-4 w-4" />Leave</>}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="text-right">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">Available</div>
-                <div className="text-base font-black text-emerald-600 dark:text-emerald-400">{money(availableBalance)}</div>
-              </div>
-            </div>
-
-            {/* ── T+2 Clearance Banner ───────────────────────────────────────── */}
-            {isClearing ? (
-              <div className="mt-4 rounded-2xl border border-blue-400/25 bg-blue-50/80 dark:bg-blue-500/10 p-3.5 space-y-2 text-xs text-blue-900 dark:text-blue-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
-                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-pulse" />
-                    <span>T+2 Clearance Active (2 Business Days)</span>
-                  </div>
-                  <span className="rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
-                    T+2 Holding
-                  </span>
+            </section>
+          </>
+        ) : (
+          <>
+            {shopRequests.length > 0 && (
+              <section className="rounded-3xl border border-yellow-400/30 bg-yellow-400/10 p-4">
+                <h2 className="text-xl font-black text-slate-950 dark:text-white">Shop requests</h2>
+                <p className="mt-1 text-sm font-medium text-yellow-700 dark:text-yellow-100/70">Accept a seller request to start earning on that shop.</p>
+                <div className="mt-4 grid gap-3">
+                  {shopRequests.map((request) => (
+                    <div key={request.id} className="rounded-2xl border border-yellow-400/30 bg-white dark:bg-black/30 p-4 text-slate-950 dark:text-white">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-black">{request.shop_name}</p>
+                          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/40">
+                            Invited by {request.seller_name || 'seller'}
+                          </p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Button
+                            type="button"
+                            onClick={() => handleShopRequest(request.id, 'accept')}
+                            disabled={respondingRequestId === request.id}
+                            className="h-9 bg-yellow-400 font-black text-black hover:bg-yellow-300"
+                          >
+                            {respondingRequestId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Accept'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleShopRequest(request.id, 'deny')}
+                            disabled={respondingRequestId === request.id}
+                            className="h-9 border-slate-300 dark:border-white/10 bg-white dark:bg-transparent text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                          >
+                            Deny
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-[11px] leading-relaxed">
-                  <strong>{money(clearingBalance)}</strong> is clearing from recent referral earnings. Funds unlock for withdrawal on{' '}
-                  <span className="font-semibold text-blue-950 dark:text-white">{formattedClearingDate}</span>
-                  {formattedClearingTime ? ` at ${formattedClearingTime}` : ''}.
-                </p>
-                <div className="flex items-center justify-between pt-0.5 border-t border-blue-200/50 dark:border-blue-500/20 text-[11px]">
-                  <span className="text-blue-700 dark:text-blue-300 font-medium">Next withdrawal available:</span>
-                  <span className="font-bold text-blue-950 dark:text-white">
-                    {formattedClearingDate}{formattedClearingTime ? ` at ${formattedClearingTime}` : ''}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-white/40">
-                <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                <span>Earnings unlock 2 business days (T+2) after each sale or referral.</span>
-              </div>
+              </section>
             )}
 
-            {/* ── Withdrawal Fee Information ─────────────────────────────────── */}
-            <div className="mt-4 rounded-2xl border border-yellow-400/25 bg-yellow-400/10 p-3 text-xs">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-slate-900 dark:text-white">M-Pesa Withdrawal Fees & T+2 Clearance</span>
-                    <span className="text-[10px] font-bold text-slate-600 dark:text-white/60">Min: KSh {MIN_WITHDRAWAL_AMOUNT}</span>
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-slate-600 dark:text-white/60 leading-tight">
-                    Carrier charges are deducted from your balance alongside the withdrawal amount.
-                  </p>
-                  <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold">
-                    {WITHDRAWAL_FEE_TIERS.map((tier) => (
-                      <div key={tier.label} className="rounded-xl border border-yellow-400/20 bg-white/70 dark:bg-black/30 p-1.5 text-slate-800 dark:text-white">
-                        <div className="text-[9px] text-slate-500 dark:text-white/50">{tier.label}</div>
-                        <div className="mt-0.5 text-yellow-600 dark:text-yellow-300 font-black">Fee: KSh {tier.fee}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2.5 pt-2 border-t border-yellow-400/20 text-[10px] text-slate-600 dark:text-white/60 leading-tight">
-                    <span className="font-bold text-slate-900 dark:text-white">T+2 Clearance Schedule: </span>
-                    Earnings are held for <strong>2 business days (T+2)</strong> before becoming available for M-Pesa withdrawal.
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CreatorLinkedShops
+              shops={linkedShops}
+              onCopy={copy}
+              onLeave={handleLeaveShop}
+              leavingSellerId={leavingShopSellerId}
+              maxPromotions={MAX_PROMOTED_SHOPS}
+            />
 
-            {/* ── Withdrawal Form ────────────────────────────────────────────── */}
-            <div className="mt-4 space-y-3">
-              <div className="relative">
-                <Input
-                  type="number"
-                  min={MIN_WITHDRAWAL_AMOUNT}
-                  value={withdrawalAmount}
-                  onChange={(event) => setWithdrawalAmount(event.target.value)}
-                  placeholder="Amount in KSh"
-                  className="h-11 pr-16 border-slate-300 dark:border-white/10 bg-white dark:bg-black/40 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 font-bold"
-                />
-                {maxWithdrawable > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setWithdrawalAmount(String(maxWithdrawable))}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md bg-yellow-400/20 hover:bg-yellow-400/30 px-2 py-1 text-[11px] font-black text-yellow-700 dark:text-yellow-300 transition-colors"
-                  >
-                    Max
-                  </button>
-                )}
-              </div>
-
-              {requestedAmount >= MIN_WITHDRAWAL_AMOUNT && (
-                <div className="rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-xs font-bold space-y-1.5">
-                  <div className="flex justify-between gap-3">
-                    <span className="text-slate-600 dark:text-white/55">Withdrawal charge</span>
-                    <span className="text-slate-950 dark:text-white">{money(withdrawalFee)}</span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-slate-600 dark:text-white/55">Total deducted</span>
-                    <span className={hasEnoughBalance ? 'text-yellow-600 dark:text-yellow-100 font-extrabold' : 'text-red-600 dark:text-red-300 font-extrabold'}>
-                      {money(totalDeduction)}
-                    </span>
-                  </div>
-                  {hasEnoughBalance && (
-                    <div className="flex justify-between gap-3 text-[11px] pt-1 border-t border-yellow-400/20 text-slate-500 dark:text-white/50">
-                      <span>Remaining available</span>
-                      <span>{money(Math.max(0, availableBalance - totalDeduction))}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <Button
-                onClick={handleWithdrawal}
-                disabled={withdrawing || requestedAmount < MIN_WITHDRAWAL_AMOUNT || !hasEnoughBalance || availableBalance < MIN_WITHDRAWAL_AMOUNT}
-                className="h-11 w-full bg-yellow-400 font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {withdrawing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : isClearing && availableBalance < MIN_WITHDRAWAL_AMOUNT ? (
-                  `Clearing (Available ${formattedClearingDate})`
-                ) : availableBalance >= MIN_WITHDRAWAL_AMOUNT ? (
-                  'Withdraw to M-Pesa'
-                ) : totalBalance > 0 ? (
-                  `Min Withdrawal KSh ${MIN_WITHDRAWAL_AMOUNT}`
-                ) : (
-                  'No Balance Available'
-                )}
-              </Button>
-            </div>
-            <div className="mt-4 space-y-2">
-              {(dashboard?.withdrawals || []).slice(0, 3).map((item) => (
-                <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 p-3 text-xs text-slate-950 dark:text-white">
-                  <div className="flex justify-between gap-3 font-bold">
-                    <span>{money(item.amount)}</span>
-                    <span className="uppercase text-yellow-600 dark:text-yellow-200">{item.status}</span>
-                  </div>
-                  <p className="mt-1 text-slate-500 dark:text-white/40">Charge {money(item.withdrawal_fee)}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0a0a0a] p-5 text-slate-950 dark:text-white shadow-sm transition-colors duration-200">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-500 dark:text-white/40">Account</p>
-          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-white/50">Sign out of your creator account on this device.</p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleLogout}
-            className="mt-3 h-10 w-full border-slate-300 dark:border-white/10 bg-white dark:bg-white/[0.03] text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 sm:w-auto font-bold"
-            aria-label="Log out of creator dashboard"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </section>
+            <CreatorAvailableShops />
+          </>
+        )}
       </div>
+
+      <CreatorProfileSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        creator={creator}
+        clearance={clearance}
+        withdrawals={dashboard?.withdrawals || []}
+        onLogout={handleLogout}
+        focusWithdrawals={sheetFocusWithdrawals}
+      />
     </main>
   );
 }
-
-
-

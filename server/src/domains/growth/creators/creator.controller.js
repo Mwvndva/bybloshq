@@ -287,6 +287,24 @@ export const denyShopRequest = async (req, res, next) => {
   }
 };
 
+export const leavePromotedShop = async (req, res, next) => {
+  try {
+    const result = await CreatorService.leavePromotedShop(req.user.creatorId, Number(req.params.sellerId));
+    res.status(200).json({ status: 'success', message: 'You have left this shop.', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const leaveInvitedBusiness = async (req, res, next) => {
+  try {
+    const result = await CreatorService.leaveInvitedBusiness(req.user.creatorId, Number(req.params.sellerId));
+    res.status(200).json({ status: 'success', message: 'You have left this business.', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getReferralDashboard = async (req, res, next) => {
   try {
     const dashboard = await CreatorService.getReferralDashboard(req.user.creatorId);
