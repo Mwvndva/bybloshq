@@ -963,25 +963,6 @@ class CreatorService {
 
     const totalBalance = Number.parseFloat(creator.balance || 0);
 
-    const [salesEarningsResult, referralEarningsResult] = await Promise.all([
-      pool.query(
-        `SELECT id, amount, created_at, metadata
-         FROM creator_earnings
-         WHERE creator_id = $1
-         ORDER BY created_at DESC
-         LIMIT 50`,
-        [creatorId]
-      ),
-      pool.query(
-        `SELECT id, amount, created_at, metadata
-         FROM creator_referral_earnings
-         WHERE referrer_creator_id = $1
-         ORDER BY created_at DESC
-         LIMIT 50`,
-        [creatorId]
-      )
-    ]);
-
     // FIX (self-referral review-hold follow-up): an earning flagged by the
     // post-hoc self-dealing check in creditCreatorForOrder must never clear
     // just because 2 business days passed — it stays uncleared until an
@@ -991,10 +972,49 @@ class CreatorService {
       createdAt: new Date(e.created_at),
       flaggedForReview: (e.metadata || {}).flagged_for_review === true
     });
-    const allEarnings = [
-      ...salesEarningsResult.rows.map(toEarning),
-      ...referralEarningsResult.rows.map(toEarning)
-    ];
+
+    // Load recent sales + referral earnings for clearance. Tolerate a database
+    // that predates the creator_referral_earnings.metadata migration
+    // (20260905130000): on undefined_column (Postgres SQLSTATE 42703) retry
+    // without the metadata column and treat those rows as unflagged, so schema
+    // drift degrades gracefully instead of 500-ing the entire creator
+    // dashboard. Self-heals once the migration is applied — the durable fix is
+    // running `npm run migrate` against the affected database.
+    const loadEarnings = async (columns) => {
+      const [salesEarningsResult, referralEarningsResult] = await Promise.all([
+        pool.query(
+          `SELECT ${columns}
+           FROM creator_earnings
+           WHERE creator_id = $1
+           ORDER BY created_at DESC
+           LIMIT 50`,
+          [creatorId]
+        ),
+        pool.query(
+          `SELECT ${columns}
+           FROM creator_referral_earnings
+           WHERE referrer_creator_id = $1
+           ORDER BY created_at DESC
+           LIMIT 50`,
+          [creatorId]
+        )
+      ]);
+      return [
+        ...salesEarningsResult.rows.map(toEarning),
+        ...referralEarningsResult.rows.map(toEarning)
+      ];
+    };
+
+    let allEarnings;
+    try {
+      allEarnings = await loadEarnings('id, amount, created_at, metadata');
+    } catch (err) {
+      if (err && err.code === '42703') {
+        allEarnings = await loadEarnings('id, amount, created_at');
+      } else {
+        throw err;
+      }
+    }
 
     const { availableBalance, clearingBalance, flaggedAmount, hasFlaggedHolds, nextAvailableAt, isClearing } =
       computeClearance({ totalBalance, earnings: allEarnings });
