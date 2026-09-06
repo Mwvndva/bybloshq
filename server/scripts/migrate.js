@@ -82,10 +82,19 @@ async function run() {
     // 2. Logging
     console.log(`[${new Date().toISOString()}] [INFO] Connecting to Database...`);
 
+    // Single SSL config, shared by the pre-flight pool AND node-pg-migrate's
+    // own connection below. Managed Postgres (Render, etc.) rejects non-SSL
+    // connections with "SSL/TLS required" (28000); passing only a bare URL
+    // string to migrate() opened an unencrypted connection and failed even
+    // though the pre-flight pool connected fine. DATABASE_URL built from DB_*
+    // parts carries no sslmode, so the SSL must come from here.
+    const sslConfig = process.env.DB_SSL === 'false'
+        ? false
+        : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false);
+
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DB_SSL === 'false' ? false : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false),
-
+        ssl: sslConfig,
     });
 
     try {
@@ -123,7 +132,9 @@ async function run() {
             dir: path.resolve(__dirname, '../migrations'), // Ensure absolute path to migrations folder
             direction: 'up',
             migrationsTable: 'pgmigrations',
-            databaseUrl: process.env.DATABASE_URL,
+            // Pass a pg ClientConfig (not a bare string) so node-pg-migrate's
+            // connection uses the same SSL settings as the pre-flight pool.
+            databaseUrl: { connectionString: process.env.DATABASE_URL, ssl: sslConfig },
             verbose: true,
             logger: {
                 info: console.log,
