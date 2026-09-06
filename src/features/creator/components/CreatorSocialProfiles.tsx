@@ -90,23 +90,23 @@ export function CreatorSocialProfiles({ profile }: CreatorSocialProfilesProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Instagram input */}
           <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <img src={instagramLogo} alt="Instagram" className="h-5 w-5 object-contain" />
-                <label className="text-xs font-bold text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <img src={instagramLogo} alt="Instagram" className="h-5 w-5 object-contain shrink-0" />
+                <label className="text-xs font-bold text-slate-900 dark:text-white truncate">
                   Instagram Profile
                 </label>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 shrink-0">
                 {instagramHref && (
                   <a
                     href={instagramHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] font-bold text-pink-600 hover:text-pink-500 transition-colors"
+                    aria-label="Open Instagram link"
+                    className="rounded-md p-1 text-pink-600 hover:bg-pink-500/10 transition-colors"
                   >
-                    <span>Test Link</span>
-                    <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
                 {profile?.instagramLink && (
@@ -115,10 +115,9 @@ export function CreatorSocialProfiles({ profile }: CreatorSocialProfilesProps) {
                     onClick={() => handleRemove('instagram')}
                     disabled={updateMutation.isPending}
                     aria-label="Remove Instagram link"
-                    className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                    className="rounded-md p-1 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" />
-                    <span>Remove</span>
                   </button>
                 )}
               </div>
@@ -137,23 +136,23 @@ export function CreatorSocialProfiles({ profile }: CreatorSocialProfilesProps) {
 
           {/* TikTok input */}
           <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <img src={tiktokLogo} alt="TikTok" className="h-5 w-5 object-contain" />
-                <label className="text-xs font-bold text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <img src={tiktokLogo} alt="TikTok" className="h-5 w-5 object-contain shrink-0" />
+                <label className="text-xs font-bold text-slate-900 dark:text-white truncate">
                   TikTok Profile
                 </label>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 shrink-0">
                 {tiktokHref && (
                   <a
                     href={tiktokHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] font-bold text-cyan-600 hover:text-cyan-500 transition-colors"
+                    aria-label="Open TikTok link"
+                    className="rounded-md p-1 text-cyan-600 hover:bg-cyan-500/10 transition-colors"
                   >
-                    <span>Test Link</span>
-                    <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
                 {profile?.tiktokLink && (
@@ -162,10 +161,9 @@ export function CreatorSocialProfiles({ profile }: CreatorSocialProfilesProps) {
                     onClick={() => handleRemove('tiktok')}
                     disabled={updateMutation.isPending}
                     aria-label="Remove TikTok link"
-                    className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                    className="rounded-md p-1 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" />
-                    <span>Remove</span>
                   </button>
                 )}
               </div>

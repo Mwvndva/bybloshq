@@ -36,6 +36,7 @@ export type LinkedShop = {
   seller_id?: number;
   shop_name?: string;
   slug?: string;
+  avatar_url?: string | null;
   code?: string;
   commission_rate?: number | string;
   sales_count?: number | string;
