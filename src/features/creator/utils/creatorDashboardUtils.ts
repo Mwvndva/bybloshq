@@ -9,7 +9,12 @@ export const getWithdrawalFee = (amount: number) => {
   if (!Number.isFinite(amount) || amount < MIN_WITHDRAWAL_AMOUNT) return 0;
   return WITHDRAWAL_FEE_TIERS.find(({ min, max }) => amount >= min && amount <= max)?.fee || 0;
 };
-export type AnalysisPeriod = 'daily' | 'weekly' | 'monthly';
+export type AnalysisPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+// Mirror server/src/domains/growth/creators/creatorLimits.js — used for the
+// "X/3" counters and to disable actions at the cap.
+export const MAX_PROMOTED_SHOPS = 3;
+export const MAX_INVITED_BUSINESSES = 3;
 export type ApiError = { response?: { data?: { message?: string } }; message?: string };
 export type CreatorProfile = {
   id?: number;
@@ -28,6 +33,7 @@ export type CreatorProfile = {
 export type ShopRequest = { id: number; shop_name?: string; seller_name?: string };
 export type LinkedShop = {
   id: number;
+  seller_id?: number;
   shop_name?: string;
   slug?: string;
   code?: string;
@@ -36,14 +42,30 @@ export type LinkedShop = {
   click_count?: number | string;
   earnings?: number | string;
 };
+export type InvitedBusiness = {
+  id: number;
+  shop_name?: string;
+  earnings?: number | string;
+  units_sold?: number | string;
+};
 export type AnalysisRow = {
   period?: string;
+  period_start?: string;
   month?: string;
   sales?: number | string;
   sales_value?: number | string;
   salesValue?: number | string;
   earnings?: number | string;
+  commission_earnings?: number | string;
+  referral_earnings?: number | string;
   clicks?: number | string;
+};
+export type BusinessEarningRow = {
+  period?: string;
+  period_start?: string;
+  seller_id: number;
+  shop_name?: string;
+  earnings?: number | string;
 };
 export type WithdrawalRow = { id: number; amount?: number | string; withdrawal_fee?: number | string; status?: string };
 export type LeaderboardRow = {
@@ -59,6 +81,10 @@ export type CreatorClearance = {
   clearingBalance?: number;
   nextAvailableAt?: string | null;
   isClearing?: boolean;
+  flaggedAmount?: number;
+  hasFlaggedHolds?: boolean;
+  commissionEarnings?: number;
+  referralEarnings?: number;
 };
 
 export type DashboardData = {
@@ -67,12 +93,14 @@ export type DashboardData = {
   shops?: LinkedShop[];
   shopRequests?: ShopRequest[];
   analysis?: AnalysisRow[];
+  businessEarnings?: BusinessEarningRow[];
+  analysisPeriod?: string;
   monthly?: AnalysisRow[];
   withdrawals?: WithdrawalRow[];
   leaderboard?: LeaderboardRow[];
   linkClicks?: number;
 };
-export type ReferralData = { referralCode?: string };
+export type ReferralData = { referralCode?: string; referredSellers?: InvitedBusiness[] };
 
 export function getMaxWithdrawableAmount(availableBalance: number): number {
   if (!Number.isFinite(availableBalance) || availableBalance < MIN_WITHDRAWAL_AMOUNT + 21) {

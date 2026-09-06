@@ -22,5 +22,6 @@ export const requestCollaboration = z.object({ sellerId: id }).passthrough();
 export const updateProfile = z.object({
   instagramLink: z.string().nullable().optional(),
   tiktokLink: z.string().nullable().optional(),
-  whatsappNumber: z.string().nullable().optional()
+  whatsappNumber: z.string().nullable().optional(),
+  mpesaNumber: z.string().nullable().optional()
 }).passthrough();
