@@ -72,3 +72,8 @@ export const respondToCreatorRequest = async (requestId: number, action: 'accept
   const response = await apiClient.post(`/sellers/creators/requests/${requestId}/respond`, { action });
   return response.data;
 };
+
+export const removeSellerCreator = async (creatorId: number) => {
+  const response = await apiClient.delete(`/sellers/creators/${creatorId}`);
+  return response.data;
+};
