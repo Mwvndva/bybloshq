@@ -36,7 +36,7 @@ export function SellerForgotPasswordDialog({ open, onOpenChange, email, onEmailC
                   id="forgot-email"
                   type="email"
                   placeholder="your@email.com"
-                  className="!pl-12 h-10 rounded-xl bg-white dark:bg-[#141414] border-slate-300 dark:border-white/10 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                  className="!pl-12 h-10 rounded-xl bg-white dark:bg-[#141414] border-slate-300 dark:border-white/10 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 dark:text-white/40 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   value={email}
                   onChange={(e) => onEmailChange(e.target.value)}
                   required

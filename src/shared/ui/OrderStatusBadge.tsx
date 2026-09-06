@@ -77,6 +77,85 @@ export function OrderStatusBadge({ status, viewerRole = 'seller', className }: O
         style: 'bg-blue-600 dark:bg-blue-600',
       };
       break;
+    case 'PAID':
+      content = {
+        icon: <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Paid',
+        style: 'bg-blue-600 dark:bg-blue-600',
+      };
+      break;
+    case 'PAYMENT_PENDING':
+      content = {
+        icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: viewerRole === 'buyer' ? 'Awaiting Payment' : 'Payment Pending',
+        style: 'bg-amber-600 dark:bg-amber-600',
+      };
+      break;
+    case 'FULFILLMENT_PENDING':
+      content = {
+        icon: <Truck className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Preparing',
+        style: 'bg-amber-600 dark:bg-amber-600',
+      };
+      break;
+    case 'FULFILLED':
+      content = {
+        icon: <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Fulfilled',
+        style: 'bg-emerald-600 dark:bg-emerald-600',
+      };
+      break;
+    case 'DELIVERED':
+      content = {
+        icon: <Package className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Delivered',
+        style: 'bg-purple-600 dark:bg-purple-600',
+      };
+      break;
+    case 'BOOKED':
+      content = {
+        icon: <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Booked',
+        style: 'bg-blue-600 dark:bg-blue-600',
+      };
+      break;
+    case 'REFUND_PENDING':
+      content = {
+        icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Refund Pending',
+        style: 'bg-orange-600 dark:bg-orange-600',
+      };
+      break;
+    case 'REFUNDED':
+      content = {
+        icon: <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Refunded',
+        style: 'bg-slate-600 dark:bg-slate-600',
+      };
+      break;
+    case 'MANUAL_REVIEW':
+    case 'COMPENSATION_REQUIRED':
+      content = {
+        icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Under Review',
+        style: 'bg-orange-600 dark:bg-orange-600',
+      };
+      break;
+    case 'RESERVED':
+    case 'HELD':
+      content = {
+        icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: statusValue === 'HELD' ? 'On Hold' : 'Reserved',
+        style: 'bg-slate-600 dark:bg-slate-600',
+      };
+      break;
+    case 'EXPIRED':
+      content = {
+        icon: <XCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
+        label: 'Expired',
+        style: 'bg-slate-600 dark:bg-slate-600',
+      };
+      break;
     case 'FAILED':
       content = {
         icon: <XCircle className="h-3.5 w-3.5 mr-1 shrink-0" />,
@@ -95,7 +174,11 @@ export function OrderStatusBadge({ status, viewerRole = 'seller', className }: O
     default:
       content = {
         icon: <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />,
-        label: statusValue ? statusValue.replace(/_/g, ' ') : 'Pending',
+        // Title-case any unmapped status so no raw ALL_CAPS backend enum term
+        // (e.g. "FUTURE_STATE") ever leaks into the UI.
+        label: statusValue
+          ? statusValue.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+          : 'Pending',
         style: 'bg-yellow-600 dark:bg-yellow-600',
       };
       break;

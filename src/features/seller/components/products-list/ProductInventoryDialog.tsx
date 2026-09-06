@@ -34,13 +34,13 @@ export function ProductInventoryDialog({
 }: ProductInventoryDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0a0a0a] border border-white/10 text-white w-[90vw] max-w-sm sm:max-w-[360px]">
+      <DialogContent className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white w-[90vw] max-w-sm sm:max-w-[360px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+          <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Package className="h-5 w-5 text-emerald-400" />
             Manage Inventory
           </DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogDescription className="text-slate-500 dark:text-white/60">
             Update stock levels for {selectedProduct?.name}
           </DialogDescription>
         </DialogHeader>
@@ -48,8 +48,8 @@ export function ProductInventoryDialog({
         <div className="space-y-6 py-4">
           <div className="flex items-center justify-between p-4 seller-card-soft rounded-xl">
             <div>
-              <label className="text-sm font-semibold text-white">Track Inventory</label>
-              <p className="text-xs text-white/60 mt-1 font-medium">Enable stock tracking for this product</p>
+              <label className="text-sm font-semibold text-slate-900 dark:text-white">Track Inventory</label>
+              <p className="text-xs text-slate-500 dark:text-white/60 mt-1 font-medium">Enable stock tracking for this product</p>
             </div>
             <button
               type="button"
@@ -78,7 +78,7 @@ export function ProductInventoryDialog({
                     min="0"
                     value={stockQuantity}
                     onChange={(event) => onStockQuantityChange(Math.max(0, Number.parseInt(event.target.value, 10) || 0))}
-                    className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                    className="w-full px-4 py-3 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                     placeholder="0"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -105,10 +105,10 @@ export function ProductInventoryDialog({
                   min="1"
                   value={lowStockThreshold}
                   onChange={(event) => onLowStockThresholdChange(Math.max(1, Number.parseInt(event.target.value, 10) || 5))}
-                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
+                  className="w-full px-4 py-3 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
                   placeholder="5"
                 />
-                <p className="text-xs text-white/60 font-medium">
+                <p className="text-xs text-slate-500 dark:text-white/60 font-medium">
                   You'll receive an email alert when stock falls to or below this level
                 </p>
               </div>
@@ -120,14 +120,14 @@ export function ProductInventoryDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border-white/10 bg-transparent text-zinc-300 hover:bg-white/5 font-semibold"
+            className="border-slate-200 dark:border-white/10 bg-transparent text-zinc-300 hover:bg-white/5 font-semibold"
           >
             Cancel
           </Button>
           <Button
             onClick={onSave}
             disabled={updatingStock}
-            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md"
+            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 dark:text-white hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md"
           >
             {updatingStock ? (
               <>

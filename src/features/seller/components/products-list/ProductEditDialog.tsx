@@ -53,19 +53,19 @@ export function ProductEditDialog({
 }: ProductEditDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0a0a0a] border border-white/10 text-white w-[90vw] max-w-sm sm:max-w-[400px] max-h-[78dvh] overflow-y-auto p-3 sm:p-4 rounded-xl shadow-2xl">
+      <DialogContent className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white w-[90vw] max-w-sm sm:max-w-[400px] max-h-[78dvh] overflow-y-auto p-3 sm:p-4 rounded-xl shadow-2xl">
         <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-2">
           <IconButton
             variant="ghost"
             onClick={() => onOpenChange(false)}
             aria-label="Back"
-            className="h-11 w-11 -ml-2 text-white/60 hover:text-white hover:bg-white/10 rounded-full shrink-0"
+            className="h-11 w-11 -ml-2 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:text-white hover:bg-white/10 rounded-full shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </IconButton>
           <div>
-            <DialogTitle className="text-base sm:text-lg font-bold text-white">Edit Product</DialogTitle>
-            <DialogDescription className="text-white/60 text-[10px] sm:text-xs font-medium">
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Edit Product</DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-white/60 text-[10px] sm:text-xs font-medium">
               Update product information
             </DialogDescription>
           </div>
@@ -122,9 +122,9 @@ export function ProductEditDialog({
                   <SelectTrigger className="seller-field h-9 rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0a0a0a] border-white/10 text-white z-[110]">
+                  <SelectContent className="bg-white dark:bg-[#0a0a0a] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white z-[110]">
                     {aestheticCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id} className="text-white focus:bg-[var(--theme-button-bg,#f5c518)] focus:text-[var(--theme-button-text,#000000)]">
+                      <SelectItem key={category.id} value={category.id} className="text-slate-900 dark:text-white focus:bg-[var(--theme-button-bg,#f5c518)] focus:text-[var(--theme-button-text,#000000)]">
                         {category.title}
                       </SelectItem>
                     ))}
@@ -139,7 +139,7 @@ export function ProductEditDialog({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="seller-label font-semibold">Product Photos</Label>
-                  <span className="text-[10px] font-semibold text-white/60">
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-white/60">
                     {[formData.imagePreview, ...formData.extraPreviews].filter(Boolean).length} / 3 photos
                   </span>
                 </div>
@@ -158,15 +158,15 @@ export function ProductEditDialog({
                             <img
                               src={preview}
                               alt={`Photo ${slot + 1}`}
-                              className="w-full h-full object-cover rounded-lg border border-white/10"
+                              className="w-full h-full object-cover rounded-lg border border-slate-200 dark:border-white/10"
                             />
                             {isFirst && (
-                              <span className="absolute bottom-1 left-1 text-[8px] font-bold bg-emerald-600 text-white px-1 rounded-sm">Main</span>
+                              <span className="absolute bottom-1 left-1 text-[8px] font-bold bg-emerald-600 text-slate-900 dark:text-white px-1 rounded-sm">Main</span>
                             )}
                             <button
                               type="button"
                               onClick={() => onRemoveImage(slot)}
-                              className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center shadow-md transition-colors z-10"
+                              className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-slate-900 dark:text-white rounded-full h-5 w-5 flex items-center justify-center shadow-md transition-colors z-10"
                             >
                               <X className="h-2.5 w-2.5" />
                             </button>
@@ -174,12 +174,12 @@ export function ProductEditDialog({
                         ) : (
                           <label
                             className={`w-full h-full flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors duration-200 ${isDisabled
-                              ? 'border-white/5 bg-white/[0.02] cursor-not-allowed opacity-40'
-                              : 'border-white/20 bg-white/5 hover:border-emerald-500 hover:bg-emerald-400/5 cursor-pointer'
+                              ? 'border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-white/[0.02] cursor-not-allowed opacity-40'
+                              : 'border-slate-200 dark:border-white/20 bg-white/5 hover:border-emerald-500 hover:bg-emerald-400/5 cursor-pointer'
                               }`}
                           >
-                            <ImagePlus className={`h-4 w-4 mb-1 ${isDisabled ? 'text-white/40' : 'text-white'}`} />
-                            <span className={`text-[8px] font-bold ${isDisabled ? 'text-white/40' : 'text-white'}`}>
+                            <ImagePlus className={`h-4 w-4 mb-1 ${isDisabled ? 'text-slate-500 dark:text-white/40' : 'text-slate-900 dark:text-white'}`} />
+                            <span className={`text-[8px] font-bold ${isDisabled ? 'text-slate-500 dark:text-white/40' : 'text-slate-900 dark:text-white'}`}>
                               {isFirst ? 'Main photo' : `Photo ${slot + 1}`}
                             </span>
                             {!isDisabled && (
@@ -196,7 +196,7 @@ export function ProductEditDialog({
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-white/60 mt-2 font-medium">PNG, JPG up to 5MB.</p>
+                <p className="text-[10px] text-slate-500 dark:text-white/60 mt-2 font-medium">PNG, JPG up to 5MB.</p>
               </div>
             </div>
           </div>
@@ -206,7 +206,7 @@ export function ProductEditDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border-white/20 bg-transparent text-white hover:bg-white/10 font-semibold"
+            className="border-slate-200 dark:border-white/20 bg-transparent text-slate-900 dark:text-white hover:bg-white/10 font-semibold"
             disabled={isSaving}
           >
             Cancel

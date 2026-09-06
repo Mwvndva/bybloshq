@@ -81,7 +81,7 @@ export function AccountSwitcher() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent,#f5c518)]"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-white/15 bg-slate-100 dark:bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-900 dark:text-white transition hover:bg-slate-200 dark:hover:bg-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent,#f5c518)]"
           aria-label="Switch account"
         >
           <ActiveIcon className="h-4 w-4 text-[var(--theme-accent,#f5c518)]" />
@@ -91,9 +91,9 @@ export function AccountSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 border-white/10 bg-[#0a0a0a] text-white"
+        className="w-56 border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white"
       >
-        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
+        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
           {owned.length > 1 ? 'Switch account' : 'Active Account'}
         </div>
         {owned.map((role) => {
@@ -109,14 +109,14 @@ export function AccountSwitcher() {
                 void handleSwitch(role);
               }}
               disabled={isActive || !!switching}
-              className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm text-white focus:bg-white/10 focus:text-white data-[disabled]:opacity-100"
+              className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm text-slate-900 dark:text-white focus:bg-slate-100 dark:focus:bg-white/10 focus:text-slate-900 dark:focus:text-white data-[disabled]:opacity-100"
             >
               <Icon className="h-4 w-4 text-[var(--theme-accent,#f5c518)]" />
               <span className="flex-1">{meta.label}</span>
               {isActive ? (
                 <Check className="h-4 w-4 text-[var(--theme-accent,#f5c518)]" />
               ) : isSwitching ? (
-                <Loader2 className="h-4 w-4 animate-spin text-white/60" />
+                <Loader2 className="h-4 w-4 animate-spin text-slate-500 dark:text-white/60" />
               ) : null}
             </DropdownMenuItem>
           );
@@ -124,7 +124,7 @@ export function AccountSwitcher() {
 
         {!data.accounts.creator && (
           <>
-            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuSeparator className="bg-slate-200 dark:bg-white/10" />
             <DropdownMenuItem
               onSelect={(e) => {
                 e.preventDefault();
@@ -140,15 +140,15 @@ export function AccountSwitcher() {
 
         {!data.accounts.seller && (
           <>
-            {data.accounts.creator && <DropdownMenuSeparator className="bg-white/10" />}
+            {data.accounts.creator && <DropdownMenuSeparator className="bg-slate-200 dark:bg-white/10" />}
             <DropdownMenuItem
               onSelect={(e) => {
                 e.preventDefault();
                 navigate('/seller/register');
               }}
-              className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm text-white/80 focus:bg-white/10 focus:text-white"
+              className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm text-slate-500 dark:text-white/80 focus:bg-slate-100 dark:focus:bg-white/10 focus:text-slate-900 dark:focus:text-white"
             >
-              <Plus className="h-4 w-4 text-white/50" />
+              <Plus className="h-4 w-4 text-slate-500 dark:text-white/50" />
               <span className="flex-1">Become a Seller</span>
             </DropdownMenuItem>
           </>

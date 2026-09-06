@@ -77,7 +77,7 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
 
     const toneStyles = {
         yellow: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30',
-        neutral: 'bg-white/10 text-white/70 border-white/20',
+        neutral: 'bg-white/10 text-slate-500 dark:text-white/70 border-slate-200 dark:border-white/20',
         green: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
         blue: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
         purple: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
@@ -89,20 +89,20 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-[#0a0a0a] shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
+            className="relative w-full overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
         >
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
                 {metrics.map(({ label, value, helper, icon: Icon, tone }, index) => (
                     <div
                         key={label}
-                        className={`group min-h-[128px] p-4 sm:p-5 lg:p-6 flex flex-col justify-between border-white/10 transition-colors hover:bg-white/[0.06] ${index < metrics.length - 1 ? 'border-r' : ''} max-md:[&:nth-child(2n)]:border-r-0 max-md:[&:nth-child(-n+4)]:border-b md:max-xl:[&:nth-child(3n)]:border-r-0 md:max-xl:[&:nth-child(-n+3)]:border-b`}
+                        className={`group min-h-[128px] p-4 sm:p-5 lg:p-6 flex flex-col justify-between border-slate-200 dark:border-white/10 transition-colors hover:bg-slate-100 dark:bg-white/[0.06] ${index < metrics.length - 1 ? 'border-r' : ''} max-md:[&:nth-child(2n)]:border-r-0 max-md:[&:nth-child(-n+4)]:border-b md:max-xl:[&:nth-child(3n)]:border-r-0 md:max-xl:[&:nth-child(-n+3)]:border-b`}
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                                <h3 className="text-[11px] sm:text-xs font-semibold text-white/60 tracking-wide">
+                                <h3 className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-white/60 tracking-wide">
                                     {label}
                                 </h3>
-                                <p className="mt-1 text-xl sm:text-2xl font-semibold leading-tight tracking-tight text-white [overflow-wrap:anywhere]">
+                                <p className="mt-1 text-xl sm:text-2xl font-semibold leading-tight tracking-tight text-slate-900 dark:text-white [overflow-wrap:anywhere]">
                                     {value}
                                 </p>
                             </div>
@@ -111,7 +111,7 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                             </span>
                         </div>
 
-                        <p className="mt-4 text-xs text-white/60 leading-snug">
+                        <p className="mt-4 text-xs text-slate-500 dark:text-white/60 leading-snug">
                             {helper}
                         </p>
                     </div>

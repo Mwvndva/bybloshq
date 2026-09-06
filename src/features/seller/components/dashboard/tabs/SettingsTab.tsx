@@ -82,7 +82,7 @@ export function SettingsTab({
           setIsEditingContacts(false);
         }}
         disabled={isSaving}
-        className="h-8 rounded-lg border-white/15 bg-white/5 text-xs font-bold text-white hover:bg-white/10"
+        className="h-8 rounded-lg border-slate-200 dark:border-white/15 bg-white/5 text-xs font-bold text-slate-900 dark:text-white hover:bg-white/10"
       >
         Cancel
       </Button>
@@ -112,7 +112,7 @@ export function SettingsTab({
       size="sm"
       variant="outline"
       onClick={() => setIsEditingContacts(true)}
-      className="h-8 gap-1.5 rounded-lg border-white/15 bg-white/5 text-xs font-bold text-white hover:bg-white/10"
+      className="h-8 gap-1.5 rounded-lg border-slate-200 dark:border-white/15 bg-white/5 text-xs font-bold text-slate-900 dark:text-white hover:bg-white/10"
     >
       <Edit className="h-3.5 w-3.5 text-yellow-400" />
       Edit Contacts
@@ -150,13 +150,13 @@ export function SettingsTab({
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <div className="seller-card-soft p-4">
             <p className="seller-label mb-1">Email</p>
-            <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.email || 'Not set'}>
+            <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-900 dark:text-white truncate" title={sellerProfile?.email || 'Not set'}>
               {sellerProfile?.email || 'Not set'}
             </p>
           </div>
 
           <div className="seller-card-soft p-4">
-            <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-1">WhatsApp Number</p>
+            <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-white/50 mb-1">WhatsApp Number</p>
             {isEditingContacts ? (
               <Input
                 name="whatsappNumber"
@@ -166,7 +166,7 @@ export function SettingsTab({
                 className="seller-field text-xs"
               />
             ) : (
-              <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
+              <p className="text-sm sm:text-base lg:text-lg font-semibold text-slate-900 dark:text-white">
                 {sellerProfile?.whatsappNumber || sellerProfile?.phone || 'Not set'}
               </p>
             )}
@@ -228,19 +228,19 @@ export function SettingsTab({
 
       <section className="rounded-2xl border border-yellow-400/25 bg-yellow-400/[0.06] p-4 sm:p-5 flex items-center justify-between gap-4">
         <div>
-          <h4 className="text-base font-black text-white">Creator Partnerships</h4>
-          <p className="mt-0.5 text-xs text-white/60">
+          <h4 className="text-base font-black text-slate-900 dark:text-white">Creator Partnerships</h4>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-white/60">
             Marketplace listings, commission rates, and incoming creator collaboration requests have moved to the dedicated <strong>Creators</strong> tab.
           </p>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#000000] p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#000000] p-4 shadow-sm sm:p-5 lg:p-6">
         <SectionHeader title="Account" description="Sign out of your seller account on this device." />
         <div className="mt-4">
           <Button
             onClick={onLogout}
-            className="h-10 w-full bg-red-600 font-black text-white hover:bg-red-500 sm:w-auto"
+            className="h-10 w-full bg-red-600 font-black text-slate-900 dark:text-white hover:bg-red-500 sm:w-auto"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Logout

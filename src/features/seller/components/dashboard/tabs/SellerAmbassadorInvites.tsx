@@ -14,7 +14,7 @@ interface SellerAmbassadorInvitesProps {
   toggleEdit: () => void;
 }
 
-const inputClass = 'h-10 border-white/10 bg-[#141414] text-white placeholder:text-white/40';
+const inputClass = 'h-10 border-slate-200 dark:border-white/10 bg-white dark:bg-[#141414] text-slate-900 dark:text-white placeholder:text-slate-500 dark:text-white/40';
 
 export function SellerAmbassadorInvites({ formData, setFormData, isEditing, toggleEdit }: SellerAmbassadorInvitesProps) {
   const [creatorEmail, setCreatorEmail] = useState('');
@@ -51,15 +51,15 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
   const creatorCommissionLabel = `${Number(formData.creatorCommissionRate || 1).toFixed(2).replace(/\.?0+$/, '')}%`;
 
   return (
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 shadow-sm sm:p-5 lg:p-6">
+      <section className="space-y-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-4 shadow-sm sm:p-5 lg:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="rounded-xl p-2" style={{ backgroundColor: 'rgba(var(--theme-accent-rgb, 245, 158, 11), 0.15)' }}>
               <MailPlus className="h-5 w-5" style={{ color: 'var(--theme-accent, #f5c518)' }} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white">Invite Creators</h3>
-              <p className="text-white/60 text-xs sm:text-sm">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Invite Creators</h3>
+              <p className="text-slate-500 dark:text-white/60 text-xs sm:text-sm">
                 Give influencers a creator link for your shop. They earn your chosen commission after completed sales.
               </p>
             </div>
@@ -70,14 +70,14 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: 'var(--theme-accent, #f5c518)' }}>Creator commission</p>
-              <h4 className="mt-1 text-lg font-black text-white">{creatorCommissionLabel} per completed sale</h4>
-              <p className="mt-1 text-xs font-medium text-white/60 sm:text-sm">
+              <h4 className="mt-1 text-lg font-black text-slate-900 dark:text-white">{creatorCommissionLabel} per completed sale</h4>
+              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-white/60 sm:text-sm">
                 This is the cut creators earn from sales they bring to your shop. Default is 1%; you can raise it before inviting creators.
               </p>
             </div>
             {isEditing ? (
               <div className="w-full sm:w-44">
-                <label className="mb-1 block text-xs font-semibold text-white/70" htmlFor="creatorCommissionRate">
+                <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-white/70" htmlFor="creatorCommissionRate">
                   Commission %
                 </label>
                 <Input
@@ -99,7 +99,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
                 type="button"
                 onClick={toggleEdit}
                 variant="outline"
-                className="h-10 border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
+                className="h-10 border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] text-slate-900 dark:text-white hover:bg-white/10"
               >
                 Set Commission
               </Button>
@@ -126,9 +126,9 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
           </Button>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
           {invites.length === 0 ? (
-            <div className="bg-white/[0.03] p-4 text-sm font-medium text-white/50">
+            <div className="bg-slate-100 dark:bg-white/[0.03] p-4 text-sm font-medium text-slate-500 dark:text-white/50">
               No creator invites yet.
             </div>
           ) : (
@@ -136,12 +136,12 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
               {(invites as unknown[]).map((inviteItem) => {
                  const invite = inviteItem as { id: string | number; creatorName?: string; email?: string; status?: string; code?: string; commissionRate?: number; shopUrl?: string; shopName?: string };
                  return (
-                 <div key={invite.id} className="grid gap-3 bg-white/[0.03] p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                 <div key={invite.id} className="grid gap-3 bg-slate-100 dark:bg-white/[0.03] p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                    <div className="min-w-0">
-                     <p className="truncate text-sm font-black text-white">
+                     <p className="truncate text-sm font-black text-slate-900 dark:text-white">
                        {invite.creatorName || invite.email}
                      </p>
-                     <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                     <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/45">
                        {invite.status}
                        {invite.code ? ` · ${(Number(invite.commissionRate || 0.01) * 100).toFixed(2).replace(/\.?0+$/, '')}% creator cut` : ''}
                      </p>
@@ -150,7 +150,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
                          href={invite.shopUrl}
                          target="_blank"
                          rel="noreferrer"
-                         className="mt-1 block truncate text-xs font-bold text-white/70 underline decoration-yellow-400 underline-offset-2"
+                         className="mt-1 block truncate text-xs font-bold text-slate-500 dark:text-white/70 underline decoration-yellow-400 underline-offset-2"
                          title={invite.shopUrl}
                        >
                          {getShopUsername(invite.shopName || formData.shopName)}
@@ -162,7 +162,7 @@ export function SellerAmbassadorInvites({ formData, setFormData, isEditing, togg
                        type="button"
                        variant="outline"
                        onClick={() => copyCreatorLink(invite.shopUrl, getShopUsername(invite.shopName || formData.shopName))}
-                       className="h-9 border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
+                       className="h-9 border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] text-slate-900 dark:text-white hover:bg-white/10"
                      >
                        <Copy className="mr-2 h-4 w-4" />
                        Copy Link
