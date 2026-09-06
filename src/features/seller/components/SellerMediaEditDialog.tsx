@@ -87,7 +87,7 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, fallbackI
           {/* Business photo */}
           <div className="flex items-center gap-4">
             <div
-              className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#141414]"
+              className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white dark:bg-[#141414]"
               style={{ border: '3px solid var(--theme-accent, #f5c518)' }}
             >
               {photoPreview ? (
@@ -102,7 +102,7 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, fallbackI
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-black text-white">Business photo</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">Business photo</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   size="sm"
@@ -124,7 +124,7 @@ export function SellerMediaEditDialog({ open, onOpenChange, avatarUrl, fallbackI
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
+                    className="h-8 border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.04] text-slate-900 dark:text-white hover:bg-white/10"
                     disabled={busy === 'photo'}
                     onClick={() => runRemove((b) => photoMutation.mutateAsync(b), 'Business photo')}
                   >

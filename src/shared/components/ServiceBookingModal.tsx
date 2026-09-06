@@ -79,11 +79,11 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                     disabled={isDateDisabled}
                                     className="bg-transparent text-slate-950 dark:text-white p-0"
                                     classNames={{
-                                        nav_button: "border-0 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-950 dark:hover:text-white text-slate-500 dark:text-[#666] h-8 w-8",
+                                        nav_button: "border-0 hover:bg-slate-100 dark:hover:bg-slate-100 dark:bg-white/5 hover:text-slate-950 dark:hover:text-slate-900 dark:text-white text-slate-500 dark:text-[#666] h-8 w-8",
                                         caption: "text-sm font-bold pt-1 text-slate-950 dark:text-white",
                                         head_cell: "text-slate-500 dark:text-[#666] text-[0.8rem] font-medium pt-1 w-8 sm:w-9",
                                         cell: "h-8 w-8 sm:h-9 sm:w-9 text-center text-sm p-0 flex items-center justify-center",
-                                        day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl aria-selected:opacity-100 text-yellow-600 dark:text-yellow-400",
+                                        day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-slate-100 dark:hover:bg-slate-100 dark:bg-white/5 rounded-xl aria-selected:opacity-100 text-yellow-600 dark:text-yellow-400",
                                         day_selected: "!bg-yellow-400 !text-black hover:!bg-yellow-400 hover:!text-black focus:!bg-yellow-400 focus:!text-black font-bold",
                                         day_today: "text-slate-950 dark:text-white bg-slate-100 dark:bg-white/5 font-bold",
                                         day_outside: "text-slate-300 dark:text-[#333] opacity-50",
@@ -99,13 +99,13 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                 <Select value={time} onValueChange={setTime}>
                                     <SelectTrigger className="w-full h-11 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-transparent text-base sm:text-sm font-medium focus:ring-1 focus:ring-yellow-400 transition-all text-slate-950 dark:text-white">
                                         <div className="flex items-center gap-2">
-                                            <Clock className="w-4 h-4 text-[#666]" />
+                                            <Clock className="w-4 h-4 text-slate-500 dark:text-[#666]" />
                                             <SelectValue placeholder="Select time" />
                                         </div>
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#111] border-white/5 text-white max-h-[200px]">
+                                    <SelectContent className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/5 text-slate-900 dark:text-white max-h-[200px]">
                                         {availableTimeSlots.map(slot => (
-                                            <SelectItem key={slot} value={slot} className="focus:bg-white/10 focus:text-white text-base sm:text-sm py-2.5 cursor-pointer">{slot}</SelectItem>
+                                            <SelectItem key={slot} value={slot} className="focus:bg-white/10 focus:text-slate-900 dark:text-white text-base sm:text-sm py-2.5 cursor-pointer">{slot}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -120,7 +120,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                 {isShopless ? (
                                     <div className="space-y-4 animate-in fade-in duration-500">
                                         {isChangingLocation ? (
-                                            <div className="space-y-4 bg-white/5 p-4 rounded-3xl border border-white/10">
+                                            <div className="space-y-4 bg-slate-100 dark:bg-white/5 p-4 rounded-3xl border border-slate-200 dark:border-white/10">
                                                 <LocationPicker
                                                     onLocationChange={handleLocationPickerChange}
                                                     initialAddress={customLocation || buyerProfile?.fullAddress}
@@ -135,12 +135,12 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <div className="flex items-start gap-4 p-4 bg-white/5 rounded-3xl border border-white/5 hover:border-white/20 transition-all group">
-                                                <div className="w-10 h-10 bg-white/5 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-yellow-400/10 transition-colors">
-                                                    <MapPin className="h-5 w-5 text-[#666] group-hover:text-yellow-400" />
+                                            <div className="flex items-start gap-4 p-4 bg-slate-100 dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-slate-200 dark:border-white/20 transition-all group">
+                                                <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-yellow-400/10 transition-colors">
+                                                    <MapPin className="h-5 w-5 text-slate-500 dark:text-[#666] group-hover:text-yellow-400" />
                                                 </div>
                                                 <div className="flex-1 space-y-1">
-                                                    <p className="text-sm font-medium text-white/90">
+                                                    <p className="text-sm font-medium text-slate-500 dark:text-white/90">
                                                         {customLocation || buyerProfile?.fullAddress || 'Search Precise Location...'}
                                                     </p>
                                                     <button
@@ -169,7 +169,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                                 </p>
                                             </div>
                                         ) : (
-                                            <div className="p-4 bg-white/5 rounded-3xl border border-white/5 text-center italic text-[#666] text-xs">
+                                            <div className="p-4 bg-slate-100 dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5 text-center italic text-slate-500 dark:text-[#666] text-xs">
                                                 Please select a location above!
                                             </div>
                                         )}
@@ -178,14 +178,14 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">
-                                    Service Requirements <span className={`ml-1 ${wordCount > maxWords ? 'text-red-400' : 'text-[#444]'}`}>({wordCount}/{maxWords})</span>
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#666]">
+                                    Service Requirements <span className={`ml-1 ${wordCount > maxWords ? 'text-red-400' : 'text-slate-400 dark:text-[#444]'}`}>({wordCount}/{maxWords})</span>
                                 </Label>
                                 <textarea
                                     placeholder="Describe your needs..."
                                     value={serviceRequirements}
                                     onChange={(e) => setServiceRequirements(e.target.value)}
-                                    className="flex min-h-[80px] w-full rounded-xl bg-white/5 border-0 px-3 py-2 text-sm text-white placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 focus:outline-none resize-none font-medium"
+                                    className="flex min-h-[80px] w-full rounded-xl bg-slate-100 dark:bg-white/5 border-0 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 focus:outline-none resize-none font-medium"
                                 />
                             </div>
                         </div>
@@ -194,8 +194,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
                 <div className="p-6 pt-2 pb-8 mt-auto shrink-0 space-y-3">
                     <div className="flex items-center justify-between text-xs px-1 mb-1">
-                        <span className="text-[#666] font-medium">Total Price</span>
-                        <span className="text-lg font-black text-white">
+                        <span className="text-slate-500 dark:text-[#666] font-medium">Total Price</span>
+                        <span className="text-lg font-black text-slate-900 dark:text-white">
                             {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(product.price)}
                         </span>
                     </div>
@@ -208,25 +208,25 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                         Confirm Booking
                     </Button>
                     {!isValid && (
-                        <p className="text-xs text-[#666] text-center font-medium">
+                        <p className="text-xs text-slate-500 dark:text-[#666] text-center font-medium">
                             {getDisabledReason()}
                         </p>
                     )}
-                    <Button variant="ghost" onClick={onClose} className="w-full h-10 rounded-xl text-xs font-bold text-[#666] hover:text-white">
+                    <Button variant="ghost" onClick={onClose} className="w-full h-10 rounded-xl text-xs font-bold text-slate-500 dark:text-[#666] hover:text-slate-900 dark:text-white">
                         Cancel
                     </Button>
                 </div>
             </DialogContent>
 
             <Dialog open={isChangingLocation} onOpenChange={setIsChangingLocation}>
-                <DialogContent className="flex flex-col w-[95vw] max-w-[450px] max-h-[90dvh] gap-0 p-0 overflow-hidden rounded-[32px] border border-white/5 shadow-2xl bg-[#0a0a0a] text-white z-[60]">
+                <DialogContent className="flex flex-col w-[95vw] max-w-[450px] max-h-[90dvh] gap-0 p-0 overflow-hidden rounded-[32px] border border-slate-200 dark:border-white/5 shadow-2xl bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white z-[60]">
                     <DialogHeader className="p-6 pb-2 shrink-0 space-y-4 pt-8">
-                        <div className="mx-auto w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
+                        <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center">
                             <MapPin className="h-6 w-6 text-yellow-400" />
                         </div>
                         <div className="space-y-1 text-center">
-                            <DialogTitle className="text-xl font-bold bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">Update My Location</DialogTitle>
-                            <DialogDescription className="text-sm font-medium text-[#666]">
+                            <DialogTitle className="text-xl font-bold bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-white/60 bg-clip-text text-transparent">Update My Location</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-slate-500 dark:text-[#666]">
                                 This location will be saved to your profile.
                             </DialogDescription>
                         </div>
@@ -253,7 +253,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                             {isUpdatingProfile ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Save & Use Location
                         </Button>
-                        <Button variant="ghost" onClick={() => setIsChangingLocation(false)} className="w-full h-10 rounded-xl text-xs font-bold text-[#666] hover:text-white">
+                        <Button variant="ghost" onClick={() => setIsChangingLocation(false)} className="w-full h-10 rounded-xl text-xs font-bold text-slate-500 dark:text-[#666] hover:text-slate-900 dark:text-white">
                             Cancel
                         </Button>
                     </DialogFooter>

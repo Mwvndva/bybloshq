@@ -160,10 +160,24 @@ export const getPaymentStatusBadge = (status?: string) => {
           Reversed
         </span>
       );
+    case 'cancelled':
+      return (
+        <span className="bg-gray-600 dark:bg-gray-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
+          <XCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
+          Cancelled
+        </span>
+      );
+    case 'manual_review':
+      return (
+        <span className="bg-orange-600 dark:bg-orange-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
+          <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />
+          Under Review
+        </span>
+      );
     default:
       return (
         <span className="bg-gray-600 dark:bg-gray-600 !text-white text-xs sm:text-sm font-bold px-3 py-1 rounded-full shadow-sm inline-flex items-center tracking-wide">
-          {status}
+          {(status || 'Pending').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
         </span>
       );
   }

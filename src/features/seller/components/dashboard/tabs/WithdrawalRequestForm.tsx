@@ -17,7 +17,7 @@ interface WithdrawalRequestFormProps {
   totalDeducted: number;
 }
 
-const inputClass = 'h-10 sm:h-11 text-sm bg-[#141414] border-white/10 text-white placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400';
+const inputClass = 'h-10 sm:h-11 text-sm bg-neutral-50 border-slate-200 text-slate-900 placeholder:text-slate-400 dark:bg-[#141414] dark:border-white/10 dark:text-white dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400';
 
 export function WithdrawalRequestForm({
   balance,
@@ -43,12 +43,12 @@ export function WithdrawalRequestForm({
             Request Withdrawal
           </Button>
         ) : (
-          <div className="border border-white/10 bg-[#0a0a0a] rounded-xl sm:rounded-2xl p-3 sm:p-6 md:p-8 shadow-[0_12px_35px_rgba(0,0,0,0.45)]">
-            <h4 className="text-lg sm:text-xl font-black text-white mb-4">Request Withdrawal</h4>
+          <div className="border border-slate-200 bg-white dark:border-white/10 dark:bg-[#0a0a0a] rounded-xl sm:rounded-2xl p-3 sm:p-6 md:p-8 shadow-[0_12px_35px_rgba(0,0,0,0.45)]">
+            <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mb-4">Request Withdrawal</h4>
             <form onSubmit={handleWithdrawalRequest} className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="amount" className="text-xs font-semibold text-white/70 mb-2 block">
+                  <Label htmlFor="amount" className="text-xs font-semibold text-slate-600 dark:text-white/70 mb-2 block">
                     Amount (KSh)
                   </Label>
                   <Input
@@ -62,12 +62,12 @@ export function WithdrawalRequestForm({
                     className={inputClass}
                     required
                   />
-                  <p className="text-xs text-white/60 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-white/60 mt-1">
                     Max: {formatKes(balance)}
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="mpesaNumber" className="text-xs font-semibold text-white/70 mb-2 block">
+                  <Label htmlFor="mpesaNumber" className="text-xs font-semibold text-slate-600 dark:text-white/70 mb-2 block">
                     M-Pesa Number
                   </Label>
                   <Input
@@ -82,7 +82,7 @@ export function WithdrawalRequestForm({
                 </div>
               </div>
               <div>
-                <Label htmlFor="mpesaName" className="text-xs font-semibold text-white/70 mb-2 block">
+                <Label htmlFor="mpesaName" className="text-xs font-semibold text-slate-600 dark:text-white/70 mb-2 block">
                   Name on M-Pesa Number
                 </Label>
                 <Input
@@ -96,9 +96,9 @@ export function WithdrawalRequestForm({
                 />
               </div>
               {totalDeducted > 0 && (
-                <div className="rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-3 text-xs font-semibold text-white">
+                <div className="rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-3 text-xs font-semibold text-slate-900 dark:text-white">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-white/70">Withdrawal charge</span>
+                    <span className="text-slate-600 dark:text-white/70">Withdrawal charge</span>
                     <span>{formatKes(withdrawalFee)}</span>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-3 text-sm font-black">
@@ -138,7 +138,7 @@ export function WithdrawalRequestForm({
                       mpesaName: ''
                     });
                   }}
-                  className="px-4 py-2 h-10 sm:h-8 text-xs rounded-lg border-white/10 bg-white/[0.04] text-white hover:bg-white/10 w-full sm:w-auto"
+                  className="px-4 py-2 h-10 sm:h-8 text-xs rounded-lg border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/10 w-full sm:w-auto"
                 >
                   Cancel
                 </Button>

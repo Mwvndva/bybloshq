@@ -29,6 +29,26 @@ export function applyResolvedTheme(resolved: 'light' | 'dark'): void {
   if (metaThemeColor) {
     metaThemeColor.setAttribute('content', resolved === 'light' ? '#f5f4f0' : '#000000');
   }
+
+  // Keep the native (Android) keyboard accessory bar in step with the app theme,
+  // rather than the static Keyboard.style in capacitor.config.ts. No-op on web.
+  void syncNativeKeyboardStyle(resolved);
+}
+
+/**
+ * Match the native keyboard's light/dark accessory bar to the resolved app
+ * theme. Lazily loads the Capacitor plugin so web builds never pull it in, and
+ * silently no-ops when not running in the native shell.
+ */
+async function syncNativeKeyboardStyle(resolved: 'light' | 'dark'): Promise<void> {
+  try {
+    const { isNativeApp } = await import('@/infrastructure/navigation/mobileApp');
+    if (!isNativeApp()) return;
+    const { Keyboard, KeyboardStyle } = await import('@capacitor/keyboard');
+    await Keyboard.setStyle({ style: resolved === 'dark' ? KeyboardStyle.Dark : KeyboardStyle.Light });
+  } catch {
+    // Web build or plugin unavailable — nothing to sync.
+  }
 }
 
 function isAppTheme(v: unknown): v is AppTheme {

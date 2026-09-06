@@ -40,21 +40,12 @@ export function useNotifications(variant: NotificationVariant = 'default', enabl
     staleTime: 15000,
   });
 
-  const unreadCountQueryKey = ['notifications', variant, 'unread-count'] as const;
-  const unreadCountQuery = useQuery({
-    queryKey: unreadCountQueryKey,
-    queryFn: async (): Promise<number> => {
-      const res = await apiClient.get(`${base}/unread-count`);
-      return (res.data?.data?.unreadCount ?? 0) as number;
-    },
-    enabled,
-    refetchInterval: 45000,
-    refetchOnWindowFocus: true,
-    staleTime: 15000,
-  });
-
   const notifications = query.data ?? [];
-  const unreadCount = unreadCountQuery.data ?? notifications.filter((n) => !n.read_at).length;
+  // Derived from the polled feed rather than a second independent 45s request.
+  // The feed is capped at limit=30, so the badge saturates at 30 unread — an
+  // acceptable approximation for a bell badge, and mark-read mutations keep it
+  // instantly in sync via the optimistic cache updates below.
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   const markReadMutation = useMutation({
     mutationFn: async (id: AppNotification['id']) => {
@@ -64,7 +55,6 @@ export function useNotifications(variant: NotificationVariant = 'default', enabl
       queryClient.setQueryData<AppNotification[]>(queryKey, (current = []) =>
         current.map((n) => (n.id === id ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n))
       );
-      void queryClient.invalidateQueries({ queryKey: unreadCountQueryKey });
     },
   });
 
@@ -76,15 +66,12 @@ export function useNotifications(variant: NotificationVariant = 'default', enabl
       queryClient.setQueryData<AppNotification[]>(queryKey, (current = []) =>
         current.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() }))
       );
-      queryClient.setQueryData<number>(unreadCountQueryKey, 0);
-      void queryClient.invalidateQueries({ queryKey: unreadCountQueryKey });
     },
   });
 
   const refetch = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['notifications', variant] });
-    void queryClient.invalidateQueries({ queryKey: unreadCountQueryKey });
-  }, [queryClient, variant, unreadCountQueryKey]);
+  }, [queryClient, variant]);
 
   // On the native app, refetch the feed the moment a push arrives so the bell
   // badge updates instantly instead of waiting for the poll. No-op on web.
