@@ -72,7 +72,7 @@ export function CreatorEarningsHero({
   const animatedEarnings = useCountUp(totalEarnings);
   const hasEarnings = totalEarnings > 0;
   const name = firstName || 'Creator';
-  const [showExplain, setShowExplain] = useState(true);
+  const [showExplain, setShowExplain] = useState(false);
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-yellow-400/30 bg-slate-50 dark:bg-[#0a0a0a] p-5 shadow-sm transition-colors duration-200 sm:p-6">
