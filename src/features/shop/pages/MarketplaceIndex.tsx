@@ -1,6 +1,9 @@
 import { Button } from '@/shared/ui/button';
 import { AddBusinessCard } from '@/features/shop/components/AddBusinessCard';
 import { Link } from 'react-router-dom';
+import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
+
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=space.bybloshq.app';
 
 /**
  * The single Byblos landing screen, shared by web and the Android app: a centred
@@ -47,6 +50,25 @@ const LandingHome = () => (
       <p className="text-[13px] font-bold tracking-wide text-slate-800 dark:text-white/90">
         Tap logo to get access
       </p>
+
+      {/* Play Store download is a web-only affordance — the native app already has itself installed. */}
+      {!isNativeApp() && (
+        <a
+          href={PLAY_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Get Byblos on Google Play"
+          // Rounded "frame" around the badge rather than clipping the artwork itself —
+          // Google's brand guidelines ask that the official badge stay unmodified.
+          className="inline-block rounded-xl bg-black p-1"
+        >
+          <img
+            src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+            alt="Get it on Google Play"
+            className="h-11 w-auto"
+          />
+        </a>
+      )}
     </main>
 
     <AddBusinessCard />
