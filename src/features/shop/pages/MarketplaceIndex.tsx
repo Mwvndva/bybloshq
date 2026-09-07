@@ -1,5 +1,6 @@
 import { Button } from '@/shared/ui/button';
 import { AddBusinessCard } from '@/features/shop/components/AddBusinessCard';
+import { LandingDoodles } from '@/features/shop/components/LandingDoodles';
 import { Link } from 'react-router-dom';
 import { isNativeApp } from '@/infrastructure/navigation/mobileApp';
 
@@ -12,19 +13,23 @@ const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=space.bybl
  */
 const LandingHome = () => (
   <div className="relative flex min-h-[100svh] items-center justify-center bg-[var(--byblos-bg,#000000)] px-6 py-10 text-[var(--byblos-text,#f5f5f5)] selection:bg-yellow-300 selection:text-black transition-colors duration-200">
-    <Link to="/mzigo/login" className="absolute left-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))]" aria-label="Mzigo Ego delivery partner login">
+    {/* z-0 explicitly, so the scatter stays behind the nav buttons and main content
+        regardless of DOM order — flex items paint in the same layer as position:absolute
+        siblings, so relying on ordering alone here would be fragile. */}
+    <LandingDoodles />
+    <Link to="/mzigo/login" className="absolute left-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))] z-10" aria-label="Mzigo Ego delivery partner login">
       <Button className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] p-0 shadow-sm hover:bg-black/[0.08] dark:hover:bg-white/10">
         <img src="/mzigo-ego.png" alt="Mzigo Ego" className="h-6 w-6 object-contain" />
       </Button>
     </Link>
 
-    <Link to="/creator/login" className="absolute right-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))]">
+    <Link to="/creator/login" className="absolute right-5 top-[calc(1.25rem+env(safe-area-inset-top,0px))] z-10">
       <Button className="h-7 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] px-3 text-[10px] font-bold uppercase tracking-wider text-slate-800 dark:text-white shadow-sm hover:bg-black/[0.08] dark:hover:bg-white/10">
         Creator
       </Button>
     </Link>
 
-    <main className="flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)] pb-28">
+    <main className="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 text-center pt-[env(safe-area-inset-top,0px)] pb-28">
       {/* The centre logo is the buyer entry point — tapping it opens buyer login. */}
       <Link
         to="/buyer/login"
