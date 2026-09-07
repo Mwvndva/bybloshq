@@ -60,12 +60,12 @@ const LandingHome = () => (
           aria-label="Get Byblos on Google Play"
           // Rounded "frame" around the badge rather than clipping the artwork itself —
           // Google's brand guidelines ask that the official badge stay unmodified.
-          className="inline-block rounded-xl bg-black p-1"
+          className="inline-block rounded-2xl bg-black p-2"
         >
           <img
             src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
             alt="Get it on Google Play"
-            className="h-11 w-auto"
+            className="h-16 w-auto"
           />
         </a>
       )}
