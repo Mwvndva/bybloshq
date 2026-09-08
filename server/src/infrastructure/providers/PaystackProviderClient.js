@@ -427,7 +427,11 @@ class PaystackProviderClient {
     _handlePaystackError(error) {
         if (error.response) {
             const status = error.response.status;
-            const message = error.response.data?.message || error.response.data?.error || error.message;
+            // Paystack's charge endpoint wraps the actually useful failure reason
+            // one level deeper (data.data.message, e.g. "Declined. Please use the
+            // test mobile money number...") — the outer data.message is usually
+            // just a generic "Charge attempted". Prefer the specific one.
+            const message = error.response.data?.data?.message || error.response.data?.message || error.response.data?.error || error.message;
             const wrapped = new Error(message || 'Paystack request failed');
             wrapped.statusCode = status;
             wrapped.provider = 'paystack';

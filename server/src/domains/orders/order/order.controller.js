@@ -146,10 +146,13 @@ export const requestSellerPickup = async (req, res) => {
         });
     } catch (error) {
         logger.error('Error requesting seller pickup:', error);
-        const statusCode = error.message?.includes('not found') ? 404
+        // Prefer an explicit statusCode already set on the error (e.g. a provider
+        // failure like a declined Paystack charge) over guessing from the message —
+        // otherwise a routine payment decline gets misreported as a 500.
+        const statusCode = error.statusCode || (error.message?.includes('not found') ? 404
             : error.message?.includes('already') ? 409
                 : error.message?.includes('only') || error.message?.includes('required') || error.message?.includes('Valid') ? 400
-                    : 500;
+                    : 500);
 
         res.status(statusCode).json({
             status: 'error',
@@ -173,9 +176,9 @@ export const selectHubDropoff = async (req, res) => {
         });
     } catch (error) {
         logger.error('Error selecting hub drop-off:', error);
-        const statusCode = error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
+        const statusCode = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
             : error.message?.includes('only') || error.message?.includes('cannot') || error.message?.includes('after') ? 400
-                : 500;
+                : 500);
         res.status(statusCode).json({ status: 'error', message: error.message || 'Failed to select hub drop-off' });
     }
 };
@@ -195,9 +198,9 @@ export const markDroppedAtHub = async (req, res) => {
         });
     } catch (error) {
         logger.error('Error marking dropped at hub:', error);
-        const statusCode = error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
+        const statusCode = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
             : error.message?.includes('only') || error.message?.includes('cannot') || error.message?.includes('after') ? 400
-                : 500;
+                : 500);
         res.status(statusCode).json({ status: 'error', message: error.message || 'Failed to mark package dropped at hub' });
     }
 };
@@ -217,9 +220,9 @@ export const confirmBooking = async (req, res) => {
         });
     } catch (error) {
         logger.error('Error confirming booking:', error);
-        const statusCode = error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
+        const statusCode = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('not found') ? 404
             : error.message?.includes('only') || error.message?.includes('Cannot') || error.message?.includes('after') ? 400
-                : 500;
+                : 500);
         res.status(statusCode).json({ status: 'error', message: error.message || 'Failed to confirm booking' });
     }
 };
