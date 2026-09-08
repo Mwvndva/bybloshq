@@ -151,7 +151,6 @@ function auditCreatorExperience() {
   check('Creator experience', 'Creator dashboard has requests, linked shops, leaderboard, clicks, withdrawals, logout, and period analysis', hasAll('src/features/creator/pages/CreatorDashboard.tsx', [/Linked shops|LinkedShops/i, /Link clicks|clicks/i]) && hasAll('server/src/application/routes/creator.routes.js', [/\/logout/]), 'Creator dashboard analytics or logout coverage is incomplete.');
   check('Creator experience', 'Creator referral links invite sellers', hasAll('src/features/creator/pages/CreatorDashboard.tsx', [/ref=|referral/i]), 'Creator seller referral link is missing.');
   check('Creator experience', 'Creator backend tracks requests, clicks, earnings, referrals, and withdrawals', hasAll('server/src/domains/growth/creators/creator.service.js', [/recordLinkClick|creditCreator/i]) && hasAll('server/src/application/routes/creator.routes.js', [/shop-requests/]), 'Creator backend flow coverage is incomplete.');
-  check('Creator experience', 'Creator sale notifications are wired to WhatsApp', hasAll('server/src/domains/growth/creators/creator.service.js', [/whatsapp_number|sendMessage|whatsapp/i]) && migrationIncludes(/ALTER TABLE creators/i), 'Creator successful-sale WhatsApp notification wiring is missing.');
 }
 
 function auditCheckoutAndPayments() {

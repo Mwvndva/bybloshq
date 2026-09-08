@@ -131,3 +131,6 @@ google-services.json
 *.docx
 ~$*
 
+
+# Dead WhatsApp Web session data (removed; do not recreate)
+server/src/whatsapp-sessions/
