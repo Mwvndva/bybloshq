@@ -44,13 +44,29 @@ const RATE_LIMIT_OPTIONS = {
 // Always-available in-memory limiter (no external dependency).
 const memoryLimiter = rateLimit({ ...RATE_LIMIT_OPTIONS });
 
-// Redis-backed limiter for a shared counter across instances.
-const redisLimiter = rateLimit({
-    ...RATE_LIMIT_OPTIONS,
-    store: new RedisStore({
-        sendCommand: (...args) => getRedisClient().call(...args),
-    }),
-});
+// Redis-backed limiter for a shared counter across instances. Built lazily on
+// first use (see getRedisLimiter below) rather than at module load —
+// RedisStore's constructor issues a command immediately to load its Lua
+// scripts, and building it eagerly meant a Redis outage at boot (or
+// NODE_ENV=test's enableOfflineQueue:false) threw an unhandled rejection that
+// crashed the whole process, defeating the fail-open design this exists for.
+let redisLimiter = null;
+
+function getRedisLimiter() {
+    if (redisLimiter) return redisLimiter;
+    try {
+        redisLimiter = rateLimit({
+            ...RATE_LIMIT_OPTIONS,
+            store: new RedisStore({
+                sendCommand: (...args) => getRedisClient().call(...args),
+            }),
+        });
+    } catch (err) {
+        logger.warn('[AUTH-LIMITER] Failed to build Redis-backed limiter, staying on in-memory store:', err?.message);
+        return null;
+    }
+    return redisLimiter;
+}
 
 /**
  * Fail-open progressive auth rate limiter with IP + Email dual key.
@@ -69,7 +85,12 @@ export const authLimiter = (req, res, next) => {
         return memoryLimiter(req, res, next);
     }
 
-    return redisLimiter(req, res, (err) => {
+    const limiter = getRedisLimiter();
+    if (!limiter) {
+        return memoryLimiter(req, res, next);
+    }
+
+    return limiter(req, res, (err) => {
         if (err) {
             logger.warn('[AUTH-LIMITER] Redis limiter failed, failing open to in-memory store:', err?.message);
             return memoryLimiter(req, res, next);

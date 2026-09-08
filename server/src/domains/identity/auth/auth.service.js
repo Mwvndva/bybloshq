@@ -10,6 +10,7 @@ import { pool } from '../../../infrastructure/database/database.js';
 import PendingRegistration from '../../../shared/utils/pendingRegistration.model.js';
 import ReferralService from '../../growth/referrals/referral.service.js';
 import ProfileProvisioningService from '../users/profileProvisioning.service.js';
+import { AppError } from '../../../shared/utils/errorHandler.js';
 
 // FIXED BUG-AUTH-02: cost factor must match bcrypt.hash(password, 12) used in user.model.js
 // Regenerate with: node -e "const b=require('bcrypt');b.hash('__timing_dummy__',12).then(console.log)"
@@ -23,6 +24,13 @@ class AuthService {
      * @param {string} type - Optional portal type: 'buyer' | 'seller' | 'admin'
      */
     static async login(email, password, type = null) {
+        // Some callers (e.g. the creator route) validate the request body with a
+        // deliberately permissive schema that doesn't require these fields — see
+        // shared/validations/creator.validation.js. Guard here so a missing
+        // email/password is a clean 400 instead of crashing on .toLowerCase().
+        if (!email || !password) {
+            throw new AppError('Email and password are required', 400);
+        }
         const normalizedEmail = email.toLowerCase().trim();
         let target = await User.findByEmail(normalizedEmail);
         let isPending = false;
@@ -449,7 +457,7 @@ class AuthService {
      */
     static async verifyEmail(email, rawToken) {
         if (!email || !rawToken) {
-            throw new Error('Email and token are required');
+            throw new AppError('Email and token are required', 400);
         }
 
         const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -469,7 +477,7 @@ class AuthService {
         const pending = await PendingRegistration.findByEmailAndToken(email, hashedToken);
         if (!pending) {
             logger.warn(`[AUTH] Verification failed - record not found for email: ${email} with hashed token: ${hashedToken}`);
-            throw new Error('Verification link is invalid or has expired. Please request a new one.');
+            throw new AppError('Verification link is invalid or has expired. Please request a new one.', 400);
         }
 
         // 3. Create account from pending data

@@ -15,14 +15,30 @@ const GLOBAL_LIMIT_OPTIONS = {
 const memoryLimiter = rateLimit({ ...GLOBAL_LIMIT_OPTIONS });
 
 // Redis-backed limiter sharing one counter across all instances, so N pods do
-// not each hand out the full quota. Only used while the Redis client is ready.
-const redisLimiter = rateLimit({
-    ...GLOBAL_LIMIT_OPTIONS,
-    store: new RedisStore({
-        prefix: 'grl:',
-        sendCommand: (...args) => getRedisClient().call(...args),
-    }),
-});
+// not each hand out the full quota. Built lazily on first use (see
+// getRedisLimiter below) rather than at module load — RedisStore's constructor
+// issues a command immediately to load its Lua scripts, and building it eagerly
+// meant a Redis outage at boot (or NODE_ENV=test's enableOfflineQueue:false)
+// threw an unhandled rejection that crashed the whole process, defeating the
+// fail-open design this middleware is supposed to provide.
+let redisLimiter = null;
+
+function getRedisLimiter() {
+    if (redisLimiter) return redisLimiter;
+    try {
+        redisLimiter = rateLimit({
+            ...GLOBAL_LIMIT_OPTIONS,
+            store: new RedisStore({
+                prefix: 'grl:',
+                sendCommand: (...args) => getRedisClient().call(...args),
+            }),
+        });
+    } catch (err) {
+        logger.warn('[GLOBAL-LIMITER] Failed to build Redis-backed limiter, staying on in-memory store:', err?.message);
+        return null;
+    }
+    return redisLimiter;
+}
 
 // Fail-open global limiter. A Redis outage must never take down the API: use
 // Redis only while the client is ready, and if a Redis command fails mid-request
@@ -36,7 +52,12 @@ export const globalLimiter = (req, res, next) => {
         return memoryLimiter(req, res, next);
     }
 
-    return redisLimiter(req, res, (err) => {
+    const limiter = getRedisLimiter();
+    if (!limiter) {
+        return memoryLimiter(req, res, next);
+    }
+
+    return limiter(req, res, (err) => {
         if (err) {
             logger.warn('[GLOBAL-LIMITER] Redis limiter failed, failing open to in-memory store:', err?.message);
             return memoryLimiter(req, res, next);
