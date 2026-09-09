@@ -67,11 +67,11 @@ class AuthService {
 
             logger.info(`[AUTH] Login attempted for pending user, resent verification email: ${normalizedEmail}`);
 
-            const err = new Error(
-                "Your account is not yet verified. We've sent a new verification link to your email. Please check your inbox."
+            const err = new AppError(
+                "Your account is not yet verified. We've sent a new verification link to your email. Please check your inbox.",
+                403,
+                'PENDING_VERIFICATION'
             );
-            err.code = 'PENDING_VERIFICATION';
-            err.statusCode = 403;
             err.email = normalizedEmail;
             err.userType = target.role;
             throw err;
@@ -81,9 +81,7 @@ class AuthService {
         const user = target;
 
         if (user.is_active === false) {
-            const err = new Error('Your account has been deactivated. Please contact support.');
-            err.statusCode = 403;
-            err.code = 'ACCOUNT_DEACTIVATED';
+            const err = new AppError('Your account has been deactivated. Please contact support.', 403, 'ACCOUNT_DEACTIVATED');
             err.email = user.email;
             err.userType = type || user.role;
             throw err;
@@ -93,9 +91,7 @@ class AuthService {
         // Sellers must verify before accessing the platform
         // Buyers get a softer check — they can still purchase (for guest checkout compat)
         if (!user.is_verified) {
-            const err = new Error('Please verify your email before logging in. Check your inbox or request a new verification link.');
-            err.statusCode = 403;
-            err.code = 'EMAIL_NOT_VERIFIED';
+            const err = new AppError('Please verify your email before logging in. Check your inbox or request a new verification link.', 403, 'EMAIL_NOT_VERIFIED');
             err.email = user.email;
             err.userType = type || user.role;
             throw err;
@@ -117,9 +113,7 @@ class AuthService {
             await AuthService.resendVerificationEmail(user.email, type || user.role);
 
             // 2. Throw specific error for frontend redirection
-            const err = new Error('Please accept the terms and conditions and verify your account.');
-            err.statusCode = 403;
-            err.code = 'TERMS_NOT_ACCEPTED';
+            const err = new AppError('Please accept the terms and conditions and verify your account.', 403, 'TERMS_NOT_ACCEPTED');
             err.email = user.email;
             err.userType = type || user.role;
             throw err;
@@ -224,8 +218,7 @@ class AuthService {
 
 
             // No cross-role profile found — typed 401 so controller can give clear message
-            const err = new Error(`Wrong portal. This account is registered as a ${user.role}.`);
-            err.statusCode = 401;
+            const err = new AppError(`Wrong portal. This account is registered as a ${user.role}.`, 401);
             err.isRoleMismatch = true;
             throw err;
         }
@@ -291,7 +284,7 @@ class AuthService {
 
         // 0. Validate terms acceptance
         if (termsAccepted !== true) {
-            throw new Error('You must accept the terms and conditions to create an account.');
+            throw new AppError('You must accept the terms and conditions to create an account.', 400);
         }
 
         // 1. Check if user already exists in unified users table
@@ -324,7 +317,7 @@ class AuthService {
                     return { status: 'created', user: buyer };
                 }
                 default:
-                    throw new Error('Invalid registration type');
+                    throw new AppError('Invalid registration type', 400);
             }
         }
 
@@ -372,9 +365,7 @@ class AuthService {
         // Require a real, buyer-chosen password (the checkout modal always sends
         // one; this guards any other caller / future flow).
         if (!data.password || String(data.password).trim().length < 6) {
-            const error = new Error('A password is required to create your account.');
-            error.statusCode = 400;
-            throw error;
+            throw new AppError('A password is required to create your account.', 400);
         }
 
         return AuthService.register({
@@ -408,7 +399,7 @@ class AuthService {
             return true;
         } catch (err) {
             await User.setPasswordResetToken(email, null, null);
-            throw new Error('There was an error sending the email. Try again later!');
+            throw new AppError('There was an error sending the email. Try again later!', 500);
         }
     }
 
@@ -423,7 +414,7 @@ class AuthService {
 
         // Verify token
         const isValid = await User.verifyPasswordResetToken(email, hashedToken);
-        if (!isValid) throw new Error('Token is invalid or has expired');
+        if (!isValid) throw new AppError('Token is invalid or has expired', 400);
 
         // Reset
         return await User.resetPassword(email, newPassword);
