@@ -542,6 +542,11 @@ class CreatorService {
     if (data.password !== data.confirmPassword) {
       throw new Error('Passwords do not match.');
     }
+    // Same terms requirement as registerDirect -- an invite from a seller
+    // doesn't substitute for the creator's own consent to Byblos's terms.
+    if (data.termsAccepted !== true) {
+      throw new AppError('You must accept the terms and conditions to create an account.', 400);
+    }
 
     const existingCreator = await this.findByEmail(email);
     if (existingCreator) throw new Error('A creator account already exists for this email.');
@@ -587,8 +592,8 @@ class CreatorService {
 
       const { rows: creatorRows } = await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number)
-         VALUES ($1, $2, $3, $4, $5, $6)
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, terms_accepted, terms_accepted_at)
+         VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
          RETURNING *`,
         [
           user.id,
@@ -657,6 +662,15 @@ class CreatorService {
     if (data.password !== data.confirmPassword) {
       throw new Error('Passwords do not match.');
     }
+    // Buyers/sellers have always required this (AuthService.register); creators
+    // never did -- registerDirect had no concept of terms acceptance at all.
+    // AppError (not a plain Error) because the controller's catch block below
+    // classifies 400-vs-500 by matching substrings in error.message, and this
+    // message doesn't match any of them -- it would otherwise fall through to
+    // next(error) and get masked as a generic 500 by globalErrorHandler.
+    if (data.termsAccepted !== true) {
+      throw new AppError('You must accept the terms and conditions to create an account.', 400);
+    }
 
     const existingCreator = await this.findByEmail(email);
     if (existingCreator) throw new Error('A creator account already exists for this email.');
@@ -702,8 +716,8 @@ class CreatorService {
 
       await client.query(
         `INSERT INTO creators
-           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+           (user_id, first_name, last_name, email, mpesa_number, whatsapp_number, terms_accepted, terms_accepted_at)
+         VALUES ($1, $2, $3, $4, $5, $6, true, NOW())`,
         [
           user.id,
           String(data.firstName).trim(),

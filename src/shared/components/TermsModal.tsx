@@ -1,11 +1,16 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TermsContent } from './TermsContent';
 
 interface TermsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAccept?: () => void;
+  /** Section id (without the "section-" prefix) to scroll to when the modal opens.
+   *  Lets separate "View Terms" / "View Privacy Policy" entry points jump straight
+   *  to the relevant part of the combined document instead of always opening at
+   *  the top. Defaults to 'privacy'. */
+  initialSection?: string;
 }
 
 const sections = [
@@ -21,8 +26,8 @@ const sections = [
   { id: 'governing', label: '10. Governing Law' },
 ];
 
-const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
-  const [activeSection, setActiveSection] = useState('privacy');
+const TermsModal = ({ isOpen, onClose, onAccept, initialSection = 'privacy' }: TermsModalProps) => {
+  const [activeSection, setActiveSection] = useState(initialSection);
 
   const scrollTo = (id: string) => {
     setActiveSection(id);
@@ -30,11 +35,29 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // Keep the sidebar highlight in sync with which section we're about to show.
+  useEffect(() => {
+    if (isOpen) setActiveSection(initialSection);
+  }, [isOpen, initialSection]);
+
+  // Radix mounts DialogContent into its portal asynchronously relative to the
+  // `isOpen` prop flip, so a requestAnimationFrame scheduled from a plain
+  // useEffect can fire before `section-${id}` actually exists in the DOM --
+  // the scroll silently no-ops. `onOpenAutoFocus` fires only once Radix has
+  // finished mounting and is about to move focus into the now-visible
+  // content, which is the first point the section elements are guaranteed
+  // to be present and laid out.
+  const scrollToInitialSection = () => {
+    const el = document.getElementById(`section-${initialSection}`);
+    if (el) el.scrollIntoView({ block: 'start' });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
         className="max-w-5xl h-[90dvh] sm:h-[92dvh] w-[95vw] sm:w-[95vw] flex flex-col p-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-[#141414] dark:bg-[#141414] text-white dark:text-white border border-white/10 dark:border-white/10 shadow-2xl [&>button]:text-white/80 [&>button]:hover:text-white [&>button]:hover:bg-white/10"
+        onOpenAutoFocus={scrollToInitialSection}
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Byblos Terms &amp; Conditions</DialogTitle>
@@ -120,27 +143,42 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — the accept/decline actions only make sense during
+            registration (onAccept provided). Opened from an account settings
+            page to simply review the documents, this is just a close button. */}
         <div className="flex-shrink-0 border-t border-white/10 bg-[#161616] px-5 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-400 italic">
-            By clicking &quot;I Agree&quot; or using Byblos, you confirm you have read and accepted all terms above.
+            {onAccept
+              ? 'By clicking "I Agree" or using Byblos, you confirm you have read and accepted all terms above.'
+              : 'This is the version of the Terms & Privacy Policy currently in effect.'}
           </p>
           <div className="flex gap-3 w-full sm:w-auto justify-end">
-            <button
-              onClick={onClose}
-              className="px-5 py-2 text-xs border border-white/20 text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors font-medium"
-            >
-              Decline
-            </button>
-            <button
-              onClick={() => {
-                if (onAccept) onAccept();
-                onClose();
-              }}
-              className="px-6 py-2 text-xs bg-yellow-400 hover:bg-yellow-300 text-black font-bold rounded-xl shadow-lg transition-colors tracking-wide"
-            >
-              I Agree
-            </button>
+            {onAccept ? (
+              <>
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2 text-xs border border-white/20 text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors font-medium"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => {
+                    onAccept();
+                    onClose();
+                  }}
+                  className="px-6 py-2 text-xs bg-yellow-400 hover:bg-yellow-300 text-black font-bold rounded-xl shadow-lg transition-colors tracking-wide"
+                >
+                  I Agree
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={onClose}
+                className="px-6 py-2 text-xs bg-yellow-400 hover:bg-yellow-300 text-black font-bold rounded-xl shadow-lg transition-colors tracking-wide"
+              >
+                Close
+              </button>
+            )}
           </div>
         </div>
       </DialogContent>

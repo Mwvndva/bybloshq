@@ -111,7 +111,8 @@ export function TermsContent() {
                   "Sellers must fulfill orders within the stated timeframe or face suspension.",
                   "Sellers are solely responsible for tax obligations on income earned, including VAT and income tax to KRA.",
                   "Byblos reserves the right to withhold payouts pending dispute resolution.",
-                  "Sellers consent to Byblos using their shop name, logo, and product listings for platform marketing."
+                  "Sellers consent to Byblos using their shop name, logo, and product listings for platform marketing.",
+                  "Proceeds from a completed sale are held for a standard clearance period (currently 2 business days from buyer confirmation or the confirmation window lapsing) before becoming available for withdrawal, and are subject to the M-Pesa withdrawal fee disclosed in the seller dashboard at the time of withdrawal."
                 ]} />
               </Sub>
 
@@ -119,12 +120,23 @@ export function TermsContent() {
                 <BulletList items={[
                   "Payment in full is required before order confirmation. No credit facilities are offered.",
                   "Buyers must provide accurate delivery and contact information. Losses from inaccurate data are the buyer's sole responsibility.",
+                  "Funds paid for an order are held by Byblos and released to the seller only after you confirm receipt or the confirmation window lapses, giving you a window to raise an issue before funds clear to the seller.",
                   "Buyers waive the right to chargeback through their bank where a dispute process exists on Byblos.",
                   "Refunds are governed by Section 3 of these Terms."
                 ]} />
               </Sub>
 
-
+              <Sub title="2.5 Creator Program Terms">
+                Byblos operates a creator affiliate programme with two independent earning streams. By creating a creator account, you agree to the following:
+                <BulletList items={[
+                  "Seller referrals: sharing your personal referral link with a business that registers as a Byblos seller entitles you to a fixed royalty (currently KSh 3) on every sale that seller subsequently completes, for as long as both your creator account and the referred seller's account remain active in good standing.",
+                  "Shop collaboration: with a seller's explicit acceptance of your collaboration request, you receive a unique tracking link for that seller's shop. Purchases completed through that link earn you a commission calculated on the product subtotal (before Byblos's service charge and platform fee) at the rate the seller set at the time you joined. A seller changing their advertised rate afterward does not affect commissions already agreed for creators already promoting their shop.",
+                  "You may not use your own referral or tracking links to purchase from yourself, refer your own business, or otherwise engage in self-dealing; Byblos may withhold, reverse, or reclaim any commission or royalty arising from self-referral, collusion, or fraudulent activity.",
+                  "Creator earnings are held for a minimum clearance period (currently 2 business days) from the date they are credited before becoming eligible for withdrawal, and are subject to the same M-Pesa withdrawal charges disclosed at checkout in the creator dashboard.",
+                  "Byblos may suspend, adjust, or terminate the creator programme, an individual creator's account, or a specific collaboration link at its discretion where these Terms, applicable law, or a seller's own withdrawal of an accepted collaboration are engaged, without affecting royalties or commissions already earned and cleared in good faith.",
+                  "Creator earnings are income for tax purposes; creators are solely responsible for declaring and remitting any tax due to KRA on amounts earned through the programme."
+                ]} />
+              </Sub>
 
               <Sub title="2.6 Platform Rights">
                 Byblos may, at its sole discretion and without prior notice:
@@ -298,13 +310,6 @@ export function TermsContent() {
 
               <Sub title="8.3 Arbitration">
                 Unresolved disputes shall be referred to binding arbitration under the Arbitration Act, 1995 (Kenya), administered by the NCIA, with a sole arbitrator appointed by agreement or, failing agreement, by the NCIA. Proceedings shall be conducted in English in Nairobi, Kenya.
-              </Sub>
-
-              <Sub title="8.1 Informal Negotiation">
-                Parties agree to first attempt amicable resolution within 14 days of written notice of a dispute.
-              </Sub>
-              <Sub title="8.2 Arbitration">
-                Any unresolved dispute shall be referred to and finally resolved by arbitration under the Arbitration Act, 1995 (Kenya) in Nairobi, conducted in English.
               </Sub>
             </section>
 

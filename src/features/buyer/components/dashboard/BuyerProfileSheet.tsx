@@ -7,6 +7,7 @@ import { DeleteAccountButton } from '@/components/account/DeleteAccountButton';
 import { deleteBuyerAccount } from '@/features/buyer/api/profile';
 import { useThemeScope } from '@/shared/hooks/useAppTheme';
 import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
+import { LegalLinks } from '@/shared/components/LegalLinks';
 
 interface BuyerProfileContentProps {
   isEditingProfile: boolean;
@@ -176,6 +177,11 @@ export function BuyerProfileContent({
           <h3 className="text-sm font-bold text-slate-950 dark:text-white">Refunds</h3>
         </div>
         <RefundCard refundAmount={refundAmount} compact />
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-bold text-slate-950 dark:text-white">Legal</h3>
+        <LegalLinks />
       </section>
 
       <div className="space-y-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black p-4">

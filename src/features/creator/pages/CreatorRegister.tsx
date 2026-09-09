@@ -6,7 +6,9 @@ import { useCreatorRegisterMutation } from '@/features/creator/hooks/mutations/u
 import { useCreatorInviteQuery } from '@/features/creator/hooks/queries/useCreatorInviteQuery';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
 import { registerModalDismiss } from '@/shared/utils/modalBackHandler';
+import TermsModal from '@/shared/components/TermsModal';
 
 import { useGlobalAuth } from '@/features/auth/hooks/useGlobalAuth';
 
@@ -42,6 +44,8 @@ export default function CreatorRegister() {
   } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -111,11 +115,16 @@ export default function CreatorRegister() {
       toast.error('Passwords do not match.');
       return;
     }
+    if (!termsAccepted) {
+      toast.error('You must accept the Terms & Conditions to create an account.');
+      return;
+    }
     setLoading(true);
     try {
       const result = await registerMutation.mutateAsync({
         token: token || undefined,
-        ...form
+        ...form,
+        termsAccepted
       });
       const resObj = result as { status?: string; message?: string; data?: { status?: string; email?: string } };
       const registrationStatus = resObj?.data?.status;
@@ -287,8 +296,29 @@ export default function CreatorRegister() {
               </div>
             </div>
           )}
+          <div className="sm:col-span-2">
+            <div className="flex items-start space-x-2 rounded-xl border border-black/[0.08] dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3">
+              <input
+                type="checkbox"
+                id="termsAccepted"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 rounded accent-yellow-400 cursor-pointer"
+              />
+              <Label htmlFor="termsAccepted" className="text-xs font-medium text-slate-600 dark:text-gray-300 cursor-pointer">
+                I agree to the{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsTermsModalOpen(true)}
+                  className="font-semibold text-yellow-600 hover:underline dark:text-yellow-400"
+                >
+                  Terms &amp; Conditions
+                </button>
+              </Label>
+            </div>
+          </div>
           <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
-            <Button disabled={loading || !passwordsMatch} className="h-12 rounded-2xl bg-yellow-400 font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50">
+            <Button disabled={loading || !passwordsMatch || !termsAccepted} className="h-12 rounded-2xl bg-yellow-400 font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create creator account'}
             </Button>
             <Link to="/creator/login" className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.08] dark:border-white/10 bg-slate-100 dark:bg-white/[0.03] px-4 text-sm font-black text-slate-900 dark:text-white transition hover:bg-slate-200 dark:hover:bg-white/10">
@@ -362,6 +392,12 @@ export default function CreatorRegister() {
           </div>
         </div>
       )}
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+        onAccept={() => setTermsAccepted(true)}
+      />
     </main>
   );
 }

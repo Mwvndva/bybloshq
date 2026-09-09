@@ -801,6 +801,8 @@ CREATE TABLE public.creators (
     refund_withdrawal_reserved_balance numeric(15,2) DEFAULT 0 NOT NULL,
     instagram_link text,
     tiktok_link text,
+    terms_accepted boolean DEFAULT false NOT NULL,
+    terms_accepted_at timestamp with time zone,
     CONSTRAINT creators_balance_non_negative CHECK ((balance >= (0)::numeric)),
     CONSTRAINT creators_total_earnings_non_negative CHECK ((total_earnings >= (0)::numeric)),
     CONSTRAINT creators_total_referral_earnings_non_negative CHECK ((total_referral_earnings >= (0)::numeric)),

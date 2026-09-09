@@ -13,6 +13,7 @@ import { SectionHeader, SocialInput } from './settingsTab.parts';
 import { SettingsLocationSection } from './SettingsLocationSection';
 import { ThemeSegmentedPill } from '@/shared/ui/ThemeSegmentedPill';
 import { useThemeScope } from '@/shared/hooks/useAppTheme';
+import { LegalLinks } from '@/shared/components/LegalLinks';
 import type { LocationCoordinates } from '@/infrastructure/location/location';
 
 
@@ -232,6 +233,13 @@ export function SettingsTab({
           <p className="mt-0.5 text-xs text-slate-500 dark:text-white/60">
             Marketplace listings, commission rates, and incoming creator collaboration requests have moved to the dedicated <strong>Creators</strong> tab.
           </p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#000000] p-4 shadow-sm sm:p-5 lg:p-6">
+        <SectionHeader title="Legal" description="Review the documents you agreed to when you registered." />
+        <div className="mt-4">
+          <LegalLinks />
         </div>
       </section>
 

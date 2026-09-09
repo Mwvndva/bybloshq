@@ -9,6 +9,7 @@ export interface CreatorRegistrationPayload {
   whatsappNumber: string;
   password: string;
   confirmPassword: string;
+  termsAccepted: boolean;
 }
 
 export const register = async (payload: CreatorRegistrationPayload) => {

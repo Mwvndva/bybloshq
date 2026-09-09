@@ -110,6 +110,12 @@ class AuthService {
         } else if (user.role === 'buyer') {
             const profile = await Buyer.findByUserId(user.id);
             termsAccepted = profile ? profile.termsAccepted : true;
+        } else if (user.role === 'creator') {
+            // A raw query rather than importing CreatorService: creator.service.js
+            // already imports AuthService (for its own login()/register() delegation),
+            // so importing it back here would be a circular import.
+            const { rows } = await pool.query('SELECT terms_accepted FROM creators WHERE user_id = $1', [user.id]);
+            termsAccepted = rows[0] ? rows[0].terms_accepted : true;
         }
 
         if (termsAccepted === false) {

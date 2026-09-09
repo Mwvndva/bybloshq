@@ -9,6 +9,7 @@ import { useThemeScope } from '@/shared/hooks/useAppTheme';
 import { CreatorSocialProfiles } from '@/features/creator/components/CreatorSocialProfiles';
 import { CreatorWithdrawalPanel } from '@/features/creator/components/CreatorWithdrawalPanel';
 import { useUpdateCreatorProfileMutation } from '@/features/creator/hooks/mutations/useUpdateCreatorProfileMutation';
+import { LegalLinks } from '@/shared/components/LegalLinks';
 import type { CreatorProfile, CreatorClearance, WithdrawalRow } from '@/features/creator/utils/creatorDashboardUtils';
 
 interface CreatorProfileSheetProps {
@@ -139,6 +140,12 @@ export function CreatorProfileSheet({ open, onOpenChange, creator, clearance, wi
           <div ref={withdrawRef} className="scroll-mt-4">
             <CreatorWithdrawalPanel creator={creator} clearance={clearance} withdrawals={withdrawals} />
           </div>
+
+          {/* Legal */}
+          <section className="space-y-2">
+            <h3 className="text-sm font-bold text-slate-950 dark:text-white">Legal</h3>
+            <LegalLinks />
+          </section>
 
           {/* Logout */}
           <Button

@@ -25,6 +25,7 @@ export function useCreatorRegisterMutation() {
       whatsappNumber: string;
       password: string;
       confirmPassword: string;
+      termsAccepted: boolean;
     }) => creatorApi.register(args),
   });
 }
