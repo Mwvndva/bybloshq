@@ -64,8 +64,9 @@ export const findSellerByUserId = async (userId) => {
       physical_address AS "physicalAddress",
       latitude,
       longitude,
+      terms_accepted AS "termsAccepted",
       created_at AS "createdAt"
-     FROM sellers 
+     FROM sellers
      WHERE user_id = $1`,
     [userId]
   );

@@ -139,6 +139,28 @@ export const login = async (req, res) => {
         userType: e.userType
       });
     }
+    if (e.code === 'ACCOUNT_DEACTIVATED') {
+      return res.status(403).json({
+        status: 'error',
+        message: e.message,
+        code: 'ACCOUNT_DEACTIVATED',
+        email: e.email,
+        userType: e.userType
+      });
+    }
+    // Fallback for any other typed AuthService error (AppError instances all
+    // carry a real statusCode) -- without this, every code above this line
+    // needed its own explicit branch or it silently fell into the generic 500
+    // below, discarding e.message entirely. That's exactly what happened to
+    // ACCOUNT_DEACTIVATED before this fix: a deactivated seller saw "Login
+    // failed. Please try again." instead of the real reason.
+    if (e.statusCode && e.statusCode !== 500) {
+      return res.status(e.statusCode).json({
+        status: 'error',
+        message: e.message,
+        code: e.code
+      });
+    }
     console.error('Seller login error:', e);
     res.status(500).json({ status: 'error', message: 'Login failed. Please try again.' });
   }

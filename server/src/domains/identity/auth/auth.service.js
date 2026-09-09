@@ -98,13 +98,18 @@ class AuthService {
         }
 
         // NEW: Check terms acceptance (Task 10)
+        // Both models return camelCase (SellerModel.findSellerByUserId aliases
+        // its SQL columns; Buyer.findByUserId runs the row through
+        // toCamelCase()) -- reading .terms_accepted here always read undefined,
+        // so this gate never actually fired for anyone regardless of their
+        // real terms_accepted value.
         let termsAccepted = true;
         if (user.role === 'seller') {
             const profile = await SellerModel.findSellerByUserId(user.id);
-            termsAccepted = profile ? profile.terms_accepted : true;
+            termsAccepted = profile ? profile.termsAccepted : true;
         } else if (user.role === 'buyer') {
             const profile = await Buyer.findByUserId(user.id);
-            termsAccepted = profile ? profile.terms_accepted : true;
+            termsAccepted = profile ? profile.termsAccepted : true;
         }
 
         if (termsAccepted === false) {
@@ -217,8 +222,14 @@ class AuthService {
             }
 
 
-            // No cross-role profile found — typed 401 so controller can give clear message
-            const err = new AppError(`Wrong portal. This account is registered as a ${user.role}.`, 401);
+            // No cross-role profile found — typed 401 so controller can give clear message.
+            // `code` matters here too, not just `.isRoleMismatch`: buyer/seller
+            // controllers check .isRoleMismatch directly (never reach the global
+            // handler), but creator/admin/marketing fall through to next(error),
+            // where the global handler only echoes a response `error` field when
+            // `.code` is set — without it those three portals returned this
+            // message with no machine-readable code at all.
+            const err = new AppError(`Wrong portal. This account is registered as a ${user.role}.`, 401, 'WRONG_PORTAL');
             err.isRoleMismatch = true;
             throw err;
         }
