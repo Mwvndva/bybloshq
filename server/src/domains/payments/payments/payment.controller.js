@@ -107,6 +107,14 @@ class PaymentController {
       });
     } catch (error) {
       logger.error('[PaymentController] Product payment initiation failed:', error);
+      // productCheckout.service.js's validation throws are AppError instances
+      // with a real statusCode — prefer that over the message allowlist below.
+      // The allowlist used to be the ONLY classification here, matched by exact
+      // string, so any validation message not spelled out verbatim (multi-item
+      // bag rules: same-seller-only, no services/custom/imported in a bag, plus
+      // the empty-cart and bag-size-limit checks) silently fell through to a
+      // generic 500 even though every one of them is a normal 400 the buyer
+      // needs to see and act on.
       const clientErrorMessages = [
         'Checkout idempotency token is required',
         'Product not found',
@@ -122,11 +130,17 @@ class PaymentController {
         'Product not available',
         'Insufficient stock available'
       ];
-      const statusCode = clientErrorMessages.includes(error.message) ? 400 : 500;
+      const statusCode = (typeof error.statusCode === 'number' && error.statusCode)
+        || (clientErrorMessages.includes(error.message) ? 400 : 500);
 
       res.status(statusCode).json({
         status: 'error',
-        message: 'Product payment initiation failed',
+        // The real validation reason belongs in `message` for any 4xx — not
+        // buried in `error` behind a generic wrapper string the buyer can't
+        // act on. Only mask it behind the generic wrapper for genuine 5xx
+        // (unexpected/programming errors), matching globalErrorHandler's own
+        // "don't leak non-operational error details" rule.
+        message: statusCode < 500 ? error.message : 'Product payment initiation failed',
         error: error.message
       });
     }

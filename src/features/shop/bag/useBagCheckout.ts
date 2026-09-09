@@ -12,6 +12,7 @@ import { calculateBuyerPayableTotal, calculateProductServiceCharge, createChecko
 import { toBuyerLocationPayload, type BuyerLocationPayload } from '@/infrastructure/location/location';
 import type { DoorDeliverySelection } from '@/shared/components/PhoneCheckModal';
 import type { BuyerInfo } from '@/shared/components/BuyerInfoModal';
+import { classifyApiError } from '@/shared/utils/errorClassification';
 import type { BagContextValue } from './BagContext';
 
 interface BuyerDetails { fullName: string; email: string; mobilePayment: string; city?: string; location?: string; latitude?: number; longitude?: number; }
@@ -161,7 +162,12 @@ export function useBagCheckout(bag: BagContextValue) {
       }
     } catch (error) {
       checkoutTokenRef.current = null;
-      toast({ title: 'Payment error', description: (error as Error)?.message || 'Failed to initiate payment.', variant: 'destructive' });
+      // buyerApi.initiateProduct re-throws the raw axios error uncaught — its
+      // .message is axios's own generic "Request failed with status code 400",
+      // never the real backend validation reason (e.g. "Custom and imported
+      // products must be bought on their own, not in a bag."). classifyApiError
+      // reads the actual response body instead.
+      toast({ title: 'Payment error', description: classifyApiError(error, 'Failed to initiate payment.').message, variant: 'destructive' });
     } finally {
       setIsProcessingPurchase(false);
     }
@@ -252,7 +258,7 @@ export function useBagCheckout(bag: BagContextValue) {
         setIsBuyerModalOpen(true);
       }
     } catch (error) {
-      toast({ title: 'Error', description: (error as Error)?.message || 'Failed to check phone number.', variant: 'destructive' });
+      toast({ title: 'Error', description: classifyApiError(error, 'Failed to check phone number.').message, variant: 'destructive' });
     }
   };
 
@@ -270,7 +276,7 @@ export function useBagCheckout(bag: BagContextValue) {
       setIsBuyerModalOpen(false);
       await runWithLock(async () => { await executePayment(info); });
     } catch (error) {
-      toast({ title: 'Error', description: (error as Error)?.message || 'Failed to save information.', variant: 'destructive' });
+      toast({ title: 'Error', description: classifyApiError(error, 'Failed to save information.').message, variant: 'destructive' });
     }
   };
 

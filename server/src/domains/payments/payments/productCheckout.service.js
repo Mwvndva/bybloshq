@@ -20,6 +20,7 @@
 // creation. Reuses existing services; ports no legacy orchestrator.
 import { pool } from '../../../infrastructure/database/database.js';
 import logger from '../../../shared/utils/logger.js';
+import { AppError } from '../../../shared/utils/errorHandler.js';
 import Payment from './payment.model.js';
 import PaystackProviderClient from '../../../infrastructure/providers/PaystackProviderClient.js';
 import CreatorService from '../../growth/creators/creator.service.js';
@@ -171,11 +172,11 @@ async function findExistingByToken(token) {
  */
 export async function initiateProductPayment(normalizedOrder, deps = {}) {
   const { buyer, location = {}, metadata = {}, idempotencyKey } = normalizedOrder;
-  if (!idempotencyKey) throw new Error('Checkout idempotency token is required');
+  if (!idempotencyKey) throw new AppError('Checkout idempotency token is required', 400);
 
   const rawItems = parseItems(normalizedOrder);
-  if (rawItems.length === 0) throw new Error('No valid items to check out');
-  if (rawItems.length > MAX_BAG_ITEMS) throw new Error(`A bag can hold at most ${MAX_BAG_ITEMS} products`);
+  if (rawItems.length === 0) throw new AppError('No valid items to check out', 400);
+  if (rawItems.length > MAX_BAG_ITEMS) throw new AppError(`A bag can hold at most ${MAX_BAG_ITEMS} products`, 400);
   const items = mergeQuantities(rawItems);
   const isMulti = items.length > 1;
 
@@ -195,15 +196,15 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   );
   const productById = new Map(prows.map((r) => [Number(r.id), r]));
   for (const id of productIds) {
-    if (!productById.has(id)) throw new Error('Product not found');
+    if (!productById.has(id)) throw new AppError('Product not found', 404);
   }
   if (new Set(prows.map((r) => Number(r.seller_id))).size > 1) {
-    throw new Error('All items in a bag must be from the same seller.');
+    throw new AppError('All items in a bag must be from the same seller.', 400);
   }
   const anyProduct = prows[0];
-  if (anyProduct.seller_status !== 'active') throw new Error('Seller is not accepting orders');
+  if (anyProduct.seller_status !== 'active') throw new AppError('Seller is not accepting orders', 400);
   for (const r of prows) {
-    if (r.status !== 'available') throw new Error('Product not available');
+    if (r.status !== 'available') throw new AppError('Product not available', 400);
   }
 
   // 2. Build line items + secure per-line pricing.
@@ -212,10 +213,10 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
     const qty = Math.max(1, Number.parseInt(i.quantity, 10) || 1);
     const dbPrice = Number.parseFloat(p.price || 0);
     if (!Number.isFinite(dbPrice) || dbPrice <= 0) {
-      throw new Error('Invalid order amount after secure calculation');
+      throw new AppError('Invalid order amount after secure calculation', 400);
     }
     const lineSubtotal = roundMoney(dbPrice * qty);
-    if (!(lineSubtotal > 0)) throw new Error('Invalid order amount after secure calculation');
+    if (!(lineSubtotal > 0)) throw new AppError('Invalid order amount after secure calculation', 400);
     const productType = String(p.product_type || '').toLowerCase();
     const isDigital = p.is_digital === true || productType === 'digital';
     const isService = productType === 'service';
@@ -237,8 +238,8 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   // Multi-item bags are physical + digital only (v1).
   if (isMulti) {
     for (const l of lines) {
-      if (l.isService) throw new Error('Services must be booked on their own, not in a bag.');
-      if (l.isCustom || l.isImported) throw new Error('Custom and imported products must be bought on their own, not in a bag.');
+      if (l.isService) throw new AppError('Services must be booked on their own, not in a bag.', 400);
+      if (l.isCustom || l.isImported) throw new AppError('Custom and imported products must be bought on their own, not in a bag.', 400);
     }
   }
 
@@ -254,15 +255,15 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   ).trim();
   let preHandoffSla = null;
   if (singleLine && singleLine.isCustom && singleLine.isImported) {
-    throw new Error('Product cannot be both custom and imported.');
+    throw new AppError('Product cannot be both custom and imported.', 400);
   }
   if (singleLine && singleLine.isCustom) {
     const productionDays = Number.parseInt(singleLine.product.production_days, 10);
     if (!Number.isInteger(productionDays) || productionDays < 1 || productionDays > 5) {
-      throw new Error('Custom product is misconfigured. Please contact the seller.');
+      throw new AppError('Custom product is misconfigured. Please contact the seller.', 400);
     }
     if (!customInstructions) {
-      throw new Error('Customization instructions are required for this custom product.');
+      throw new AppError('Customization instructions are required for this custom product.', 400);
     }
     preHandoffSla = {
       type: 'custom_production',
@@ -275,7 +276,7 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   } else if (singleLine && singleLine.isImported) {
     const importDays = Number.parseInt(singleLine.product.import_days, 10);
     if (![7, 14, 21, 30].includes(importDays)) {
-      throw new Error('Imported product is misconfigured. Please contact the seller.');
+      throw new AppError('Imported product is misconfigured. Please contact the seller.', 400);
     }
     preHandoffSla = {
       type: 'import_waiting',
@@ -291,12 +292,12 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
   let deliveryQuote = null;
   let deliveryFee = 0;
   if (door) {
-    if (!anyPhysical) throw new Error('Door delivery is only available for physical products.');
+    if (!anyPhysical) throw new AppError('Door delivery is only available for physical products.', 400);
     const buyerLoc = extractDeliveryLocation(metadata, location);
     const lat = Number(buyerLoc.lat);
     const lng = Number(buyerLoc.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -5 || lat > 5 || lng < 33 || lng > 42) {
-      throw new Error('Door delivery coordinates are required.');
+      throw new AppError('Door delivery coordinates are required.', 400);
     }
     deliveryQuote = LogisticsQuoteService.quoteBuyerDoorDelivery(buyerLoc);
     const minFee = roundMoney(Number(deliveryQuote.rateKesPerKm) || 0);
@@ -359,7 +360,7 @@ export async function initiateProductPayment(normalizedOrder, deps = {}) {
             RETURNING id`,
           [l.product.id, l.quantity]
         );
-        if (reserved.rows.length === 0) throw new Error('Insufficient stock available');
+        if (reserved.rows.length === 0) throw new AppError('Insufficient stock available', 409);
       }
     }
 
