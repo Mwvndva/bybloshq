@@ -200,7 +200,15 @@ export function deriveOrderJourney(order: ApiOrder): Journey {
   const isService = orderType === 'SERVICE' || Boolean(order.items?.some((i) => i.productType === 'service'));
   const deliveryLeg = order.logistics?.deliveryLeg;
   const pickupLeg = order.logistics?.pickupLeg;
-  const hasDoorDelivery = Boolean(deliveryLeg || order.shippingAddress?.address);
+  const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
+  // Must agree with OrderLogisticsTracking's own isDoorDelivery check
+  // (fulfillmentType === 'COURIER' || deliveryLeg). Checking only
+  // deliveryLeg/shippingAddress missed COURIER orders that are still
+  // AWAITING_SELLER_ACTION with no leg created yet, sending them into the
+  // hub-collection branch below and showing "Ready at Hub"/"Collected" +
+  // "collect at Byblos CBD Hub" copy for an order that will actually be
+  // delivered to the buyer's door, not picked up.
+  const hasDoorDelivery = fulfillmentType === 'COURIER' || Boolean(deliveryLeg || order.shippingAddress?.address);
 
   if (isDigital) {
     const isReady = order.status === 'PAID' || order.status === 'COMPLETED' || order.status === 'READY_FOR_BUYER';
