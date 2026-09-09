@@ -1,5 +1,6 @@
 import type { LogisticsLeg, LogisticsLegType, LogisticsLocation, LogisticsRequestCard, LogisticsStatusUpdate } from '@/features/logistics/api';
 import { DELIVERY_ACTIONS, PICKUP_ACTIONS } from '@/features/logistics/utils/mzigoDashboard.constants';
+import { hasBuyerPaidDoorDelivery } from '@/features/seller/utils/sellerOrders.utils';
 import type { ApiOrder, ApiOrderLogisticsDeliveryLeg } from '@/shared/types';
 
 export type JourneyState = 'normal' | 'delayed' | 'attention';
@@ -200,15 +201,15 @@ export function deriveOrderJourney(order: ApiOrder): Journey {
   const isService = orderType === 'SERVICE' || Boolean(order.items?.some((i) => i.productType === 'service'));
   const deliveryLeg = order.logistics?.deliveryLeg;
   const pickupLeg = order.logistics?.pickupLeg;
-  const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
-  // Must agree with OrderLogisticsTracking's own isDoorDelivery check
-  // (fulfillmentType === 'COURIER' || deliveryLeg). Checking only
-  // deliveryLeg/shippingAddress missed COURIER orders that are still
-  // AWAITING_SELLER_ACTION with no leg created yet, sending them into the
-  // hub-collection branch below and showing "Ready at Hub"/"Collected" +
-  // "collect at Byblos CBD Hub" copy for an order that will actually be
-  // delivered to the buyer's door, not picked up.
-  const hasDoorDelivery = fulfillmentType === 'COURIER' || Boolean(deliveryLeg || order.shippingAddress?.address);
+  // NOTE: this must NOT check fulfillment_type — resolveFulfillmentType()
+  // (server/src/shared/utils/fulfillment.js) maps EVERY physical order to
+  // 'COURIER' regardless of whether the buyer gets door delivery or collects
+  // in person from the hub; that split is real per-order state carried by the
+  // delivery leg / checkout metadata (mirrors OrderService._hasBuyerDoorDelivery
+  // server-side). hasBuyerPaidDoorDelivery is the same shared predicate used
+  // by OrderLogisticsTracking and the seller order cards — reusing it here
+  // keeps this journey's branch selection in agreement with theirs.
+  const hasDoorDelivery = hasBuyerPaidDoorDelivery(order) || Boolean(order.shippingAddress?.address);
 
   if (isDigital) {
     const isReady = order.status === 'PAID' || order.status === 'COMPLETED' || order.status === 'READY_FOR_BUYER';

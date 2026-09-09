@@ -18,6 +18,7 @@ import {
 } from '@/features/logistics/utils/mzigoJourney';
 import { MzigoJourneyStepper } from '@/features/logistics/components/MzigoJourneyStepper';
 import { useOrderLiveEtaQuery } from '@/features/logistics/hooks/useOrderLiveEtaQuery';
+import { hasBuyerPaidDoorDelivery } from '@/features/seller/utils/sellerOrders.utils';
 import { cn } from '@/shared/utils/formatting';
 
 type TrackingView = 'buyer' | 'seller';
@@ -91,7 +92,17 @@ export function OrderLogisticsTracking({
 
   const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
   const orderType = String(order.order_type || order.orderType || '').toUpperCase();
-  const isDoorDelivery = fulfillmentType === 'COURIER' || Boolean(deliveryLeg);
+  // fulfillment_type is NOT a door-delivery signal for physical orders — the
+  // backend's resolveFulfillmentType() (server/src/shared/utils/fulfillment.js)
+  // maps EVERY physical order to fulfillment_type = 'COURIER' regardless of
+  // whether the buyer ends up getting door delivery or collecting in person
+  // from the Mzigo Ego hub; that split is decided per-order by the logistics
+  // legs and checkout metadata (see OrderService._hasBuyerDoorDelivery
+  // server-side). hasBuyerPaidDoorDelivery is the same shared predicate
+  // SellerOrderCard/SellerOrdersSection already use — reusing it here (rather
+  // than re-deriving from deliveryLeg alone) also catches orders where the
+  // buyer paid for delivery at checkout but no leg has been created yet.
+  const isDoorDelivery = hasBuyerPaidDoorDelivery(order) || Boolean(order.shippingAddress?.address);
   // The isPhysical fallback only makes sense when the order actually IS
   // physical — otherwise a SERVICE/DIGITAL order whose caller didn't pass
   // fulfillmentType would default into pickup-hub copy via isPhysical's own
