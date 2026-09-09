@@ -2,10 +2,20 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { DollarSign, Loader2, Clock, Wallet, TrendingUp, CheckCircle2, AlertCircle, Info } from 'lucide-react';
-import { format } from 'date-fns';
 import { RefundConfirmDialog } from './RefundConfirmDialog';
 import { useRefundCard } from '@/features/buyer/hooks/useRefundCard';
 import { formatSettlementDate, formatSettlementTimeOnly } from '@/features/buyer/utils/refundUtils';
+
+// formatSettlementDate/-TimeOnly already guard invalid/missing input (return
+// 'Pending schedule' / null instead of throwing) — unlike raw date-fns
+// `format(new Date(x))`, which throws RangeError on an invalid date and, if
+// unguarded here, previously took down this whole page whenever a pending
+// request's date field didn't parse.
+function formatRequestDate(value?: string | null) {
+  const date = formatSettlementDate(value);
+  const time = formatSettlementTimeOnly(value);
+  return time ? `${date} at ${time}` : date;
+}
 
 interface RefundCardProps {
   refundAmount: number;
@@ -84,7 +94,7 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
                 {pendingRequests.map((request) => (
                   <div key={request.id} className="flex items-center justify-between gap-3 text-xs text-amber-700 dark:text-amber-200/90 font-medium">
                     <span>{formatCurrency(parseFloat(request.amount.toString()))}</span>
-                    <span className="text-right">{format(new Date(request.requested_at), 'MMM d, yyyy')}</span>
+                    <span className="text-right">{formatSettlementDate(request.createdAt)}</span>
                   </div>
                 ))}
               </div>
@@ -280,7 +290,7 @@ export default function RefundCard({ refundAmount, compact = false, onRefundRequ
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Requested:</span>
                     <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {format(new Date(request.requested_at), 'MMM d, yyyy h:mm a')}
+                      {formatRequestDate(request.createdAt)}
                     </span>
                   </div>
                   <Badge className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-700">

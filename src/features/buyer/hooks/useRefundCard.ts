@@ -15,9 +15,11 @@ interface PendingRequest {
   id: number;
   amount: number;
   status: string;
-  requested_at: string;
-  withdrawal_fee?: number;
-  total_deducted?: number;
+  // sanitizeWithdrawalRequest (server-side) returns camelCase — this is NOT
+  // the raw snake_case shape the admin/creator withdrawal endpoints return.
+  createdAt: string;
+  withdrawalFee?: number;
+  totalDeducted?: number;
 }
 
 interface PendingRefundsResponse {

@@ -16,13 +16,18 @@ export async function requestRefund(data: {
 }
 
 export async function getPendingRefundRequests(): Promise<{
+  // Shape returned by sanitizeWithdrawalRequest (server/src/shared/utils/sanitize.js)
+  // — camelCase, not the raw snake_case DB columns the admin/creator withdrawal
+  // endpoints return unsanitized. Mixing the two up here previously crashed
+  // this page (date-fns `format(new Date(undefined))` on a nonexistent
+  // `requested_at` field throws instead of just rendering blank).
   pendingRequests: Array<{
     id: number;
     amount: number;
     status: string;
-    requested_at: string;
-    withdrawal_fee?: number;
-    total_deducted?: number;
+    createdAt: string;
+    withdrawalFee?: number;
+    totalDeducted?: number;
   }>;
   hasPending: boolean;
   totalRefunds?: number;
