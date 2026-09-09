@@ -13,6 +13,45 @@ export const getWithdrawalFee = (amount: number) => {
   return WITHDRAWAL_FEE_TIERS.find(({ min, max }) => amount >= min && amount <= max)?.fee || 0;
 };
 
+/**
+ * Calculates the maximum net withdrawal amount A such that A + getWithdrawalFee(A) <= availableBalance.
+ * Returns 0 if availableBalance is less than MIN_WITHDRAWAL_AMOUNT + minimum fee (KSh 71).
+ *
+ * WithdrawalRequestForm.tsx previously showed "Max: {balance}" directly — the
+ * fee comes out of the same balance (see getWithdrawalFee), so requesting the
+ * full displayed max always failed server-side with "Available balance must
+ * cover the withdrawal and KSh X charge." The buyer refund flow
+ * (features/buyer/utils/refundUtils.ts) and the creator withdrawal panel
+ * (features/creator/utils/creatorDashboardUtils.ts) already solve this
+ * correctly with the identical formula — this mirrors theirs for sellers.
+ */
+export const getMaxWithdrawableAmount = (availableBalance: number): number => {
+  if (!Number.isFinite(availableBalance) || availableBalance < MIN_WITHDRAWAL_AMOUNT + 21) {
+    return 0;
+  }
+
+  // Tier 3: >= 20,000, fee = 63. Threshold: 20000 + 63 = 20063
+  if (availableBalance >= 20000 + 63) {
+    return Math.floor((availableBalance - 63) * 100) / 100;
+  }
+
+  // Tier 2: 1,501 - 19,999.99, fee = 45. Threshold: 1501 + 45 = 1546
+  if (availableBalance >= 1501 + 45) {
+    const net = Math.floor((availableBalance - 45) * 100) / 100;
+    // Cap at 19999.99 so fee doesn't jump to 63
+    return Math.min(19999.99, net);
+  }
+
+  // Tier 1: 50 - 1,500, fee = 21. Threshold: 50 + 21 = 71
+  if (availableBalance >= 50 + 21) {
+    const net = Math.floor((availableBalance - 21) * 100) / 100;
+    // Cap at 1500 so fee doesn't jump to 45
+    return Math.min(1500, net);
+  }
+
+  return 0;
+};
+
 export const pendingOverviewStatuses = new Set([
   'PAID',
   'AWAITING_SELLER_ACTION',

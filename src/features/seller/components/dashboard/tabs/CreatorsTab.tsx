@@ -366,6 +366,7 @@ export function CreatorsTab() {
                       variant="outline"
                       onClick={() => handleRespondToRequest(req.id, 'deny')}
                       disabled={respondingId === req.id}
+                      aria-label={`Decline ${req.creatorName}'s collaboration request`}
                       className="h-10 px-3 border-slate-200 dark:border-white/10 bg-transparent text-slate-500 dark:text-white/70 hover:text-slate-900 dark:text-white hover:bg-white/5"
                     >
                       <X className="h-4 w-4" />

@@ -2,7 +2,7 @@ import { Loader2, Wallet } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { MIN_WITHDRAWAL_AMOUNT } from '../dashboardUtils';
+import { MIN_WITHDRAWAL_AMOUNT, getMaxWithdrawableAmount } from '../dashboardUtils';
 import { formatKes } from './withdrawalsTab.utils';
 
 interface WithdrawalRequestFormProps {
@@ -30,6 +30,11 @@ export function WithdrawalRequestForm({
   withdrawalFee,
   totalDeducted,
 }: WithdrawalRequestFormProps) {
+  // The withdrawal fee comes out of this SAME balance (see getWithdrawalFee),
+  // so the enterable max must leave room for it — offering the raw balance as
+  // "Max" meant requesting exactly that amount always failed server-side with
+  // "Available balance must cover the withdrawal and KSh X charge."
+  const maxWithdrawable = getMaxWithdrawableAmount(balance);
   return (
       <div>
         {!showWithdrawalForm ? (
@@ -58,12 +63,12 @@ export function WithdrawalRequestForm({
                     onChange={(e) => setWithdrawalForm(prev => ({ ...prev, amount: e.target.value }))}
                     placeholder="Enter amount"
                     min={MIN_WITHDRAWAL_AMOUNT}
-                    max={balance}
+                    max={maxWithdrawable}
                     className={inputClass}
                     required
                   />
                   <p className="text-xs text-slate-500 dark:text-white/60 mt-1">
-                    Max: {formatKes(balance)}
+                    Max: {formatKes(maxWithdrawable)}
                   </p>
                 </div>
                 <div>
@@ -110,7 +115,7 @@ export function WithdrawalRequestForm({
               <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3 sm:pt-4">
                 <Button
                   type="submit"
-                  disabled={isRequestingWithdrawal}
+                  disabled={isRequestingWithdrawal || totalDeducted > balance}
                   className="shadow-lg px-4 py-2 h-10 sm:h-8 text-xs rounded-lg font-black w-full sm:w-auto"
                   style={{ backgroundColor: 'var(--theme-button-bg, #f5c518)', color: 'var(--theme-button-text, #000000)' }}
                   size="sm"
