@@ -6,12 +6,16 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { useGlobalAuth } from '@/features/auth/contexts';
 import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
+import { classifyApiError } from '@/shared/utils/errorClassification';
+import { VerifyEmailModal } from '@/features/auth/components/VerifyEmailModal';
 
 export default function CreatorLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
   const { login } = useGlobalAuth();
   const navigate = useNavigate();
@@ -44,7 +48,16 @@ export default function CreatorLogin() {
       await login(targetEmail, targetPassword, 'creator');
       // Navigation is handled by useGlobalAuth().login() via getDashboardPath('creator')
     } catch (error: unknown) {
-      // Error is handled inside useAuthActions with a toast
+      const classified = classifyApiError(error);
+      // useAuthActions intentionally skips the generic error toast for these
+      // codes, expecting the caller to open this modal — CreatorLogin never
+      // did, so an unverified creator got zero feedback on login failure.
+      if (classified.code === 'PENDING_VERIFICATION' || classified.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(classified.email || targetEmail);
+        setIsVerifyModalOpen(true);
+        return;
+      }
+      // Other errors: handled inside useAuthActions with a toast
     } finally {
       setLoading(false);
     }
@@ -112,6 +125,13 @@ export default function CreatorLogin() {
           </p>
         </form>
       </div>
+
+      <VerifyEmailModal
+        isOpen={isVerifyModalOpen}
+        onClose={() => setIsVerifyModalOpen(false)}
+        email={unverifiedEmail}
+        role="creator"
+      />
     </main>
   );
 }

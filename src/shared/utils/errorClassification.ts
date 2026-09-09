@@ -56,7 +56,15 @@ export function classifyApiError(error: unknown, fallbackMessage = 'An unexpecte
         category: 'http',
         statusCode: status,
         message: backendMessage || error.message || fallbackMessage,
-        code: responseData?.code || String(status),
+        // The global error handler (server/src/shared/utils/errorHandler.js)
+        // puts the app's error code (EMAIL_NOT_VERIFIED, PENDING_VERIFICATION,
+        // etc.) in the response body's `error` field, not `code` — there is no
+        // top-level `code` field in production responses at all. Reading only
+        // `responseData?.code` meant this always fell through to the numeric
+        // status string, so every caller checking classified.code against a
+        // specific app code (VerifyEmailModal triggers on login pages) never
+        // matched, regardless of what the backend actually returned.
+        code: responseData?.code || responseData?.error || String(status),
         email: responseData?.email,
         userType: responseData?.userType,
         rawError: error,

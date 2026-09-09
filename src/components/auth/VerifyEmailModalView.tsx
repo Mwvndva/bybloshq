@@ -6,7 +6,7 @@ export interface VerifyEmailModalViewProps {
   isOpen: boolean;
   onClose: () => void;
   email: string;
-  role: 'buyer' | 'seller';
+  role: 'buyer' | 'seller' | 'creator';
   isResending: boolean;
   resendCooldown: number;
   isSuccess: boolean;

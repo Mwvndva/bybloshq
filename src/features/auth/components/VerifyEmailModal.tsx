@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/shared/hooks/use-toast';
 import { useBuyerResendVerificationMutation } from '@/features/buyer/hooks/mutations/useBuyerAuthMutations';
 import { useSellerResendVerificationMutation } from '@/features/seller/hooks/mutations/useSellerAuthMutations';
+import { useCreatorResendVerificationMutation } from '@/features/creator/hooks/mutations/useCreatorAuthMutations';
 import { VerifyEmailModalView } from '@/components/auth/VerifyEmailModalView';
 
 export interface VerifyEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
   email: string;
-  role: 'buyer' | 'seller';
+  role: 'buyer' | 'seller' | 'creator';
 }
 
 export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailModalProps) {
@@ -31,6 +32,7 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
 
   const buyerResend = useBuyerResendVerificationMutation();
   const sellerResend = useSellerResendVerificationMutation();
+  const creatorResend = useCreatorResendVerificationMutation();
 
   const handleResend = async () => {
     if (resendCooldown > 0 || isResending) return;
@@ -40,6 +42,8 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
     try {
       if (role === 'seller') {
         await sellerResend.mutateAsync(email);
+      } else if (role === 'creator') {
+        await creatorResend.mutateAsync(email);
       } else {
         await buyerResend.mutateAsync(email);
       }
