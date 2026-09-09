@@ -9,7 +9,7 @@ import { SellerOrderActions } from './SellerOrderActions';
 import { getOrderInstruction } from '@/features/orders/utils/orderInstructions';
 import { OrderLogisticsTracking } from '@/components/orders/OrderLogisticsTracking';
 import { OrderStatusBadge } from '@/shared/ui/OrderStatusBadge';
-import { OrderMetaPills } from '@/features/orders/utils/ordersSectionUtils';
+import { isDigitalOrder, isServiceOrder, OrderMetaPills } from '@/features/orders/utils/ordersSectionUtils';
 import { formatCurrency, formatDate, getEffectiveFulfillmentType, HUB_DROPOFF_LOCATION } from '../utils/sellerOrders.utils';
 
 interface SellerOrderCardProps {
@@ -29,8 +29,11 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
                             const firstItem = order.items?.[0];
                             const itemCount = order.items?.length || 0;
                             const extraCount = itemCount > 1 ? itemCount - 1 : 0;
-                            const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
-                            const isDigital = order.items?.some(i => i.productType === 'digital');
+                            // Shared with BuyerOrderCard so a SERVICE/DIGITAL order can't read as
+                            // PHYSICAL on one side and not the other — both check order.order_type
+                            // first (the authoritative field) before falling back to metadata/items.
+                            const isService = isServiceOrder(order);
+                            const isDigital = isDigitalOrder(order);
                             const isPhysicalOrder = !isService && !isDigital;
                             const isPaid = ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '');
                             const effectiveFulfillmentType = getEffectiveFulfillmentType(order);
@@ -139,7 +142,11 @@ export function SellerOrderCard({ order, isUpdating, isRequestingPickup, onReady
 
                                                 {/* NEW: Instruction Banner */}
                                                 {(() => {
-                                                    const productType = order.metadata?.product_type || (order.items?.some(i => i.productType === 'service') ? 'service' : 'physical');
+                                                    // isService/isDigital (above) already check order.order_type first,
+                                                    // so deriving productType from them keeps this banner in sync with
+                                                    // the isPhysicalOrder-driven UI elsewhere in this card instead of
+                                                    // re-guessing independently.
+                                                    const productType = isService ? 'service' : isDigital ? 'digital' : 'physical';
                                                     const instruction = getOrderInstruction({
                                                         status: order.status,
                                                         userRole: 'seller',

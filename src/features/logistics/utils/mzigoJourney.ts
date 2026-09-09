@@ -189,8 +189,15 @@ function journeyDetail(stepIndex: number, state: JourneyState) {
  * - SERVICE: Appointment at seller
  */
 export function deriveOrderJourney(order: ApiOrder): Journey {
-  const isDigital = Boolean(order.isDigital || order.items?.some((i) => i.productType === 'digital' || i.isDigital));
-  const isService = Boolean(order.items?.some((i) => i.productType === 'service'));
+  // order.order_type / orderType (the order's own order_type column) is the
+  // authoritative source — see ApiOrder. Without checking it here, this
+  // function fell through to the "Physical: Hub Collection" branch below for
+  // any SERVICE/DIGITAL order whose items didn't carry a productType flag,
+  // producing "Seller Handoff -> Mzigo Hub -> Collected" hub-pickup copy for
+  // orders that never touch a hub.
+  const orderType = String(order.order_type || order.orderType || '').toUpperCase();
+  const isDigital = orderType === 'DIGITAL' || Boolean(order.isDigital || order.items?.some((i) => i.productType === 'digital' || i.isDigital));
+  const isService = orderType === 'SERVICE' || Boolean(order.items?.some((i) => i.productType === 'service'));
   const deliveryLeg = order.logistics?.deliveryLeg;
   const pickupLeg = order.logistics?.pickupLeg;
   const hasDoorDelivery = Boolean(deliveryLeg || order.shippingAddress?.address);

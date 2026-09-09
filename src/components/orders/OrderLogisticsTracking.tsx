@@ -89,11 +89,22 @@ export function OrderLogisticsTracking({
   const pickupLeg = logistics?.pickupLeg || null;
   const isSeller = view === 'seller';
 
-  const fulfillmentType = String(order.fulfillment_type || '').toUpperCase();
+  const fulfillmentType = String(order.fulfillment_type || order.fulfillmentType || '').toUpperCase();
+  const orderType = String(order.order_type || order.orderType || '').toUpperCase();
   const isDoorDelivery = fulfillmentType === 'COURIER' || Boolean(deliveryLeg);
-  const isPickup = fulfillmentType === 'BUYER_TO_SELLER' || (!isDoorDelivery && isPhysical);
-  const isDigital = Boolean(order.isDigital || order.items?.some((i) => i.productType === 'digital' || i.isDigital));
-  const isService = Boolean(order.items?.some((i) => i.productType === 'service'));
+  // The isPhysical fallback only makes sense when the order actually IS
+  // physical — otherwise a SERVICE/DIGITAL order whose caller didn't pass
+  // fulfillmentType would default into pickup-hub copy via isPhysical's own
+  // default (true), which is exactly the bug this orderType check closes.
+  const isDigital = orderType === 'DIGITAL' || Boolean(order.isDigital || order.items?.some((i) => i.productType === 'digital' || i.isDigital));
+  const isService = orderType === 'SERVICE' || Boolean(order.items?.some((i) => i.productType === 'service'));
+  // BUYER_TO_SELLER is a real fulfillment_type on SERVICE and DIGITAL orders
+  // too (there's no hub leg involved either way) — it must not alone imply
+  // hub pickup. Without the !isDigital && !isService gate here, this first
+  // OR branch fired unconditionally for those orders and printed
+  // "Hub Collection Tracking" regardless of the isDigital/isService checks
+  // added below, which is the bug this whole block exists to fix.
+  const isPickup = !isDigital && !isService && (fulfillmentType === 'BUYER_TO_SELLER' || (!isDoorDelivery && isPhysical));
 
   const journey = useMemo(() => deriveOrderJourney(order), [order]);
   const riderMoving = isDoorDelivery && isRiderMoving(deliveryLeg);

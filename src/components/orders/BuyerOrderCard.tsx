@@ -39,9 +39,13 @@ export function BuyerOrderCard({
 }: BuyerOrderCardProps) {
   const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
   const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
-  const productType = order.items[0]?.productType || 'PHYSICAL';
   const isService = isServiceOrder(order);
   const isDigital = isDigitalOrder(order);
+  // order.order_type / orderType is authoritative; isService/isDigital above
+  // already check it first, so deriving productType from them keeps this in
+  // sync instead of re-guessing from the first item's own (often-unset)
+  // productType field.
+  const productType = order.order_type || order.orderType || (isService ? 'SERVICE' : isDigital ? 'DIGITAL' : order.items[0]?.productType || 'PHYSICAL');
   const canConfirmReceipt = canConfirmOrderReceipt(order);
   const buyerServiceCharge = getBuyerServiceCharge(order);
   const instruction = getOrderInstruction({

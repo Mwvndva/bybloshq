@@ -97,6 +97,13 @@ export interface ApiOrder {
   seller: ApiOrderSeller;
   shippingAddress: ApiShippingAddress;
   metadata?: Record<string, unknown>;
+  /** 'PHYSICAL' | 'SERVICE' | 'DIGITAL' — the order's own order_type column. The
+   *  raw orders-list query aliases it camelCase (orderType); sanitizeOrder
+   *  (used after mutations) normalizes it to snake_case (order_type), mirroring
+   *  fulfillment_type below. Check both — prefer this over inferring from
+   *  items/metadata, which may not be populated. */
+  orderType?: string;
+  order_type?: string;
   isDigital?: boolean;
   buyerServiceChargeAmount?: number;
   buyerServiceChargeRate?: number;

@@ -83,6 +83,7 @@ export const isDigitalOrderItem = (item: ApiOrderItem): boolean => {
 
 export const isDigitalOrder = (order: ApiOrder): boolean => {
   return !!(
+    String(order.order_type || order.orderType || '').toUpperCase() === 'DIGITAL' ||
     order.isDigital ||
     (order as unknown as Record<string, unknown>).is_digital ||
     (order.metadata as Record<string, unknown>)?.product_type === 'digital' ||
@@ -93,6 +94,11 @@ export const isDigitalOrder = (order: ApiOrder): boolean => {
 
 export const isServiceOrder = (order?: ApiOrder | null): boolean => {
   if (!order) return false;
+  // order.order_type / orderType (the order's own order_type column, in
+  // whichever casing this endpoint returned it — see ApiOrder) is the
+  // authoritative source. The metadata/item checks below are a defensive
+  // fallback for any response shape that omits it entirely.
+  if (String(order.order_type || order.orderType || '').toUpperCase() === 'SERVICE') return true;
   const metadata = (order.metadata as Record<string, unknown>) || {};
   const orderType = String((order as unknown as Record<string, unknown>).order_type || (order as unknown as Record<string, unknown>).type || metadata.product_type || metadata.order_type || '').toLowerCase();
   return orderType === 'service' || order.items.some((item: ApiOrderItem) => item.productType === 'service' || (item as unknown as Record<string, unknown>).isService);

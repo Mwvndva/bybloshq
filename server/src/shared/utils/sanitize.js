@@ -304,6 +304,13 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         buyerServiceChargeAmount: Number.isFinite(buyerServiceChargeAmount) ? buyerServiceChargeAmount : 0,
         buyerServiceChargeRate: Number.isFinite(buyerServiceChargeRate) ? buyerServiceChargeRate : 0.02,
         fulfillment_type: orderObj.fulfillment_type || orderObj.fulfillmentType || null,
+        // Mirrors fulfillment_type above — order_type was being silently dropped
+        // here (this function builds an allow-listed object rather than spreading
+        // the source), which meant any order routed through sanitizeOrder lost
+        // its PHYSICAL/SERVICE/DIGITAL type even though the raw orders-list query
+        // still exposed it, causing SERVICE/DIGITAL orders to intermittently read
+        // back as PHYSICAL depending on which endpoint served them.
+        order_type: orderObj.order_type || orderObj.orderType || null,
         seller: orderObj.seller ? {
             id: orderObj.seller.id,
             shopName: orderObj.seller.shopName,
