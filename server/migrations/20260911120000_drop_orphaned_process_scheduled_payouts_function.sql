@@ -1,0 +1,25 @@
+-- Cleanup companion to 20260905140000_drop_legacy_order_completion_payout_trigger:
+-- that migration dropped handle_order_completion_trigger/handle_order_completion()
+-- (the legacy trigger that silently blocked every escrow payout by pre-empting
+-- EscrowManager's ON CONFLICT idempotency gate). process_scheduled_payouts()
+-- is the third piece of that same obsolete 20250930150000 design -- a
+-- standalone function meant to be invoked periodically (there is no pg_cron
+-- job or application code anywhere that ever calls it; verified via
+-- `grep -r process_scheduled_payouts migrations/ src/` -- it appears nowhere
+-- but its own CREATE FUNCTION) to advance payouts.status through
+-- 'pending' -> 'processing' -> 'completed' and then flip product_orders.status
+-- to a hardcoded lowercase 'completed', based on a 24-hour hold after
+-- o.status = 'delivered'.
+--
+-- It has been fully inert since it was written (nothing schedules it), but it
+-- is exactly the kind of landmine the trigger was: it duplicates payout
+-- state transitions EscrowManager (settlement windows, platform fee
+-- accounting, commission/referral crediting) is now solely responsible for,
+-- and its lowercase 'delivered'/'completed' status literals have been stale
+-- since 20250924000000_fix_payment_status_case.sql upper-cased every status
+-- value -- so even a future pg_cron wiring of this function would silently
+-- match zero rows rather than doing anything, masking the fact that it's the
+-- wrong mechanism entirely. Dropping it now rather than leaving it to be
+-- rediscovered (and possibly wired up) the way handle_order_completion_trigger
+-- was.
+DROP FUNCTION IF EXISTS process_scheduled_payouts();

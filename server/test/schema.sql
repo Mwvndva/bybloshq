@@ -330,55 +330,6 @@ $$;
 
 
 --
--- Name: process_scheduled_payouts(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.process_scheduled_payouts() RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    -- Update payouts that are pending and their order's delivered_at is older than 24 hours
-    UPDATE payouts p
-    SET 
-        status = 'processing',
-        updated_at = NOW()
-    FROM product_orders o
-    WHERE p.order_id = o.id
-    AND p.status = 'pending'
-    AND o.status = 'delivered'
-    AND o.updated_at < (NOW() - INTERVAL '24 hours')
-    RETURNING p.*;
-    
-    -- Here you would add the actual payout processing logic
-    -- For example, calling the payment provider's API to initiate the transfer
-    -- For now, we'll just mark them as completed after a short delay
-    
-    -- Simulate processing delay
-    PERFORM pg_sleep(5);
-    
-    -- Mark payouts as completed
-    UPDATE payouts
-    SET 
-        status = 'completed',
-        completed_at = NOW(),
-        updated_at = NOW()
-    WHERE status = 'processing';
-    
-    -- Update the order status to completed
-    UPDATE product_orders o
-    SET 
-        status = 'completed',
-        completed_at = NOW(),
-        updated_at = NOW()
-    FROM payouts p
-    WHERE o.id = p.order_id
-    AND p.status = 'completed'
-    AND o.status = 'delivered';
-END;
-$$;
-
-
---
 -- Name: update_modified_column(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6244,6 +6195,7 @@ INSERT INTO public.pgmigrations (id, name, run_on) VALUES (99, '20260905130000_a
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (100, '20260905140000_drop_legacy_order_completion_payout_trigger', '2026-09-05 17:30:00');
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (101, '20260910000000_add_terms_accepted_to_creators', '2026-09-10 00:04:35');
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (102, '20260910010000_backfill_creator_terms_accepted', '2026-09-10 00:04:35');
+INSERT INTO public.pgmigrations (id, name, run_on) VALUES (103, '20260911120000_drop_orphaned_process_scheduled_payouts_function', '2026-09-11 12:00:00');
 
 -- Advance the bookkeeping sequence past the explicitly-inserted ids above, so a
 -- NEW migration applied on top of this restored snapshot inserts id 101+ via the
