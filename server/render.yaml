@@ -2,7 +2,23 @@ services:
   - type: web
     name: byblos-atelier-api
     runtime: node
-    buildCommand: npm run build
+    # Migrations run in buildCommand, NOT just preDeployCommand: Render's
+    # pre-deploy command is only supported on paid web services ("The
+    # pre-deploy command is available for paid web services, private
+    # services, and background workers" -- render.com/docs/deploys). This
+    # service is on the free plan (see `plan: free` below), so
+    # preDeployCommand below was silently never executing -- new code kept
+    # shipping against whatever schema production already had, which is
+    # exactly what caused the terms_accepted production incident (code
+    # deployed expecting a column a migration never applied). Running
+    # `npm run migrate` here, inside the build step that every plan
+    # supports, is what actually guarantees migrations run before the new
+    # version serves traffic. node-pg-migrate is idempotent per migration
+    # (tracked in the `pgmigrations` table), so it's safe to also leave
+    # preDeployCommand in place below: it's a harmless no-op today and
+    # becomes a second, redundant safety net for free if this service is
+    # ever upgraded to a paid plan.
+    buildCommand: npm run build && npm run migrate
     preDeployCommand: npm run migrate
     startCommand: npm start
     envVars:
