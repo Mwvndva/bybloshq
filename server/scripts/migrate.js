@@ -169,6 +169,14 @@ async function run() {
             // Pass a pg ClientConfig (not a bare string) so node-pg-migrate's
             // connection uses the same SSL settings as the pre-flight pool.
             databaseUrl: { connectionString: process.env.DATABASE_URL, ssl: sslConfig },
+            // Refuses to run if the migrations directory's sort order ever
+            // diverges from the DB's real historical run_on order again (see
+            // migrations/ filenames: all now normalized to a real 14-digit
+            // YYYYMMDDHHMMSS prefix so node-pg-migrate's own timestamp
+            // parser -- which only special-cases 13/17-digit prefixes -- sorts
+            // them correctly; any format regression now fails loudly here
+            // instead of being silently tolerated).
+            checkOrder: true,
             verbose: true,
             logger: {
                 info: console.log,
