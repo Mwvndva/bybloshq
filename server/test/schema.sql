@@ -4387,10 +4387,10 @@ CREATE INDEX idx_payments_payment_method_status ON public.payments USING btree (
 
 
 --
--- Name: idx_payments_provider_reference; Type: INDEX; Schema: public; Owner: -
+-- Name: payments_provider_reference_unique; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_payments_provider_reference ON public.payments USING btree (provider_reference) WHERE (provider_reference IS NOT NULL);
+CREATE UNIQUE INDEX payments_provider_reference_unique ON public.payments USING btree (provider_reference) WHERE (provider_reference IS NOT NULL);
 
 
 --
@@ -6196,6 +6196,7 @@ INSERT INTO public.pgmigrations (id, name, run_on) VALUES (100, '20260905140000_
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (101, '20260910000000_add_terms_accepted_to_creators', '2026-09-10 00:04:35');
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (102, '20260910010000_backfill_creator_terms_accepted', '2026-09-10 00:04:35');
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (103, '20260911120000_drop_orphaned_process_scheduled_payouts_function', '2026-09-11 12:00:00');
+INSERT INTO public.pgmigrations (id, name, run_on) VALUES (104, '20260911130000_add_payments_provider_reference_unique_constraint', '2026-09-11 13:00:00');
 
 -- Advance the bookkeeping sequence past the explicitly-inserted ids above, so a
 -- NEW migration applied on top of this restored snapshot inserts id 101+ via the
