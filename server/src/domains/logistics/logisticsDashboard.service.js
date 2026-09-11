@@ -61,8 +61,8 @@ class LogisticsDashboardService {
 
     static async bootstrapMzigoAccountIfConfigured(email, password) {
         const normalizedEmail = normalizeEmail(email);
-        const configuredEmail = normalizeEmail(process.env.MZIGO_EGO_EMAIL);
-        const configuredPassword = process.env.MZIGO_EGO_PASSWORD || '';
+        const configuredEmail = normalizeEmail(process.env.MZIGO_EMAIL);
+        const configuredPassword = process.env.MZIGO_PASSWORD || '';
 
         if (!configuredEmail || !configuredPassword) return null;
         if (normalizedEmail !== configuredEmail || password !== configuredPassword) return null;

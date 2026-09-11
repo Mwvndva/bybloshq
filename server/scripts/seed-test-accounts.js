@@ -229,7 +229,7 @@ async function main() {
     console.log(`  • seller ${sellerId}.referred_by_creator_id = ${creatorId} (creator referral reward path)`);
     console.log(`  • creator ${creatorId} also owns buyer profile ${creatorOwnBuyerId} on the same user (self-referral scenario)`);
     console.log(`  • buyer ${buyerId} is an independent, legitimate buyer (control case)`);
-    console.log('\nMzigo Ego logistics login is bootstrapped from MZIGO_EGO_EMAIL / MZIGO_EGO_PASSWORD on first login — set those and log in to create it.\n');
+    console.log('\nMzigo Ego logistics login is bootstrapped from MZIGO_EMAIL / MZIGO_PASSWORD on first login — set those and log in to create it.\n');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('❌ Seeding failed:', error.message);
