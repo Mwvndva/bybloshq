@@ -71,7 +71,13 @@ export const createWithdrawal = async (req, res, next) => {
         });
     } catch (err) {
         logger.error(`[WithdrawalCtrl] createWithdrawal failed for seller ${sellerId}:`, err.message);
-        return next(new AppError(err.message, statusFromError(err.message)));
+        // WithdrawalService.createWithdrawalRequest throws AppError with a real
+        // statusCode for every validation failure — prefer that over the regex
+        // allowlist below, which doesn't cover every message (e.g. "M-Pesa
+        // registered name is required" matches none of its patterns and used to
+        // fall through to a masked 500 even though it's a normal 400).
+        const statusCode = (typeof err.statusCode === 'number' && err.statusCode) || statusFromError(err.message);
+        return next(new AppError(err.message, statusCode));
     }
 };
 

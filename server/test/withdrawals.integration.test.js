@@ -140,7 +140,17 @@ for (const [entityType, cfg] of Object.entries(ENTITIES)) {
       entity = await cfg.create();
       await cfg.seedBalance(entity.id, 100); // < AMOUNT + fee
 
-      await assert.rejects(() => req(entityType, entity.id), /insufficient balance/i);
+      // Regression guard for the generic-500-toast bug: this used to be a
+      // plain `Error` (no statusCode, isOperational undefined), which
+      // globalErrorHandler masks to a generic 500 "Something went wrong!" in
+      // production regardless of the real message -- so assert it's a real
+      // operational 400 AppError, not just "it throws".
+      await assert.rejects(() => req(entityType, entity.id), (err) => {
+        assert.match(err.message, /insufficient balance/i);
+        assert.equal(err.statusCode, 400, 'a real 400, not masked to a generic 500');
+        assert.equal(err.isOperational, true, 'operational, so globalErrorHandler surfaces the real message');
+        return true;
+      });
 
       const bal = await cfg.read(entity.id);
       assert.equal(bal.available, 100, 'balance untouched on rejection');
@@ -181,7 +191,14 @@ describe('Withdrawal — seller-specific guard', () => {
       () => WithdrawalService.createWithdrawalRequest({
         entityId: seller.id, entityType: 'seller', amount: AMOUNT, mpesaNumber: PHONE, idempotencyKey: `noname-${Date.now()}`
       }),
-      /name/i
+      (err) => {
+        assert.match(err.message, /name/i);
+        // Regression guard: this used to be a plain `Error` (no statusCode,
+        // isOperational undefined) -- masked to a generic 500 in production.
+        assert.equal(err.statusCode, 400, 'a real 400, not masked to a generic 500');
+        assert.equal(err.isOperational, true, 'operational, so globalErrorHandler surfaces the real message');
+        return true;
+      }
     );
   });
 });

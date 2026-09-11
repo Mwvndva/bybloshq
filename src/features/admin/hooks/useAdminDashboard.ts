@@ -321,7 +321,9 @@ export function useAdminDashboard() {
         toast.success(`Seller has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
       }
     } catch (error) {
-      toast.error('Failed to update seller status');
+      // useUpdateSellerStatusMutation's own onError already shows the real
+      // backend reason via classifyApiError — this catch only exists to stop
+      // execution before the success-branch state update above runs.
     }
   };
 
@@ -365,7 +367,8 @@ export function useAdminDashboard() {
         buyers: role === 'buyer' ? prev.buyers.filter(b => String(b.user_id) !== String(userId)) : prev.buyers
       }));
     } catch (error) {
-      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete user account');
+      // useDeleteUserMutation's own onError already shows the real backend
+      // reason via classifyApiError.
     }
   };
 
@@ -382,7 +385,8 @@ export function useAdminDashboard() {
         creators: prev.creators.filter(creator => String(creator.id) !== String(creatorId))
       }));
     } catch (error) {
-      toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete creator account');
+      // useDeleteCreatorMutation's own onError already shows the real backend
+      // reason via classifyApiError.
     }
   };
 
@@ -407,7 +411,8 @@ export function useAdminDashboard() {
         toast.success(`Buyer has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
       }
     } catch (error) {
-      toast.error('Failed to update buyer status');
+      // useUpdateBuyerStatusMutation's own onError already shows the real
+      // backend reason via classifyApiError.
     }
   };
 
@@ -436,7 +441,8 @@ export function useAdminDashboard() {
         toast.success(`Withdrawal request has been ${action}`);
       }
     } catch (error) {
-      toast.error('Failed to update withdrawal request status');
+      // useUpdateWithdrawalRequestStatusMutation's own onError already shows
+      // the real backend reason via classifyApiError.
     }
   };
 

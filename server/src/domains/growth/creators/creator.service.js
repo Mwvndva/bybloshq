@@ -1676,17 +1676,21 @@ class CreatorService {
         const nextDateStr = clearance.nextAvailableAt
           ? new Date(clearance.nextAvailableAt).toLocaleDateString('en-KE', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
           : 'soon';
-        const error = new Error(
-          `Your withdrawal of KES ${withdrawalAmount.toLocaleString()} requires KES ${totalDeducted.toLocaleString()} from your balance (including KES ${withdrawalFee} withdrawal charge). KES ${clearance.clearingBalance.toLocaleString()} is currently clearing under the standard T+2 holding period and will be ready for withdrawal on ${nextDateStr}.`
+        // Plain `new Error()` + a manually-set `.statusCode` looks like it
+        // classifies as a 400, but globalErrorHandler only trusts
+        // `isOperational` (which only AppError sets) to decide whether to
+        // surface the real message — otherwise it masks to a generic 500
+        // regardless of statusCode. These carefully-worded balance/clearing
+        // messages were silently never reaching the creator.
+        throw new AppError(
+          `Your withdrawal of KES ${withdrawalAmount.toLocaleString()} requires KES ${totalDeducted.toLocaleString()} from your balance (including KES ${withdrawalFee} withdrawal charge). KES ${clearance.clearingBalance.toLocaleString()} is currently clearing under the standard T+2 holding period and will be ready for withdrawal on ${nextDateStr}.`,
+          400
         );
-        error.statusCode = 400;
-        throw error;
       }
-      const error = new Error(
-        `Insufficient available balance. Available: KES ${clearance.availableBalance.toLocaleString()}, Required: KES ${totalDeducted.toLocaleString()} (including KES ${withdrawalFee} withdrawal charge).`
+      throw new AppError(
+        `Insufficient available balance. Available: KES ${clearance.availableBalance.toLocaleString()}, Required: KES ${totalDeducted.toLocaleString()} (including KES ${withdrawalFee} withdrawal charge).`,
+        400
       );
-      error.statusCode = 400;
-      throw error;
     }
 
     return WithdrawalService.createWithdrawalRequest({

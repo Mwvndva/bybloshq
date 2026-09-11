@@ -2,6 +2,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/features/admin/api';
 import { adminQueryKeys } from '@/features/admin/api/queryKeys';
 import { toast } from 'sonner';
+import { classifyApiError } from '@/shared/utils/errorClassification';
+
+// Every mutation below calls a `src/features/admin/api/*` function that
+// returns the raw axios promise uncaught (no try/catch, or a catch that just
+// re-throws unchanged) — so `error` here is always the raw axios error, and
+// `(error as Error).message` was always axios's own generic "Request failed
+// with status code 400", never the backend's real validation reason.
+// classifyApiError reads the actual response body instead. Same fix as
+// checkout's useBagCheckout.ts (fd1c686e).
 
 export function useGetSellerByIdMutation() {
   return useMutation({
@@ -20,8 +29,7 @@ export function useUpdateSellerStatusMutation() {
       toast.success('Seller status updated successfully');
     },
     onError: (error) => {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to update seller status');
+      toast.error(classifyApiError(error, 'Failed to update seller status').message);
     },
   });
 }
@@ -42,8 +50,7 @@ export function useDeleteUserMutation() {
       toast.success('User deleted successfully');
     },
     onError: (error) => {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to delete user');
+      toast.error(classifyApiError(error, 'Failed to delete user').message);
     },
   });
 }
@@ -58,8 +65,7 @@ export function useDeleteCreatorMutation() {
       toast.success('Creator deleted successfully');
     },
     onError: (error) => {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to delete creator');
+      toast.error(classifyApiError(error, 'Failed to delete creator').message);
     },
   });
 }
@@ -75,8 +81,7 @@ export function useUpdateBuyerStatusMutation() {
       toast.success('Buyer status updated successfully');
     },
     onError: (error) => {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to update buyer status');
+      toast.error(classifyApiError(error, 'Failed to update buyer status').message);
     },
   });
 }
@@ -92,8 +97,7 @@ export function useUpdateWithdrawalRequestStatusMutation() {
       toast.success('Withdrawal request status updated');
     },
     onError: (error) => {
-      const err = error as Error;
-      toast.error(err.message || 'Failed to update withdrawal request status');
+      toast.error(classifyApiError(error, 'Failed to update withdrawal request status').message);
     },
   });
 }

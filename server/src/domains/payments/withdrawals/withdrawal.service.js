@@ -1,5 +1,6 @@
 import { pool } from '../../../infrastructure/database/database.js';
 import logger from '../../../shared/utils/logger.js';
+import { AppError } from '../../../shared/utils/errorHandler.js';
 import payoutService from '../payouts/payout.service.js';
 import domainEventDispatcher, { AppEvents, DomainEvents } from '../../../shared/core/domainEventDispatcher.js';
 const eventBus = domainEventDispatcher;
@@ -199,7 +200,7 @@ class WithdrawalService {
                 [requestId]
             );
 
-            if (!request) throw new Error('Withdrawal request not found');
+            if (!request) throw new AppError('Withdrawal request not found', 404);
 
             // Lock wallet owner row to prevent race conditions during balance updates.
             if (['completed', 'failed'].includes(newStatus)) {
@@ -329,13 +330,13 @@ class WithdrawalService {
         const validatedAmount = payoutService.validateAmount(amount);
 
         if (!['seller', 'creator', 'buyer_refund'].includes(entityType)) {
-            throw new Error(`Invalid entityType: ${entityType}. Must be 'seller', 'creator', or 'buyer_refund'.`);
+            throw new AppError(`Invalid entityType: ${entityType}. Must be 'seller', 'creator', or 'buyer_refund'.`, 400);
         }
         if (entityType === 'seller' && !mpesaName?.trim()) {
-            throw new Error('M-Pesa registered name is required');
+            throw new AppError('M-Pesa registered name is required', 400);
         }
         if (typeof idempotencyKey !== 'string' || !idempotencyKey.trim()) {
-            throw new Error('Idempotency-Key header is required');
+            throw new AppError('Idempotency-Key header is required', 400);
         }
         const normalizedIdempotencyKey = idempotencyKey.trim().slice(0, 120);
 
@@ -383,7 +384,7 @@ class WithdrawalService {
             const entityRow = rows[0];
 
             if (!entityRow) {
-                throw new Error(`${entityType} not found or unauthorized`);
+                throw new AppError(`${entityType} not found or unauthorized`, 404);
             }
 
             entity = entityRow;
@@ -444,14 +445,15 @@ class WithdrawalService {
 
             const currentBalance = Number.parseFloat(entity.balance || 0);
             if (currentBalance < deductionAmount) {
-                throw new Error(
+                throw new AppError(
                     `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
                     `Required: KES ${deductionAmount.toLocaleString()} including withdrawal charge. ` +
                     (entityType === 'seller'
                         ? 'Recent sales may still be preparing for withdrawal.'
                         : entityType === 'buyer_refund'
                             ? 'Some refund funds may already be reserved for another withdrawal.'
-                            : 'Some earnings may already be reserved for another withdrawal.')
+                            : 'Some earnings may already be reserved for another withdrawal.'),
+                    400
                 );
             }
 
