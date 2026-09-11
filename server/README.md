@@ -72,6 +72,49 @@ The payment processing system handles the complete lifecycle of payments, from i
   - Product inventory management
   - Sales analytics and reporting
 
+## ⚙️ Process Roles & Background Jobs
+
+This server is a single Express app (`src/index.js`) that can run in one of
+two roles, controlled by the `BYBLOS_PROCESS_ROLE` environment variable:
+
+| `BYBLOS_PROCESS_ROLE` | What runs |
+|---|---|
+| unset, or `all` (**the default**) | API routes **and** every cron job / background worker, all in one process |
+| `api` or `web` | API routes only — cron jobs and workers are skipped (`application/bootstrap/index.js`); expected to run separately via `src/worker.js` |
+
+**In production today, `BYBLOS_PROCESS_ROLE` is unset**, so the single
+deployed web process (Render service `byblos-backend`) runs both the API
+*and* every background job below. There is no separate worker service
+actually deployed — `server/render.yaml` describes a two-service split
+(`api` role + a dedicated worker service) as a *possible* target
+architecture, but that file is not the live Render config for this project's
+services (it was written for a differently-named service and never applied
+via "New from Blueprint"); it's aspirational, not a description of what's
+running. If you're reading only this README and wondering where cron jobs
+run: **they run inside the same process as the API**, right now.
+
+This is safe by design at the current scale (see `shouldStartWorkers` in
+`application/bootstrap/index.js`), but it means:
+- Scaling the web service to more than one instance would start every cron
+  job on every instance — set `BYBLOS_PROCESS_ROLE=api` on the web service
+  and run `node src/worker.js` as a separate service before doing that.
+- A deploy that restarts the process also restarts every cron job's schedule
+  (there's no separate worker uptime to rely on).
+
+### Background jobs that start when the worker role is active (`all`, or a dedicated `worker.js` process)
+
+Each is individually toggleable via its own `ENABLE_*_CRON` env var
+(default: enabled) — see `application/bootstrap/cron.js`:
+
+- **Payment processing** (`ENABLE_PAYMENT_CRON`) — reconciles pending payments with the provider, every 5 minutes
+- **Reconciliation Engine** — self-healing pass over payout/withdrawal state
+- **Fulfillment Worker** — processes the order-fulfillment queue
+- **Payout reconciliation** (`ENABLE_PAYOUT_RECONCILIATION`)
+- **Settlement promotion** (`ENABLE_SETTLEMENT_PROMOTION_CRON`) — promotes Paystack-settled seller earnings into withdrawable balance
+- **Order deadline checks** (`ENABLE_ORDER_DEADLINE_CRON`) — custom-production SLA reminders/refunds
+- **Cleanup job** (`ENABLE_CLEANUP_CRON`) — daily housekeeping
+- **Referral rewards** (`ENABLE_REFERRAL_CRON`) — monthly referral payout
+
 ## 🛠 Tech Stack
 
 - **Runtime**: Node.js 18+ with Express

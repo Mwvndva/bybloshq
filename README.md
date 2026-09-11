@@ -211,6 +211,12 @@ npm install -g pm2
 pm2 start server/dist/index.js --name "byblos-api"
 ```
 
+**Where do cron jobs run?** By default, in the same process as the API —
+there is no separate worker service unless you explicitly split them via
+`BYBLOS_PROCESS_ROLE`. See the "Process Roles & Background Jobs" section in
+[server/README.md](server/README.md) before scaling the API to more than one
+instance.
+
 ## 🐳 Docker Support
 
 Run the entire stack with Docker Compose:
