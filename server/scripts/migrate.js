@@ -99,7 +99,41 @@ async function run() {
 
     try {
         // 3. Pre-Flight Connection
-        await pool.query('SELECT 1');
+        //
+        // Retried with backoff rather than a single attempt: this script now
+        // runs as the very first thing a freshly-started container does
+        // (server/docker-entrypoint.sh), often within milliseconds of the
+        // process starting. Render's internal-hostname DNS/private networking
+        // for a just-booted container isn't always ready in that first
+        // instant -- the app's own server boot does enough other
+        // initialization first that it doesn't usually hit this window, but
+        // a script this eager to connect can lose that race and fail a
+        // migration (and therefore the whole deploy) on transient
+        // not-ready-yet networking rather than a real problem with the
+        // database or credentials.
+        const MAX_CONNECT_ATTEMPTS = 6;
+        const CONNECT_RETRY_DELAY_MS = 5000;
+        let lastConnectError;
+        for (let attempt = 1; attempt <= MAX_CONNECT_ATTEMPTS; attempt++) {
+            try {
+                await pool.query('SELECT 1');
+                lastConnectError = undefined;
+                break;
+            } catch (err) {
+                lastConnectError = err;
+                const isLastAttempt = attempt === MAX_CONNECT_ATTEMPTS;
+                console.warn(
+                    `[${new Date().toISOString()}] [WARN] Database connection attempt ${attempt}/${MAX_CONNECT_ATTEMPTS} failed` +
+                    `${isLastAttempt ? '' : `, retrying in ${CONNECT_RETRY_DELAY_MS / 1000}s`}: ${err.message}`
+                );
+                if (!isLastAttempt) {
+                    await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAY_MS));
+                }
+            }
+        }
+        if (lastConnectError) {
+            throw lastConnectError;
+        }
         console.log(`[${new Date().toISOString()}] [SUCCESS] Connection established.`);
 
         const hasUsers = await tableExists(pool, 'users');
