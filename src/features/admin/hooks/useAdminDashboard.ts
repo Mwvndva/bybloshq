@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useGlobalAuth } from '@/features/auth/contexts';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { useGetBuyerByIdMutation, useDeleteUserMutation, useDeleteCreatorMutation, useUpdateBuyerStatusMutation, useGetSellerByIdMutation, useUpdateSellerStatusMutation, useUpdateWithdrawalRequestStatusMutation } from '@/features/admin/hooks/mutations/useAdminMutations';
+import { useGetBuyerByIdMutation, useDeleteUserMutation, useDeleteCreatorMutation, useGetSellerByIdMutation, useUpdateSellerStatusMutation, useUpdateWithdrawalRequestStatusMutation } from '@/features/admin/hooks/mutations/useAdminMutations';
 import {
   useAdminAnalyticsQuery,
   useAdminSellersQuery,
@@ -29,7 +29,6 @@ export function useAdminDashboard() {
   const getBuyerByIdMutation = useGetBuyerByIdMutation();
   const deleteUserMutation = useDeleteUserMutation();
   const deleteCreatorMutation = useDeleteCreatorMutation();
-  const updateBuyerStatusMutation = useUpdateBuyerStatusMutation();
   const getSellerByIdMutation = useGetSellerByIdMutation();
   const updateSellerStatusMutation = useUpdateSellerStatusMutation();
   const updateWithdrawalRequestStatusMutation = useUpdateWithdrawalRequestStatusMutation();
@@ -387,32 +386,6 @@ export function useAdminDashboard() {
     } catch (error) {
       // useDeleteCreatorMutation's own onError already shows the real backend
       // reason via classifyApiError.
-    }
-  };
-
-  // Handle toggling buyer status (active/inactive)
-  const handleToggleBuyerStatus = async (buyerId: string, newStatus: 'active' | 'inactive') => {
-    try {
-      // Call the API to update the buyer status
-      const response = await updateBuyerStatusMutation.mutateAsync({ buyerId, status: newStatus });
-
-      if (response.data.status === 'success') {
-        // Update the UI to reflect the new status
-        setDashboardState(prevState => ({
-          ...prevState,
-          buyers: prevState.buyers.map(buyer =>
-            buyer.id === buyerId
-               ? { ...buyer, status: newStatus }
-              : buyer
-          )
-        }));
-
-        // Show success message
-        toast.success(`Buyer has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
-      }
-    } catch (error) {
-      // useUpdateBuyerStatusMutation's own onError already shows the real
-      // backend reason via classifyApiError.
     }
   };
 

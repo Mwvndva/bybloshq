@@ -70,22 +70,6 @@ export function useDeleteCreatorMutation() {
   });
 }
 
-export function useUpdateBuyerStatusMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (args: { buyerId: string; status: string }) =>
-      adminApi.updateBuyerStatus(args.buyerId, { status: args.status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.buyers() });
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.analytics() });
-      toast.success('Buyer status updated successfully');
-    },
-    onError: (error) => {
-      toast.error(classifyApiError(error, 'Failed to update buyer status').message);
-    },
-  });
-}
-
 export function useUpdateWithdrawalRequestStatusMutation() {
   const queryClient = useQueryClient();
   return useMutation({

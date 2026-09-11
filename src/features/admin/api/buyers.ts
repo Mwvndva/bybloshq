@@ -48,10 +48,6 @@ export async function getBuyerById(id: string) {
   }
 }
 
-export function updateBuyerStatus(buyerId: string, data: { status: string }) {
-  return api.patch(`/admin/buyers/${buyerId}/status`, data);
-}
-
 export async function deleteUser(userId: string) {
   try {
     const response = await api.delete(`/admin/users/${userId}`);

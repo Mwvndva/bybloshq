@@ -2,7 +2,7 @@ import { adminApiInstance } from './instance';
 import { login, getMe } from './auth';
 import { getDashboardStats } from './dashboard';
 import { getAnalytics, getMonthlyMetrics } from './analytics';
-import { getBuyers, getBuyerById, updateBuyerStatus, deleteUser } from './buyers';
+import { getBuyers, getBuyerById, deleteUser } from './buyers';
 import { getSellers, getSellerById, updateSellerStatus } from './sellers';
 import { getClients } from './clients';
 import { getCreators, deleteCreator } from './creators';
@@ -37,7 +37,6 @@ export const adminApi = {
   getSellerById,
   getMonthlyMetrics,
   updateSellerStatus,
-  updateBuyerStatus,
   getClients,
   deleteUser,
   getWithdrawalRequests,
