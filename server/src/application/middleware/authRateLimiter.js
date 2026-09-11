@@ -44,16 +44,29 @@ const RATE_LIMIT_OPTIONS = {
 // Always-available in-memory limiter (no external dependency).
 const memoryLimiter = rateLimit({ ...RATE_LIMIT_OPTIONS });
 
-// Redis-backed limiter for a shared counter across instances. Built lazily on
-// first use (see getRedisLimiter below) rather than at module load —
-// RedisStore's constructor issues a command immediately to load its Lua
-// scripts, and building it eagerly meant a Redis outage at boot (or
-// NODE_ENV=test's enableOfflineQueue:false) threw an unhandled rejection that
-// crashed the whole process, defeating the fail-open design this exists for.
+// Redis-backed limiter for a shared counter across instances. Built exactly
+// once, outside of any request's call stack -- express-rate-limit validates
+// that a limiter is constructed at app initialization, not while responding
+// to a request (ERR_ERL_CREATED_IN_REQUEST_HANDLER), and throws synchronously
+// out of the middleware invocation (not just the constructor call) the first
+// time a request-triggered instance actually runs. That's exactly what
+// building it lazily on first use inside authLimiter did in production: the
+// very first login request after Redis became ready threw this uncaught,
+// bypassing the fail-open design entirely instead of falling back to
+// memoryLimiter.
+//
+// Fixed by building it the moment Redis is actually ready -- immediately if
+// it already is by the time this module loads, otherwise via the client's
+// own 'ready' event -- which happens independently of any HTTP request, so
+// express-rate-limit's construction-context check is satisfied either way.
+// Still guarded by try/catch: RedisStore's constructor issues a command to
+// load its Lua scripts, and if that somehow fails despite the client
+// reporting ready, we fall back to in-memory rather than losing rate
+// limiting (or crashing) entirely.
 let redisLimiter = null;
 
-function getRedisLimiter() {
-    if (redisLimiter) return redisLimiter;
+function buildRedisLimiter() {
+    if (redisLimiter) return;
     try {
         redisLimiter = rateLimit({
             ...RATE_LIMIT_OPTIONS,
@@ -61,10 +74,23 @@ function getRedisLimiter() {
                 sendCommand: (...args) => getRedisClient().call(...args),
             }),
         });
+        logger.info('[AUTH-LIMITER] Redis-backed rate limiter initialized');
     } catch (err) {
         logger.warn('[AUTH-LIMITER] Failed to build Redis-backed limiter, staying on in-memory store:', err?.message);
-        return null;
+        redisLimiter = null;
     }
+}
+
+const initialRedisClient = getRedisClient();
+if (initialRedisClient) {
+    if (initialRedisClient.status === 'ready') {
+        buildRedisLimiter();
+    } else {
+        initialRedisClient.once('ready', buildRedisLimiter);
+    }
+}
+
+function getRedisLimiter() {
     return redisLimiter;
 }
 
