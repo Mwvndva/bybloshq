@@ -45,6 +45,13 @@ export const sellerLoginSchema = z.object({
     email: z.string().email('Please provide a valid email address').trim().toLowerCase(),
 
     password: z.string().min(1, 'Password is required'),
+
+    // Optional: set when the login form retries after the user accepts the
+    // Terms modal shown for a TERMS_NOT_ACCEPTED response. z.object() silently
+    // strips any key not declared here (validate.js replaces req.body with
+    // the parsed result), so omitting this field makes the accept-terms
+    // retry a permanent dead end regardless of the controller/service layer.
+    acceptTerms: z.boolean().optional(),
 });
 
 export const validateSellerRegistration = validateMiddleware(sellerRegistrationSchema);

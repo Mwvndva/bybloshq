@@ -21,14 +21,14 @@ import apiClient from '@/infrastructure/http/apiClient';
 
 export function useBuyerLoginMutation() {
   return useMutation({
-    mutationFn: (credentials: { email: string; password: string }) =>
+    mutationFn: (credentials: { email: string; password: string; acceptTerms?: boolean }) =>
       buyerApi.login(credentials),
   });
 }
 
 export function useSellerLoginMutation() {
   return useMutation({
-    mutationFn: (credentials: { email: string; password: string }) =>
+    mutationFn: (credentials: { email: string; password: string; acceptTerms?: boolean }) =>
       sellerApi.login(credentials),
   });
 }
@@ -47,7 +47,7 @@ export function useAdminLoginMutation() {
 
 export function useCreatorLoginMutation() {
   return useMutation({
-    mutationFn: (credentials: { email: string; password: string }) =>
+    mutationFn: (credentials: { email: string; password: string; acceptTerms?: boolean }) =>
       creatorApi.login(credentials),
   });
 }

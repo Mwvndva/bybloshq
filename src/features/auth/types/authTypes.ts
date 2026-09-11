@@ -108,7 +108,7 @@ export interface GlobalAuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   role: UserRole | null;
-  login: (email: string, password: string, role: UserRole) => Promise<void>;
+  login: (email: string, password: string, role: UserRole, acceptTerms?: boolean) => Promise<void>;
   loginWithToken: (token: string, role: UserRole) => Promise<void>;
   loginAdmin: (email: string, password: string) => Promise<void>;
   register: (data: RegistrationData, role: UserRole) => Promise<{ status: string; message?: string } | void>;

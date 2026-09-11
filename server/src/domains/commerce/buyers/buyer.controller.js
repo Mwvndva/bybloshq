@@ -130,7 +130,7 @@ export const login = async (req, res, next) => {
       return next(new AppError('Please provide email and password', 400));
     }
 
-    const data = await AuthService.login(email, password, 'buyer');
+    const data = await AuthService.login(email, password, 'buyer', req.body.acceptTerms === true);
     if (!data) {
       return next(new AppError('Invalid email or password', 401));
     }

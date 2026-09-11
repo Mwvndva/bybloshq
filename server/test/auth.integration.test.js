@@ -217,6 +217,75 @@ describe('AuthService.login — terms acceptance gate (regression: was silently 
   });
 });
 
+// Regression: a TERMS_NOT_ACCEPTED block used to be a dead end. Buyer/seller
+// login pages treated it identically to EMAIL_NOT_VERIFIED and opened a
+// "resend verification email" modal -- which can never clear the block,
+// since resending only ever touches is_verified. The creator login page
+// didn't even do that much: TERMS_NOT_ACCEPTED fell through to a generic
+// toast with zero recovery path. These tests cover the fix: AuthService.login
+// accepts a 4th `acceptTerms` argument that records acceptance and lets the
+// SAME already-verified credentials complete login in one round trip.
+describe('AuthService.login — acceptTerms retry (regression: TERMS_NOT_ACCEPTED was a dead end)', () => {
+  test('buyer blocked by TERMS_NOT_ACCEPTED can retry with acceptTerms:true, and it persists', async () => {
+    const user = await makeUser({ role: 'buyer' });
+    await makeBuyerProfile(user.id, user.email, { termsAccepted: false });
+
+    await assertAppErrorRejection(AuthService.login(user.email, PASSWORD, 'buyer'), {
+      statusCode: 403,
+      code: 'TERMS_NOT_ACCEPTED',
+    });
+
+    const result = await AuthService.login(user.email, PASSWORD, 'buyer', true);
+    assert.ok(result, 'expected a successful login result');
+    assert.equal(result.user.email, user.email);
+
+    const { rows } = await pool.query(
+      'SELECT terms_accepted, terms_accepted_at FROM buyers WHERE user_id = $1',
+      [user.id]
+    );
+    assert.equal(rows[0].terms_accepted, true);
+    assert.ok(rows[0].terms_accepted_at, 'terms_accepted_at should be recorded');
+
+    // Acceptance persists: a normal login (no acceptTerms flag) now succeeds too.
+    const secondLogin = await AuthService.login(user.email, PASSWORD, 'buyer');
+    assert.ok(secondLogin, 'terms acceptance should persist across logins');
+  });
+
+  test('seller blocked by TERMS_NOT_ACCEPTED can retry with acceptTerms:true', async () => {
+    const user = await makeUser({ role: 'seller' });
+    await makeSellerProfile(user.id, user.email, { termsAccepted: false });
+
+    const result = await AuthService.login(user.email, PASSWORD, 'seller', true);
+    assert.ok(result, 'expected a successful login result');
+
+    const { rows } = await pool.query('SELECT terms_accepted FROM sellers WHERE user_id = $1', [user.id]);
+    assert.equal(rows[0].terms_accepted, true);
+  });
+
+  test('creator blocked by TERMS_NOT_ACCEPTED can retry with acceptTerms:true (creators previously had no resolution path at all)', async () => {
+    const user = await makeUser({ role: 'creator' });
+    await makeCreatorProfile(user.id, user.email); // terms_accepted defaults to false
+
+    await assertAppErrorRejection(AuthService.login(user.email, PASSWORD, 'creator'), {
+      statusCode: 403,
+      code: 'TERMS_NOT_ACCEPTED',
+    });
+
+    const result = await AuthService.login(user.email, PASSWORD, 'creator', true);
+    assert.ok(result, 'expected a successful login result');
+
+    const { rows } = await pool.query('SELECT terms_accepted FROM creators WHERE user_id = $1', [user.id]);
+    assert.equal(rows[0].terms_accepted, true);
+  });
+
+  test('acceptTerms:true is a harmless no-op for an account that already accepted terms', async () => {
+    const user = await makeUser({ role: 'buyer' });
+    await makeBuyerProfile(user.id, user.email, { termsAccepted: true });
+    const result = await AuthService.login(user.email, PASSWORD, 'buyer', true);
+    assert.ok(result, 'expected a successful login result');
+  });
+});
+
 describe('AuthService.login — wrong-portal (role mismatch)', () => {
   test('a verified buyer logging into the seller portal is rejected with WRONG_PORTAL', async () => {
     const user = await makeUser({ role: 'buyer' });

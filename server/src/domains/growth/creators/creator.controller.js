@@ -111,7 +111,7 @@ export const register = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const result = await CreatorService.login(req.body.email, req.body.password);
+    const result = await CreatorService.login(req.body.email, req.body.password, req.body.acceptTerms === true);
     if (!result) {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password.' });
     }

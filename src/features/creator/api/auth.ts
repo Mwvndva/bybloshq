@@ -17,7 +17,7 @@ export const register = async (payload: CreatorRegistrationPayload) => {
   return response.data;
 };
 
-export const login = async (emailOrCredentials: string | { email: string; password: string }, maybePassword?: string) => {
+export const login = async (emailOrCredentials: string | { email: string; password: string; acceptTerms?: boolean }, maybePassword?: string) => {
   const credentials = typeof emailOrCredentials === 'string'
     ? { email: emailOrCredentials, password: maybePassword }
     : emailOrCredentials;

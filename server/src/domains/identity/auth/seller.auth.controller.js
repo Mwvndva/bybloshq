@@ -95,7 +95,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const data = await AuthService.login(email, password, 'seller');
+    const data = await AuthService.login(email, password, 'seller', req.body.acceptTerms === true);
 
     if (!data) {
       return res.status(401).json({ status: 'error', message: 'Invalid email or password' });

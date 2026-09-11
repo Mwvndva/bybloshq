@@ -23,7 +23,7 @@ class AuthService {
      * @param {string} password 
      * @param {string} type - Optional portal type: 'buyer' | 'seller' | 'admin'
      */
-    static async login(email, password, type = null) {
+    static async login(email, password, type = null, acceptTerms = false) {
         // Some callers (e.g. the creator route) validate the request body with a
         // deliberately permissive schema that doesn't require these fields — see
         // shared/validations/creator.validation.js. Guard here so a missing
@@ -119,15 +119,36 @@ class AuthService {
         }
 
         if (termsAccepted === false) {
-            // Treat unaccepted terms as a verification blocker for login
-            // 1. Resend verification email (standard procedure)
-            await AuthService.resendVerificationEmail(user.email, type || user.role);
-
-            // 2. Throw specific error for frontend redirection
-            const err = new AppError('Please accept the terms and conditions and verify your account.', 403, 'TERMS_NOT_ACCEPTED');
-            err.email = user.email;
-            err.userType = type || user.role;
-            throw err;
+            // Give the caller a way to actually resolve this instead of a dead
+            // end: the login form re-submits with acceptTerms:true (after the
+            // user reviews and accepts the Terms modal) using the SAME
+            // credentials already verified above, so this doesn't need a
+            // separate authenticated endpoint. Record the acceptance and fall
+            // through to the normal login flow below rather than throwing.
+            //
+            // (No resendVerificationEmail call here: is_verified was already
+            // checked above, so by this point the user is guaranteed verified
+            // -- treating an unaccepted-terms block as an email-verification
+            // problem was the original bug. It sent a pointless "verify your
+            // email" email to an already-verified user and, worse, gave the
+            // frontend no way to actually clear the block: resending a
+            // verification email only ever sets is_verified, never
+            // terms_accepted, so the user stayed locked out regardless of
+            // what they clicked.)
+            if (acceptTerms === true) {
+                const termsTable = { seller: 'sellers', buyer: 'buyers', creator: 'creators' }[user.role];
+                if (termsTable) {
+                    await pool.query(
+                        `UPDATE ${termsTable} SET terms_accepted = TRUE, terms_accepted_at = NOW() WHERE user_id = $1`,
+                        [user.id]
+                    );
+                }
+            } else {
+                const err = new AppError('Please accept the terms and conditions to continue.', 403, 'TERMS_NOT_ACCEPTED');
+                err.email = user.email;
+                err.userType = type || user.role;
+                throw err;
+            }
         }
 
         // ── Role mismatch handling ──────────────────────────────────────────

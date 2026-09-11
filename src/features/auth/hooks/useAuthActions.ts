@@ -83,16 +83,16 @@ export function useAuthActions({
   const { forgotPassword, resetPassword } = useAuthPasswordReset({ navigate, setIsLoading });
   const { getProfile, updateProfile } = useAuthProfile({ setUser });
 
-  const login = useCallback(async (email: string, password: string, role: UserRole) => {
+  const login = useCallback(async (email: string, password: string, role: UserRole, acceptTerms?: boolean) => {
     setIsLoading(true);
     try {
       let response: any;
       if (role === 'buyer') {
-        response = await buyerLoginMut.mutateAsync({ email, password });
+        response = await buyerLoginMut.mutateAsync({ email, password, acceptTerms });
       } else if (role === 'seller') {
-        response = await sellerLoginMut.mutateAsync({ email, password });
+        response = await sellerLoginMut.mutateAsync({ email, password, acceptTerms });
       } else if (role === 'creator') {
-        response = await creatorLoginMut.mutateAsync({ email, password });
+        response = await creatorLoginMut.mutateAsync({ email, password, acceptTerms });
       } else if (role === 'admin') {
         response = await adminLoginMut.mutateAsync({ email, password });
       } else if (role === 'logistics') {

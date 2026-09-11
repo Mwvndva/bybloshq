@@ -122,7 +122,7 @@ export const checkShopNameAvailability = async (shopName: string): Promise<{ ava
 export const deleteSellerAccount = () => sellerApiInstance.delete('/sellers/account');
 
 export const sellerProfileApi = {
-  login: async (credentials: { email: string; password: string }): Promise<{ seller: ApiSeller; token?: string; refreshToken?: string }> => {
+  login: async (credentials: { email: string; password: string; acceptTerms?: boolean }): Promise<{ seller: ApiSeller; token?: string; refreshToken?: string }> => {
     const response = await sellerApiInstance.post<any>('/sellers/login', credentials);
     let responseBody = response?.data !== undefined ? response.data : response;
     if (typeof responseBody === 'string' && responseBody.trim()) {

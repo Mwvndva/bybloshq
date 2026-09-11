@@ -8,6 +8,8 @@ import { useGlobalAuth } from '@/features/auth/contexts';
 import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import { classifyApiError } from '@/shared/utils/errorClassification';
 import { VerifyEmailModal } from '@/features/auth/components/VerifyEmailModal';
+import TermsModal from '@/shared/components/TermsModal';
+import { toast } from 'sonner';
 
 export default function CreatorLogin() {
   const [email, setEmail] = useState('');
@@ -16,6 +18,8 @@ export default function CreatorLogin() {
   const [loading, setLoading] = useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
 
   const { login } = useGlobalAuth();
   const navigate = useNavigate();
@@ -57,9 +61,33 @@ export default function CreatorLogin() {
         setIsVerifyModalOpen(true);
         return;
       }
+      if (classified.code === 'TERMS_NOT_ACCEPTED') {
+        // Previously fell through to "Other errors" below and showed only a
+        // generic toast with no way to actually resolve it -- there was no
+        // terms-acceptance UI anywhere in the creator login flow. Show the
+        // real Terms so the user can accept and retry.
+        setPendingCredentials({ email: targetEmail, password: targetPassword });
+        setIsTermsModalOpen(true);
+        return;
+      }
       // Other errors: handled inside useAuthActions with a toast
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAcceptTerms = async () => {
+    setIsTermsModalOpen(false);
+    if (!pendingCredentials) return;
+    setLoading(true);
+    try {
+      await login(pendingCredentials.email, pendingCredentials.password, 'creator', true);
+    } catch (error: unknown) {
+      const classified = classifyApiError(error);
+      toast.error('Login Failed', { description: classified.message });
+    } finally {
+      setLoading(false);
+      setPendingCredentials(null);
     }
   };
 
@@ -131,6 +159,12 @@ export default function CreatorLogin() {
         onClose={() => setIsVerifyModalOpen(false)}
         email={unverifiedEmail}
         role="creator"
+      />
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => { setIsTermsModalOpen(false); setPendingCredentials(null); }}
+        onAccept={handleAcceptTerms}
       />
     </main>
   );

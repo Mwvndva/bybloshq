@@ -6,6 +6,7 @@ import { ArrowLeft, Eye, EyeOff, Loader2, Store } from 'lucide-react';
 import { useGlobalAuth } from '@/features/auth/contexts';
 import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import { VerifyEmailModal } from '@/features/auth/components/VerifyEmailModal';
+import TermsModal from '@/shared/components/TermsModal';
 import { SellerForgotPasswordDialog } from '../components/SellerForgotPasswordDialog';
 import { toast } from 'sonner';
 import { classifyApiError } from '@/shared/utils/errorClassification';
@@ -20,6 +21,8 @@ export function SellerLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [isSendingResetLink, setIsSendingResetLink] = useState(false);
@@ -57,15 +60,42 @@ export function SellerLogin() {
       // Navigation handled by useGlobalAuth().login() via getDashboardPath('seller')
     } catch (error: unknown) {
       const classified = classifyApiError(error);
-      if (classified.code === 'PENDING_VERIFICATION' || classified.code === 'EMAIL_NOT_VERIFIED' || classified.code === 'TERMS_NOT_ACCEPTED') {
+      if (classified.code === 'PENDING_VERIFICATION' || classified.code === 'EMAIL_NOT_VERIFIED') {
         setUnverifiedEmail(classified.email || targetEmail);
         setIsVerifyModalOpen(true);
+        return;
+      }
+      if (classified.code === 'TERMS_NOT_ACCEPTED') {
+        // Not an email-verification problem -- the backend only reaches this
+        // check once the account is already verified. Show the actual Terms
+        // so the user can accept and retry, instead of a "resend
+        // verification email" button that can never clear this block.
+        setPendingCredentials({ email: targetEmail, password: targetPassword });
+        setIsTermsModalOpen(true);
         return;
       }
       // Error toast handled inside useAuthActions
     } finally {
       loginInFlightRef.current = false;
       setIsLoading(false);
+    }
+  };
+
+  const handleAcceptTerms = async () => {
+    setIsTermsModalOpen(false);
+    if (!pendingCredentials) return;
+    if (loginInFlightRef.current) return;
+    loginInFlightRef.current = true;
+    setIsLoading(true);
+    try {
+      await login(pendingCredentials.email, pendingCredentials.password, 'seller', true);
+    } catch (error: unknown) {
+      const classified = classifyApiError(error);
+      toast.error('Login Failed', { description: classified.message });
+    } finally {
+      loginInFlightRef.current = false;
+      setIsLoading(false);
+      setPendingCredentials(null);
     }
   };
 
@@ -196,6 +226,12 @@ export function SellerLogin() {
         onClose={() => setIsVerifyModalOpen(false)}
         email={unverifiedEmail}
         role="seller"
+      />
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => { setIsTermsModalOpen(false); setPendingCredentials(null); }}
+        onAccept={handleAcceptTerms}
       />
 
       <SellerForgotPasswordDialog

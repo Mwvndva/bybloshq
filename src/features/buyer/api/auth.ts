@@ -42,7 +42,7 @@ export interface RegisterData {
   location: string;
 }
 
-export async function login(credentials: { email: string; password: string }): Promise<LoginResponse> {
+export async function login(credentials: { email: string; password: string; acceptTerms?: boolean }): Promise<LoginResponse> {
   const response = await apiClient.post<any>('/buyers/login', credentials);
   let responseBody = response?.data !== undefined ? response.data : response;
   if (typeof responseBody === 'string' && responseBody.trim()) {

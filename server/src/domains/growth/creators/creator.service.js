@@ -752,8 +752,8 @@ class CreatorService {
     }
   }
 
-  static async login(email, password) {
-    const result = await AuthService.login(email, password, 'creator');
+  static async login(email, password, acceptTerms = false) {
+    const result = await AuthService.login(email, password, 'creator', acceptTerms === true);
     if (!result) return null;
     const profile = result.profile || await this.findByUserId(result.user.id);
     const token = result.token || signToken(result.user.id, 'creator', result.user.email);

@@ -6,6 +6,7 @@ import { ArrowLeft, Eye, EyeOff, Loader2, ShoppingBag } from 'lucide-react';
 import { useGlobalAuth } from '@/features/auth/contexts';
 import { getFreshCsrfToken } from '@/infrastructure/http/apiClient';
 import { VerifyEmailModal } from '@/features/auth/components/VerifyEmailModal';
+import TermsModal from '@/shared/components/TermsModal';
 import { toast } from 'sonner';
 import { classifyApiError } from '@/shared/utils/errorClassification';
 
@@ -16,6 +17,8 @@ export function BuyerLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
 
   const { login } = useGlobalAuth();
   const navigate = useNavigate();
@@ -64,9 +67,34 @@ export function BuyerLogin() {
         setIsVerifyModalOpen(true);
         return;
       }
+      if (classified.code === 'TERMS_NOT_ACCEPTED') {
+        // Not an email-verification problem (the backend only reaches this
+        // check once the account is already verified) -- show the actual
+        // Terms so the user can accept them and retry, instead of opening
+        // VerifyEmailModal for something a "resend verification email"
+        // button can never fix.
+        setPendingCredentials({ email: targetEmail, password: targetPassword });
+        setIsTermsModalOpen(true);
+        return;
+      }
       // Error toast is handled inside useAuthActions
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAcceptTerms = async () => {
+    setIsTermsModalOpen(false);
+    if (!pendingCredentials) return;
+    setIsLoading(true);
+    try {
+      await login(pendingCredentials.email, pendingCredentials.password, 'buyer', true);
+    } catch (error: unknown) {
+      const classified = classifyApiError(error);
+      toast.error('Login Failed', { description: classified.message });
+    } finally {
+      setIsLoading(false);
+      setPendingCredentials(null);
     }
   };
 
@@ -169,6 +197,12 @@ export function BuyerLogin() {
         onClose={() => setIsVerifyModalOpen(false)}
         email={unverifiedEmail}
         role="buyer"
+      />
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => { setIsTermsModalOpen(false); setPendingCredentials(null); }}
+        onAccept={handleAcceptTerms}
       />
     </main>
   );

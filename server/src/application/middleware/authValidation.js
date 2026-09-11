@@ -41,6 +41,14 @@ export const loginSchema = z.object({
     email: z.string().email('Please provide a valid email address').trim().toLowerCase(),
 
     password: z.string().min(1, 'Password is required'),
+
+    // Optional: set when the login form is retrying after the user accepted
+    // the Terms modal shown for a TERMS_NOT_ACCEPTED response. z.object()
+    // silently strips any key not declared here (validate.js replaces
+    // req.body with the parsed result), so omitting this field would make
+    // the accept-terms retry a permanent dead end regardless of what the
+    // controller/service layer does with it.
+    acceptTerms: z.boolean().optional(),
 });
 
 // For backward compatibility or direct use if needed, though we prefer the new validate middleware
