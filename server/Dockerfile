@@ -42,8 +42,10 @@ COPY . .
 # default matches that to avoid a stale/misleading value.
 EXPOSE 3000
 
-# Create necessary directories and ensure node user can write to them
-RUN mkdir -p uploads && chown -R node:node /app
+# Create necessary directories and ensure node user can write to them, and
+# make the entrypoint script executable (COPY doesn't reliably preserve the
+# exec bit across platforms/checkouts).
+RUN mkdir -p uploads && chmod +x docker-entrypoint.sh && chown -R node:node /app
 
 # Switch to non-root user
 USER node
@@ -51,11 +53,17 @@ USER node
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=20s \
     CMD wget -qO- http://localhost:${PORT:-3000}/api/health || exit 1
 
-# Migrations are NOT run here. Every real deploy path runs them separately and
-# exactly once: docker-compose has a dedicated one-shot `migrate` service that
-# backend/worker wait on (depends_on: service_completed_successfully), and Render
-# uses `preDeployCommand: npm run migrate` (see server/render.yaml). Running
-# `npm run migrate` in this CMD too would re-run migrations on every backend
-# replica's boot (a needless race under horizontal scaling). If you ever run
-# this image standalone (bare `docker run`), run `npm run migrate` first.
-CMD ["npm", "start"]
+# Run pending migrations, then exec into the server -- see docker-entrypoint.sh
+# for why this lives here (Render's actual production service runs on the
+# free plan, where Pre-Deploy Command is locked, and a hand-typed Docker
+# Command override in the dashboard is not a substitute: it isn't version
+# controlled and doesn't behave like a real shell -- `&&` typed there doesn't
+# chain commands the way it looks like it should).
+#
+# docker-compose overrides this CMD for `worker` (`command: ["npm", "run",
+# "start:worker"]`) and already runs migrations exactly once via its own
+# dedicated `migrate` service ahead of both `backend` and `worker` -- so
+# `backend` running this entrypoint under compose just re-checks for pending
+# migrations redundantly (a fast no-op when there are none), it does not
+# re-apply anything.
+CMD ["./docker-entrypoint.sh"]
