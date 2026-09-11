@@ -125,7 +125,11 @@ export function RefundConfirmDialog({
                 value={mpesaNumber}
                 onChange={(e) => onMpesaNumberChange(e.target.value)}
                 placeholder="0712345678"
-                className="h-10 rounded-xl border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-zinc-900 text-xs font-medium text-slate-950 dark:text-white"
+                // No text-xs (12px) override: iOS Safari auto-zooms on focus
+                // for any input under 16px. The shared Input component's own
+                // default (text-base, 16px on mobile) is already safe --
+                // don't fight it.
+                className="h-10 rounded-xl border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-zinc-900 font-medium text-slate-950 dark:text-white"
               />
             </div>
             <div className="space-y-1.5">
@@ -138,7 +142,7 @@ export function RefundConfirmDialog({
                 value={mpesaName}
                 onChange={(e) => onMpesaNameChange(e.target.value)}
                 placeholder="Registered name"
-                className="h-10 rounded-xl border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-zinc-900 text-xs font-medium text-slate-950 dark:text-white"
+                className="h-10 rounded-xl border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-zinc-900 font-medium text-slate-950 dark:text-white"
               />
             </div>
           </div>

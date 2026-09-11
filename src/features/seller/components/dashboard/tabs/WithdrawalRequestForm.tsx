@@ -17,7 +17,10 @@ interface WithdrawalRequestFormProps {
   totalDeducted: number;
 }
 
-const inputClass = 'h-10 sm:h-11 text-sm bg-neutral-50 border-slate-200 text-slate-900 placeholder:text-slate-400 dark:bg-[#141414] dark:border-white/10 dark:text-white dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400';
+// No flat text-sm (14px): iOS Safari auto-zooms on focus for any input under
+// 16px. The shared Input component's own default (text-base, 16px on mobile;
+// md:text-sm, 14px on desktop) is already mobile-safe -- don't override it.
+const inputClass = 'h-10 sm:h-11 bg-neutral-50 border-slate-200 text-slate-900 placeholder:text-slate-400 dark:bg-[#141414] dark:border-white/10 dark:text-white dark:placeholder:text-white/40 focus:border-yellow-400 focus:ring-yellow-400';
 
 export function WithdrawalRequestForm({
   balance,
