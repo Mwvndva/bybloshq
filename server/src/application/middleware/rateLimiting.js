@@ -1,20 +1,29 @@
-import rateLimit from 'express-rate-limit';
 import logger from '../../shared/utils/logger.js';
+import { createResilientRateLimiter } from './createResilientRateLimiter.js';
 
 /**
  * Granular Rate Limiting Configuration (P1-003)
- * 
+ *
  * Different endpoints have different rate limit requirements:
  * - Authentication: Strict limits to prevent brute force
  * - Webhooks: Moderate limits (handled in provider webhook security middleware)
  * - Public API: Generous limits for normal usage
  * - Admin: More generous for authenticated admins
+ *
+ * Every limiter below is built via createResilientRateLimiter: Redis-backed
+ * (one shared counter across every instance) whenever Redis is ready, failing
+ * open to an in-memory, per-process counter otherwise -- with an alert when
+ * that fallback is actually in use. These five used to be built with plain
+ * `rateLimit(...)` -- always in-memory, unconditionally, with no relationship
+ * to Redis's availability at all. Harmless on today's single instance; would
+ * have silently multiplied the effective limit by instance count the moment
+ * this API ever ran more than one. See createResilientRateLimiter.js.
  */
 
 // ========================================
 // 4. Payment Initiation (MODERATE)
 // ========================================
-export const paymentRateLimiter = rateLimit({
+export const paymentRateLimiter = createResilientRateLimiter('payment', {
     windowMs: 5 * 60 * 1000, // 5 minutes
     max: 10, // 10 payment initiations per 5 minutes
     message: {
@@ -47,7 +56,7 @@ export const paymentRateLimiter = rateLimit({
 // ========================================
 // 5. Withdrawal Requests (MODERATE)
 // ========================================
-export const withdrawalRateLimiter = rateLimit({
+export const withdrawalRateLimiter = createResilientRateLimiter('withdrawal', {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 5, // 5 withdrawal requests per hour
     message: {
@@ -79,7 +88,7 @@ export const withdrawalRateLimiter = rateLimit({
 // ========================================
 // 6. Public API (GENEROUS)
 // ========================================
-export const publicApiRateLimiter = rateLimit({
+export const publicApiRateLimiter = createResilientRateLimiter('public-api', {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // 100 requests per 15 minutes
     message: {
@@ -106,7 +115,7 @@ export const publicApiRateLimiter = rateLimit({
 // ========================================
 // 7. Public Tracking (60 req/min)
 // ========================================
-export const publicTrackingRateLimiter = rateLimit({
+export const publicTrackingRateLimiter = createResilientRateLimiter('public-tracking', {
     windowMs: 60 * 1000, // 1 minute
     max: 60, // 60 requests per minute
     message: {
@@ -133,7 +142,7 @@ export const publicTrackingRateLimiter = rateLimit({
 // ========================================
 // 8. File Upload (STRICT)
 // ========================================
-export const uploadRateLimiter = rateLimit({
+export const uploadRateLimiter = createResilientRateLimiter('upload', {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 20, // 20 uploads per hour
     message: {
@@ -165,8 +174,13 @@ export const uploadRateLimiter = rateLimit({
 // ========================================
 // Helper: Create Custom Rate Limiter
 // ========================================
-export const createRateLimiter = (options) => {
-    return rateLimit({
+// Unused today (verified: no callers anywhere in src/) but kept as the
+// documented escape hatch for a one-off limiter -- built resiliently like
+// every other limiter above rather than left on the old always-in-memory
+// path. `name` is required (not defaulted) so a future caller can't end up
+// with an unlabeled limiter in logs/alerts.
+export const createRateLimiter = (name, options) => {
+    return createResilientRateLimiter(name, {
         standardHeaders: true,
         legacyHeaders: false,
         handler: (req, res) => {
@@ -194,4 +208,3 @@ export default {
     upload: uploadRateLimiter,
     create: createRateLimiter
 };
-
