@@ -55,6 +55,7 @@ const NewAdminDashboard = () => {
     handleDeleteCreator,
     handleViewBuyer,
     handleWithdrawalRequestAction,
+    processingWithdrawalId,
   } = useAdminDashboard();
 
   const navigate = useNavigate();
@@ -264,6 +265,7 @@ const NewAdminDashboard = () => {
                 formatProviderBalance={formatProviderBalance}
                 formatDate={safeFormatDate}
                 onAction={handleWithdrawalRequestAction}
+                processingRequestId={processingWithdrawalId}
               />
             </TabsContent>
 

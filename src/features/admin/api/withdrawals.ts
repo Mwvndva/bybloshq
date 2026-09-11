@@ -34,8 +34,22 @@ export async function getWithdrawalRequests() {
   }
 }
 
-export async function updateWithdrawalRequestStatus(requestId: string, status: 'approved' | 'rejected') {
-  return api.patch(`/admin/withdrawal-requests/${requestId}/status`, { status });
+// The backend (admin.service.js overrideWithdrawalStatus) only ever accepts
+// 'completed' or 'failed' -- the only two values withdrawal_requests.status
+// actually reaches in its real lifecycle (see withdrawal.service.js). It
+// used to be called with 'approved'/'rejected', which every single call
+// rejected with a 400 "must be 'completed' or 'failed'" -- unconditionally,
+// not just on a double-click.
+export async function updateWithdrawalRequestStatus(
+  requestId: string,
+  status: 'completed' | 'failed',
+  idempotencyKey: string
+) {
+  return api.patch(
+    `/admin/withdrawal-requests/${requestId}/status`,
+    { status },
+    { headers: { 'Idempotency-Key': idempotencyKey } }
+  );
 }
 
 

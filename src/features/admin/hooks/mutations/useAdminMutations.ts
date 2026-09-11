@@ -73,8 +73,8 @@ export function useDeleteCreatorMutation() {
 export function useUpdateWithdrawalRequestStatusMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: { requestId: string; action: 'approve' | 'deny' }) =>
-      adminApi.updateWithdrawalRequestStatus(args.requestId, args.action === 'approve' ? 'approved' : 'rejected'),
+    mutationFn: (args: { requestId: string; status: 'completed' | 'failed'; idempotencyKey: string }) =>
+      adminApi.updateWithdrawalRequestStatus(args.requestId, args.status, args.idempotencyKey),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.withdrawals() });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.analytics() });

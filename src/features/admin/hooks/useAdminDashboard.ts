@@ -56,6 +56,15 @@ export function useAdminDashboard() {
   const [selectedBuyer, setSelectedBuyer] = useState<unknown | null>(null);
   const [isLoadingBuyer, setIsLoadingBuyer] = useState(false);
 
+  // Id of the withdrawal request currently being approved/rejected, if any --
+  // drives the per-row loading/disabled state in AdminWithdrawalsTab so a
+  // double-click (or a slow network) can't fire two overrides for the same
+  // request. Also checked synchronously at the top of
+  // handleWithdrawalRequestAction itself (not just via the disabled prop),
+  // since a React state update is not guaranteed to have re-rendered before a
+  // second click lands.
+  const [processingWithdrawalId, setProcessingWithdrawalId] = useState<string | null>(null);
+
   const [dashboardState, setDashboardState] = React.useState<DashboardState>({
     analytics: {
       totalRevenue: 0,
@@ -390,9 +399,24 @@ export function useAdminDashboard() {
   };
 
   const handleWithdrawalRequestAction = async (requestId: string, action: 'approved' | 'rejected') => {
+    // Synchronous re-entrancy guard: checked (and set) before any await, so a
+    // second click landing before the state update above has re-rendered
+    // still can't slip through -- the disabled prop alone can't guarantee
+    // that, since setState/re-render isn't synchronous.
+    if (processingWithdrawalId) return;
+    setProcessingWithdrawalId(requestId);
+
+    // The backend (admin.service.js overrideWithdrawalStatus) only accepts
+    // 'completed'/'failed' -- the real terminal states withdrawal_requests.status
+    // reaches. 'approved'/'rejected' is this component's own UI vocabulary.
+    const status = action === 'approved' ? 'completed' : 'failed';
+    // Deterministic per (request, target status): a genuine retry of the same
+    // action reuses the same key. Matches the refund-moderation flow's
+    // `refund-confirm-${id}` / `refund-reject-${id}` pattern.
+    const idempotencyKey = `withdrawal-${status}-${requestId}`;
+
     try {
-      const apiAction = action === 'approved' ? 'approve' : 'deny';
-      const response = await updateWithdrawalRequestStatusMutation.mutateAsync({ requestId, action: apiAction }) as { data: { status: string } };
+      const response = await updateWithdrawalRequestStatusMutation.mutateAsync({ requestId, status, idempotencyKey }) as { data: { status: string } };
 
       if (response.data.status === 'success') {
         // Update the UI to reflect the new status
@@ -402,7 +426,7 @@ export function useAdminDashboard() {
             request.id === requestId
               ? {
                 ...request,
-                status: action,
+                status,
                 processedAt: new Date().toISOString(),
                 processedBy: 'Admin' // You might want to get the actual admin name
               }
@@ -416,6 +440,8 @@ export function useAdminDashboard() {
     } catch (error) {
       // useUpdateWithdrawalRequestStatusMutation's own onError already shows
       // the real backend reason via classifyApiError.
+    } finally {
+      setProcessingWithdrawalId(null);
     }
   };
 
@@ -462,5 +488,6 @@ export function useAdminDashboard() {
     handleDeleteCreator,
     handleViewBuyer,
     handleWithdrawalRequestAction,
+    processingWithdrawalId,
   };
 }
