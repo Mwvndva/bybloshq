@@ -1,10 +1,12 @@
 import express from 'express';
 import { pool } from '../../infrastructure/database/database.js';
 import getRedisClient from '../../shared/config/redis.js';
+import paymentService from '../../domains/payments/payments/payment.service.js';
 
 const router = express.Router();
 
 const REDIS_PING_TIMEOUT_MS = 1000;
+const PAYSTACK_CHECK_TIMEOUT_MS = 3000;
 
 /**
  * Pings Redis with a short timeout. Returns a status string rather than
@@ -27,6 +29,32 @@ async function checkRedis() {
       new Promise((_, reject) => setTimeout(() => reject(new Error('redis ping timeout')), REDIS_PING_TIMEOUT_MS))
     ]);
     return pong === 'PONG' ? 'connected' : 'degraded';
+  } catch {
+    return 'disconnected';
+  }
+}
+
+/**
+ * Checks reachability of the payment provider (Paystack) with a short
+ * timeout. Reported alongside Redis rather than as a hard gate on readiness:
+ * a lot of the app (browsing, dashboards, admin work unrelated to money
+ * movement) still functions with Paystack down, so failing the whole
+ * readiness probe over it would pull an otherwise-serviceable instance out of
+ * rotation. It IS the payment/payout provider though, so this makes an
+ * outage or misconfiguration (wrong/expired PAYSTACK_SECRET_KEY, network
+ * egress blocked, Paystack itself down) visible immediately instead of only
+ * surfacing the first time a real buyer tries to pay.
+ */
+async function checkPaystack() {
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    return 'unconfigured';
+  }
+  try {
+    const result = await Promise.race([
+      paymentService.checkBalance(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('paystack check timeout')), PAYSTACK_CHECK_TIMEOUT_MS))
+    ]);
+    return result?.success === false ? 'degraded' : 'connected';
   } catch {
     return 'disconnected';
   }
@@ -68,22 +96,26 @@ router.get('/ready', async (req, res) => {
   try {
     // Postgres is the hard gate — the app cannot serve requests without it.
     await pool.query('SELECT 1');
-    // Redis is reported but non-fatal (see checkRedis): its status makes a
-    // misconfiguration visible without failing readiness for a degraded-but-
-    // serviceable instance.
-    const redis = await checkRedis();
+    // Redis and Paystack are reported but non-fatal (see checkRedis/
+    // checkPaystack): their status makes a misconfiguration or outage
+    // visible without failing readiness for an instance that's still
+    // serviceable for everything that doesn't touch payments.
+    const [redis, paystack] = await Promise.all([checkRedis(), checkPaystack()]);
     res.status(200).json({
       status: 'ready',
       timestamp: new Date().toISOString(),
       database: 'ready',
       redis,
+      paystack,
     });
   } catch (error) {
+    const [redis, paystack] = await Promise.all([checkRedis(), checkPaystack()]);
     res.status(503).json({
       status: 'not_ready',
       message: 'Required dependency unavailable',
       database: 'disconnected',
-      redis: await checkRedis(),
+      redis,
+      paystack,
     });
   }
 });
