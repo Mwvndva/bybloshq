@@ -19,7 +19,15 @@ set -e
 
 npm run migrate
 
-# exec (not a plain call) replaces this shell process with node, so SIGTERM
-# from Render on redeploy/shutdown reaches the server directly for a clean
-# shutdown instead of being absorbed by an intermediate shell.
-exec npm start
+# exec node directly, NOT `exec npm start`. `npm start` still forks node as
+# its own child process even under exec -- exec only replaces this shell, not
+# the extra npm layer -- so Render's SIGTERM on every deploy's old-instance
+# retirement (completely normal, happens on every single deploy) got relayed
+# through npm's process wrapper, which unconditionally logs it as
+# "npm error ... signal SIGTERM" regardless of whether the app underneath
+# handled it gracefully (it does -- see index.js's SIGTERM handler, which
+# drains connections and exits 0). That's harmless but reads exactly like a
+# crash in the deploy logs. Invoking node directly makes it the actual
+# process Render's signal reaches, and removes npm's misleading wrapper
+# output from every routine deploy.
+exec node src/index.js
