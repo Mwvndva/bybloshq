@@ -312,3 +312,96 @@ describe('AuthService.login — happy path', () => {
     assert.equal(result.user.email, user.email);
   });
 });
+
+// Regression coverage for bootstrapPrivilegedAccountIfConfigured: the admin
+// and marketing accounts previously required a one-off `node
+// scripts/seed-admin.js` / `seed-marketing-admin.js` run, which needs shell
+// access to the server -- unavailable on Render's free plan (the situation
+// that prompted this). They now self-create on first login with the exact
+// email/password already configured in ADMIN_EMAIL/ADMIN_PASSWORD or
+// MARKETING_EMAIL/MARKETING_PASSWORD, the same pattern
+// LogisticsDashboardService.bootstrapMzigoAccountIfConfigured() already uses
+// for the Mzigo Ego partner account.
+describe('AuthService.login — admin/marketing self-bootstrap from env credentials', () => {
+  const ORIGINAL_ENV = {
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    MARKETING_EMAIL: process.env.MARKETING_EMAIL,
+    MARKETING_PASSWORD: process.env.MARKETING_PASSWORD,
+  };
+
+  function restoreEnv() {
+    for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+
+  test('logging in with the configured ADMIN_EMAIL/ADMIN_PASSWORD creates the admin account on first login', async () => {
+    const email = `bootstrap-admin-${Date.now()}@test.byblos.local`;
+    process.env.ADMIN_EMAIL = email;
+    process.env.ADMIN_PASSWORD = PASSWORD;
+    try {
+      const result = await AuthService.login(email, PASSWORD, 'admin');
+      assert.ok(result, 'expected a successful login result');
+      assert.equal(result.user.role, 'admin');
+      assert.equal(result.user.email, email);
+      createdUserIds.push(result.user.id);
+
+      // Repeating it hits the normal (non-bootstrap) login path now that the
+      // account exists -- confirms bootstrap doesn't need to keep firing.
+      const secondLogin = await AuthService.login(email, PASSWORD, 'admin');
+      assert.ok(secondLogin, 'expected the account to persist for a normal login');
+    } finally {
+      restoreEnv();
+    }
+  });
+
+  test('logging in with the configured MARKETING_EMAIL/MARKETING_PASSWORD creates the account and is granted marketing access via cross-role handling', async () => {
+    const email = `bootstrap-marketing-${Date.now()}@test.byblos.local`;
+    process.env.MARKETING_EMAIL = email;
+    process.env.MARKETING_PASSWORD = PASSWORD;
+    try {
+      const result = await AuthService.login(email, PASSWORD, 'marketing');
+      assert.ok(result, 'expected a successful login result');
+      // seed-marketing-admin.js also writes role='admin' -- the marketing
+      // grant comes from AuthService's existing admin<->marketing cross-role
+      // case, not from this column, so the bootstrapped row must match that.
+      assert.equal(result.crossRole, true);
+      createdUserIds.push(result.user.id);
+    } finally {
+      restoreEnv();
+    }
+  });
+
+  test('a login attempt with the right email but wrong password does not bootstrap anything', async () => {
+    const email = `bootstrap-noleak-${Date.now()}@test.byblos.local`;
+    process.env.ADMIN_EMAIL = email;
+    process.env.ADMIN_PASSWORD = PASSWORD;
+    try {
+      const result = await AuthService.login(email, 'TotallyWrongPassword!', 'admin');
+      assert.equal(result, null, 'a wrong password must not create the account');
+
+      const { rows } = await pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
+      assert.equal(rows.length, 0, 'no user row should have been created');
+    } finally {
+      restoreEnv();
+    }
+  });
+
+  test('an unrelated login attempt is unaffected when ADMIN_EMAIL/MARKETING_EMAIL are configured', async () => {
+    process.env.ADMIN_EMAIL = 'admin-env-configured@test.byblos.local';
+    process.env.ADMIN_PASSWORD = PASSWORD;
+    process.env.MARKETING_EMAIL = 'marketing-env-configured@test.byblos.local';
+    process.env.MARKETING_PASSWORD = PASSWORD;
+    try {
+      const user = await makeUser({ role: 'buyer' });
+      await makeBuyerProfile(user.id, user.email);
+      const result = await AuthService.login(user.email, PASSWORD, 'buyer');
+      assert.ok(result, 'a normal buyer login must still succeed exactly as before');
+      assert.equal(result.user.role, 'buyer');
+    } finally {
+      restoreEnv();
+    }
+  });
+});

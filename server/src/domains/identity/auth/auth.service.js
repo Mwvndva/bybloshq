@@ -18,9 +18,56 @@ const TIMING_DUMMY_HASH = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TgxO7dCVS0VxMhUv8E1Y2
 
 class AuthService {
     /**
+     * Self-bootstrap the admin or marketing account from env-configured
+     * credentials on first login, the same pattern
+     * LogisticsDashboardService.bootstrapMzigoAccountIfConfigured() already
+     * uses for the Mzigo Ego partner: rather than requiring a one-off
+     * `node scripts/seed-admin.js` run (which needs shell access to the
+     * server -- not available on Render's free plan), the account
+     * materializes itself the moment someone logs in with the exact
+     * email/password already configured in ADMIN_EMAIL/ADMIN_PASSWORD or
+     * MARKETING_EMAIL/MARKETING_PASSWORD. Only fires when normal lookup
+     * already failed (see login() below), and only when both the email AND
+     * password match one of the configured pairs exactly -- a stranger
+     * guessing at admin@whatever.com can't trigger this without also
+     * knowing the real configured password.
+     */
+    static async bootstrapPrivilegedAccountIfConfigured(normalizedEmail, password) {
+        const candidates = [
+            { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, label: 'admin' },
+            { email: process.env.MARKETING_EMAIL, password: process.env.MARKETING_PASSWORD, label: 'marketing' },
+        ];
+
+        const match = candidates.find((c) =>
+            c.email && c.password &&
+            c.email.toLowerCase().trim() === normalizedEmail &&
+            c.password === password
+        );
+        if (!match) return null;
+
+        // Both seed-admin.js and seed-marketing-admin.js write role='admin'
+        // for either account -- the admin/marketing distinction lives
+        // elsewhere in the permission system, not in this column. Matched
+        // exactly here so a self-bootstrapped account behaves identically to
+        // one created by the manual seed scripts.
+        const hash = await bcrypt.hash(password, 12);
+        const { rows } = await pool.query(
+            `INSERT INTO users (email, password_hash, role, is_verified, is_active, created_at, updated_at)
+             VALUES ($1, $2, 'admin', true, true, NOW(), NOW())
+             ON CONFLICT (email)
+             DO UPDATE SET password_hash = EXCLUDED.password_hash, role = 'admin', is_verified = true, is_active = true, updated_at = NOW()
+             RETURNING id, email, password_hash, role, is_verified, is_active`,
+            [normalizedEmail, hash]
+        );
+
+        logger.info(`[AUTH] Bootstrapped ${match.label} account from env-configured credentials: ${normalizedEmail}`);
+        return rows[0];
+    }
+
+    /**
      * Unified login method
-     * @param {string} email 
-     * @param {string} password 
+     * @param {string} email
+     * @param {string} password
      * @param {string} type - Optional portal type: 'buyer' | 'seller' | 'admin'
      */
     static async login(email, password, type = null, acceptTerms = false) {
@@ -43,7 +90,20 @@ class AuthService {
         // Anti-Enumeration: Always run bcrypt.compare to prevent timing attacks.
         // Use a pre-computed dummy hash if the email doesn't exist in either table.
         const hashToCompare = target ? (target.password_hash || target.password) : TIMING_DUMMY_HASH;
-        const isMatch = await bcrypt.compare(password, hashToCompare);
+        let isMatch = await bcrypt.compare(password, hashToCompare);
+
+        if (!target || !isMatch) {
+            // Normal lookup failed -- give the admin/marketing accounts a
+            // chance to self-bootstrap from env-configured credentials
+            // before giving up (see bootstrapPrivilegedAccountIfConfigured
+            // above). No-ops for every other login attempt.
+            const bootstrapped = await AuthService.bootstrapPrivilegedAccountIfConfigured(normalizedEmail, password);
+            if (bootstrapped) {
+                target = bootstrapped;
+                isPending = false;
+                isMatch = await bcrypt.compare(password, target.password_hash);
+            }
+        }
 
         if (!target || !isMatch) {
             // Timing-safe: we spent the same amount of CPU time regardless of email existence.
