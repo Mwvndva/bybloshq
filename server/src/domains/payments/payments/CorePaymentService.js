@@ -719,7 +719,18 @@ const CorePaymentService = {
         const providerPayload = normalizePaystackChargePayload(webhookData);
         const verifiedReference = extractPaymentReference(providerPayload);
         if (!verifiedReference) {
-            logger.warn('[CorePaymentService] Webhook received with no payment reference. Ignoring.', webhookData);
+            // Never log the full webhook payload — it can carry buyer PII
+            // (email, phone, card/authorization metadata). Same discipline as
+            // PaymentController's webhook-received log and the
+            // paymentRequestLogger middleware: only safe, derived fields.
+            const data = getProviderPayloadData(providerPayload);
+            logger.warn('[CorePaymentService] Webhook received with no payment reference. Ignoring.', {
+                event: webhookData?.event || null,
+                providerTransactionId: data?.id || null,
+                status: data?.status || null,
+                hasEmail: !!data?.customer?.email,
+                hasPhone: !!(data?.customer?.phone || data?.customer?.phone_number),
+            });
             return { status: 'ignored', message: 'No reference in webhook' };
         }
 
