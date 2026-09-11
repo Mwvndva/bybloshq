@@ -6242,6 +6242,8 @@ INSERT INTO public.pgmigrations (id, name, run_on) VALUES (97, '20260904205500_a
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (98, '20260905120000_add_missing_balance_and_amount_constraints', '2026-09-05 15:26:12.470792');
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (99, '20260905130000_add_creator_referral_earnings_metadata_column', '2026-09-05 15:26:12.48493');
 INSERT INTO public.pgmigrations (id, name, run_on) VALUES (100, '20260905140000_drop_legacy_order_completion_payout_trigger', '2026-09-05 17:30:00');
+INSERT INTO public.pgmigrations (id, name, run_on) VALUES (101, '20260910000000_add_terms_accepted_to_creators', '2026-09-10 00:04:35');
+INSERT INTO public.pgmigrations (id, name, run_on) VALUES (102, '20260910010000_backfill_creator_terms_accepted', '2026-09-10 00:04:35');
 
 -- Advance the bookkeeping sequence past the explicitly-inserted ids above, so a
 -- NEW migration applied on top of this restored snapshot inserts id 101+ via the
