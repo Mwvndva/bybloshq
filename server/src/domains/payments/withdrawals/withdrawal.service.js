@@ -400,17 +400,24 @@ class WithdrawalService {
                     ? (mpesaName?.trim() || getEntityLabel(entity))
                 : mpesaName.trim();
 
-            // Seller payout destination is client-supplied (sellers have no stored
-            // verified M-Pesa number). If it differs from the seller's last
-            // SUCCESSFUL payout number, hold the request for admin review instead of
-            // dispatching — a compromised seller session cannot silently redirect
-            // funds to a new number. Funds are still reserved; first-time and
-            // same-number withdrawals proceed normally.
+            // Client-supplied payout destination check. Sellers have no stored
+            // verified M-Pesa number, and buyer refunds accept a per-request
+            // mpesaNumber straight from the client — for BOTH, if the destination
+            // differs from the entity's last SUCCESSFUL payout number, hold the
+            // request for admin review instead of dispatching, so a compromised
+            // session cannot silently redirect funds to a brand-new number. Funds
+            // are still reserved; first-time and same-number withdrawals proceed
+            // normally. Creators are excluded on purpose: they pay out only to
+            // their own stored, non-client-supplied mpesa_number, so there is no
+            // client-controlled destination to redirect.
             let holdForReview = false;
-            if (entityType === 'seller') {
+            if (entityType === 'seller' || entityType === 'buyer_refund') {
+                // Fixed internal ternary, not user input — same safe interpolation
+                // pattern as the idempotency lookup below.
+                const idColumn = entityType === 'buyer_refund' ? 'buyer_id' : 'seller_id';
                 const { rows: prior } = await client.query(
                     `SELECT mpesa_number FROM withdrawal_requests
-                      WHERE seller_id = $1 AND status IN ('completed','success','paid')
+                      WHERE ${idColumn} = $1 AND status IN ('completed','success','paid')
                       ORDER BY created_at DESC LIMIT 1`,
                     [entityId]
                 );
@@ -530,9 +537,10 @@ class WithdrawalService {
         // Do not dispatch a held (destination-changed) request to the provider —
         // it waits for admin review. Funds remain reserved.
         if (request.status === 'manual_review') {
-            logger.warn('[WithdrawalService] Seller withdrawal held for review — payout destination changed', {
+            logger.warn('[WithdrawalService] Withdrawal held for review — payout destination changed', {
                 withdrawalId: request.id,
-                sellerId: entityId
+                entityType,
+                entityId
             });
         } else {
             this._callProviderAndUpdate(request, entity, validatedAmount, normalizedPhone)

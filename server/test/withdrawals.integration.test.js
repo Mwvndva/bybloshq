@@ -202,3 +202,101 @@ describe('Withdrawal — seller-specific guard', () => {
     );
   });
 });
+
+// Security regression: buyer refunds take a per-request mpesaNumber straight from
+// the client, so a stolen buyer session could redirect a cleared refund balance
+// to an attacker's number. Sellers already hold a withdrawal for admin review
+// when its destination differs from the last SUCCESSFUL payout; this guarantees
+// buyer refunds now get the identical protection (extended in withdrawal.service.js
+// createWithdrawalRequest -- the `entityType === 'seller' || entityType === 'buyer_refund'`
+// branch). Creators are intentionally NOT covered: they pay out only to a stored,
+// non-client-supplied number.
+describe('Withdrawal — buyer_refund payout destination hold', () => {
+  const NEW_PHONE = '0798765432'; // deliberately different from PHONE (0712345678)
+
+  // Seeds a prior COMPLETED buyer withdrawal to `toNumber`, establishing a known
+  // last-successful destination without going through the async provider flow.
+  async function seedCompletedPayout(buyerId, toNumber) {
+    await pool.query(
+      `INSERT INTO withdrawal_requests
+         (buyer_id, amount, mpesa_number, mpesa_name, status, api_call_pending, idempotency_key, metadata, created_at)
+       VALUES ($1, $2, $3, 'Prior Payee', 'completed', FALSE, $4, '{}'::jsonb, NOW() - INTERVAL '1 day')`,
+      [buyerId, AMOUNT, toNumber, `prior-${buyerId}-${Date.now()}`]
+    );
+  }
+
+  test('a refund to a CHANGED destination is held for admin review, not dispatched', async (t) => {
+    let buyer;
+    t.after(() => buyer && cleanupEntity(ENTITIES.buyer_refund, buyer.id));
+    buyer = await createBuyer({});
+    await ENTITIES.buyer_refund.seedBalance(buyer.id, BALANCE);
+    await seedCompletedPayout(buyer.id, PHONE); // last successful payout went to PHONE
+
+    const before = await ENTITIES.buyer_refund.read(buyer.id);
+
+    // Attacker-style request: same account, brand-new destination number.
+    const request = await WithdrawalService.createWithdrawalRequest({
+      entityId: buyer.id,
+      entityType: 'buyer_refund',
+      amount: AMOUNT,
+      mpesaNumber: NEW_PHONE,
+      idempotencyKey: `hold-${buyer.id}-${Date.now()}`
+    });
+
+    assert.equal(request.status, 'manual_review', 'held for review, not dispatched');
+
+    const { rows: [row] } = await pool.query(
+      'SELECT status, api_call_pending, metadata FROM withdrawal_requests WHERE id = $1',
+      [request.id]
+    );
+    assert.equal(row.status, 'manual_review');
+    assert.equal(row.api_call_pending, false, 'a held request must NOT be queued for the payout provider');
+    assert.equal(row.metadata.held_for_review, true);
+    assert.equal(row.metadata.hold_reason, 'payout_destination_changed');
+
+    // Funds are still reserved while it waits for review (same as the seller hold),
+    // so the balance can't be spent twice — it just can't leave without approval.
+    const after = await ENTITIES.buyer_refund.read(buyer.id);
+    assert.equal(after.available, before.available - DEDUCTION, 'refund balance reserved');
+    assert.equal(after.reserved, before.reserved + DEDUCTION, 'held amount moved into the reserve');
+  });
+
+  test('a refund to the SAME destination as the last successful payout dispatches normally', async (t) => {
+    let buyer;
+    t.after(() => buyer && cleanupEntity(ENTITIES.buyer_refund, buyer.id));
+    buyer = await createBuyer({});
+    await ENTITIES.buyer_refund.seedBalance(buyer.id, BALANCE);
+    await seedCompletedPayout(buyer.id, PHONE);
+
+    const request = await WithdrawalService.createWithdrawalRequest({
+      entityId: buyer.id,
+      entityType: 'buyer_refund',
+      amount: AMOUNT,
+      mpesaNumber: PHONE, // unchanged destination
+      idempotencyKey: `same-${buyer.id}-${Date.now()}`
+    });
+
+    assert.equal(request.status, 'processing', 'unchanged destination is not held');
+    const settled = await waitForProviderSettled(request.id);
+    assert.notEqual(settled.status, 'manual_review');
+  });
+
+  test('a first-ever refund (no prior successful payout) is not held', async (t) => {
+    let buyer;
+    t.after(() => buyer && cleanupEntity(ENTITIES.buyer_refund, buyer.id));
+    buyer = await createBuyer({});
+    await ENTITIES.buyer_refund.seedBalance(buyer.id, BALANCE);
+    // No prior payout seeded — nothing to compare against.
+
+    const request = await WithdrawalService.createWithdrawalRequest({
+      entityId: buyer.id,
+      entityType: 'buyer_refund',
+      amount: AMOUNT,
+      mpesaNumber: NEW_PHONE,
+      idempotencyKey: `first-${buyer.id}-${Date.now()}`
+    });
+
+    assert.equal(request.status, 'processing', 'first-time withdrawal proceeds, matching seller behavior');
+    await waitForProviderSettled(request.id);
+  });
+});
