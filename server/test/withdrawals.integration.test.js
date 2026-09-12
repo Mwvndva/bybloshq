@@ -19,7 +19,7 @@ process.env.PAYOUT_PROVIDER = 'paystack';
 const { pool } = await import('../src/infrastructure/database/database.js');
 const WithdrawalService = (await import('../src/domains/payments/withdrawals/withdrawal.service.js')).default;
 const Fees = (await import('../src/shared/config/fees.js')).default;
-const { createBuyer, createSeller, createCreator, cleanupBuyer, cleanupSeller, cleanupCreator } =
+const { createBuyer, createSeller, createCreator, createCompletedOrder, cleanupBuyer, cleanupSeller, cleanupCreator, cleanupOrder } =
   await import('./helpers/factories.js');
 
 const BALANCE = 10000;
@@ -298,5 +298,100 @@ describe('Withdrawal — buyer_refund payout destination hold', () => {
 
     assert.equal(request.status, 'processing', 'first-time withdrawal proceeds, matching seller behavior');
     await waitForProviderSettled(request.id);
+  });
+});
+
+// Security regression: the T+2 clearing hold for creators and buyer refunds was
+// only enforced by a read-before-lock advisory check in the controller. Because
+// creators.balance / buyers.refunds hold the FULL amount immediately (unlike
+// sellers, whose uncleared money lives in pending_settlement_balance), two
+// concurrent withdrawal requests could each pass that advisory check and then
+// both drain past the hold — extracting money frozen for chargeback/self-dealing
+// review. The fix recomputes the clearing balance INSIDE the FOR UPDATE
+// transaction against the locked balance (withdrawal.service.js
+// createWithdrawalRequest), so the second request sees the first's reserve and
+// the clearing floor, and is rejected.
+describe('Withdrawal — clearing-hold race (creator & buyer_refund)', () => {
+  const RACE_AMOUNT = 300;
+  const RACE_DEDUCTION = RACE_AMOUNT + Fees.calculateWithdrawalFee(RACE_AMOUNT); // 321
+  const UNCLEARED = 700;                     // one earning/refund still within T+2
+  const RACE_SEED = UNCLEARED + RACE_DEDUCTION; // 1021: covers the hold + exactly ONE withdrawal
+  // available = RACE_SEED - UNCLEARED = RACE_DEDUCTION, so a single withdrawal
+  // fits and two do not — yet 2*RACE_DEDUCTION < RACE_SEED, so the RAW-balance
+  // check would let both through. Only the in-transaction clearing check stops
+  // the second.
+
+  test('creator: two concurrent withdrawals cannot drain past the T+2 clearing hold', async (t) => {
+    let creator, seller, buyer, order;
+    t.after(async () => {
+      if (creator) {
+        await pool.query('DELETE FROM creator_earnings WHERE creator_id = $1', [creator.id]).catch(() => {});
+        await cleanupEntity(ENTITIES.creator, creator.id).catch(() => {});
+      }
+      if (order) await cleanupOrder(order.id).catch(() => {});
+      if (seller) await cleanupSeller(seller.id).catch(() => {});
+      if (buyer) await cleanupBuyer(buyer.id).catch(() => {});
+    });
+
+    creator = await createCreator({});
+    seller = await createSeller({});
+    buyer = await createBuyer({});
+    order = await createCompletedOrder({ buyerId: buyer.id, sellerId: seller.id, totalAmount: 1000, sellerPayoutAmount: 900 });
+    await pool.query('UPDATE creators SET balance = $2 WHERE id = $1', [creator.id, RACE_SEED]);
+    // One credited earning of UNCLEARED, created NOW -> still inside the T+2 window.
+    await pool.query(
+      `INSERT INTO creator_earnings (creator_id, seller_id, order_id, amount, rate, base_amount, status, created_at)
+       VALUES ($1, $2, $3, $4, 0.01, $4, 'credited', NOW())`,
+      [creator.id, seller.id, order.id, UNCLEARED]
+    );
+
+    const results = await Promise.allSettled([
+      WithdrawalService.createWithdrawalRequest({ entityId: creator.id, entityType: 'creator', amount: RACE_AMOUNT, idempotencyKey: `race-c1-${creator.id}` }),
+      WithdrawalService.createWithdrawalRequest({ entityId: creator.id, entityType: 'creator', amount: RACE_AMOUNT, idempotencyKey: `race-c2-${creator.id}` })
+    ]);
+
+    const ok = results.filter(r => r.status === 'fulfilled');
+    const failed = results.filter(r => r.status === 'rejected');
+    assert.equal(ok.length, 1, 'exactly one concurrent withdrawal succeeds');
+    assert.equal(failed.length, 1, 'the other is rejected by the in-transaction clearing check');
+    assert.match(failed[0].reason.message, /available balance|clearing/i);
+
+    // The T+2-held money must remain: spendable balance stays at or above the
+    // uncleared floor (without the fix, both would commit and balance would drop
+    // to RACE_SEED - 2*RACE_DEDUCTION = 379, i.e. 321 of held money leaked).
+    const { rows: [c] } = await pool.query('SELECT balance::float AS balance FROM creators WHERE id = $1', [creator.id]);
+    assert.ok(c.balance >= UNCLEARED, `clearing hold preserved: balance ${c.balance} >= uncleared ${UNCLEARED}`);
+  });
+
+  test('buyer_refund: two concurrent withdrawals cannot drain past the T+2 clearing hold', async (t) => {
+    let buyer;
+    t.after(async () => {
+      if (!buyer) return;
+      await pool.query('DELETE FROM refund_requests WHERE buyer_id = $1', [buyer.id]).catch(() => {});
+      await cleanupEntity(ENTITIES.buyer_refund, buyer.id).catch(() => {});
+    });
+
+    buyer = await createBuyer({});
+    await pool.query('UPDATE buyers SET refunds = $2 WHERE id = $1', [buyer.id, RACE_SEED]);
+    // One completed refund of UNCLEARED, credited NOW -> still inside the T+2 window.
+    await pool.query(
+      `INSERT INTO refund_requests (buyer_id, amount, status, processed_at, requested_at)
+       VALUES ($1, $2, 'completed', NOW(), NOW())`,
+      [buyer.id, UNCLEARED]
+    );
+
+    const results = await Promise.allSettled([
+      WithdrawalService.createWithdrawalRequest({ entityId: buyer.id, entityType: 'buyer_refund', amount: RACE_AMOUNT, mpesaNumber: PHONE, idempotencyKey: `race-b1-${buyer.id}` }),
+      WithdrawalService.createWithdrawalRequest({ entityId: buyer.id, entityType: 'buyer_refund', amount: RACE_AMOUNT, mpesaNumber: PHONE, idempotencyKey: `race-b2-${buyer.id}` })
+    ]);
+
+    const ok = results.filter(r => r.status === 'fulfilled');
+    const failed = results.filter(r => r.status === 'rejected');
+    assert.equal(ok.length, 1, 'exactly one concurrent refund withdrawal succeeds');
+    assert.equal(failed.length, 1, 'the other is rejected by the in-transaction clearing check');
+    assert.match(failed[0].reason.message, /available balance|clearing/i);
+
+    const { rows: [b] } = await pool.query('SELECT refunds::float AS refunds FROM buyers WHERE id = $1', [buyer.id]);
+    assert.ok(b.refunds >= UNCLEARED, `clearing hold preserved: refunds ${b.refunds} >= uncleared ${UNCLEARED}`);
   });
 });

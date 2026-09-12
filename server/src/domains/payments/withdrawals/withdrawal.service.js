@@ -11,6 +11,7 @@ import PayoutCallbackStateMachineService, {
 } from '../payouts/payoutCallbackStateMachine.service.js';
 import WithdrawalRetryWorkerService from './withdrawalRetryWorker.service.js';
 import { getWithdrawalReservedAmount } from '../../../shared/utils/withdrawalUtils.js';
+import { computeClearance } from '../../growth/creators/creatorMoney.utils.js';
 
 const AMBIGUOUS_PAYOUT_ERROR_CODES = new Set([
     'CONNECTION_FAILED',
@@ -50,6 +51,83 @@ function getEntityLabel(entity = {}) {
 
 function getEntityPhone(entity = {}) {
     return entity.whatsapp_number || entity.mpesa_number || entity.mobile_payment || null;
+}
+
+// Recompute the still-clearing (T+2 hold + self-dealing-flag hold) portion of a
+// creator's balance from INSIDE an open transaction, using the caller's locked
+// client. Data sources mirror CreatorService.getCreatorClearance, but running
+// it here — under the same FOR UPDATE that reserves the funds — makes the hold
+// authoritative rather than a read-before-lock advisory, closing the
+// concurrent-request race where two withdrawals each pass the controller's
+// pre-transaction check and then both drain past the clearing hold.
+//
+// Queries WITH the metadata column (present in every schema at/after migration
+// 20260905130000). On a DB that predates it, the 42703 aborts this transaction
+// and the withdrawal fails closed — the correct safe direction, and never hit
+// by any current/test schema. (getCreatorClearance can retry-without-metadata
+// only because it runs on the pool, not inside a transaction.)
+async function computeCreatorClearingBalance(client, creatorId, lockedBalance) {
+    const toEarning = (e) => ({
+        amount: Number.parseFloat(e.amount || 0),
+        createdAt: new Date(e.created_at),
+        flaggedForReview: (e.metadata || {}).flagged_for_review === true
+    });
+    const [salesResult, referralResult] = await Promise.all([
+        client.query(
+            `SELECT id, amount, created_at, metadata
+               FROM creator_earnings
+              WHERE creator_id = $1 AND status = 'credited'
+              ORDER BY created_at DESC LIMIT 50`,
+            [creatorId]
+        ),
+        client.query(
+            `SELECT id, amount, created_at, metadata
+               FROM creator_referral_earnings
+              WHERE referrer_creator_id = $1 AND status = 'credited'
+              ORDER BY created_at DESC LIMIT 50`,
+            [creatorId]
+        )
+    ]);
+    const earnings = [...salesResult.rows.map(toEarning), ...referralResult.rows.map(toEarning)];
+    return computeClearance({ totalBalance: lockedBalance, earnings }).clearingBalance;
+}
+
+// Buyer-refund equivalent of computeCreatorClearingBalance: recompute the
+// still-clearing (T+2) portion of a buyer's refund balance inside the locked
+// transaction. Data sources mirror getBuyerRefundClearance; there is no
+// self-dealing flag for refunds, so every event is unflagged. Reuses the same
+// computeClearance math so the hold behaves identically to the advisory check.
+async function computeBuyerRefundClearingBalance(client, buyerId, lockedRefunds) {
+    const [refundRequestsResult, refundedOrdersResult] = await Promise.all([
+        client.query(
+            `SELECT amount, processed_at, updated_at, requested_at, payment_details
+               FROM refund_requests
+              WHERE buyer_id = $1 AND status = 'completed'`,
+            [buyerId]
+        ),
+        client.query(
+            `SELECT total_amount AS amount, updated_at
+               FROM product_orders
+              WHERE buyer_id = $1 AND status = 'REFUNDED'
+                AND id NOT IN (SELECT order_id FROM refund_requests WHERE buyer_id = $1 AND order_id IS NOT NULL)`,
+            [buyerId]
+        )
+    ]);
+    const events = [
+        ...refundRequestsResult.rows.map((rr) => ({
+            amount: Number.parseFloat(rr.amount || 0),
+            createdAt: (rr.payment_details?.credited_at || rr.payment_details?.reconciled_at)
+                ? new Date(rr.payment_details.credited_at || rr.payment_details.reconciled_at)
+                : new Date(rr.updated_at || rr.processed_at || rr.requested_at),
+            flaggedForReview: false
+        })),
+        ...refundedOrdersResult.rows.map((po) => ({
+            amount: Number.parseFloat(po.amount || 0),
+            createdAt: new Date(po.updated_at),
+            flaggedForReview: false
+        }))
+    ];
+    return computeClearance({ totalBalance: lockedRefunds, earnings: events }).clearingBalance;
 }
 
 /**
@@ -451,15 +529,38 @@ class WithdrawalService {
             const deductionAmount = validatedAmount + withdrawalFee;
 
             const currentBalance = Number.parseFloat(entity.balance || 0);
-            if (currentBalance < deductionAmount) {
+
+            // Clearing-aware availability check, computed INSIDE this FOR UPDATE
+            // transaction so it is atomic with the deduction below. For sellers,
+            // `balance` already excludes uncleared money (it lives in
+            // pending_settlement_balance until the settlement cron promotes it
+            // after T+2), so clearingBalance is 0 and this reduces to the old
+            // raw-balance check. For creators and buyer refunds, `balance`/
+            // `refunds` is credited in full immediately and the T+2 (plus, for
+            // creators, self-dealing-flag) hold is only enforced by the
+            // controller's read-before-lock advisory check — recomputing it here
+            // against the LOCKED balance is what actually prevents two concurrent
+            // requests from each passing the advisory check and then together
+            // draining past the hold.
+            let clearingBalance = 0;
+            if (entityType === 'creator') {
+                clearingBalance = await computeCreatorClearingBalance(client, entityId, currentBalance);
+            } else if (entityType === 'buyer_refund') {
+                clearingBalance = await computeBuyerRefundClearingBalance(client, entityId, currentBalance);
+            }
+            const availableBalance = Math.max(0, currentBalance - clearingBalance);
+
+            if (deductionAmount > availableBalance) {
                 throw new AppError(
-                    `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
+                    `Insufficient balance. Available: KES ${availableBalance.toLocaleString()}, ` +
                     `Required: KES ${deductionAmount.toLocaleString()} including withdrawal charge. ` +
-                    (entityType === 'seller'
-                        ? 'Recent sales may still be preparing for withdrawal.'
-                        : entityType === 'buyer_refund'
-                            ? 'Some refund funds may already be reserved for another withdrawal.'
-                            : 'Some earnings may already be reserved for another withdrawal.'),
+                    (clearingBalance > 0
+                        ? `KES ${clearingBalance.toLocaleString()} is still clearing under the standard T+2 holding period.`
+                        : entityType === 'seller'
+                            ? 'Recent sales may still be preparing for withdrawal.'
+                            : entityType === 'buyer_refund'
+                                ? 'Some refund funds may already be reserved for another withdrawal.'
+                                : 'Some earnings may already be reserved for another withdrawal.'),
                     400
                 );
             }
